@@ -97,13 +97,13 @@ let authError, sessionTimerDisplay, totalTimeDisplay, totalBreakTimeDisplay, act
 function initializeFirebase() {
     try {
         const firebaseConfig = {
-  apiKey: "AIzaSyBSCrL6ravOzFnwOa7A0Jl_W68vEfZVcNw",
-  authDomain: "focus-flow-34c07.firebaseapp.com",
-  projectId: "focus-flow-34c07",
-  storageBucket: "focus-flow-34c07.firebasestorage.app",
-  messagingSenderId: "473980178825",
-  appId: "1:473980178825:web:164566ec8b068da3281158",
-  measurementId: "G-RRFK3LY0E4"
+  apiKey: "AIzaSyCOK3nyWnRYDpu9SvY7oxLhb1A-85Qva5o",
+  authDomain: "focus-flow-bfcd1.firebaseapp.com",
+  projectId: "focus-flow-bfcd1",
+  storageBucket: "focus-flow-bfcd1.firebasestorage.app",
+  messagingSenderId: "637758725334",
+  appId: "1:637758725334:web:556ec4feda0e0d42ed3d77",
+  measurementId: "G-2YBNMYQK3D"
 };
 
 // Initialize Firebase
