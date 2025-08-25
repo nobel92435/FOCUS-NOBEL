@@ -20,15 +20,17 @@ import {
 import { getCurrentDate } from './utils.js'; // Import getCurrentDate
 import { showToast, showPage, updateProfileUI } from './ui.js'; // Import UI functions
 
+let authInstance; // Will store the auth instance passed from main.js
 let authErrorElement; // To be initialized by main.js
 let dbInstance; // To be initialized by main.js
 let appId; // To be initialized by main.js
 
 export const initializeAuth = (app, db, errorElement, currentAppId) => {
+    authInstance = getAuth(app); // Initialize auth here and store it
     authErrorElement = errorElement;
     dbInstance = db;
     appId = currentAppId;
-    return getAuth(app);
+    return authInstance; // Return the initialized auth instance
 };
 
 export async function getOrCreateUserDocument(user) {
@@ -84,6 +86,7 @@ export async function getOrCreateUserDocument(user) {
 }
 
 export const setupAuthListeners = (auth, callbacks) => {
+    // This 'auth' parameter should be the authInstance returned by initializeAuth
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             const userDoc = await getOrCreateUserDocument(user);
@@ -96,7 +99,7 @@ export const setupAuthListeners = (auth, callbacks) => {
 
 export const handleLogin = async (email, password) => {
     try {
-        await signInWithEmailAndPassword(getAuth(), email, password);
+        await signInWithEmailAndPassword(authInstance, email, password); // Use stored authInstance
     } catch (error) {
         if (authErrorElement) authErrorElement.textContent = error.message;
         throw error;
@@ -105,7 +108,7 @@ export const handleLogin = async (email, password) => {
 
 export const handleSignup = async (email, password) => {
     try {
-        await createUserWithEmailAndPassword(getAuth(), email, password);
+        await createUserWithEmailAndPassword(authInstance, email, password); // Use stored authInstance
     } catch (error) {
         if (authErrorElement) authErrorElement.textContent = error.message;
         throw error;
@@ -115,7 +118,7 @@ export const handleSignup = async (email, password) => {
 export const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
-        await signInWithPopup(getAuth(), provider);
+        await signInWithPopup(authInstance, provider); // Use stored authInstance
     } catch (error) {
         if (authErrorElement) authErrorElement.textContent = error.message;
         throw error;
@@ -124,7 +127,7 @@ export const handleGoogleSignIn = async () => {
 
 export const handleSignOut = async () => {
     try {
-        await signOut(getAuth());
+        await signOut(authInstance); // Use stored authInstance
     } catch (error) {
         showToast(`Sign out failed: ${error.message}`, 'error');
         throw error;
@@ -142,6 +145,5 @@ export const handleUsernameSetup = async (currentUser, username) => {
 
     const userDoc = await getDoc(userDocRef);
     updateProfileUI(userDoc.data());
-    showPage('page-timer'); // Assuming this should be handled in main or ui
-    // setupRealtimeListeners and loadDailyTotal will be handled by main.js
+    showPage('page-timer');
 };
