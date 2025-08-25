@@ -263,7 +263,7 @@
     <!-- Modals -->
     <div id="add-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Subject</div><button class="close-modal">&times;</button></div><form id="add-subject-form">...</form></div></div>
     <div id="start-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Start New Session</div><button id="close-start-session-modal" class="close-modal">&times;</button></div><form id="start-session-form">...</form></div></div>
-    <div id="add-task-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Add New Task</div><button class="close-modal">&times;</button></div><form id="add-task-form">...</form></div></div>
+    <div id="add-task-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Task</div><button class="close-modal">&times;</button></div><form id="add-task-form">...</form></div></div>
     <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form">...</form></div></div>
     <div id="confirmation-modal" class="modal"><div class="modal-content"><div class="modal-header><h2 id="confirmation-modal-title" class="modal-title">Are you sure?</h2><button class="close-modal">&times;</button></div><p id="confirmation-modal-message">...</p><div id="confirmation-modal-buttons">...</div></div></div>
     <div id="edit-profile-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Edit Profile</div><button class="close-modal">&times;</button></div><form id="edit-profile-form">...</form></div></div>
@@ -273,18 +273,16 @@
     <div id="edit-subject-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Edit Subject</div><button class="close-modal">&times;</button></div><form id="edit-subject-form">...</form></div></div>
 
     <script type="module">
-        // Import Firebase modules from the CDN (these are just the functions)
-        import {
-            onAuthStateChanged, signOut, createUserWithEmailAndPassword,
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, 
             signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import {
-            getDoc, addDoc, collection, onSnapshot, updateDoc, deleteDoc, getDocs, serverTimestamp,
-            query, orderBy, limit, increment
+        import { 
+            getFirestore, doc, setDoc, getDoc, addDoc, collection, onSnapshot,
+            arrayUnion, updateDoc, deleteDoc, getDocs, serverTimestamp,
+            query, orderBy, limit, increment, where, runTransaction
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Import Firebase app, db, and auth instances from your firebase.js file
-        import { app, db, auth } from './firebase.js';
 
         // --- Achievement Definitions ---
         const ACHIEVEMENTS = {
@@ -313,7 +311,7 @@
             }
 
             self.onmessage = function(e) {
-                const { command, duration, newSettings } = e.data; // Added newSettings
+                const { command, duration } = e.data;
                 switch(command) {
                     case 'start': // Simplified start
                         if (timerInterval) clearInterval(timerInterval);
@@ -331,10 +329,6 @@
                         if (timerInterval) clearInterval(timerInterval);
                         timerInterval = null; endTime = 0; remainingTimeOnPause = 0; isPaused = false;
                         break;
-                    case 'updateSettings': // NEW: Handle settings update for the worker
-                        // No direct state update needed in this simplified worker if 'duration' is always passed
-                        // But good to acknowledge the message
-                        break;
                 }
             };
         `;
@@ -350,12 +344,12 @@
         }
 
         // --- Application State ---
-        // db and auth are now imported from firebase.js
+        let db, auth;
         let currentUser = null;
         let currentUserData = {};
         let dashboardCharts = {};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        let userSessions = [];
+        let userSessions = []; 
         let isAudioUnlocked = false;
         let isAddingSubjectFromStartSession = false;
 
@@ -371,7 +365,7 @@
         let memberTimerIntervals = [];
         let currentGroupId = null;
         let groupRealtimeData = { members: {}, sessions: {} };
-
+        
         // Break Timer State
         let breakTimerInterval = null;
         let breakStartTime = 0;
@@ -415,7 +409,7 @@
             console.log(`Confirmation: ${title} - ${message}`);
             // Actual modal display logic removed
             // Simulate confirmation for skeleton
-            // onConfirm();
+            // onConfirm(); 
         }
 
         function formatTime(seconds, includeSeconds = true) {
@@ -432,58 +426,155 @@
             return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
-        // --- Removed the entire `initializeFirebase()` function ---
+        // --- Firebase Initialization ---
+        function initializeFirebase() {
+            console.log('Initializing Firebase...');
+            // NOTE: Replace with your actual Firebase config
+            const firebaseConfig = {
+  apiKey: "AIzaSyCOK3nyWnRYDpu9SvY7oxLhb1A-85Qva5o",
+  authDomain: "focus-flow-bfcd1.firebaseapp.com",
+  projectId: "focus-flow-bfcd1",
+  storageBucket: "focus-flow-bfcd1.firebasestorage.app",
+  messagingSenderId: "637758725334",
+  appId: "1:637758725334:web:556ec4feda0e0d42ed3d77",
+  measurementId: "G-2YBNMYQK3D"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUser = user;
+                    const userDoc = await getOrCreateUserDocument(user);
+                    currentUserData = userDoc.data();
+                    if (!currentUserData || !currentUserData.username) {
+                        showPage('page-username-setup');
+                    } else {
+                        updateProfileUI(currentUserData);
+                        showPage('page-timer');
+                        setupRealtimeListeners();
+                        loadDailyTotal();
+                    }
+                } else {
+                    currentUser = null;
+                    currentUserData = {};
+                    showPage('auth-screen');
+                }
+            });
+        }
+
+        // --- Page Navigation ---
+        function showPage(pageId) {
+            console.log(`Navigating to page: ${pageId}`);
+            // Logic to hide/show pages and navigation bars
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+
+            // Handle auth screen visibility
+            if (pageId === 'auth-screen') {
+                document.getElementById('auth-screen').classList.add('active');
+                document.getElementById('app-container').classList.remove('active');
+            } else if (pageId === 'page-username-setup') {
+                document.getElementById('auth-screen').classList.remove('active');
+                document.getElementById('app-container').classList.remove('active');
+                document.getElementById('page-username-setup').classList.add('active');
+            }
+            else {
+                document.getElementById('auth-screen').classList.remove('active');
+                document.getElementById('page-username-setup').classList.remove('active');
+                document.getElementById('app-container').classList.add('active');
+            }
+
+            // Update active navigation item
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            const activeNavItem = document.querySelector(`.nav-item[data-page="${pageId.replace('page-', '')}"]`);
+            if (activeNavItem) {
+                activeNavItem.classList.add('active');
+            }
+        }
+
+        async function startTimer(subject) {
+            console.log(`Starting timer for: ${subject} in ${timerMode} mode.`);
+            // Timer start logic (normal or Pomodoro)
+            // Save idle break if any
+            // Update studying status in Firestore
+        }
+        
+        async function stopTimer() {
+            console.log('Stopping timer.');
+            // Stop timer logic, save session
+            // Reset UI and Firestore studying status
+        }
+
+        function pauseTimer() {
+            console.log('Pausing timer.');
+            // Pause timer logic
+        }
+
+        function resumeTimer() {
+            console.log('Resuming timer.');
+            // Resume timer logic
+        }
+
+        async function handlePomodoroPhaseEnd({ newState, oldState }) {
+            console.log(`Pomodoro phase ended: ${oldState} -> ${newState}`);
+            // Logic to save session, play sound, and transition to next phase (auto/manual)
+        }
+
+        function startNextPomodoroPhase(state) {
+            console.log(`Starting next Pomodoro phase: ${state}`);
+            // Logic to set timer, update UI, and schedule next SW alarm
+        }
+
+        function updateBreakTimerDisplay() {
+            // Logic to update break timer on UI
+        }
+        
+        function updateTotalTimeDisplay() {
+            if (totalTimeDisplay && totalBreakTimeDisplay) {
+                totalTimeDisplay.textContent = `Total Today: ${formatTime(totalTimeTodayInSeconds)}`;
+                totalBreakTimeTodayDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
+            }
+        }
+
+        async function saveSession(subject, durationSeconds, sessionType = 'study') {
+            console.log(`Saving ${sessionType} session: ${subject} for ${durationSeconds} seconds.`);
+            // Firestore transaction to save session and update totals/streaks/achievements
+        }
+
+        async function checkAndAwardAchievements(completedSessionDuration) {
+            console.log('Checking for achievements...');
+            // Logic to compare study data against ACHIEVEMENTS and update Firestore
+        }
+
+        async function loadDailyTotal() {
+            console.log('Loading daily totals...');
+            // Fetch daily totals from Firestore
+        }
 
         async function getOrCreateUserDocument(user) {
             console.log(`Getting or creating user document for: ${user.uid}`);
             // Fetch or create user document in Firestore with initial data
             // In a real app, this would query Firestore:
-            const userRef = doc(db, 'artifacts', appId, 'users', user.uid);
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) { return userSnap; }
-            else {
-                await setDoc(userRef, {
-                    username: user.displayName || 'New User',
-                    email: user.email,
-                    createdAt: serverTimestamp(),
-                    totalStudySeconds: 0,
-                    totalBreakSeconds: 0,
-                    streak: 0,
-                    lastStudyDay: '',
-                    unlockedAchievements: [],
-                    studying: null,
-                    studyGoalHours: 4,
-                    pomodoroSettings: {
-                        work: 25,
-                        short_break: 5,
-                        long_break: 15,
-                        long_break_interval: 4,
-                        autoStartBreak: true,
-                        autoStartFocus: true
-                    },
-                    pomodoroSounds: {
-                        start: "tone_simple_beep",
-                        focus: "tone_chime_chord",
-                        break: "tone_metal_bell",
-                        volume: 1.0
-                    },
-                    totalTimeToday: {
-                        date: getCurrentDate().toISOString().split('T')[0],
-                        seconds: 0
-                    },
-                    totalBreakTimeToday: {
-                        date: getCurrentDate().toISOString().split('T')[0],
-                        seconds: 0
-                    }
-                });
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
-                    username: user.displayName || 'New User',
-                    email: user.email,
-                    totalStudySeconds: 0,
-                    totalBreakSeconds: 0
-                });
-                return await getDoc(userRef);
-            }
+            // const userRef = doc(db, "users", user.uid);
+            // const userSnap = await getDoc(userRef);
+            // if (userSnap.exists()) { return userSnap; }
+            // else {
+            //     await setDoc(userRef, {
+            //         username: user.displayName || 'New User',
+            //         email: user.email,
+            //         createdAt: serverTimestamp(),
+            //         totalStudyTime: 0,
+            //         totalBreakTime: 0,
+            //         streak: 0,
+            //         lastStudyDate: null,
+            //         achievements: []
+            //     });
+            //     return await getDoc(userRef);
+            // }
+            return { exists: () => true, data: () => ({ username: user.displayName || user.email, email: user.email }) }; // Simplified return for skeleton
         }
 
         function updateProfileUI(userData) {
@@ -503,532 +594,8 @@
         function setupRealtimeListeners() {
             console.log('Setting up real-time Firestore listeners...');
             // onSnapshot listeners for user data, subjects, sessions, groups, planner tasks
-            if (!currentUser) return;
-            const groupsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'groups');
-            const usersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-            const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-            const subjectsCollectionRef = query(collection(userDocRef, 'subjects'), orderBy('order', 'asc'));
-            const sessionsCollectionRef = collection(userDocRef, 'sessions');
-            const plannerTasksRef = collection(userDocRef, 'plannerTasks');
-
-            onSnapshot(userDocRef, (doc) => {
-                if (doc.exists()) {
-                    const data = doc.data();
-                    currentUserData = data; // Update currentUserData reference
-                    // updateCurrentUserAndData(currentUser, currentUserData); // This function is not defined here.
-
-                    const todayStr = getCurrentDate().toISOString().split('T')[0];
-                    if (!data.totalTimeToday || data.totalTimeToday.date !== todayStr || !data.totalBreakTimeToday || data.totalBreakTimeToday.date !== todayStr) {
-                        loadDailyTotal();
-                    } else {
-                        totalTimeTodayInSeconds = data.totalTimeToday.seconds;
-                        totalBreakTimeTodayInSeconds = data.totalBreakTimeToday.seconds;
-                        updateTotalTimeDisplay(); // Assuming updateTotalTimeDisplay uses global state
-                    }
-
-                    if (data.pomodoroSettings) {
-                        pomodoroSettings = { ...pomodoroSettings, ...data.pomodoroSettings };
-                        pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings });
-                    }
-                    if (data.pomodoroSounds) {
-                        pomodoroSounds = { ...pomodoroSounds, ...data.pomodoroSounds };
-                    }
-                    updateProfileUI(data);
-                    renderJoinedGroups();
-                }
-            });
-
-            onSnapshot(groupsCollectionRef, () => {
-                if (document.getElementById('page-my-groups').classList.contains('active') || document.getElementById('page-find-groups').classList.contains('active')) {
-                    renderAvailableGroups();
-                    renderJoinedGroups();
-                }
-            });
-
-            onSnapshot(subjectsCollectionRef, (snapshot) => {
-                const subjects = [];
-                snapshot.forEach(doc => subjects.push({ id: doc.id, ...doc.data() }));
-                renderSubjectSelectionList(subjects);
-            });
-
-            onSnapshot(usersCollectionRef, () => {
-                if (document.getElementById('page-ranking').classList.contains('active')) {
-                    const activeTab = document.querySelector('#ranking-period-tabs .ranking-tab-btn.active');
-                    renderLeaderboard(activeTab ? activeTab.dataset.period : 'weekly');
-                }
-            });
-
-            onSnapshot(query(sessionsCollectionRef, orderBy("endedAt", "desc")), (snapshot) => {
-                userSessions = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        id: doc.id,
-                        ...data,
-                        endedAt: data.endedAt && typeof data.endedAt.toDate === 'function' ? data.endedAt.toDate() : null,
-                        type: data.type || 'study'
-                    };
-                });
-                if (document.getElementById('page-stats').classList.contains('active')) {
-                    initializeDashboard(userSessions);
-                }
-                if (document.getElementById('page-ranking').classList.contains('active')) {
-                    const activeTab = document.querySelector('#ranking-period-tabs .ranking-tab-btn.active');
-                    renderLeaderboard(activeTab ? activeTab.dataset.period : 'weekly');
-                }
-            });
-
-            onSnapshot(query(plannerTasksRef, orderBy("date")), (snapshot) => {
-                if (document.getElementById('page-planner').classList.contains('active')) {
-                    const tasks = [];
-                    snapshot.forEach(doc => tasks.push({ id: doc.id, ...doc.data() }));
-                    renderPlanner(tasks);
-                }
-            });
         }
-
-        async function startTimer(subject) {
-            console.log(`Starting timer for: ${subject} in ${timerMode} mode.`);
-            // Timer start logic (normal or Pomodoro)
-            // Save idle break if any
-            // Update studying status in Firestore
-             if (!subject) {
-                showToast("Please select a subject first.", "error");
-                return;
-            }
-            unlockAudio();
-
-            if (timerInterval) clearInterval(timerInterval);
-
-            activeSubject = subject;
-            activeSubjectDisplay.textContent = activeSubject;
-
-            if (currentUser) {
-                const sessionsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'sessions');
-                const q = query(sessionsRef, orderBy('endedAt', 'desc'), limit(1));
-                const lastSessionSnapshot = await getDocs(q);
-
-                if (!lastSessionSnapshot.empty) {
-                    const lastSessionData = lastSessionSnapshot.docs[0].data();
-                    const lastSessionEndedAt = lastSessionData.endedAt && typeof lastSessionData.endedAt.toDate === 'function'
-                        ? lastSessionData.endedAt.toDate()
-                        : null;
-                    const now = Date.now();
-
-                    if (lastSessionData.type === 'study' && lastSessionEndedAt && lastSessionEndedAt < now) {
-                        const idleDurationSeconds = Math.floor((now - lastSessionEndedAt) / 1000);
-                        if (idleDurationSeconds > 0) {
-                            await saveSession('Idle Break', idleDurationSeconds, 'break');
-                        }
-                    }
-                }
-            }
-
-            if (timerMode === 'normal') {
-                sessionStartTime = Date.now();
-                timerInterval = setInterval(() => {
-                    const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
-                    sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
-                }, 1000);
-            } else { // Pomodoro Mode
-                pomodoroState = 'work';
-                playSound(pomodoroSounds.start, pomodoroSounds.volume);
-
-                const workDurationSeconds = pomodoroSettings.work * 60;
-                pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
-
-                scheduleSWAlarm({
-                    delay: workDurationSeconds * 1000,
-                    timerId: 'pomodoro-transition',
-                    transitionMessage: {
-                        type: 'TIMER_ENDED',
-                        newState: 'short_break',
-                        oldState: 'work',
-                        title: 'Focus complete!',
-                        options: { body: `Time for a short break.`, tag: 'pomodoro-transition' }
-                    }
-                });
-
-                pomodoroStatusDisplay.textContent = `Work (1/${pomodoroSettings.long_break_interval})`;
-                pomodoroStatusDisplay.style.color = '#3b82f6';
-            }
-
-            document.getElementById('start-studying-btn').classList.add('hidden');
-            document.getElementById('stop-studying-btn').classList.remove('hidden');
-            document.getElementById('pause-btn').classList.remove('hidden');
-            document.getElementById('manual-start-btn').classList.add('hidden');
-
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-            await updateDoc(userRef, { studying: { subject: activeSubject, startTime: serverTimestamp(), type: 'study' } });
-        }
-
-        async function stopTimer() {
-            console.log('Stopping timer.');
-            // Stop timer logic, save session
-            // Reset UI and Firestore studying status
-            pomodoroWorker.postMessage({ command: 'stop' });
-
-            isPaused = false;
-            pauseStartTime = 0;
-
-            if (timerMode === 'pomodoro' && pomodoroState !== 'idle') {
-                const workDuration = pomodoroSettings.work * 60;
-                const displayTime = sessionTimerDisplay.textContent;
-                const timeLeftInSeconds = (parseInt(displayTime.split(':')[0], 10) * 60) + parseInt(displayTime.split(':')[1], 10);
-                const elapsedSeconds = workDuration - timeLeftInSeconds;
-
-                if (pomodoroState === 'work' && elapsedSeconds > 0) {
-                    await saveSession(activeSubject, elapsedSeconds, 'study');
-                }
-
-                cancelSWAlarm('pomodoro-transition');
-            }
-            else if (timerMode === 'normal' && timerInterval) {
-                clearInterval(timerInterval);
-                const elapsedMillis = Date.now() - sessionStartTime;
-                const sessionDurationSeconds = Math.floor(elapsedMillis / 1000);
-                if (sessionDurationSeconds > 0) {
-                    await saveSession(activeSubject, sessionDurationSeconds, 'study');
-                }
-            }
-
-            timerInterval = null;
-            pomodoroState = 'idle';
-            activeSubjectDisplay.textContent = '';
-            sessionTimerDisplay.textContent = timerMode === 'pomodoro' ? formatPomodoroTime(pomodoroSettings.work * 60) : formatTime(0);
-            pomodoroStatusDisplay.textContent = timerMode === 'pomodoro' ? 'Ready for Pomodoro' : '';
-            pomodoroStatusDisplay.style.color = '#9ca3af';
-
-            document.getElementById('start-studying-btn').classList.remove('hidden');
-            document.getElementById('stop-studying-btn').classList.add('hidden');
-            document.getElementById('pause-btn').classList.add('hidden');
-            document.getElementById('resume-btn').classList.add('hidden');
-            document.getElementById('manual-start-btn').classList.add('hidden');
-
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-            await updateDoc(userRef, { studying: null });
-        }
-
-        function pauseTimer() {
-            console.log('Pausing timer.');
-            // Pause timer logic
-            if (timerMode === 'normal' && timerInterval) {
-                clearInterval(timerInterval);
-                isPaused = true;
-                pauseStartTime = Date.now();
-                document.getElementById('pause-btn').classList.add('hidden');
-                document.getElementById('resume-btn').classList.remove('hidden');
-            } else if (timerMode === 'pomodoro' && pomodoroState !== 'idle') {
-                pomodoroWorker.postMessage({ command: 'pause' });
-                cancelSWAlarm('pomodoro-transition');
-                isPaused = true;
-                document.getElementById('pause-btn').classList.add('hidden');
-                document.getElementById('resume-btn').classList.remove('hidden');
-            }
-        }
-
-        function resumeTimer() {
-            console.log('Resuming timer.');
-            // Resume timer logic
-            if (timerMode === 'normal' && isPaused) {
-                const pauseDuration = Date.now() - pauseStartTime;
-                sessionStartTime += pauseDuration;
-                isPaused = false;
-                timerInterval = setInterval(() => {
-                    const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
-                    sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
-                }, 1000);
-                document.getElementById('pause-btn').classList.remove('hidden');
-                document.getElementById('resume-btn').classList.add('hidden');
-            } else if (timerMode === 'pomodoro' && isPaused) {
-                pomodoroWorker.postMessage({ command: 'resume' });
-                isPaused = false;
-                document.getElementById('pause-btn').classList.remove('hidden');
-                document.getElementById('resume-btn').classList.add('hidden');
-            }
-        }
-
-        async function handlePomodoroPhaseEnd({ newState, oldState }) {
-            console.log(`Pomodoro phase ended: ${oldState} -> ${newState}`);
-            // Logic to save session, play sound, and transition to next phase (auto/manual)
-            if (oldState === 'work') {
-                await saveSession(activeSubject, pomodoroSettings.work * 60, 'study');
-            } else { // It was a break
-                const breakDuration = oldState === 'short_break' ? pomodoroSettings.short_break * 60 : pomodoroSettings.long_break * 60;
-                await saveSession('Break', breakDuration, 'break');
-            }
-
-            const soundToPlay = oldState === 'work' ? pomodoroSounds.break : pomodoroSounds.focus;
-            playSound(soundToPlay, pomodoroSounds.volume);
-
-            const shouldAutoStart = (newState === 'work' && pomodoroSettings.autoStartFocus) || (newState.includes('break') && pomodoroSettings.autoStartBreak);
-
-            if (shouldAutoStart) {
-                startNextPomodoroPhase(newState);
-            } else {
-                pomodoroWorker.postMessage({ command: 'stop' });
-                pomodoroState = 'idle';
-                nextPomodoroPhase = newState;
-
-                const manualStartBtn = document.getElementById('manual-start-btn');
-                manualStartBtn.textContent = `Start ${newState.replace('_', ' ')}`;
-                manualStartBtn.classList.remove('hidden');
-
-                document.getElementById('stop-studying-btn').classList.add('hidden');
-                document.getElementById('pause-btn').classList.add('hidden');
-                document.getElementById('resume-btn').classList.add('hidden');
-
-                pomodoroStatusDisplay.textContent = `Ready for ${newState.replace('_', ' ')}`;
-
-                let nextDuration = 0;
-                if (newState === 'work') {
-                    nextDuration = pomodoroSettings.work * 60;
-                } else if (newState === 'short_break') {
-                    nextDuration = pomodoroSettings.short_break * 60;
-                } else {
-                    nextDuration = pomodoroSettings.long_break * 60;
-                }
-                sessionTimerDisplay.textContent = formatPomodoroTime(nextDuration);
-            }
-        }
-
-        function startNextPomodoroPhase(state) {
-            console.log(`Starting next Pomodoro phase: ${state}`);
-            // Logic to set timer, update UI, and schedule next SW alarm
-            pomodoroState = state;
-
-            let durationSeconds = 0;
-            let statusText = '';
-            let transitionMessage = {};
-
-            const currentCycle = Math.floor((currentUserData.pomodoroCycle || 0) / 2);
-
-            if (state === 'work') {
-                durationSeconds = pomodoroSettings.work * 60;
-                const nextState = ((currentCycle + 1) % pomodoroSettings.long_break_interval === 0) ? 'long_break' : 'short_break';
-                statusText = `Work (${currentCycle + 1}/${pomodoroSettings.long_break_interval})`;
-                transitionMessage = {
-                    type: 'TIMER_ENDED',
-                    newState: nextState,
-                    oldState: 'work',
-                    title: 'Focus complete!',
-                    options: { body: `Time for a ${nextState.replace('_', ' ')}.`, tag: 'pomodoro-transition' }
-                };
-            } else { // It's a break
-                durationSeconds = state === 'short_break' ? pomodoroSettings.short_break * 60 : pomodoroSettings.long_break * 60;
-                statusText = state.replace('_', ' ');
-                transitionMessage = {
-                    type: 'TIMER_ENDED',
-                    newState: 'work',
-                    oldState: state,
-                    title: 'Break is over!',
-                    options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' }
-                };
-            }
-
-            pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds });
-            pomodoroStatusDisplay.textContent = statusText;
-            pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e0b' : '#3b82f6';
-
-            scheduleSWAlarm({
-                delay: durationSeconds * 1000,
-                timerId: 'pomodoro-transition',
-                transitionMessage: transitionMessage
-            });
-
-            if (state === 'work') {
-                const newCycleCount = (currentUserData.pomodoroCycle || 0) + 1;
-                updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid), { pomodoroCycle: newCycleCount });
-            }
-        }
-
-        function updateBreakTimerDisplay() {
-            console.log('Logic to update break timer on UI');
-        }
-
-        function updateTotalTimeDisplay() {
-            if (totalTimeDisplay && totalBreakTimeDisplay) {
-                totalTimeDisplay.textContent = `Total Today: ${formatTime(totalTimeTodayInSeconds)}`;
-                totalBreakTimeTodayDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
-            }
-        }
-
-        async function saveSession(subject, durationSeconds, sessionType = 'study') {
-            console.log(`Saving ${sessionType} session: ${subject} for ${durationSeconds} seconds.`);
-            // Firestore transaction to save session and update totals/streaks/achievements
-            if (!currentUser || !db) {
-                console.error("Firebase not initialized or user not logged in. Cannot save session.");
-                showToast("Please log in to save sessions.", "error");
-                return;
-            }
-
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-            const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-            const sessionsRef = collection(userRef, 'sessions');
-
-            await runTransaction(db, async (transaction) => {
-                const userDoc = await transaction.get(userRef);
-                const publicUserDoc = await transaction.get(publicUserRef);
-
-                if (!userDoc.exists()) {
-                    throw "User document does not exist!";
-                }
-
-                const userData = userDoc.data();
-                const publicUserData = publicUserDoc.exists() ? publicUserDoc.data() : { totalStudySeconds: 0, totalBreakSeconds: 0 };
-
-                const todayStr = getCurrentDate().toISOString().split('T')[0];
-                const lastStudyDay = userData.lastStudyDay || '';
-                let newStreak = userData.currentStreak || 0;
-
-                const endedAt = serverTimestamp(); // Use server timestamp for consistency
-
-                // Add session record
-                transaction.set(sessionsRef.doc(), {
-                    subject: subject,
-                    durationSeconds: durationSeconds,
-                    endedAt: endedAt,
-                    type: sessionType,
-                    groupId: currentGroupId || null // Store groupId if available
-                });
-
-                // Update total study/break time
-                if (sessionType === 'study') {
-                    transaction.update(userRef, {
-                        totalStudySeconds: increment(durationSeconds),
-                        totalTimeToday: {
-                            date: todayStr,
-                            seconds: (userData.totalTimeToday && userData.totalTimeToday.date === todayStr ? userData.totalTimeToday.seconds : 0) + durationSeconds
-                        },
-                        studying: null // Clear studying status after session ends
-                    });
-                    if (publicUserDoc.exists()) {
-                        transaction.update(publicUserRef, {
-                            totalStudySeconds: increment(durationSeconds)
-                        });
-                    }
-                    totalTimeTodayInSeconds = (userData.totalTimeToday && userData.totalTimeToday.date === todayStr ? userData.totalTimeToday.seconds : 0) + durationSeconds;
-
-                    // Streak logic (only for study sessions)
-                    if (lastStudyDay === '') { // First session ever
-                        newStreak = 1;
-                    } else if (lastStudyDay === todayStr) { // Studied multiple times today, streak continues
-                        // No change to streak, just ensure it's not reset
-                    } else {
-                        const lastDay = new Date(lastStudyDay);
-                        const today = getCurrentDate();
-                        const diffTime = Math.abs(today.getTime() - lastDay.getTime());
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                        if (diffDays === 1) { // Consecutive day
-                            newStreak++;
-                        } else { // Break in streak
-                            newStreak = 1;
-                        }
-                    }
-                    transaction.update(userRef, {
-                        currentStreak: newStreak,
-                        lastStudyDay: todayStr
-                    });
-                } else if (sessionType === 'break') {
-                    transaction.update(userRef, {
-                        totalBreakSeconds: increment(durationSeconds),
-                        totalBreakTimeToday: {
-                            date: todayStr,
-                            seconds: (userData.totalBreakTimeToday && userData.totalBreakTimeToday.date === todayStr ? userData.totalBreakTimeToday.seconds : 0) + durationSeconds
-                        }
-                    });
-                    if (publicUserDoc.exists()) {
-                        transaction.update(publicUserRef, {
-                            totalBreakSeconds: increment(durationSeconds)
-                        });
-                    }
-                    totalBreakTimeTodayInSeconds = (userData.totalBreakTimeToday && userData.totalBreakTimeToday.date === todayStr ? userData.totalBreakTimeToday.seconds : 0) + durationSeconds;
-                }
-
-                // Check and award achievements in the same transaction
-                await checkAndAwardAchievements(userDoc, transaction, durationSeconds, sessionType);
-            });
-            updateTotalTimeDisplay();
-            showToast(`${sessionType === 'study' ? 'Study' : 'Break'} session saved!`, 'success');
-
-        }
-
-        async function checkAndAwardAchievements(userDoc, transaction, completedSessionDuration, sessionType) {
-            console.log('Checking for achievements...');
-            if (!userDoc || !userDoc.exists()) return;
-
-            const userData = userDoc.data();
-            const userRef = userDoc.ref;
-            const unlockedAchievements = userData.unlockedAchievements || [];
-
-            // Helper to add achievement
-            const awardAchievement = (achievementId) => {
-                if (!unlockedAchievements.includes(achievementId)) {
-                    transaction.update(userRef, {
-                        unlockedAchievements: arrayUnion(achievementId)
-                    });
-                    showToast(`Achievement Unlocked: ${ACHIEVEMENTS[achievementId].name}!`, 'info');
-                }
-            };
-
-            // Novice Scholar: Total Study Time (1 hour)
-            if (userData.totalStudySeconds + completedSessionDuration >= 3600 && sessionType === 'study') {
-                awardAchievement('novice_scholar');
-            }
-
-            // Dedicated Learner: Total Study Time (10 hours)
-            if (userData.totalStudySeconds + completedSessionDuration >= 36000 && sessionType === 'study') {
-                awardAchievement('dedicated_learner');
-            }
-
-            // Marathoner: Single Study Session > 2 hours
-            if (completedSessionDuration >= 7200 && sessionType === 'study') {
-                awardAchievement('marathoner');
-            }
-
-            // Consistent Coder: 7-day streak
-            if (userData.currentStreak >= 7) {
-                awardAchievement('consistent_coder');
-            }
-        }
-
-        async function loadDailyTotal() {
-            console.log('Loading daily totals...');
-            if (!currentUser || !db) return { totalStudy: 0, totalBreak: 0 };
-
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-            const userDoc = await getDoc(userRef);
-
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                const todayStr = getCurrentDate().toISOString().split('T')[0];
-
-                let currentStudyTotal = 0;
-                let currentBreakTotal = 0;
-
-                if (userData.totalTimeToday && userData.totalTimeToday.date === todayStr) {
-                    currentStudyTotal = userData.totalTimeToday.seconds;
-                } else {
-                    await updateDoc(userRef, {
-                        totalTimeToday: { date: todayStr, seconds: 0 }
-                    });
-                }
-
-                if (userData.totalBreakTimeToday && userData.totalBreakTimeToday.date === todayStr) {
-                    currentBreakTotal = userData.totalBreakTimeToday.seconds;
-                } else {
-                    await updateDoc(userRef, {
-                        totalBreakTimeToday: { date: todayStr, seconds: 0 }
-                    });
-                }
-                totalTimeTodayInSeconds = currentStudyTotal;
-                totalBreakTimeTodayInSeconds = currentBreakTotal;
-                updateTotalTimeDisplay();
-                return { totalStudy: currentStudyTotal, totalBreak: currentBreakTotal };
-            }
-            return { totalStudy: 0, totalBreak: 0 };
-        }
-
+        
         async function renderLeaderboard(period = 'weekly', containerId = 'ranking-list') {
             console.log(`Rendering leaderboard for period: ${period} in ${containerId}`);
             // Fetch and sort public user study data, then render HTML
@@ -1063,7 +630,7 @@
             console.log('Rendering Trend View for dashboard...');
             // Render specific charts and data for trend view
         }
-
+        
         function renderDayView() {
             console.log('Rendering Day View for dashboard...');
             // Render specific charts and data for day view
@@ -1073,7 +640,7 @@
             console.log(`Rendering session log in ${containerId}`);
             // Render list of sessions with edit/delete options
         }
-
+        
         async function deleteSession(sessionId, durationSeconds, endedAt) {
             console.log(`Deleting session: ${sessionId}`);
             // Firestore deletion and total updates
@@ -1098,12 +665,12 @@
             console.log('Rendering subject selection list...');
             // Display draggable list of subjects
         }
-
+        
         function renderPlanner(tasks) {
             console.log('Rendering planner tasks...');
             // Display tasks grouped by date
         }
-
+        
         async function renderGroupDetail(groupId) {
             console.log(`Rendering group detail for: ${groupId}`);
             // Set current group, populate dropdown, set up member listeners
@@ -1118,12 +685,12 @@
             console.log(`Rendering group sub-page: ${subpage}`);
             // Switch content based on subpage (home, attendance, rankings, invite, chat)
         }
-
+        
         function renderGroupMembers() {
             console.log('Rendering group members...');
             // Display list of group members with their study status
         }
-
+        
         function renderGroupLeaderboard(period) {
             console.log(`Rendering group leaderboard for period: ${period}`);
             // Filter and sort group member sessions, then render
@@ -1133,12 +700,12 @@
             console.log('Rendering group attendance...');
             // Display calendar, stats, and member attendance for the selected month
         }
-
+        
         function isToday(year, month, day) {
             // Check if a given date is today
             return false;
         }
-
+        
         function setupGroupChat(groupId) {
             console.log(`Setting up group chat for: ${groupId}`);
             // onSnapshot for messages, and form submission for sending messages
@@ -1166,34 +733,13 @@
             authError = document.getElementById('auth-error');
             sessionTimerDisplay = document.getElementById('session-timer');
             totalTimeDisplay = document.getElementById('total-time-display');
-            totalBreakTimeTodayDisplay = document.getElementById('total-break-time-display');
+            totalBreakTimeDisplay = document.getElementById('total-break-time-display');
             activeSubjectDisplay = document.getElementById('active-subject-display');
             pomodoroStatusDisplay = document.getElementById('pomodoro-status');
-
-            // Removed `initializeFirebase();` call - Firebase is now initialized via import from firebase.js
+            
+            initializeFirebase();
 
             // --- Authentication Listeners ---
-            onAuthStateChanged(auth, async (user) => { // Using the imported 'auth' instance
-                if (user) {
-                    currentUser = user;
-                    const userDoc = await getOrCreateUserDocument(user);
-                    currentUserData = userDoc.data();
-                    if (!currentUserData || !currentUserData.username) {
-                        showPage('page-username-setup');
-                    } else {
-                        updateProfileUI(currentUserData);
-                        showPage('page-timer');
-                        setupRealtimeListeners();
-                        loadDailyTotal();
-                    }
-                } else {
-                    currentUser = null;
-                    currentUserData = {};
-                    showPage('auth-screen');
-                }
-            });
-
-            // --- Authentication Listeners for forms/buttons (using imported 'auth' instance) ---
             ael('login-form', 'submit', async (e) => {
                 e.preventDefault();
                 console.log('Login attempt...');
@@ -1272,10 +818,10 @@
                     usernameError.textContent = 'Username must be at least 3 characters.';
                     return;
                 }
-
+                
                 if (currentUser && db) {
                     try {
-                        const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid); // Corrected path
+                        const userRef = doc(db, "users", currentUser.uid);
                         await updateDoc(userRef, { username: username });
                         currentUserData.username = username; // Update local state
                         updateProfileUI(currentUserData);
@@ -1310,7 +856,7 @@
             document.querySelectorAll('.category-option, .time-option').forEach(option => { option.addEventListener('click', () => { console.log('Category/time option selected.'); }); });
             ael('increase-capacity', 'click', () => { console.log('Increasing capacity...'); });
             ael('decrease-capacity', 'click', () => { console.log('Decreasing capacity...'); });
-
+            
             // --- Modals & Timer Controls ---
             ael('add-subject-btn', 'click', () => { console.log('Open add subject modal...'); });
             ael('add-subject-form', 'submit', async (e) => { e.preventDefault(); console.log('Adding subject...'); });
@@ -1321,7 +867,7 @@
             ael('stop-studying-btn', 'click', stopTimer);
             ael('pause-btn', 'click', pauseTimer);
             ael('resume-btn', 'click', resumeTimer);
-            ael('manual-start-btn', 'click', () => { console.log('Manual start button clicked.'); });
+            ael('manual-start-btn', 'click', () => { console.log('Manual start button clicked...'); });
             ael('normal-timer-btn', 'click', () => { console.log('Switch to normal timer...'); });
             ael('pomodoro-timer-btn', 'click', () => { console.log('Switch to Pomodoro timer...'); });
             ael('add-task-btn', 'click', () => { console.log('Open add task modal...'); });
@@ -1358,7 +904,7 @@
                 modal.addEventListener('click', (e) => { if (e.target === modal) { modal.classList.remove('active'); } });
                 modal.querySelectorAll('.close-modal').forEach(btn => { btn.addEventListener('click', () => { modal.classList.remove('active'); }); });
             });
-
+            
             // --- Web Worker Message Listener ---
             pomodoroWorker.onmessage = (e) => {
                 const { type, timeLeft } = e.data;
