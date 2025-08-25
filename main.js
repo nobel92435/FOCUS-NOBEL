@@ -23,12 +23,14 @@ const canvasFirebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined'
 
 // Fallback to hardcoded config if __firebase_config is not available (e.g., local testing)
 const firebaseConfig = Object.keys(canvasFirebaseConfig).length > 0 ? canvasFirebaseConfig : {
-    apiKey: "AIzaSyBSCrL6ravOzFnwOa7A0Jl_W68vEfZVcNw", // Replace with your actual key if needed for local testing
-    authDomain: "focus-flow-34c07.firebaseapp.com",
-    projectId: "focus-flow-34c07",
-    storageBucket: "focus-flow-34c07.appspot.com",
-    appId: "1:473980178825:web:164566ec8b068da3281158",
-    measurementId: "G-RRFK3LY0E4"
+    // --- UPDATED CONFIGURATION WITH YOUR PROVIDED DETAILS ---
+    apiKey: "AIzaSyCOK3nyWnRYDpu9SvY7oxLhb1A-85Qva5o",
+    authDomain: "focus-flow-bfcd1.firebaseapp.com",
+    projectId: "focus-flow-bfcd1",
+    storageBucket: "focus-flow-bfcd1.firebasestorage.app",
+    messagingSenderId: "637758725334",
+    appId: "1:637758725334:web:556ec4feda0e0d42ed3d77",
+    measurementId: "G-2YBNMYQK3D"
 };
 
 // --- App State ---
@@ -823,7 +825,7 @@ window.onload = async () => {
 
             document.getElementById('manual-start-btn').classList.add('hidden');
             document.getElementById('stop-studying-btn').classList.remove('hidden');
-            document.getElementById('pause-btn').classList.remove('hidden');
+            document.getElementById('pause-btn').classList.add('hidden');
         }
     });
 
@@ -944,493 +946,493 @@ window.onload = async () => {
         }
     });
 
-    subjectListContainer.addEventListener('dragleave', (e) => {
-        const targetItem = e.target.closest('.subject-item');
-        if (targetItem) {
-            targetItem.classList.remove('drag-over');
+subjectListContainer.addEventListener('dragleave', (e) => {
+    const targetItem = e.target.closest('.subject-item');
+    if (targetItem) {
+        targetItem.classList.remove('drag-over');
+    }
+});
+
+subjectListContainer.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    const targetItem = e.target.closest('.subject-item');
+
+    Array.from(subjectListContainer.children).forEach(item => item.classList.remove('drag-over'));
+
+    if (draggedItem && targetItem && draggedItem !== targetItem) {
+        const allItems = Array.from(subjectListContainer.children);
+        let newIndex = allItems.indexOf(targetItem);
+
+        const rect = targetItem.getBoundingClientRect();
+        const offsetY = e.clientY - rect.top;
+        const isAfter = offsetY > rect.height / 2;
+
+        if (isAfter && newIndex < allItems.length - 1) {
+            subjectListContainer.insertBefore(draggedItem, targetItem.nextSibling);
+            newIndex++; // Adjust index as item was inserted after
+        } else {
+            subjectListContainer.insertBefore(draggedItem, targetItem);
         }
-    });
 
-    subjectListContainer.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        const targetItem = e.target.closest('.subject-item');
+        await updateSubjectOrderInFirestore(subjectListContainer, currentUser, appId);
+    }
+});
 
-        Array.from(subjectListContainer.children).forEach(item => item.classList.remove('drag-over'));
+subjectListContainer.addEventListener('dragend', () => {
+    if (draggedItem) {
+        draggedItem.classList.remove('dragging');
+    }
+    Array.from(subjectListContainer.children).forEach(item => item.classList.remove('drag-over'));
+    draggedItem = null;
+});
 
-        if (draggedItem && targetItem && draggedItem !== targetItem) {
-            const allItems = Array.from(subjectListContainer.children);
-            let newIndex = allItems.indexOf(targetItem);
 
-            const rect = targetItem.getBoundingClientRect();
-            const offsetY = e.clientY - rect.top;
-            const isAfter = offsetY > rect.height / 2;
+document.getElementById('subject-selection-list').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const optionsBtn = e.target.closest('.subject-options-btn');
+    const subjectItem = e.target.closest('.subject-item');
 
-            if (isAfter && newIndex < allItems.length - 1) {
-                subjectListContainer.insertBefore(draggedItem, targetItem.nextSibling);
-                newIndex++; // Adjust index as item was inserted after
-            } else {
-                subjectListContainer.insertBefore(draggedItem, targetItem);
+    if (optionsBtn) {
+        const menu = optionsBtn.nextElementSibling;
+        document.querySelectorAll('.subject-options-menu').forEach(m => {
+            if (m !== menu) m.classList.remove('active');
+        });
+        menu.classList.toggle('active');
+        return;
+    }
+
+    // If a subject item itself is clicked (not the options button), select it
+    if (subjectItem) {
+        document.querySelectorAll('#subject-selection-list .subject-item').forEach(i => i.classList.remove('selected'));
+        subjectItem.classList.add('selected');
+    }
+
+    if (e.target.classList.contains('delete-subject-btn')) {
+        const itemToDelete = e.target.closest('.subject-item');
+        const subjectId = itemToDelete.dataset.subjectId;
+        const subjectName = itemToDelete.dataset.subjectName;
+        showConfirmationModal(
+            'Delete Subject?',
+            `Are you sure you want to delete "${subjectName}"? This cannot be undone.`,
+            async () => {
+                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+                await deleteDoc(doc(userRef, 'subjects', subjectId));
+                await updateSubjectOrderInFirestore(subjectListContainer, currentUser, appId);
+                showToast(`Deleted "${subjectName}"`, 'success');
             }
+        );
+    }
 
-            await updateSubjectOrderInFirestore(subjectListContainer, currentUser, appId);
-        }
-    });
+    if (e.target.classList.contains('edit-subject-btn')) {
+        const itemToEdit = e.target.closest('.subject-item');
+        const subjectId = itemToEdit.dataset.subjectId;
+        const subjectName = itemToEdit.dataset.subjectName;
+        const subjectColorClass = Array.from(itemToEdit.querySelector('.w-4.h-4').classList).find(c => c.startsWith('bg-'));
 
-    subjectListContainer.addEventListener('dragend', () => {
-        if (draggedItem) {
-            draggedItem.classList.remove('dragging');
-        }
-        Array.from(subjectListContainer.children).forEach(item => item.classList.remove('drag-over'));
-        draggedItem = null;
-    });
+        const modal = document.getElementById('edit-subject-modal');
+        document.getElementById('edit-subject-id').value = subjectId;
+        document.getElementById('edit-subject-name').value = subjectName;
 
-
-    document.getElementById('subject-selection-list').addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const optionsBtn = e.target.closest('.subject-options-btn');
-        const subjectItem = e.target.closest('.subject-item');
-
-        if (optionsBtn) {
-            const menu = optionsBtn.nextElementSibling;
-            document.querySelectorAll('.subject-options-menu').forEach(m => {
-                if (m !== menu) m.classList.remove('active');
-            });
-            menu.classList.toggle('active');
-            return;
-        }
-
-        // If a subject item itself is clicked (not the options button), select it
-        if (subjectItem) {
-            document.querySelectorAll('#subject-selection-list .subject-item').forEach(i => i.classList.remove('selected'));
-            subjectItem.classList.add('selected');
+        const colorPicker = document.getElementById('edit-subject-color-picker');
+        const addSubjectColorPicker = document.querySelector('#add-subject-modal .subject-color-picker');
+        if (addSubjectColorPicker) { // Ensure the source exists
+            colorPicker.innerHTML = addSubjectColorPicker.innerHTML; // Copy HTML for consistency
+        } else {
+            console.warn('Source color picker not found for copying. Populating with default colors.');
+            // Fallback: Populate with default colors if source isn't available
+            colorPicker.innerHTML = `
+                <div class="color-dot bg-blue-500 selected" data-color="bg-blue-500"></div>
+                <div class="color-dot bg-green-500" data-color="bg-green-500"></div>
+                <div class="color-dot bg-red-500" data-color="bg-red-500"></div>
+                <div class="color-dot bg-yellow-500" data-color="bg-yellow-500"></div>
+                <div class="color-dot bg-purple-500" data-color="bg-purple-500"></div>
+            `;
         }
 
-        if (e.target.classList.contains('delete-subject-btn')) {
-            const itemToDelete = e.target.closest('.subject-item');
-            const subjectId = itemToDelete.dataset.subjectId;
-            const subjectName = itemToDelete.dataset.subjectName;
-            showConfirmationModal(
-                'Delete Subject?',
-                `Are you sure you want to delete "${subjectName}"? This cannot be undone.`,
-                async () => {
-                    const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-                    await deleteDoc(doc(userRef, 'subjects', subjectId));
-                    await updateSubjectOrderInFirestore(subjectListContainer, currentUser, appId);
-                    showToast(`Deleted "${subjectName}"`, 'success');
-                }
-            );
-        }
-
-        if (e.target.classList.contains('edit-subject-btn')) {
-            const itemToEdit = e.target.closest('.subject-item');
-            const subjectId = itemToEdit.dataset.subjectId;
-            const subjectName = itemToEdit.dataset.subjectName;
-            const subjectColorClass = Array.from(itemToEdit.querySelector('.w-4.h-4').classList).find(c => c.startsWith('bg-'));
-
-            const modal = document.getElementById('edit-subject-modal');
-            document.getElementById('edit-subject-id').value = subjectId;
-            document.getElementById('edit-subject-name').value = subjectName;
-
-            const colorPicker = document.getElementById('edit-subject-color-picker');
-            const addSubjectColorPicker = document.querySelector('#add-subject-modal .subject-color-picker');
-            if (addSubjectColorPicker) { // Ensure the source exists
-                colorPicker.innerHTML = addSubjectColorPicker.innerHTML; // Copy HTML for consistency
-            } else {
-                console.warn('Source color picker not found for copying. Populating with default colors.');
-                // Fallback: Populate with default colors if source isn't available
-                colorPicker.innerHTML = `
-                    <div class="color-dot bg-blue-500 selected" data-color="bg-blue-500"></div>
-                    <div class="color-dot bg-green-500" data-color="bg-green-500"></div>
-                    <div class="color-dot bg-red-500" data-color="bg-red-500"></div>
-                    <div class="color-dot bg-yellow-500" data-color="bg-yellow-500"></div>
-                    <div class="color-dot bg-purple-500" data-color="bg-purple-500"></div>
-                `;
+        colorPicker.querySelectorAll('.color-dot').forEach(dot => {
+            dot.classList.remove('selected');
+            if (dot.dataset.color === subjectColorClass) {
+                dot.classList.add('selected');
             }
-
-            colorPicker.querySelectorAll('.color-dot').forEach(dot => {
-                dot.classList.remove('selected');
-                if (dot.dataset.color === subjectColorClass) {
-                    dot.classList.add('selected');
-                }
-                dot.addEventListener('click', () => {
-                    colorPicker.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
-                    dot.classList.add('selected');
-                });
+            dot.addEventListener('click', () => {
+                colorPicker.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+                dot.classList.add('selected');
             });
+        });
 
+        modal.classList.add('active');
+    }
+});
+
+const addTaskModal = document.getElementById('add-task-modal');
+ael('add-task-btn', 'click', () => { addTaskModal.classList.add('active'); });
+addTaskModal.querySelector('.close-modal').addEventListener('click', () => { addTaskModal.classList.remove('active'); });
+
+ael('add-task-form', 'submit', async (e) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    const name = document.getElementById('add-task-name').value.trim();
+    const date = document.getElementById('add-task-date').value;
+    if (!name || !date) {
+        showToast("Please provide a name and date for the task.", "error");
+        return;
+    }
+    const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+    const plannerTasksRef = collection(userRef, 'plannerTasks');
+    await addDoc(plannerTasksRef, { name, date, completed: false });
+
+    addTaskModal.classList.remove('active');
+    document.getElementById('add-task-form').reset();
+    showToast("Task added!", "success");
+});
+
+document.getElementById('planner-list').addEventListener('change', async (e) => {
+    if (e.target.classList.contains('task-checkbox')) {
+        const taskId = e.target.dataset.taskId;
+        const isCompleted = e.target.checked;
+        const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+        const taskRef = doc(userRef, 'plannerTasks', taskId);
+        await updateDoc(taskRef, { completed: isCompleted });
+    }
+});
+
+document.getElementById('ranking-period-tabs').addEventListener('click', (e) => {
+    if (e.target.classList.contains('ranking-tab-btn')) {
+        const period = e.target.dataset.period;
+        document.querySelectorAll('#ranking-period-tabs .ranking-tab-btn').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        renderLeaderboard(period);
+    }
+});
+
+document.getElementById('my-groups-list').addEventListener('click', (e) => {
+    const groupCard = e.target.closest('.group-card');
+    if (groupCard) {
+        const groupId = groupCard.dataset.groupId;
+        showPage('page-group-detail');
+        // Pass groupDetailUnsubscribers and memberTimerIntervals by reference
+        renderGroupDetail(groupId, currentGroupId, groupDetailUnsubscribers, memberTimerIntervals);
+    }
+});
+
+document.getElementById('all-groups-list')?.addEventListener('click', async (e) => {
+    const joinBtn = e.target.closest('.join-btn');
+    if (joinBtn && !joinBtn.disabled) {
+        const groupId = joinBtn.dataset.id;
+        const isPrivate = joinBtn.dataset.private === 'true';
+
+        if (isPrivate) {
+            const modal = document.getElementById('password-prompt-modal');
             modal.classList.add('active');
-        }
-    });
-
-    const addTaskModal = document.getElementById('add-task-modal');
-    ael('add-task-btn', 'click', () => { addTaskModal.classList.add('active'); });
-    addTaskModal.querySelector('.close-modal').addEventListener('click', () => { addTaskModal.classList.remove('active'); });
-
-    ael('add-task-form', 'submit', async (e) => {
-        e.preventDefault();
-        if (!currentUser) return;
-        const name = document.getElementById('add-task-name').value.trim();
-        const date = document.getElementById('add-task-date').value;
-        if (!name || !date) {
-            showToast("Please provide a name and date for the task.", "error");
-            return;
-        }
-        const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-        const plannerTasksRef = collection(userRef, 'plannerTasks');
-        await addDoc(plannerTasksRef, { name, date, completed: false });
-
-        addTaskModal.classList.remove('active');
-        document.getElementById('add-task-form').reset();
-        showToast("Task added!", "success");
-    });
-
-    document.getElementById('planner-list').addEventListener('change', async (e) => {
-        if (e.target.classList.contains('task-checkbox')) {
-            const taskId = e.target.dataset.taskId;
-            const isCompleted = e.target.checked;
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-            const taskRef = doc(userRef, 'plannerTasks', taskId);
-            await updateDoc(taskRef, { completed: isCompleted });
-        }
-    });
-
-    document.getElementById('ranking-period-tabs').addEventListener('click', (e) => {
-        if (e.target.classList.contains('ranking-tab-btn')) {
-            const period = e.target.dataset.period;
-            document.querySelectorAll('#ranking-period-tabs .ranking-tab-btn').forEach(btn => btn.classList.remove('active'));
-            e.target.classList.add('active');
-            renderLeaderboard(period);
-        }
-    });
-
-    document.getElementById('my-groups-list').addEventListener('click', (e) => {
-        const groupCard = e.target.closest('.group-card');
-        if (groupCard) {
-            const groupId = groupCard.dataset.groupId;
-            showPage('page-group-detail');
-            // Pass groupDetailUnsubscribers and memberTimerIntervals by reference
-            renderGroupDetail(groupId, currentGroupId, groupDetailUnsubscribers, memberTimerIntervals);
-        }
-    });
-
-    document.getElementById('all-groups-list')?.addEventListener('click', async (e) => {
-        const joinBtn = e.target.closest('.join-btn');
-        if (joinBtn && !joinBtn.disabled) {
-            const groupId = joinBtn.dataset.id;
-            const isPrivate = joinBtn.dataset.private === 'true';
-
-            if (isPrivate) {
-                const modal = document.getElementById('password-prompt-modal');
-                modal.classList.add('active');
-                document.getElementById('password-prompt-form').onsubmit = async (ev) => {
-                    ev.preventDefault();
-                    const password = document.getElementById('group-password-prompt-input').value;
-                    const groupDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', groupId));
-                    if (password !== groupDoc.data().password) {
-                        showToast('Incorrect password', 'error');
-                        return;
-                    }
-                    modal.classList.remove('active');
-                    await joinGroup(groupId);
-                };
-            } else {
-                await joinGroup(groupId);
-            }
-        }
-    });
-
-    document.getElementById('group-detail-nav').addEventListener('click', (e) => {
-        const navItem = e.target.closest('.group-nav-item');
-        if (navItem) {
-            document.querySelectorAll('.group-nav-item').forEach(item => item.classList.remove('active'));
-            navItem.classList.add('active');
-            renderGroupSubPage(navItem.dataset.subpage, currentGroupId);
-        }
-    });
-
-    // Profile Settings Modals
-    const editProfileModal = document.getElementById('edit-profile-modal');
-    ael('settings-account', 'click', () => {
-        document.getElementById('edit-username-input').value = currentUserData.username || '';
-        editProfileModal.classList.add('active');
-    });
-
-    const studyGoalModal = document.getElementById('study-goal-modal');
-    ael('settings-study-goal', 'click', () => {
-        document.getElementById('study-goal-input').value = currentUserData.studyGoalHours || '';
-        studyGoalModal.classList.add('active');
-    });
-
-    const pomodoroSettingsModal = document.getElementById('pomodoro-settings-modal');
-    ael('settings-pomodoro', 'click', () => {
-        document.getElementById('pomodoro-work-duration').value = pomodoroSettings.work;
-        document.getElementById('pomodoro-short-break-duration').value = pomodoroSettings.short_break;
-        document.getElementById('pomodoro-long-break-duration').value = pomodoroSettings.long_break;
-        document.getElementById('pomodoro-long-break-interval').value = pomodoroSettings.long_break_interval;
-        document.getElementById('pomodoro-auto-start-focus').checked = pomodoroSettings.autoStartFocus;
-        document.getElementById('pomodoro-auto-start-break').checked = pomodoroSettings.autoStartBreak;
-        document.getElementById('pomodoro-volume').value = pomodoroSounds.volume;
-
-        const soundDropdowns = [
-            { id: 'pomodoro-start-sound', key: 'start' },
-            { id: 'pomodoro-focus-sound', key: 'focus' },
-            { id: 'pomodoro-break-sound', key: 'break' }
-        ];
-        soundDropdowns.forEach(dd => {
-            const selectEl = document.getElementById(dd.id);
-            selectEl.innerHTML = ''; // Clear existing options
-            for (const [name, url] of Object.entries(availableSounds)) {
-                const option = document.createElement('option');
-                option.value = url;
-                option.textContent = name;
-                if (url === pomodoroSounds[dd.key]) {
-                    option.selected = true;
+            document.getElementById('password-prompt-form').onsubmit = async (ev) => {
+                ev.preventDefault();
+                const password = document.getElementById('group-password-prompt-input').value;
+                const groupDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', groupId));
+                if (password !== groupDoc.data().password) {
+                    showToast('Incorrect password', 'error');
+                    return;
                 }
-                selectEl.appendChild(option);
-            }
-        });
-
-        pomodoroSettingsModal.classList.add('active');
-    });
-
-    ael('edit-profile-form', 'submit', async (e) => {
-        e.preventDefault();
-        const newUsername = document.getElementById('edit-username-input').value.trim();
-        if (newUsername.length < 3) {
-            showToast("Username must be at least 3 characters.", "error");
-            return;
-        }
-        const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-        const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-        await updateDoc(userRef, { username: newUsername });
-        await updateDoc(publicUserRef, { username: newUsername });
-
-        editProfileModal.classList.remove('active');
-        showToast("Profile updated!", "success");
-    });
-
-    ael('study-goal-form', 'submit', async (e) => {
-        e.preventDefault();
-        const goal = parseInt(document.getElementById('study-goal-input').value, 10);
-        if (isNaN(goal) || goal < 1 || goal > 24) {
-            showToast("Please enter a valid number of hours (1-24).", "error");
-            return;
-        }
-        const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-        await updateDoc(userRef, { studyGoalHours: goal });
-
-        studyGoalModal.classList.remove('active');
-        showToast("Study goal updated!", "success");
-    });
-
-    ael('pomodoro-settings-form', 'submit', async (e) => {
-        e.preventDefault();
-        const newSettings = {
-            work: parseInt(document.getElementById('pomodoro-work-duration').value, 10),
-            short_break: parseInt(document.getElementById('pomodoro-short-break-duration').value, 10),
-            long_break: parseInt(document.getElementById('pomodoro-long-break-duration').value, 10),
-            long_break_interval: parseInt(document.getElementById('pomodoro-long-break-interval').value, 10),
-            autoStartFocus: document.getElementById('pomodoro-auto-start-focus').checked,
-            autoStartBreak: document.getElementById('pomodoro-auto-start-break').checked,
-        };
-        const newSounds = {
-            start: document.getElementById('pomodoro-start-sound').value,
-            focus: document.getElementById('pomodoro-focus-sound').value,
-            break: document.getElementById('pomodoro-break-sound').value,
-            volume: parseFloat(document.getElementById('pomodoro-volume').value)
-        };
-
-        if (Object.values(newSettings).some(v => typeof v === 'number' && (isNaN(v) || v < 1))) {
-            showToast("Please enter valid, positive numbers for all duration settings.", "error");
-            return;
-        }
-
-        const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-        await updateDoc(userRef, {
-            pomodoroSettings: newSettings,
-            pomodoroSounds: newSounds
-        });
-
-        pomodoroSettings = newSettings;
-        pomodoroSounds = newSounds;
-        updatePomodoroSettingsInUtils(pomodoroSettings);
-        updatePomodoroSoundsInUtils(pomodoroSounds);
-        pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings }); // Send to worker
-        pomodoroSettingsModal.classList.remove('active');
-        showToast("Pomodoro settings saved!", "success");
-    });
-
-    ael('edit-session-form', 'submit', async (e) => {
-        e.preventDefault();
-        const modal = document.getElementById('edit-session-modal');
-        const sessionId = document.getElementById('edit-session-id').value;
-        const newDurationMinutes = parseInt(document.getElementById('edit-session-duration').value, 10);
-        const oldDurationSeconds = parseInt(document.getElementById('edit-session-old-duration').value, 10);
-        const endedAt = new Date(document.getElementById('edit-session-ended-at').value);
-
-        if (isNaN(newDurationMinutes) || newDurationMinutes < 1) {
-            showToast('Please enter a valid duration.', 'error');
-            return;
-        }
-
-        const newDurationSeconds = newDurationMinutes * 60;
-        const durationDifference = newDurationSeconds - oldDurationSeconds;
-
-        const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-        const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-        const sessionRef = doc(userRef, 'sessions', sessionId);
-
-        try {
-            const sessionDoc = await getDoc(sessionRef);
-            const sessionType = sessionDoc.exists() ? sessionDoc.data().type || 'study' : 'study';
-
-            await updateDoc(sessionRef, { durationSeconds: newDurationSeconds });
-
-            if (sessionType === 'study') {
-                await updateDoc(userRef, { totalStudySeconds: increment(durationDifference) });
-                await updateDoc(publicUserRef, { totalStudySeconds: increment(durationDifference) });
-            } else {
-                await updateDoc(userRef, { totalBreakSeconds: increment(durationDifference) });
-                await updateDoc(publicUserRef, { totalBreakSeconds: increment(durationDifference) });
-            }
-
-            const sessionDateStr = endedAt.toISOString().split('T')[0];
-            const todayStr = getCurrentDate().toISOString().split('T')[0];
-            if (sessionDateStr === todayStr) {
-                if (sessionType === 'study') {
-                    totalTimeTodayInSeconds += durationDifference;
-                    if (totalTimeTodayInSeconds < 0) totalTimeTodayInSeconds = 0;
-                    await updateDoc(userRef, {
-                        totalTimeToday: {
-                            date: todayStr,
-                            seconds: totalTimeTodayInSeconds
-                        }
-                    });
-                } else {
-                    totalBreakTimeTodayInSeconds += durationDifference;
-                    if (totalBreakTimeTodayInSeconds < 0) totalBreakTimeTodayInSeconds = 0;
-                    await updateDoc(userRef, {
-                        totalBreakTimeToday: {
-                            date: todayStr,
-                            seconds: totalBreakTimeTodayInSeconds
-                        }
-                    });
-                }
-                updateDailyTotalsInUtils(totalTimeTodayInSeconds, totalBreakTimeTodayInSeconds);
-            }
-
-            modal.classList.remove('active');
-            showToast("Session updated successfully!", "success");
-        } catch (error) {
-            console.error("Error updating session:", error);
-            showToast("Failed to update session.", "error");
-        }
-    });
-
-    // Ranking Scope Switch Listeners
-    ael('group-ranking-scope-btn', 'click', () => {
-        if (!document.getElementById('group-ranking-scope-btn').classList.contains('active')) {
-            document.getElementById('global-ranking-scope-btn').classList.remove('active');
-            document.getElementById('group-ranking-scope-btn').classList.add('active');
-            const activePeriod = document.querySelector('#group-ranking-period-tabs .ranking-tab-btn.active')?.dataset.period || 'weekly';
-            renderGroupLeaderboard(activePeriod);
-        }
-    });
-
-    ael('global-ranking-scope-btn', 'click', () => {
-        if (!document.getElementById('global-ranking-scope-btn').classList.contains('active')) {
-            document.getElementById('group-ranking-scope-btn').classList.remove('active');
-            document.getElementById('global-ranking-scope-btn').classList.add('active');
-            const activePeriod = document.querySelector('#group-ranking-period-tabs .ranking-tab-btn.active')?.dataset.period || 'weekly';
-            renderLeaderboard(activePeriod, 'group-ranking-list');
-        }
-    });
-
-
-    window.addEventListener('click', (e) => {
-        // Close subject options menu if click is outside
-        if (!e.target.closest('.subject-options-btn')) {
-            document.querySelectorAll('.subject-options-menu').forEach(m => m.classList.remove('active'));
-        }
-        // Close log options menu if click is outside
-        if (!e.target.closest('.log-options-btn')) {
-            document.querySelectorAll('.log-options-menu').forEach(m => m.classList.remove('active'));
-        }
-    });
-
-    // General Modal closing for all modals
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) { // Only close if clicking on the modal backdrop
                 modal.classList.remove('active');
-            }
-        });
-        modal.querySelectorAll('.close-modal').forEach(btn => {
-            btn.addEventListener('click', () => { modal.classList.remove('active'); });
-        });
-    });
-
-    const pomodoroSettingsForm = document.getElementById('pomodoro-settings-form');
-    if (pomodoroSettingsForm) {
-        pomodoroSettingsForm.addEventListener('change', (e) => {
-            const target = e.target;
-            if (target.matches('select[id^="pomodoro-"]')) {
-                const soundUrl = target.value;
-                const volume = parseFloat(document.getElementById('pomodoro-volume').value);
-                playSound(soundUrl, volume);
-            } else if (target.id === 'pomodoro-volume') {
-                const sampleSoundUrl = document.getElementById('pomodoro-focus-sound').value; // Use a default or focus sound for volume preview
-                const volume = parseFloat(target.value);
-                playSound(sampleSoundUrl, volume);
-            }
-        });
-    }
-
-    ael('group-study-timer-btn', 'click', async () => {
-        if (currentUserData.joinedGroups && currentUserData.joinedGroups.length > 0) {
-            // Prefer currentGroupId if valid, otherwise use the first joined group
-            const targetGroupId = currentGroupId && currentUserData.joinedGroups.includes(currentGroupId) ? currentGroupId : currentUserData.joinedGroups[0];
-            currentGroupId = targetGroupId; // Update currentGroupId in main.js state
-            showPage('page-group-detail');
-            renderGroupDetail(targetGroupId, currentGroupId, groupDetailUnsubscribers, memberTimerIntervals);
+                await joinGroup(groupId);
+            };
         } else {
-            showPage('page-my-groups');
+            await joinGroup(groupId);
+        }
+    }
+});
+
+document.getElementById('group-detail-nav').addEventListener('click', (e) => {
+    const navItem = e.target.closest('.group-nav-item');
+    if (navItem) {
+        document.querySelectorAll('.group-nav-item').forEach(item => item.classList.remove('active'));
+        navItem.classList.add('active');
+        renderGroupSubPage(navItem.dataset.subpage, currentGroupId);
+    }
+});
+
+// Profile Settings Modals
+const editProfileModal = document.getElementById('edit-profile-modal');
+ael('settings-account', 'click', () => {
+    document.getElementById('edit-username-input').value = currentUserData.username || '';
+    editProfileModal.classList.add('active');
+});
+
+const studyGoalModal = document.getElementById('study-goal-modal');
+ael('settings-study-goal', 'click', () => {
+    document.getElementById('study-goal-input').value = currentUserData.studyGoalHours || '';
+    studyGoalModal.classList.add('active');
+});
+
+const pomodoroSettingsModal = document.getElementById('pomodoro-settings-modal');
+ael('settings-pomodoro', 'click', () => {
+    document.getElementById('pomodoro-work-duration').value = pomodoroSettings.work;
+    document.getElementById('pomodoro-short-break-duration').value = pomodoroSettings.short_break;
+    document.getElementById('pomodoro-long-break-duration').value = pomodoroSettings.long_break;
+    document.getElementById('pomodoro-long-break-interval').value = pomodoroSettings.long_break_interval;
+    document.getElementById('pomodoro-auto-start-focus').checked = pomodoroSettings.autoStartFocus;
+    document.getElementById('pomodoro-auto-start-break').checked = pomodoroSettings.autoStartBreak;
+    document.getElementById('pomodoro-volume').value = pomodoroSounds.volume;
+
+    const soundDropdowns = [
+        { id: 'pomodoro-start-sound', key: 'start' },
+        { id: 'pomodoro-focus-sound', key: 'focus' },
+        { id: 'pomodoro-break-sound', key: 'break' }
+    ];
+    soundDropdowns.forEach(dd => {
+        const selectEl = document.getElementById(dd.id);
+        selectEl.innerHTML = ''; // Clear existing options
+        for (const [name, url] of Object.entries(availableSounds)) {
+            const option = document.createElement('option');
+            option.value = url;
+            option.textContent = name;
+            if (url === pomodoroSounds[dd.key]) {
+                option.selected = true;
+            }
+            selectEl.appendChild(option);
         }
     });
 
-    // Service Worker Registration
-    if ('serviceWorker' in navigator) {
-        if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-            navigator.serviceWorker
-                .register('./service-worker.js', { scope: './' })
-                .then(registration => {
-                    console.log('Service Worker registered successfully with scope:', registration.scope);
-                    registration.onupdatefound = () => {
-                        const installingWorker = registration.installing;
-                        if (installingWorker) {
-                            installingWorker.onstatechange = () => {
-                                if (installingWorker.state === 'installed') {
-                                    if (navigator.serviceWorker.controller) {
-                                        showToast('New version available! Refresh for updates.', 'info', 5000);
-                                        console.log('New content is available; please refresh.');
-                                    } else {
-                                        console.log('Content is cached for offline use.');
-                                    }
-                                }
-                            };
-                        }
-                    };
-                })
-                .catch(error => {
-                    console.error('Service Worker registration failed:', error);
+    pomodoroSettingsModal.classList.add('active');
+});
+
+ael('edit-profile-form', 'submit', async (e) => {
+    e.preventDefault();
+    const newUsername = document.getElementById('edit-username-input').value.trim();
+    if (newUsername.length < 3) {
+        showToast("Username must be at least 3 characters.", "error");
+        return;
+    }
+    const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+    const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
+    await updateDoc(userRef, { username: newUsername });
+    await updateDoc(publicUserRef, { username: newUsername });
+
+    editProfileModal.classList.remove('active');
+    showToast("Profile updated!", "success");
+});
+
+ael('study-goal-form', 'submit', async (e) => {
+    e.preventDefault();
+    const goal = parseInt(document.getElementById('study-goal-input').value, 10);
+    if (isNaN(goal) || goal < 1 || goal > 24) {
+        showToast("Please enter a valid number of hours (1-24).", "error");
+        return;
+    }
+    const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+    await updateDoc(userRef, { studyGoalHours: goal });
+
+    studyGoalModal.classList.remove('active');
+    showToast("Study goal updated!", "success");
+});
+
+ael('pomodoro-settings-form', 'submit', async (e) => {
+    e.preventDefault();
+    const newSettings = {
+        work: parseInt(document.getElementById('pomodoro-work-duration').value, 10),
+        short_break: parseInt(document.getElementById('pomodoro-short-break-duration').value, 10),
+        long_break: parseInt(document.getElementById('pomodoro-long-break-duration').value, 10),
+        long_break_interval: parseInt(document.getElementById('pomodoro-long-break-interval').value, 10),
+        autoStartFocus: document.getElementById('pomodoro-auto-start-focus').checked,
+        autoStartBreak: document.getElementById('pomodoro-auto-start-break').checked,
+    };
+    const newSounds = {
+        start: document.getElementById('pomodoro-start-sound').value,
+        focus: document.getElementById('pomodoro-focus-sound').value,
+        break: document.getElementById('pomodoro-break-sound').value,
+        volume: parseFloat(document.getElementById('pomodoro-volume').value)
+    };
+
+    if (Object.values(newSettings).some(v => typeof v === 'number' && (isNaN(v) || v < 1))) {
+        showToast("Please enter valid, positive numbers for all duration settings.", "error");
+        return;
+    }
+
+    const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+    await updateDoc(userRef, {
+        pomodoroSettings: newSettings,
+        pomodoroSounds: newSounds
+    });
+
+    pomodoroSettings = newSettings;
+    pomodoroSounds = newSounds;
+    updatePomodoroSettingsInUtils(pomodoroSettings);
+    updatePomodoroSoundsInUtils(pomodoroSounds);
+    pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings }); // Send to worker
+    pomodoroSettingsModal.classList.remove('active');
+    showToast("Pomodoro settings saved!", "success");
+});
+
+ael('edit-session-form', 'submit', async (e) => {
+    e.preventDefault();
+    const modal = document.getElementById('edit-session-modal');
+    const sessionId = document.getElementById('edit-session-id').value;
+    const newDurationMinutes = parseInt(document.getElementById('edit-session-duration').value, 10);
+    const oldDurationSeconds = parseInt(document.getElementById('edit-session-old-duration').value, 10);
+    const endedAt = new Date(document.getElementById('edit-session-ended-at').value);
+
+    if (isNaN(newDurationMinutes) || newDurationMinutes < 1) {
+        showToast('Please enter a valid duration.', 'error');
+        return;
+    }
+
+    const newDurationSeconds = newDurationMinutes * 60;
+    const durationDifference = newDurationSeconds - oldDurationSeconds;
+
+    const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+    const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
+    const sessionRef = doc(userRef, 'sessions', sessionId);
+
+    try {
+        const sessionDoc = await getDoc(sessionRef);
+        const sessionType = sessionDoc.exists() ? sessionDoc.data().type || 'study' : 'study';
+
+        await updateDoc(sessionRef, { durationSeconds: newDurationSeconds });
+
+        if (sessionType === 'study') {
+            await updateDoc(userRef, { totalStudySeconds: increment(durationDifference) });
+            await updateDoc(publicUserRef, { totalStudySeconds: increment(durationDifference) });
+        } else {
+            await updateDoc(userRef, { totalBreakSeconds: increment(durationDifference) });
+            await updateDoc(publicUserRef, { totalBreakSeconds: increment(durationDifference) });
+        }
+
+        const sessionDateStr = endedAt.toISOString().split('T')[0];
+        const todayStr = getCurrentDate().toISOString().split('T')[0];
+        if (sessionDateStr === todayStr) {
+            if (sessionType === 'study') {
+                totalTimeTodayInSeconds += durationDifference;
+                if (totalTimeTodayInSeconds < 0) totalTimeTodayInSeconds = 0;
+                await updateDoc(userRef, {
+                    totalTimeToday: {
+                        date: todayStr,
+                        seconds: totalTimeTodayInSeconds
+                    }
                 });
-
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                console.log('New service worker activated, reloading page for latest content.');
-                window.location.reload();
-            });
-        } else {
-            console.warn('Service Worker not registered. This feature requires a secure context (HTTPS or localhost). The Pomodoro timer will be less reliable in the background.');
+            } else {
+                totalBreakTimeTodayInSeconds += durationDifference;
+                if (totalBreakTimeTodayInSeconds < 0) totalBreakTimeTodayInSeconds = 0;
+                await updateDoc(userRef, {
+                    totalBreakTimeToday: {
+                        date: todayStr,
+                        seconds: totalBreakTimeTodayInSeconds
+                    }
+                });
+            }
+            updateDailyTotalsInUtils(totalTimeTodayInSeconds, totalBreakTimeTodayInSeconds);
         }
+
+        modal.classList.remove('active');
+        showToast("Session updated successfully!", "success");
+    } catch (error) {
+        console.error("Error updating session:", error);
+        showToast("Failed to update session.", "error");
     }
+});
+
+// Ranking Scope Switch Listeners
+ael('group-ranking-scope-btn', 'click', () => {
+    if (!document.getElementById('group-ranking-scope-btn').classList.contains('active')) {
+        document.getElementById('global-ranking-scope-btn').classList.remove('active');
+        document.getElementById('group-ranking-scope-btn').classList.add('active');
+        const activePeriod = document.querySelector('#group-ranking-period-tabs .ranking-tab-btn.active')?.dataset.period || 'weekly';
+        renderGroupLeaderboard(activePeriod);
+    }
+});
+
+ael('global-ranking-scope-btn', 'click', () => {
+    if (!document.getElementById('global-ranking-scope-btn').classList.contains('active')) {
+        document.getElementById('group-ranking-scope-btn').classList.remove('active');
+        document.getElementById('global-ranking-scope-btn').classList.add('active');
+        const activePeriod = document.querySelector('#group-ranking-period-tabs .ranking-tab-btn.active')?.dataset.period || 'weekly';
+        renderLeaderboard(activePeriod, 'group-ranking-list');
+    }
+});
+
+
+window.addEventListener('click', (e) => {
+    // Close subject options menu if click is outside
+    if (!e.target.closest('.subject-options-btn')) {
+        document.querySelectorAll('.subject-options-menu').forEach(m => m.classList.remove('active'));
+    }
+    // Close log options menu if click is outside
+    if (!e.target.closest('.log-options-btn')) {
+        document.querySelectorAll('.log-options-menu').forEach(m => m.classList.remove('active'));
+    }
+});
+
+// General Modal closing for all modals
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) { // Only close if clicking on the modal backdrop
+            modal.classList.remove('active');
+        }
+    });
+    modal.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', () => { modal.classList.remove('active'); });
+    });
+});
+
+const pomodoroSettingsForm = document.getElementById('pomodoro-settings-form');
+if (pomodoroSettingsForm) {
+    pomodoroSettingsForm.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target.matches('select[id^="pomodoro-"]')) {
+            const soundUrl = target.value;
+            const volume = parseFloat(document.getElementById('pomodoro-volume').value);
+            playSound(soundUrl, volume);
+        } else if (target.id === 'pomodoro-volume') {
+            const sampleSoundUrl = document.getElementById('pomodoro-focus-sound').value; // Use a default or focus sound for volume preview
+            const volume = parseFloat(target.value);
+            playSound(sampleSoundUrl, volume);
+        }
+    });
+}
+
+ael('group-study-timer-btn', 'click', async () => {
+    if (currentUserData.joinedGroups && currentUserData.joinedGroups.length > 0) {
+        // Prefer currentGroupId if valid, otherwise use the first joined group
+        const targetGroupId = currentGroupId && currentUserData.joinedGroups.includes(currentGroupId) ? currentGroupId : currentUserData.joinedGroups[0];
+        currentGroupId = targetGroupId; // Update currentGroupId in main.js state
+        showPage('page-group-detail');
+        renderGroupDetail(targetGroupId, currentGroupId, groupDetailUnsubscribers, memberTimerIntervals);
+    } else {
+        showPage('page-my-groups');
+    }
+});
+
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+    if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+        navigator.serviceWorker
+            .register('./service-worker.js', { scope: './' })
+            .then(registration => {
+                console.log('Service Worker registered successfully with scope:', registration.scope);
+                registration.onupdatefound = () => {
+                    const installingWorker = registration.installing;
+                    if (installingWorker) {
+                        installingWorker.onstatechange = () => {
+                            if (installingWorker.state === 'installed') {
+                                if (navigator.serviceWorker.controller) {
+                                    showToast('New version available! Refresh for updates.', 'info', 5000);
+                                    console.log('New content is available; please refresh.');
+                                } else {
+                                    console.log('Content is cached for offline use.');
+                                }
+                            }
+                        };
+                    }
+                };
+            })
+            .catch(error => {
+                console.error('Service Worker registration failed:', error);
+            });
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('New service worker activated, reloading page for latest content.');
+            window.location.reload();
+        });
+    } else {
+        console.warn('Service Worker not registered. This feature requires a secure context (HTTPS or localhost). The Pomodoro timer will be less reliable in the background.');
+    }
+}
 };
