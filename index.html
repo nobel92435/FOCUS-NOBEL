@@ -3,47 +3,792 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FocusFlow - Real-time Study Timer</title>
-    <link rel="stylesheet" href="style.css">
+    <title>FocusFlow - Real-time Study Timer (Skeleton)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel='icon' href="favicon.ico">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Tone.js for generating alarm sounds -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+
+    <style>
+        /* Essential layout and visibility styles */
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .nav-item.active svg, .nav-item.active p, .group-nav-item.active i, .group-nav-item.active p { color: #3B82F6; }
+        #auth-screen, .page, #app-container, .modal { display: none; }
+        #auth-screen.active, .page.active, #app-container.active, .modal.active { display: flex; }
+        .timer-switch-btn.active { background-color: #3b82f6; color: white; } /* Basic active state */
+    </style>
 </head>
 <body class="bg-gray-900 text-white flex flex-col h-screen antialiased">
 
+    <!-- Authentication Screen -->
+    <div id="auth-screen" class="active flex-col items-center justify-center h-full p-4">
+        <div class="w-full max-w-sm text-center">
+            <h1 class="text-4xl font-bold mb-2">FocusFlow</h1>
+            <p class="text-gray-400 mb-8">Login or Create Account</p>
+            <div id="auth-form-container" class="bg-gray-800 p-8 rounded-2xl shadow-lg">
+                <form id="login-form" class="space-y-4">
+                    <h2 class="text-2xl font-bold mb-4">Login</h2>
+                    <input type="email" id="login-email" placeholder="Email" class="w-full bg-gray-700 rounded-lg p-3" required>
+                    <input type="password" id="login-password" placeholder="Password" class="w-full bg-gray-700 rounded-lg p-3" required>
+                    <button type="submit" class="w-full bg-blue-600 py-3 rounded-lg">Sign In</button>
+                </form>
+                <form id="signup-form" class="hidden space-y-4">
+                    <h2 class="text-2xl font-bold mb-4">Create Account</h2>
+                    <input type="email" id="signup-email" placeholder="Email" class="w-full bg-gray-700 rounded-lg p-3" required>
+                    <input type="password" id="signup-password" placeholder="Password" class="w-full bg-gray-700 rounded-lg p-3" required minlength="6">
+                    <button type="submit" class="w-full bg-blue-600 py-3 rounded-lg">Sign Up</button>
+                </form>
+                <p id="auth-error" class="text-red-400 text-sm mt-4 h-5"></p>
+                <div class="flex items-center my-6"><hr class="flex-grow border-gray-600"><span class="mx-4 text-gray-500">OR</span><hr class="flex-grow border-gray-600"></div>
+                <button id="google-signin-btn" class="w-full bg-white text-gray-800 py-3 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 mr-3" viewBox="0 0 48 48">...</svg> Sign in with Google
+                </button>
+                <p class="mt-8 text-sm text-gray-400">
+                    <span id="login-toggle-text">Don't have an account?</span>
+                    <button id="auth-toggle-btn" class="font-semibold text-blue-400">Sign Up</button>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Username Setup Page -->
+    <div id="page-username-setup" class="page flex-col items-center justify-center h-full p-4">
+        <div class="w-full max-w-sm text-center">
+            <h1 class="text-3xl font-bold mb-2">Welcome!</h1>
+            <p class="text-gray-400 mb-8">Set up your username.</p>
+            <div class="bg-gray-800 p-8 rounded-2xl shadow-lg">
+                <form id="username-setup-form" class="space-y-4">
+                    <input type="text" id="username-input" placeholder="Enter your username" class="w-full bg-gray-700 rounded-lg p-3" required minlength="3">
+                    <p id="username-error" class="text-red-400 text-sm h-5"></p>
+                    <button type="submit" class="w-full bg-blue-600 py-3 rounded-lg">Save Username</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application Container -->
     <div id="app-container" class="flex-col h-screen">
         <main class="flex-grow overflow-y-auto no-scrollbar">
+            <!-- Timer Page -->
             <div id="page-timer" class="page active flex-col h-full">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20">
-                    <h1 class="text-2xl font-bold text-white">FocusFlow</h1>
+                <header class="p-4 flex items-center justify-between">
+                    <h1 class="text-2xl font-bold">FocusFlow</h1>
                     <div class="flex items-center space-x-4">
-                        <a href="my_group.html" id="groups-btn" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-gray-400 hover:bg-gray-600 transition">
-                            <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                            </svg>
-                        </a>
+                        <button id="groups-btn" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">...</svg></button>
+                        <button id="profile-btn" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden"><div id="header-avatar">U</div></button>
                     </div>
                 </header>
-                <div class="relative flex-grow flex items-center justify-center -mt-16">
-                    <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
-                        <p id="active-subject-display" class="text-xl font-semibold text-blue-400 h-7 mb-2"></p>
-                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
+                <div class="relative flex-grow flex items-center justify-center">
+                    <div class="relative text-center z-10 p-4 sm:p-8 rounded-full">
+                        <div class="timer-switch-container">
+                            <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
+                            <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
+                        </div>
+                        <button id="group-study-timer-btn" class="text-sm"><i class="fas fa-users-line"></i> Group Study</button>
+                        <p id="active-subject-display" class="text-xl font-semibold h-7 mb-2"></p>
+                        <p id="pomodoro-status"></p>
+                        <h2 id="session-timer" class="text-7xl md:text-8xl">00:00:00</h2>
                         <p id="total-time-display" class="text-gray-400 mt-2">Total Today: 00:00:00</p>
+                        <p id="total-break-time-display" class="text-gray-400 mt-1">Total Break: 00:00:00</p>
                         <div id="timer-controls" class="mt-8">
-                            <button id="start-studying-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Studying</button>
-                            <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
+                            <button id="start-studying-btn" class="bg-blue-600 py-4 px-8 rounded-full text-lg">Start Studying</button>
+                            <button id="stop-studying-btn" class="hidden bg-red-600 py-4 px-10 rounded-full text-lg">Stop</button>
+                            <button id="manual-start-btn" class="hidden bg-green-600 py-4 px-8 rounded-full text-lg">Start Next</button>
+                            <button id="pause-btn" class="hidden bg-yellow-500 py-4 px-10 rounded-full text-lg">Pause</button>
+                            <button id="resume-btn" class="hidden bg-green-500 py-4 px-8 rounded-full text-lg">Resume</button>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Stats Page -->
+            <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar">
+                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button" data-target="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
+                    <h1 class="text-xl font-bold">Stats & Insights</h1>
+                    <div class="w-6"></div>
+                </header>
+                <div id="insights-container" class="p-4">
+                    <!-- Dashboard content will be injected here -->
+                </div>
+            </div>
+
+            <!-- Ranking Page -->
+            <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar">
+                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button" data-target="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
+                    <h1 class="text-xl font-bold">Leaderboard</h1>
+                    <div class="w-6"></div>
+                </header>
+                <div class="px-4 pt-4 border-b border-gray-800">
+                    <div class="flex space-x-1" id="ranking-period-tabs">
+                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg active" data-period="weekly">Last 7 Days</button>
+                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg" data-period="monthly">Last 30 Days</button>
+                    </div>
+                </div>
+                <div id="ranking-list" class="ranking-list">
+                    <!-- Leaderboard items will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Planner Page -->
+            <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar">
+                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button" data-target="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
+                    <h1 class="text-xl font-bold">Study Planner</h1>
+                    <button id="add-task-btn" class="text-blue-500">Add Task</button>
+                </header>
+                <div id="planner-list" class="planner-container">
+                    <!-- Planner tasks will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Profile Page -->
+            <div id="page-profile" class="page flex-col h-full overflow-y-auto no-scrollbar">
+                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button" data-target="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
+                    <h1 class="text-xl font-bold">Profile Settings</h1>
+                    <div class="w-6"></div>
+                </header>
+                <div class="profile-container p-4">
+                    <div class="profile-header"><div id="profile-page-avatar" class="profile-avatar">U</div><div><div id="profile-page-name" class="profile-name">User Name</div><div id="profile-page-email" class="profile-email">user@example.com</div></div></div>
+                    <div class="card text-center p-4 bg-yellow-500/10 border-yellow-500/30 mb-6 rounded-lg">
+                        <h3 class="font-bold text-lg text-yellow-400">Current Streak</h3>
+                        <p class="text-4xl font-black text-white" id="profile-streak-display">0 days</p>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold mb-4">Achievements</h3>
+                        <div id="achievements-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-4 text-center">
+                            <!-- Achievements will be rendered here by JavaScript -->
+                        </div>
+                    </div>
+                    <div id="settings-account" class="settings-item"><div class="settings-label">Account</div><div class="settings-value">Edit profile information</div></div>
+                    <div id="settings-pomodoro" class="settings-item"><div class="settings-label">Pomodoro Timer</div><div class="settings-value">Customize durations & sounds</div></div>
+                    <div id="settings-study-goal" class="settings-item"><div class="settings-label">Study Goals</div><div id="study-goal-value" class="settings-value">Not set</div></div>
+                    <button id="sign-out-btn" class="w-full mt-8 py-3 bg-red-600 rounded-lg">Sign Out</button>
+                </div>
+            </div>
+
+            <!-- My Groups Page -->
+            <div id="page-my-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
+                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button" data-target="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
+                    <h1 class="text-xl font-bold">My Groups</h1>
+                    <button id="notification-btn" class="text-gray-400"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
+                </header>
+                <div id="my-groups-list" class="p-4 space-y-3 flex-grow"></div>
+                <button id="go-to-find-groups-btn" class="create-group-btn"><i class="fas fa-plus text-xl"></i></button>
+            </div>
+
+            <!-- Find Groups Page -->
+            <div id="page-find-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
+                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button" data-target="my-groups"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
+                    <h1 class="text-xl font-bold">Study Groups</h1>
+                    <button id="search-groups-btn" class="text-gray-400"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
+                </header>
+                <div id="all-groups-list" class="p-4 space-y-3 flex-grow"></div>
+                <button id="go-to-create-group-btn" class="create-group-btn"><i class="fas fa-plus text-xl"></i></button>
+            </div>
+
+            <!-- Create Group Page -->
+            <div id="page-create-group" class="page flex-col h-full overflow-y-auto no-scrollbar">
+                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button" data-target="find-groups"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
+                    <h1 class="text-xl font-bold">Create Group</h1>
+                    <button id="create-group-done-btn" class="font-semibold text-blue-500">Done</button>
+                </header>
+                <div class="p-4">
+                    <form id="create-group-form" class="space-y-4">
+                        <div class="form-group"><label for="group-name-input" class="block mb-2">Group Name</label><input type="text" id="group-name-input" placeholder="Enter group name" class="w-full bg-gray-800 rounded-lg p-3" required></div>
+                        <div class="form-group"><label for="group-password-input" class="block mb-2">Password (Optional)</label><input type="password" id="group-password-input" placeholder="Set a password" class="w-full bg-gray-800 rounded-lg p-3"></div>
+                        <div class="form-group"><label class="block mb-2">Category</label><div class="grid grid-cols-2 gap-3"><div class="category-option selected">Secondary School</div><div>...</div></div></div>
+                        <div class="form-group"><label class="block mb-2">Daily Time Goal</label><div class="grid grid-cols-3 gap-2"><div class="time-option selected">3 hours</div><div>...</div></div></div>
+                        <div class="form-group"><label class="block mb-2">Capacity</label><div class="flex items-center space-x-3"><button id="decrease-capacity" type="button" class="w-10 h-10 bg-gray-800 rounded-lg">-</button><div id="capacity-value" class="text-xl font-bold w-12 text-center">15</div><button id="increase-capacity" type="button" class="w-10 h-10 bg-gray-800 rounded-lg">+</button></div></div>
+                        <div class="form-group"><label for="group-description-input" class="block mb-2">Group Description</label><textarea id="group-description-input" placeholder="Describe your group" class="w-full bg-gray-800 rounded-lg p-3" rows="4" required></textarea></div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Group Detail Page -->
+            <div id="page-group-detail" class="page flex-col h-full">
+                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button" data-target="my-groups"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
+                    <div class="flex-grow flex items-center justify-center gap-4">
+                        <div class="group-detail-header-dropdown">
+                            <select id="group-selector" class="w-full">...</select>
+                        </div>
+                        <div id="ranking-scope-switch" class="hidden">
+                            <button id="group-ranking-scope-btn" class="timer-switch-btn active">Group</button>
+                            <button id="global-ranking-scope-btn" class="timer-switch-btn">Global</button>
+                        </div>
+                    </div>
+                    <div class="w-6"></div>
+                </header>
+                <div id="group-detail-content" class="flex-grow overflow-y-auto no-scrollbar">
+                    <!-- Group sub-page content (home, attendance, rankings, invite, chat) will be rendered here -->
+                </div>
+                <nav id="group-detail-nav" class="bg-gray-800 border-t border-gray-700 grid grid-cols-5 sticky bottom-0">
+                    <button class="group-nav-item active" data-subpage="home"><i class="fas fa-home"></i><p class="text-xs mt-1">Home</p></button>
+                    <button class="group-nav-item" data-subpage="attendance"><i class="fas fa-calendar-check"></i><p class="text-xs mt-1">Attendance</p></button>
+                    <button class="group-nav-item" data-subpage="rankings"><i class="fas fa-chart-bar"></i><p class="text-xs mt-1">Rankings</p></button>
+                    <button class="group-nav-item" data-subpage="invite"><i class="fas fa-user-plus"></i><p class="text-xs mt-1">Invite</p></button>
+                    <button class="group-nav-item" data-subpage="chat"><i class="fas fa-comments"></i><p class="text-xs mt-1">Chat</p></button>
+                </nav>
+            </div>
         </main>
+
+        <!-- Main Navigation Bar -->
         <nav id="main-nav" class="bg-gray-800 border-t border-gray-700 grid grid-cols-5 sticky bottom-0">
-            <a href="index.html" class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors active" data-page="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p class="text-xs mt-1">Timer</p></a>
-            <a href="stats.html" class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="stats"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg><p class="text-xs mt-1">Stats</p></a>
-            <a href="ranking.html" class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="ranking"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg><p class="text-xs mt-1">Ranking</p></a>
-            <a href="planner.html" class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="planner"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg><p class="text-xs mt-1">Planner</p></a>
-            <a href="add_subject.html" class="p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors"><svg class="w-6 h-6 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p class="text-xs mt-1 text-blue-400">Add Subject</p></a>
+            <button class="nav-item active" data-page="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">...</svg><p class="text-xs mt-1">Timer</p></button>
+            <button class="nav-item" data-page="stats"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">...</svg><p class="text-xs mt-1">Stats</p></button>
+            <button class="nav-item" data-page="ranking"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">...</svg><p class="text-xs mt-1">Ranking</p></button>
+            <button class="nav-item" data-page="planner"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">...</svg><p class="text-xs mt-1">Planner</p></button>
+            <button id="add-subject-btn" class="nav-item"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">...</svg><p class="text-xs mt-1">Add Subject</p></button>
         </nav>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Toast Container for notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Modals -->
+    <div id="add-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Subject</div><button class="close-modal">&times;</button></div><form id="add-subject-form">...</form></div></div>
+    <div id="start-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Start New Session</div><button id="close-start-session-modal" class="close-modal">&times;</button></div><form id="start-session-form">...</form></div></div>
+    <div id="add-task-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Task</div><button class="close-modal">&times;</button></div><form id="add-task-form">...</form></div></div>
+    <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form">...</form></div></div>
+    <div id="confirmation-modal" class="modal"><div class="modal-content"><div class="modal-header><h2 id="confirmation-modal-title" class="modal-title">Are you sure?</h2><button class="close-modal">&times;</button></div><p id="confirmation-modal-message">...</p><div id="confirmation-modal-buttons">...</div></div></div>
+    <div id="edit-profile-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Edit Profile</div><button class="close-modal">&times;</button></div><form id="edit-profile-form">...</form></div></div>
+    <div id="study-goal-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form">...</form></div></div>
+    <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form">...</form></div></div>
+    <div id="edit-session-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Edit Session</div><button class="close-modal">&times;</button></div><form id="edit-session-form">...</form></div></div>
+    <div id="edit-subject-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Edit Subject</div><button class="close-modal">&times;</button></div><form id="edit-subject-form">...</form></div></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, doc, setDoc, getDoc, addDoc, collection, onSnapshot,
+            arrayUnion, updateDoc, deleteDoc, getDocs, serverTimestamp,
+            query, orderBy, limit, increment, where, runTransaction
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Achievement Definitions ---
+        const ACHIEVEMENTS = {
+            'novice_scholar': { name: 'Novice Scholar', description: 'Study for a total of 1 hour.' },
+            'dedicated_learner': { name: 'Dedicated Learner', description: 'Study for a total of 10 hours.' },
+            'marathoner': { name: 'Marathoner', description: 'Complete a single study session over 2 hours.' },
+            'consistent_coder': { name: 'Consistent Coder', description: 'Maintain a 7-day study streak.' }
+        };
+
+        // --- Web Worker Implementation (Simplified) ---
+        const workerCode = `
+            let timerInterval = null;
+            let endTime = 0;
+            let remainingTimeOnPause = 0;
+            let isPaused = false;
+            let currentPhaseDuration = 0;
+
+            function tick() {
+                // Simplified tick logic
+                self.postMessage({ type: 'tick', timeLeft: Math.round((endTime - Date.now()) / 1000) });
+                if (Math.round((endTime - Date.now()) / 1000) <= 0) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    self.postMessage({ type: 'phase_ended' });
+                }
+            }
+
+            self.onmessage = function(e) {
+                const { command, duration } = e.data;
+                switch(command) {
+                    case 'start': // Simplified start
+                        if (timerInterval) clearInterval(timerInterval);
+                        endTime = Date.now() + duration * 1000;
+                        timerInterval = setInterval(tick, 1000);
+                        tick();
+                        break;
+                    case 'pause': // Simplified pause
+                        if (timerInterval) { clearInterval(timerInterval); isPaused = true; remainingTimeOnPause = endTime - Date.now(); timerInterval = null; }
+                        break;
+                    case 'resume': // Simplified resume
+                        if (isPaused && remainingTimeOnPause > 0) { isPaused = false; endTime = Date.now() + remainingTimeOnPause; timerInterval = setInterval(tick, 1000); tick(); remainingTimeOnPause = 0; }
+                        break;
+                    case 'stop': // Simplified stop
+                        if (timerInterval) clearInterval(timerInterval);
+                        timerInterval = null; endTime = 0; remainingTimeOnPause = 0; isPaused = false;
+                        break;
+                }
+            };
+        `;
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const pomodoroWorker = new Worker(URL.createObjectURL(blob));
+
+        // --- Service Worker Communication Functions (Placeholders) ---
+        function scheduleSWAlarm(payload) {
+            console.log('Scheduling SW alarm:', payload);
+        }
+        function cancelSWAlarm(timerId) {
+            console.log('Cancelling SW alarm:', timerId);
+        }
+
+        // --- Application State ---
+        let db, auth;
+        let currentUser = null;
+        let currentUserData = {};
+        let dashboardCharts = {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        let userSessions = []; 
+        let isAudioUnlocked = false;
+        let isAddingSubjectFromStartSession = false;
+
+        // Timer State
+        let isPaused = false;
+        let pauseStartTime = 0;
+        let timerInterval = null;
+        let sessionStartTime = 0;
+        let totalTimeTodayInSeconds = 0;
+        let totalBreakTimeTodayInSeconds = 0;
+        let activeSubject = '';
+        let groupDetailUnsubscribers = [];
+        let memberTimerIntervals = [];
+        let currentGroupId = null;
+        let groupRealtimeData = { members: {}, sessions: {} };
+        
+        // Break Timer State
+        let breakTimerInterval = null;
+        let breakStartTime = 0;
+
+        // Drag & Drop State
+        let draggedItem = null;
+
+        // Pomodoro State
+        let timerMode = 'normal';
+        let pomodoroState = 'idle';
+        let nextPomodoroPhase = null;
+        let pomodoroSettings = { work: 25, short_break: 5, long_break: 15, long_break_interval: 4, autoStartBreak: true, autoStartFocus: true };
+        let pomodoroSounds = { start: "tone_simple_beep", focus: "tone_chime_chord", break: "tone_metal_bell", volume: 1.0 };
+        const availableSounds = { 'None': '', 'Simple Beep': 'tone_simple_beep', 'Chime Chord': 'tone_chime_chord', 'Metal Bell': 'tone_metal_bell', /* ... other sounds ... */ };
+
+        // Attendance State
+        let attendanceMonth = new Date().getMonth();
+        let attendanceYear = new Date().getFullYear();
+
+        // UI Elements (references populated in window.onload)
+        let authError, sessionTimerDisplay, totalTimeDisplay, totalBreakTimeDisplay, activeSubjectDisplay, pomodoroStatusDisplay;
+
+        // --- UI Helper Functions ---
+        function getCurrentDate() { return new Date(); }
+
+        function playSound(soundId, volume) {
+            console.log(`Playing sound: ${soundId} at volume ${volume}`);
+            // Tone.js sound generation logic (simplified for skeleton)
+        }
+
+        function unlockAudio() {
+            console.log('Attempting to unlock audio.');
+        }
+
+        function showToast(message, type = 'info', duration = 3000) {
+            console.log(`Toast (${type}): ${message}`);
+            // Actual toast display logic removed
+        }
+
+        function showConfirmationModal(title, message, onConfirm) {
+            console.log(`Confirmation: ${title} - ${message}`);
+            // Actual modal display logic removed
+            // Simulate confirmation for skeleton
+            // onConfirm(); 
+        }
+
+        function formatTime(seconds, includeSeconds = true) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            if (includeSeconds) return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            return `${h > 0 ? h + 'h ' : ''}${m}m`;
+        }
+
+        function formatPomodoroTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        // --- Firebase Initialization ---
+        function initializeFirebase() {
+            console.log('Initializing Firebase...');
+            const firebaseConfig = { /* ... your config ... */ };
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUser = user;
+                    const userDoc = await getOrCreateUserDocument(user);
+                    currentUserData = userDoc.data();
+                    if (!currentUserData || !currentUserData.username) {
+                        showPage('page-username-setup');
+                    } else {
+                        updateProfileUI(currentUserData);
+                        showPage('page-timer');
+                        setupRealtimeListeners();
+                        loadDailyTotal();
+                    }
+                } else {
+                    currentUser = null;
+                    currentUserData = {};
+                    showPage('auth-screen');
+                }
+            });
+        }
+
+        // --- Page Navigation ---
+        function showPage(pageId) {
+            console.log(`Navigating to page: ${pageId}`);
+            // Logic to hide/show pages and navigation bars
+        }
+
+        async function startTimer(subject) {
+            console.log(`Starting timer for: ${subject} in ${timerMode} mode.`);
+            // Timer start logic (normal or Pomodoro)
+            // Save idle break if any
+            // Update studying status in Firestore
+        }
+        
+        async function stopTimer() {
+            console.log('Stopping timer.');
+            // Stop timer logic, save session
+            // Reset UI and Firestore studying status
+        }
+
+        function pauseTimer() {
+            console.log('Pausing timer.');
+            // Pause timer logic
+        }
+
+        function resumeTimer() {
+            console.log('Resuming timer.');
+            // Resume timer logic
+        }
+
+        async function handlePomodoroPhaseEnd({ newState, oldState }) {
+            console.log(`Pomodoro phase ended: ${oldState} -> ${newState}`);
+            // Logic to save session, play sound, and transition to next phase (auto/manual)
+        }
+
+        function startNextPomodoroPhase(state) {
+            console.log(`Starting next Pomodoro phase: ${state}`);
+            // Logic to set timer, update UI, and schedule next SW alarm
+        }
+
+        function updateBreakTimerDisplay() {
+            // Logic to update break timer on UI
+        }
+        
+        function updateTotalTimeDisplay() {
+            if (totalTimeDisplay && totalBreakTimeDisplay) {
+                totalTimeDisplay.textContent = `Total Today: ${formatTime(totalTimeTodayInSeconds)}`;
+                totalBreakTimeTodayDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
+            }
+        }
+
+        async function saveSession(subject, durationSeconds, sessionType = 'study') {
+            console.log(`Saving ${sessionType} session: ${subject} for ${durationSeconds} seconds.`);
+            // Firestore transaction to save session and update totals/streaks/achievements
+        }
+
+        async function checkAndAwardAchievements(completedSessionDuration) {
+            console.log('Checking for achievements...');
+            // Logic to compare study data against ACHIEVEMENTS and update Firestore
+        }
+
+        async function loadDailyTotal() {
+            console.log('Loading daily totals...');
+            // Fetch daily totals from Firestore
+        }
+
+        async function getOrCreateUserDocument(user) {
+            console.log(`Getting or creating user document for: ${user.uid}`);
+            // Fetch or create user document in Firestore with initial data
+            return { exists: () => true, data: () => ({ username: user.displayName, email: user.email }) }; // Simplified return
+        }
+
+        function updateProfileUI(userData) {
+            console.log('Updating profile UI with:', userData.username);
+            // Update username, email, avatar, streak, and achievements display
+        }
+
+        function setupRealtimeListeners() {
+            console.log('Setting up real-time Firestore listeners...');
+            // onSnapshot listeners for user data, subjects, sessions, groups, planner tasks
+        }
+        
+        async function renderLeaderboard(period = 'weekly', containerId = 'ranking-list') {
+            console.log(`Rendering leaderboard for period: ${period} in ${containerId}`);
+            // Fetch and sort public user study data, then render HTML
+        }
+
+        function renderStatsPage(focusSessions) {
+            console.log('Rendering stats page...');
+            // Initialize dashboard UI, nav, and charts
+        }
+
+        function initializeDashboard(focusSessions, insightsContainer) {
+            console.log('Initializing dashboard charts and insights...');
+            // Process session data, initialize Chart.js graphs, generate AI Insight
+        }
+
+        function generateAIInsight(sessions) {
+            console.log('Generating AI insight...');
+            // Logic to analyze sessions and generate textual insights
+        }
+
+        function renderPeriodView() {
+            console.log('Rendering Period View for dashboard...');
+            // Render specific charts and data for period view
+        }
+
+        function renderMonthView() {
+            console.log('Rendering Month View for dashboard...');
+            // Render specific charts and data for month view
+        }
+
+        function renderTrendView() {
+            console.log('Rendering Trend View for dashboard...');
+            // Render specific charts and data for trend view
+        }
+        
+        function renderDayView() {
+            console.log('Rendering Day View for dashboard...');
+            // Render specific charts and data for day view
+        }
+
+        function renderSessionLog(sessions, containerId) {
+            console.log(`Rendering session log in ${containerId}`);
+            // Render list of sessions with edit/delete options
+        }
+        
+        async function deleteSession(sessionId, durationSeconds, endedAt) {
+            console.log(`Deleting session: ${sessionId}`);
+            // Firestore deletion and total updates
+        }
+
+        async function renderJoinedGroups() {
+            console.log('Rendering joined groups...');
+            // Fetch and display groups the current user is a member of
+        }
+
+        async function renderAvailableGroups() {
+            console.log('Rendering available groups...');
+            // Fetch and display groups the current user can join
+        }
+
+        async function joinGroup(groupId) {
+            console.log(`Joining group: ${groupId}`);
+            // Add user to group in Firestore
+        }
+
+        function renderSubjectSelectionList(subjects, newlyAddedSubjectName = null) {
+            console.log('Rendering subject selection list...');
+            // Display draggable list of subjects
+        }
+        
+        function renderPlanner(tasks) {
+            console.log('Rendering planner tasks...');
+            // Display tasks grouped by date
+        }
+        
+        async function renderGroupDetail(groupId) {
+            console.log(`Rendering group detail for: ${groupId}`);
+            // Set current group, populate dropdown, set up member listeners
+        }
+
+        function setupGroupMemberListeners(memberIds) {
+            console.log('Setting up group member listeners for:', memberIds);
+            // onSnapshot listeners for group members' status and sessions
+        }
+
+        function renderGroupSubPage(subpage) {
+            console.log(`Rendering group sub-page: ${subpage}`);
+            // Switch content based on subpage (home, attendance, rankings, invite, chat)
+        }
+        
+        function renderGroupMembers() {
+            console.log('Rendering group members...');
+            // Display list of group members with their study status
+        }
+        
+        function renderGroupLeaderboard(period) {
+            console.log(`Rendering group leaderboard for period: ${period}`);
+            // Filter and sort group member sessions, then render
+        }
+
+        function renderGroupAttendance() {
+            console.log('Rendering group attendance...');
+            // Display calendar, stats, and member attendance for the selected month
+        }
+        
+        function isToday(year, month, day) {
+            // Check if a given date is today
+            return false;
+        }
+        
+        function setupGroupChat(groupId) {
+            console.log(`Setting up group chat for: ${groupId}`);
+            // onSnapshot for messages, and form submission for sending messages
+        }
+
+        async function updateSubjectOrderInFirestore() {
+            console.log('Updating subject order in Firestore...');
+            // Update 'order' field for subjects in Firestore
+        }
+
+        // --- Event Listeners (Simplified) ---
+        const ael = (id, event, callback) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener(event, callback);
+        };
+
+        // Authentication Listeners
+        ael('login-form', 'submit', async (e) => { e.preventDefault(); console.log('Login attempt...'); });
+        ael('signup-form', 'submit', async (e) => { e.preventDefault(); console.log('Signup attempt...'); });
+        ael('google-signin-btn', 'click', async () => { console.log('Google Sign-in attempt...'); });
+        ael('auth-toggle-btn', 'click', () => { console.log('Toggling auth form...'); });
+        ael('sign-out-btn', 'click', () => { console.log('Signing out...'); });
+        ael('username-setup-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving username...'); });
+
+        // Navigation Listeners
+        document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', function() { console.log('Nav item clicked:', this.dataset.page); }));
+        document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function() { console.log('Back button clicked to:', this.dataset.target); }));
+        ael('groups-btn', 'click', () => { console.log('Go to groups...'); });
+        ael('go-to-find-groups-btn', 'click', () => { console.log('Go to find groups...'); });
+        ael('go-to-create-group-btn', 'click', () => { console.log('Go to create group...'); });
+        ael('profile-btn', 'click', () => { console.log('Go to profile...'); });
+        ael('group-study-timer-btn', 'click', () => { console.log('Group study button clicked.'); });
+
+        // Group Creation Listeners
+        ael('create-group-done-btn', 'click', async () => { console.log('Creating group...'); });
+        document.querySelectorAll('.category-option, .time-option').forEach(option => { option.addEventListener('click', () => { console.log('Category/time option selected.'); }); });
+        ael('increase-capacity', 'click', () => { console.log('Increasing capacity...'); });
+        ael('decrease-capacity', 'click', () => { console.log('Decreasing capacity...'); });
+        
+        // Modals & Timer Controls
+        ael('add-subject-btn', 'click', () => { console.log('Open add subject modal...'); });
+        ael('add-subject-form', 'submit', async (e) => { e.preventDefault(); console.log('Adding subject...'); });
+        ael('edit-subject-form', 'submit', async (e) => { e.preventDefault(); console.log('Editing subject...'); });
+        ael('start-studying-btn', 'click', () => { console.log('Open start session modal...'); });
+        ael('open-add-subject-modal-from-start', 'click', () => { console.log('Open add subject from start session modal...'); });
+        ael('start-session-form', 'submit', (e) => { e.preventDefault(); console.log('Starting session from modal...'); });
+        ael('stop-studying-btn', 'click', stopTimer);
+        ael('pause-btn', 'click', pauseTimer);
+        ael('resume-btn', 'click', resumeTimer);
+        ael('manual-start-btn', 'click', () => { console.log('Manual start button clicked...'); });
+        ael('normal-timer-btn', 'click', () => { console.log('Switch to normal timer...'); });
+        ael('pomodoro-timer-btn', 'click', () => { console.log('Switch to Pomodoro timer...'); });
+        ael('add-task-btn', 'click', () => { console.log('Open add task modal...'); });
+        ael('add-task-form', 'submit', async (e) => { e.preventDefault(); console.log('Adding task...'); });
+        document.getElementById('planner-list').addEventListener('change', async (e) => { console.log('Task checkbox changed...'); });
+        document.getElementById('ranking-period-tabs').addEventListener('click', (e) => { console.log('Ranking period tab clicked...'); });
+        document.getElementById('my-groups-list').addEventListener('click', (e) => { console.log('Group card clicked...'); });
+        document.getElementById('group-detail-nav').addEventListener('click', (e) => { console.log('Group detail nav item clicked...'); });
+        ael('group-ranking-scope-btn', 'click', () => { console.log('Group ranking scope switched to Group...'); });
+        ael('global-ranking-scope-btn', 'click', () => { console.log('Group ranking scope switched to Global...'); });
+        ael('settings-account', 'click', () => { console.log('Open edit profile modal...'); });
+        ael('edit-profile-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving profile changes...'); });
+        ael('settings-study-goal', 'click', () => { console.log('Open study goal modal...'); });
+        ael('study-goal-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving study goal...'); });
+        ael('settings-pomodoro', 'click', () => { console.log('Open Pomodoro settings modal...'); });
+        ael('pomodoro-settings-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving Pomodoro settings...'); });
+        ael('edit-session-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving edited session...'); });
+
+        // General Modal closing
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => { if (e.target === modal) { modal.classList.remove('active'); } });
+            modal.querySelectorAll('.close-modal').forEach(btn => { btn.addEventListener('click', () => { modal.classList.remove('active'); }); });
+        });
+        
+        // --- Web Worker Message Listener ---
+        pomodoroWorker.onmessage = (e) => {
+            const { type, timeLeft } = e.data;
+            if (type === 'tick') {
+                sessionTimerDisplay.textContent = formatPomodoroTime(timeLeft);
+            } else if (type === 'phase_ended') {
+                handlePomodoroPhaseEnd({ /* ... determine newState, oldState ... */ });
+            }
+        };
+
+        // --- Service Worker Message Listener ---
+        navigator.serviceWorker.addEventListener('message', async (event) => {
+            if (event.data && event.data.type === 'TIMER_ENDED') {
+                handlePomodoroPhaseEnd(event.data);
+            }
+        });
+
+        // --- Drag and Drop Functionality for Subjects (Event listeners only) ---
+        const subjectListContainer = document.getElementById('subject-selection-list');
+        if (subjectListContainer) {
+            subjectListContainer.addEventListener('dragstart', (e) => { console.log('Drag started for subject.'); });
+            subjectListContainer.addEventListener('dragover', (e) => { e.preventDefault(); console.log('Drag over subject.'); });
+            subjectListContainer.addEventListener('dragenter', (e) => { e.preventDefault(); console.log('Drag entered subject.'); });
+            subjectListContainer.addEventListener('dragleave', (e) => { console.log('Drag left subject.'); });
+            subjectListContainer.addEventListener('drop', async (e) => { e.preventDefault(); console.log('Subject dropped.'); await updateSubjectOrderInFirestore(); });
+            subjectListContainer.addEventListener('dragend', () => { console.log('Drag ended for subject.'); });
+            subjectListContainer.addEventListener('click', async (e) => { console.log('Subject item clicked for edit/delete.'); });
+        }
+
+
+        window.onload = () => {
+            authError = document.getElementById('auth-error');
+            sessionTimerDisplay = document.getElementById('session-timer');
+            totalTimeDisplay = document.getElementById('total-time-display');
+            totalBreakTimeDisplay = document.getElementById('total-break-time-display');
+            activeSubjectDisplay = document.getElementById('active-subject-display');
+            pomodoroStatusDisplay = document.getElementById('pomodoro-status');
+            initializeFirebase();
+
+            const pomodoroSettingsForm = document.getElementById('pomodoro-settings-form');
+            if (pomodoroSettingsForm) {
+                pomodoroSettingsForm.addEventListener('change', (e) => {
+                    const target = e.target;
+                    if (target.matches('select[id^="pomodoro-"]')) {
+                        playSound(target.value, parseFloat(document.getElementById('pomodoro-volume').value));
+                    } else if (target.id === 'pomodoro-volume') {
+                        playSound(document.getElementById('pomodoro-focus-sound').value, parseFloat(target.value));
+                    }
+                });
+            }
+
+            // Service Worker Registration
+            if ('serviceWorker' in navigator) {
+                if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                    navigator.serviceWorker
+                        .register('./service-worker.js', { scope: './' })
+                        .then(registration => {
+                            console.log('Service Worker registered successfully:', registration.scope);
+                            registration.onupdatefound = () => { /* ... update logic ... */ };
+                        })
+                        .catch(error => {
+                            console.error('Service Worker registration failed:', error);
+                        });
+                    navigator.serviceWorker.addEventListener('controllerchange', () => { window.location.reload(); });
+                } else {
+                    console.warn('Service Worker not registered. Requires HTTPS or localhost.');
+                }
+            }
+        };
+    </script>
 </body>
 </html>
