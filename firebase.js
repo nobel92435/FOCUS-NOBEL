@@ -97,17 +97,18 @@ let authError, sessionTimerDisplay, totalTimeDisplay, totalBreakTimeDisplay, act
 function initializeFirebase() {
     try {
         const firebaseConfig = {
-            apiKey: "AIzaSyBSCrL6ravOzFnwOa7A0Jl_W68vEfZVcNw", // NOTE: This API key is public. For production, consider environment variables.
-            authDomain: "focus-flow-34c07.firebaseapp.com",
-            projectId: "focus-flow-34c07",
-            storageBucket: "focus-flow-34c07.appspot.com",
-            appId: "1:473980178825:web:164566ec8b068da3281158",
-            measurementId: "G-RRFK3LY0E4"
-        };
+  apiKey: "AIzaSyBSCrL6ravOzFnwOa7A0Jl_W68vEfZVcNw",
+  authDomain: "focus-flow-34c07.firebaseapp.com",
+  projectId: "focus-flow-34c07",
+  storageBucket: "focus-flow-34c07.firebasestorage.app",
+  messagingSenderId: "473980178825",
+  appId: "1:473980178825:web:164566ec8b068da3281158",
+  measurementId: "G-RRFK3LY0E4"
+};
 
-        const app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
