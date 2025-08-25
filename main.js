@@ -1,7 +1,7 @@
 // /js/main.js
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, doc, collection, onSnapshot, query, orderBy, getDocs, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, collection, onSnapshot, query, orderBy, getDocs, updateDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import {
     initializeAuth, setupAuthListeners, handleLogin, handleSignup, handleGoogleSignIn, handleSignOut, handleUsernameSetup
@@ -9,7 +9,8 @@ import {
 import {
     initUI, showToast, showConfirmationModal, showPage, formatTime, formatPomodoroTime, updateTotalTimeDisplay, updateProfileUI,
     renderJoinedGroups, renderAvailableGroups, renderSubjectSelectionList, renderPlanner, renderGroupDetail,
-    setupGroupMemberListeners, renderGroupSubPage, renderGroupMembers, renderGroupLeaderboard, renderGroupAttendance, renderLeaderboard, initializeDashboard
+    setupGroupMemberListeners, renderGroupSubPage, renderGroupMembers, renderGroupLeaderboard, renderLeaderboard, initializeDashboard,
+    updateUIUserReferences // New function to update user references in UI module
 } from './ui.js';
 import {
     ACHIEVEMENTS, availableSounds, playSound, unlockAudio, scheduleSWAlarm, cancelSWAlarm,
@@ -18,8 +19,11 @@ import {
 } from './utils.js';
 
 // --- Application Setup ---
-const firebaseConfig = {
-    apiKey: "AIzaSyBSCrL6ravOzFnwOa7A0Jl_W68vEfZVcNw",
+const canvasFirebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+
+// Fallback to hardcoded config if __firebase_config is not available (e.g., local testing)
+const firebaseConfig = Object.keys(canvasFirebaseConfig).length > 0 ? canvasFirebaseConfig : {
+    apiKey: "AIzaSyBSCrL6ravOzFnwOa7A0Jl_W68vEfZVcNw", // Replace with your actual key if needed for local testing
     authDomain: "focus-flow-34c07.firebaseapp.com",
     projectId: "focus-flow-34c07",
     storageBucket: "focus-flow-34c07.appspot.com",
@@ -85,6 +89,18 @@ let attendanceYear = getCurrentDate().getFullYear();
 window.attendanceMonth = attendanceMonth; // Expose to UI module for navigation
 window.attendanceYear = attendanceYear; // Expose to UI module for navigation
 
+
+// Function to update currentUser and currentUserData across modules
+function updateCurrentUserAndData(user, userData) {
+    currentUser = user;
+    currentUserData = userData;
+    // Notify UI module about updated user references
+    updateUIUserReferences(currentUser, currentUserData);
+    // Notify Utils module about updated user references
+    setUtilsGlobals(db, currentUser, appId, pomodoroSettings, pomodoroSounds, totalTimeTodayInSeconds, totalBreakTimeTodayInSeconds);
+}
+
+
 // --- Web Worker Implementation ---
 const workerCode = `
     let timerInterval = null;
@@ -92,6 +108,10 @@ const workerCode = `
     let remainingTimeOnPause = 0;
     let isPaused = false;
     let currentPhaseDuration = 0;
+    let workerPomodoroSettings = {
+        work: 25, short_break: 5, long_break: 15, long_break_interval: 4,
+        autoStartBreak: true, autoStartFocus: true
+    }; // Internal settings for the worker
 
     function tick() {
         if (isPaused) return;
@@ -109,7 +129,7 @@ const workerCode = `
     }
 
     self.onmessage = function(e) {
-        const { command, duration } = e.data;
+        const { command, duration, newSettings } = e.data;
         switch(command) {
             case 'start':
                 isPaused = false;
@@ -142,6 +162,9 @@ const workerCode = `
                 endTime = 0;
                 remainingTimeOnPause = 0;
                 isPaused = false;
+                break;
+            case 'updateSettings': // NEW: Handle settings update for the worker
+                workerPomodoroSettings = { ...workerPomodoroSettings, ...newSettings };
                 break;
         }
     };
@@ -233,6 +256,7 @@ async function stopTimer() {
     if (timerMode === 'pomodoro' && pomodoroState !== 'idle') {
         const workDuration = pomodoroSettings.work * 60;
         const displayTime = sessionTimerDisplay.textContent;
+        // The display time in pomodoro mode is MM:SS, so parse it accordingly
         const timeLeftInSeconds = (parseInt(displayTime.split(':')[0], 10) * 60) + parseInt(displayTime.split(':')[1], 10);
         const elapsedSeconds = workDuration - timeLeftInSeconds;
 
@@ -407,7 +431,9 @@ function setupRealtimeListeners() {
     onSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
             const data = doc.data();
-            currentUserData = data;
+            currentUserData = data; // Update currentUserData reference
+            updateCurrentUserAndData(currentUser, currentUserData); // Update UI module's references
+
             const todayStr = getCurrentDate().toISOString().split('T')[0];
             if (!data.totalTimeToday || data.totalTimeToday.date !== todayStr || !data.totalBreakTimeToday || data.totalBreakTimeToday.date !== todayStr) {
                 loadDailyTotal();
@@ -510,14 +536,13 @@ window.onload = async () => {
         groupRealtimeData
     );
 
+    // Initial setup for utils globals
     setUtilsGlobals(db, currentUser, appId, pomodoroSettings, pomodoroSounds, totalTimeTodayInSeconds, totalBreakTimeTodayInSeconds);
 
 
     setupAuthListeners(auth, {
         onUserLoggedIn: async (user, userData) => {
-            currentUser = user;
-            currentUserData = userData;
-            updateCurrentUserAndData(currentUser, currentUserData); // Update UI module's references
+            updateCurrentUserAndData(user, userData); // Use the new function to update user references
 
             if (currentUserData.pomodoroSettings) {
                 pomodoroSettings = { ...pomodoroSettings, ...currentUserData.pomodoroSettings };
@@ -542,9 +567,7 @@ window.onload = async () => {
             }
         },
         onUserLoggedOut: () => {
-            currentUser = null;
-            currentUserData = {};
-            updateCurrentUserAndData(null, {});
+            updateCurrentUserAndData(null, {}); // Use the new function to clear user references
             showPage('auth-screen');
         }
     });
@@ -593,6 +616,7 @@ window.onload = async () => {
             return;
         }
         usernameError.textContent = '';
+        // handleUsernameSetup already updates currentUserData and profileUI internally
         await handleUsernameSetup(currentUser, username);
     });
 
@@ -607,6 +631,7 @@ window.onload = async () => {
     document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function () {
         const targetPage = this.getAttribute('data-target');
         showPage(`page-${targetPage}`);
+        // Optionally update main nav active state if navigating back to a main nav page
         const navItem = document.querySelector(`.nav-item[data-page="${targetPage}"]`);
         if (navItem) {
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -670,7 +695,7 @@ window.onload = async () => {
         });
     });
 
-    let capacity = 15;
+    let capacity = 15; // Initial capacity
     ael('increase-capacity', 'click', () => { if (capacity < 100) { document.getElementById('capacity-value').textContent = ++capacity; } else showToast('Maximum capacity is 100', 'info'); });
     ael('decrease-capacity', 'click', () => { if (capacity > 2) { document.getElementById('capacity-value').textContent = --capacity; } else showToast('Minimum capacity is 2', 'info'); });
 
@@ -714,12 +739,12 @@ window.onload = async () => {
         addSubjectModal.classList.remove('active');
         document.getElementById('add-subject-form').reset();
         addSubjectModal.querySelector('.color-dot.selected')?.classList.remove('selected');
-        addSubjectModal.querySelector('.color-dot[data-color="bg-blue-500"]')?.classList.add('selected');
+        addSubjectModal.querySelector('.color-dot[data-color="bg-blue-500"]')?.classList.add('selected'); // Reset to default selection
 
         const updatedSubjectsSnapshot = await getDocs(query(subjectsRef, orderBy('order', 'asc')));
         const subjects = [];
         updatedSubjectsSnapshot.forEach(doc => subjects.push({ id: doc.id, ...doc.data() }));
-        renderSubjectSelectionList(subjects, name);
+        renderSubjectSelectionList(subjects, name); // Pass the newly added subject name to potentially select it
 
         showToast("Subject added!", "success");
 
@@ -808,7 +833,7 @@ window.onload = async () => {
 
     ael('normal-timer-btn', 'click', () => {
         if (timerMode === 'normal') return;
-        if (timerInterval || pomodoroStatusDisplay.textContent) stopTimer();
+        if (timerInterval || pomodoroState !== 'idle') stopTimer(); // Stop any active timer
         timerMode = 'normal';
         normalTimerBtn.classList.add('active');
         pomodoroTimerBtn.classList.remove('active');
@@ -818,7 +843,7 @@ window.onload = async () => {
 
     ael('pomodoro-timer-btn', 'click', () => {
         if (timerMode === 'pomodoro') return;
-        if (timerInterval) stopTimer();
+        if (timerInterval || pomodoroState !== 'idle') stopTimer(); // Stop any active timer
         timerMode = 'pomodoro';
         pomodoroTimerBtn.classList.add('active');
         normalTimerBtn.classList.remove('active');
@@ -883,7 +908,7 @@ window.onload = async () => {
             draggedItem = targetItem;
             e.dataTransfer.effectAllowed = 'move';
             const img = new Image();
-            img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+            img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // Transparent image for drag ghost
             e.dataTransfer.setDragImage(img, 0, 0);
             setTimeout(() => {
                 draggedItem.classList.add('dragging');
@@ -897,10 +922,12 @@ window.onload = async () => {
         if (targetItem && targetItem !== draggedItem) {
             const rect = targetItem.getBoundingClientRect();
             const offsetY = e.clientY - rect.top;
-            const isAfter = offsetY > rect.height / 2;
+            const isAfter = offsetY > rect.height / 2; // Determine if we're dragging over the top or bottom half
 
+            // Remove drag-over class from all items first
             Array.from(subjectListContainer.children).forEach(item => item.classList.remove('drag-over'));
 
+            // Add drag-over class to indicate drop target
             if (isAfter) {
                 targetItem.classList.add('drag-over');
             } else {
@@ -910,7 +937,7 @@ window.onload = async () => {
     });
 
     subjectListContainer.addEventListener('dragenter', (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Necessary to allow drop
         const targetItem = e.target.closest('.subject-item');
         if (targetItem && targetItem !== draggedItem) {
             targetItem.classList.add('drag-over');
@@ -940,7 +967,7 @@ window.onload = async () => {
 
             if (isAfter && newIndex < allItems.length - 1) {
                 subjectListContainer.insertBefore(draggedItem, targetItem.nextSibling);
-                newIndex++;
+                newIndex++; // Adjust index as item was inserted after
             } else {
                 subjectListContainer.insertBefore(draggedItem, targetItem);
             }
@@ -972,6 +999,7 @@ window.onload = async () => {
             return;
         }
 
+        // If a subject item itself is clicked (not the options button), select it
         if (subjectItem) {
             document.querySelectorAll('#subject-selection-list .subject-item').forEach(i => i.classList.remove('selected'));
             subjectItem.classList.add('selected');
@@ -1006,9 +1034,9 @@ window.onload = async () => {
             const colorPicker = document.getElementById('edit-subject-color-picker');
             const addSubjectColorPicker = document.querySelector('#add-subject-modal .subject-color-picker');
             if (addSubjectColorPicker) { // Ensure the source exists
-                colorPicker.innerHTML = addSubjectColorPicker.innerHTML;
+                colorPicker.innerHTML = addSubjectColorPicker.innerHTML; // Copy HTML for consistency
             } else {
-                console.warn('Source color picker not found for copying.');
+                console.warn('Source color picker not found for copying. Populating with default colors.');
                 // Fallback: Populate with default colors if source isn't available
                 colorPicker.innerHTML = `
                     <div class="color-dot bg-blue-500 selected" data-color="bg-blue-500"></div>
@@ -1069,6 +1097,8 @@ window.onload = async () => {
     document.getElementById('ranking-period-tabs').addEventListener('click', (e) => {
         if (e.target.classList.contains('ranking-tab-btn')) {
             const period = e.target.dataset.period;
+            document.querySelectorAll('#ranking-period-tabs .ranking-tab-btn').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
             renderLeaderboard(period);
         }
     });
@@ -1112,6 +1142,8 @@ window.onload = async () => {
     document.getElementById('group-detail-nav').addEventListener('click', (e) => {
         const navItem = e.target.closest('.group-nav-item');
         if (navItem) {
+            document.querySelectorAll('.group-nav-item').forEach(item => item.classList.remove('active'));
+            navItem.classList.add('active');
             renderGroupSubPage(navItem.dataset.subpage, currentGroupId);
         }
     });
@@ -1146,7 +1178,7 @@ window.onload = async () => {
         ];
         soundDropdowns.forEach(dd => {
             const selectEl = document.getElementById(dd.id);
-            selectEl.innerHTML = '';
+            selectEl.innerHTML = ''; // Clear existing options
             for (const [name, url] of Object.entries(availableSounds)) {
                 const option = document.createElement('option');
                 option.value = url;
@@ -1223,7 +1255,7 @@ window.onload = async () => {
         pomodoroSounds = newSounds;
         updatePomodoroSettingsInUtils(pomodoroSettings);
         updatePomodoroSoundsInUtils(pomodoroSounds);
-        pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings });
+        pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings }); // Send to worker
         pomodoroSettingsModal.classList.remove('active');
         showToast("Pomodoro settings saved!", "success");
     });
@@ -1316,17 +1348,20 @@ window.onload = async () => {
 
 
     window.addEventListener('click', (e) => {
+        // Close subject options menu if click is outside
         if (!e.target.closest('.subject-options-btn')) {
             document.querySelectorAll('.subject-options-menu').forEach(m => m.classList.remove('active'));
         }
+        // Close log options menu if click is outside
         if (!e.target.closest('.log-options-btn')) {
             document.querySelectorAll('.log-options-menu').forEach(m => m.classList.remove('active'));
         }
     });
 
+    // General Modal closing for all modals
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
+            if (e.target === modal) { // Only close if clicking on the modal backdrop
                 modal.classList.remove('active');
             }
         });
@@ -1344,7 +1379,7 @@ window.onload = async () => {
                 const volume = parseFloat(document.getElementById('pomodoro-volume').value);
                 playSound(soundUrl, volume);
             } else if (target.id === 'pomodoro-volume') {
-                const sampleSoundUrl = document.getElementById('pomodoro-focus-sound').value;
+                const sampleSoundUrl = document.getElementById('pomodoro-focus-sound').value; // Use a default or focus sound for volume preview
                 const volume = parseFloat(target.value);
                 playSound(sampleSoundUrl, volume);
             }
@@ -1353,8 +1388,9 @@ window.onload = async () => {
 
     ael('group-study-timer-btn', 'click', async () => {
         if (currentUserData.joinedGroups && currentUserData.joinedGroups.length > 0) {
+            // Prefer currentGroupId if valid, otherwise use the first joined group
             const targetGroupId = currentGroupId && currentUserData.joinedGroups.includes(currentGroupId) ? currentGroupId : currentUserData.joinedGroups[0];
-            currentGroupId = targetGroupId;
+            currentGroupId = targetGroupId; // Update currentGroupId in main.js state
             showPage('page-group-detail');
             renderGroupDetail(targetGroupId, currentGroupId, groupDetailUnsubscribers, memberTimerIntervals);
         } else {
@@ -1398,4 +1434,3 @@ window.onload = async () => {
         }
     }
 };
-
