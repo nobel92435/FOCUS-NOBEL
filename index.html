@@ -264,7 +264,7 @@
     <div id="add-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Subject</div><button class="close-modal">&times;</button></div><form id="add-subject-form">...</form></div></div>
     <div id="start-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Start New Session</div><button id="close-start-session-modal" class="close-modal">&times;</button></div><form id="start-session-form">...</form></div></div>
     <div id="add-task-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Task</div><button class="close-modal">&times;</button></div><form id="add-task-form">...</form></div></div>
-    <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form">...</form></div></div>
+    <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form">...</form></div></div>
     <div id="confirmation-modal" class="modal"><div class="modal-content"><div class="modal-header><h2 id="confirmation-modal-title" class="modal-title">Are you sure?</h2><button class="close-modal">&times;</button></div><p id="confirmation-modal-message">...</p><div id="confirmation-modal-buttons">...</div></div></div>
     <div id="edit-profile-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Edit Profile</div><button class="close-modal">&times;</button></div><form id="edit-profile-form">...</form></div></div>
     <div id="study-goal-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form">...</form></div></div>
@@ -429,7 +429,15 @@
         // --- Firebase Initialization ---
         function initializeFirebase() {
             console.log('Initializing Firebase...');
-            const firebaseConfig = { /* ... your config ... */ };
+            // NOTE: Replace with your actual Firebase config
+            const firebaseConfig = {
+                apiKey: "YOUR_API_KEY",
+                authDomain: "YOUR_AUTH_DOMAIN",
+                projectId: "YOUR_PROJECT_ID",
+                storageBucket: "YOUR_STORAGE_BUCKET",
+                messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+                appId: "YOUR_APP_ID"
+            };
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
@@ -459,6 +467,30 @@
         function showPage(pageId) {
             console.log(`Navigating to page: ${pageId}`);
             // Logic to hide/show pages and navigation bars
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+
+            // Handle auth screen visibility
+            if (pageId === 'auth-screen') {
+                document.getElementById('auth-screen').classList.add('active');
+                document.getElementById('app-container').classList.remove('active');
+            } else if (pageId === 'page-username-setup') {
+                document.getElementById('auth-screen').classList.remove('active');
+                document.getElementById('app-container').classList.remove('active');
+                document.getElementById('page-username-setup').classList.add('active');
+            }
+            else {
+                document.getElementById('auth-screen').classList.remove('active');
+                document.getElementById('page-username-setup').classList.remove('active');
+                document.getElementById('app-container').classList.add('active');
+            }
+
+            // Update active navigation item
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            const activeNavItem = document.querySelector(`.nav-item[data-page="${pageId.replace('page-', '')}"]`);
+            if (activeNavItem) {
+                activeNavItem.classList.add('active');
+            }
         }
 
         async function startTimer(subject) {
@@ -523,12 +555,38 @@
         async function getOrCreateUserDocument(user) {
             console.log(`Getting or creating user document for: ${user.uid}`);
             // Fetch or create user document in Firestore with initial data
-            return { exists: () => true, data: () => ({ username: user.displayName, email: user.email }) }; // Simplified return
+            // In a real app, this would query Firestore:
+            // const userRef = doc(db, "users", user.uid);
+            // const userSnap = await getDoc(userRef);
+            // if (userSnap.exists()) { return userSnap; }
+            // else {
+            //     await setDoc(userRef, {
+            //         username: user.displayName || 'New User',
+            //         email: user.email,
+            //         createdAt: serverTimestamp(),
+            //         totalStudyTime: 0,
+            //         totalBreakTime: 0,
+            //         streak: 0,
+            //         lastStudyDate: null,
+            //         achievements: []
+            //     });
+            //     return await getDoc(userRef);
+            // }
+            return { exists: () => true, data: () => ({ username: user.displayName || user.email, email: user.email }) }; // Simplified return for skeleton
         }
 
         function updateProfileUI(userData) {
             console.log('Updating profile UI with:', userData.username);
             // Update username, email, avatar, streak, and achievements display
+            const headerAvatar = document.getElementById('header-avatar');
+            const profilePageAvatar = document.getElementById('profile-page-avatar');
+            const profilePageName = document.getElementById('profile-page-name');
+            const profilePageEmail = document.getElementById('profile-page-email');
+
+            if (headerAvatar) headerAvatar.textContent = userData.username ? userData.username.charAt(0).toUpperCase() : 'U';
+            if (profilePageAvatar) profilePageAvatar.textContent = userData.username ? userData.username.charAt(0).toUpperCase() : 'U';
+            if (profilePageName) profilePageName.textContent = userData.username || 'User Name';
+            if (profilePageEmail) profilePageEmail.textContent = userData.email || 'user@example.com';
         }
 
         function setupRealtimeListeners() {
@@ -656,108 +714,176 @@
             // Update 'order' field for subjects in Firestore
         }
 
-        // --- Event Listeners (Simplified) ---
+        // --- Event Listeners Helper ---
         const ael = (id, event, callback) => {
             const el = document.getElementById(id);
-            if (el) el.addEventListener(event, callback);
-        };
-
-        // Authentication Listeners
-        ael('login-form', 'submit', async (e) => { e.preventDefault(); console.log('Login attempt...'); });
-        ael('signup-form', 'submit', async (e) => { e.preventDefault(); console.log('Signup attempt...'); });
-        ael('google-signin-btn', 'click', async () => { console.log('Google Sign-in attempt...'); });
-        ael('auth-toggle-btn', 'click', () => { console.log('Toggling auth form...'); });
-        ael('sign-out-btn', 'click', () => { console.log('Signing out...'); });
-        ael('username-setup-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving username...'); });
-
-        // Navigation Listeners
-        document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', function() { console.log('Nav item clicked:', this.dataset.page); }));
-        document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function() { console.log('Back button clicked to:', this.dataset.target); }));
-        ael('groups-btn', 'click', () => { console.log('Go to groups...'); });
-        ael('go-to-find-groups-btn', 'click', () => { console.log('Go to find groups...'); });
-        ael('go-to-create-group-btn', 'click', () => { console.log('Go to create group...'); });
-        ael('profile-btn', 'click', () => { console.log('Go to profile...'); });
-        ael('group-study-timer-btn', 'click', () => { console.log('Group study button clicked.'); });
-
-        // Group Creation Listeners
-        ael('create-group-done-btn', 'click', async () => { console.log('Creating group...'); });
-        document.querySelectorAll('.category-option, .time-option').forEach(option => { option.addEventListener('click', () => { console.log('Category/time option selected.'); }); });
-        ael('increase-capacity', 'click', () => { console.log('Increasing capacity...'); });
-        ael('decrease-capacity', 'click', () => { console.log('Decreasing capacity...'); });
-        
-        // Modals & Timer Controls
-        ael('add-subject-btn', 'click', () => { console.log('Open add subject modal...'); });
-        ael('add-subject-form', 'submit', async (e) => { e.preventDefault(); console.log('Adding subject...'); });
-        ael('edit-subject-form', 'submit', async (e) => { e.preventDefault(); console.log('Editing subject...'); });
-        ael('start-studying-btn', 'click', () => { console.log('Open start session modal...'); });
-        ael('open-add-subject-modal-from-start', 'click', () => { console.log('Open add subject from start session modal...'); });
-        ael('start-session-form', 'submit', (e) => { e.preventDefault(); console.log('Starting session from modal...'); });
-        ael('stop-studying-btn', 'click', stopTimer);
-        ael('pause-btn', 'click', pauseTimer);
-        ael('resume-btn', 'click', resumeTimer);
-        ael('manual-start-btn', 'click', () => { console.log('Manual start button clicked...'); });
-        ael('normal-timer-btn', 'click', () => { console.log('Switch to normal timer...'); });
-        ael('pomodoro-timer-btn', 'click', () => { console.log('Switch to Pomodoro timer...'); });
-        ael('add-task-btn', 'click', () => { console.log('Open add task modal...'); });
-        ael('add-task-form', 'submit', async (e) => { e.preventDefault(); console.log('Adding task...'); });
-        document.getElementById('planner-list').addEventListener('change', async (e) => { console.log('Task checkbox changed...'); });
-        document.getElementById('ranking-period-tabs').addEventListener('click', (e) => { console.log('Ranking period tab clicked...'); });
-        document.getElementById('my-groups-list').addEventListener('click', (e) => { console.log('Group card clicked...'); });
-        document.getElementById('group-detail-nav').addEventListener('click', (e) => { console.log('Group detail nav item clicked...'); });
-        ael('group-ranking-scope-btn', 'click', () => { console.log('Group ranking scope switched to Group...'); });
-        ael('global-ranking-scope-btn', 'click', () => { console.log('Group ranking scope switched to Global...'); });
-        ael('settings-account', 'click', () => { console.log('Open edit profile modal...'); });
-        ael('edit-profile-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving profile changes...'); });
-        ael('settings-study-goal', 'click', () => { console.log('Open study goal modal...'); });
-        ael('study-goal-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving study goal...'); });
-        ael('settings-pomodoro', 'click', () => { console.log('Open Pomodoro settings modal...'); });
-        ael('pomodoro-settings-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving Pomodoro settings...'); });
-        ael('edit-session-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving edited session...'); });
-
-        // General Modal closing
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', (e) => { if (e.target === modal) { modal.classList.remove('active'); } });
-            modal.querySelectorAll('.close-modal').forEach(btn => { btn.addEventListener('click', () => { modal.classList.remove('active'); }); });
-        });
-        
-        // --- Web Worker Message Listener ---
-        pomodoroWorker.onmessage = (e) => {
-            const { type, timeLeft } = e.data;
-            if (type === 'tick') {
-                sessionTimerDisplay.textContent = formatPomodoroTime(timeLeft);
-            } else if (type === 'phase_ended') {
-                handlePomodoroPhaseEnd({ /* ... determine newState, oldState ... */ });
+            if (el) {
+                el.addEventListener(event, callback);
+                console.log(`Attached listener for #${id} on ${event}`); // Debugging line
+            } else {
+                console.warn(`Element with ID '${id}' not found for event '${event}'.`);
             }
         };
-
-        // --- Service Worker Message Listener ---
-        navigator.serviceWorker.addEventListener('message', async (event) => {
-            if (event.data && event.data.type === 'TIMER_ENDED') {
-                handlePomodoroPhaseEnd(event.data);
-            }
-        });
-
-        // --- Drag and Drop Functionality for Subjects (Event listeners only) ---
-        const subjectListContainer = document.getElementById('subject-selection-list');
-        if (subjectListContainer) {
-            subjectListContainer.addEventListener('dragstart', (e) => { console.log('Drag started for subject.'); });
-            subjectListContainer.addEventListener('dragover', (e) => { e.preventDefault(); console.log('Drag over subject.'); });
-            subjectListContainer.addEventListener('dragenter', (e) => { e.preventDefault(); console.log('Drag entered subject.'); });
-            subjectListContainer.addEventListener('dragleave', (e) => { console.log('Drag left subject.'); });
-            subjectListContainer.addEventListener('drop', async (e) => { e.preventDefault(); console.log('Subject dropped.'); await updateSubjectOrderInFirestore(); });
-            subjectListContainer.addEventListener('dragend', () => { console.log('Drag ended for subject.'); });
-            subjectListContainer.addEventListener('click', async (e) => { console.log('Subject item clicked for edit/delete.'); });
-        }
-
 
         window.onload = () => {
+            console.log("DOM fully loaded and parsed. Initializing application.");
+
             authError = document.getElementById('auth-error');
             sessionTimerDisplay = document.getElementById('session-timer');
             totalTimeDisplay = document.getElementById('total-time-display');
             totalBreakTimeDisplay = document.getElementById('total-break-time-display');
             activeSubjectDisplay = document.getElementById('active-subject-display');
             pomodoroStatusDisplay = document.getElementById('pomodoro-status');
+            
             initializeFirebase();
+
+            // --- Authentication Listeners ---
+            ael('login-form', 'submit', async (e) => {
+                e.preventDefault();
+                console.log('Login attempt...');
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } catch (error) {
+                    authError.textContent = error.message;
+                    console.error("Login error:", error);
+                }
+            });
+
+            ael('signup-form', 'submit', async (e) => {
+                e.preventDefault();
+                console.log('Signup attempt...');
+                const email = document.getElementById('signup-email').value;
+                const password = document.getElementById('signup-password').value;
+                try {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                } catch (error) {
+                    authError.textContent = error.message;
+                    console.error("Signup error:", error);
+                }
+            });
+
+            ael('google-signin-btn', 'click', async () => {
+                console.log('Google Sign-in attempt...');
+                const provider = new GoogleAuthProvider();
+                try {
+                    await signInWithPopup(auth, provider);
+                } catch (error) {
+                    authError.textContent = error.message;
+                    console.error("Google Sign-in error:", error);
+                }
+            });
+
+            ael('auth-toggle-btn', 'click', () => {
+                console.log('Toggling auth form...');
+                const loginForm = document.getElementById('login-form');
+                const signupForm = document.getElementById('signup-form');
+                const loginToggleText = document.getElementById('login-toggle-text');
+                const authToggleButton = document.getElementById('auth-toggle-btn');
+
+                if (loginForm.classList.contains('hidden')) {
+                    loginForm.classList.remove('hidden');
+                    signupForm.classList.add('hidden');
+                    loginToggleText.textContent = "Don't have an account?";
+                    authToggleButton.textContent = "Sign Up";
+                } else {
+                    loginForm.classList.add('hidden');
+                    signupForm.classList.remove('hidden');
+                    loginToggleText.textContent = "Already have an account?";
+                    authToggleButton.textContent = "Sign In";
+                }
+                authError.textContent = ''; // Clear any previous error
+            });
+
+            ael('sign-out-btn', 'click', async () => {
+                console.log('Signing out...');
+                try {
+                    await signOut(auth);
+                } catch (error) {
+                    console.error("Sign out error:", error);
+                }
+            });
+
+            ael('username-setup-form', 'submit', async (e) => {
+                e.preventDefault();
+                console.log('Saving username...');
+                const usernameInput = document.getElementById('username-input');
+                const username = usernameInput.value.trim();
+                const usernameError = document.getElementById('username-error');
+
+                if (username.length < 3) {
+                    usernameError.textContent = 'Username must be at least 3 characters.';
+                    return;
+                }
+                
+                if (currentUser && db) {
+                    try {
+                        const userRef = doc(db, "users", currentUser.uid);
+                        await updateDoc(userRef, { username: username });
+                        currentUserData.username = username; // Update local state
+                        updateProfileUI(currentUserData);
+                        showPage('page-timer'); // Go to the main app page
+                    } catch (error) {
+                        usernameError.textContent = 'Failed to save username. Please try again.';
+                        console.error("Error setting username:", error);
+                    }
+                }
+            });
+
+
+            // --- Navigation Listeners ---
+            document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', function() {
+                const targetPage = this.dataset.page;
+                console.log('Nav item clicked:', targetPage);
+                showPage(`page-${targetPage}`);
+            }));
+            document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function() {
+                const targetPage = this.dataset.target;
+                console.log('Back button clicked to:', targetPage);
+                showPage(`page-${targetPage}`);
+            }));
+            ael('groups-btn', 'click', () => { console.log('Go to groups...'); showPage('page-my-groups'); });
+            ael('go-to-find-groups-btn', 'click', () => { console.log('Go to find groups...'); showPage('page-find-groups'); });
+            ael('go-to-create-group-btn', 'click', () => { console.log('Go to create group...'); showPage('page-create-group'); });
+            ael('profile-btn', 'click', () => { console.log('Go to profile...'); showPage('page-profile'); });
+            ael('group-study-timer-btn', 'click', () => { console.log('Group study button clicked.'); });
+
+            // --- Group Creation Listeners ---
+            ael('create-group-done-btn', 'click', async () => { console.log('Creating group...'); });
+            document.querySelectorAll('.category-option, .time-option').forEach(option => { option.addEventListener('click', () => { console.log('Category/time option selected.'); }); });
+            ael('increase-capacity', 'click', () => { console.log('Increasing capacity...'); });
+            ael('decrease-capacity', 'click', () => { console.log('Decreasing capacity...'); });
+            
+            // --- Modals & Timer Controls ---
+            ael('add-subject-btn', 'click', () => { console.log('Open add subject modal...'); });
+            ael('add-subject-form', 'submit', async (e) => { e.preventDefault(); console.log('Adding subject...'); });
+            ael('edit-subject-form', 'submit', async (e) => { e.preventDefault(); console.log('Editing subject...'); });
+            ael('start-studying-btn', 'click', () => { console.log('Open start session modal...'); });
+            ael('open-add-subject-modal-from-start', 'click', () => { console.log('Open add subject from start session modal...'); });
+            ael('start-session-form', 'submit', (e) => { e.preventDefault(); console.log('Starting session from modal...'); });
+            ael('stop-studying-btn', 'click', stopTimer);
+            ael('pause-btn', 'click', pauseTimer);
+            ael('resume-btn', 'click', resumeTimer);
+            ael('manual-start-btn', 'click', () => { console.log('Manual start button clicked...'); });
+            ael('normal-timer-btn', 'click', () => { console.log('Switch to normal timer...'); });
+            ael('pomodoro-timer-btn', 'click', () => { console.log('Switch to Pomodoro timer...'); });
+            ael('add-task-btn', 'click', () => { console.log('Open add task modal...'); });
+            ael('add-task-form', 'submit', async (e) => { e.preventDefault(); console.log('Adding task...'); });
+            document.getElementById('planner-list').addEventListener('change', async (e) => { console.log('Task checkbox changed...'); });
+            document.getElementById('ranking-period-tabs').addEventListener('click', (e) => { console.log('Ranking period tab clicked...'); });
+            document.getElementById('my-groups-list').addEventListener('click', (e) => { console.log('Group card clicked...'); });
+            document.getElementById('group-detail-nav').addEventListener('click', (e) => { console.log('Group detail nav item clicked...'); });
+            ael('group-ranking-scope-btn', 'click', () => { console.log('Group ranking scope switched to Group...'); });
+            ael('global-ranking-scope-btn', 'click', () => { console.log('Group ranking scope switched to Global...'); });
+            ael('settings-account', 'click', () => { console.log('Open edit profile modal...'); });
+            ael('edit-profile-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving profile changes...'); });
+            ael('settings-study-goal', 'click', () => { console.log('Open study goal modal...'); });
+            ael('study-goal-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving study goal...'); });
+            ael('settings-pomodoro', 'click', () => { console.log('Open Pomodoro settings modal...'); });
+            ael('pomodoro-settings-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving Pomodoro settings...'); });
+            ael('edit-session-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving edited session...'); });
+
 
             const pomodoroSettingsForm = document.getElementById('pomodoro-settings-form');
             if (pomodoroSettingsForm) {
@@ -769,6 +895,41 @@
                         playSound(document.getElementById('pomodoro-focus-sound').value, parseFloat(target.value));
                     }
                 });
+            }
+
+            // General Modal closing
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', (e) => { if (e.target === modal) { modal.classList.remove('active'); } });
+                modal.querySelectorAll('.close-modal').forEach(btn => { btn.addEventListener('click', () => { modal.classList.remove('active'); }); });
+            });
+            
+            // --- Web Worker Message Listener ---
+            pomodoroWorker.onmessage = (e) => {
+                const { type, timeLeft } = e.data;
+                if (type === 'tick') {
+                    sessionTimerDisplay.textContent = formatPomodoroTime(timeLeft);
+                } else if (type === 'phase_ended') {
+                    handlePomodoroPhaseEnd({ /* ... determine newState, oldState ... */ });
+                }
+            };
+
+            // --- Service Worker Message Listener ---
+            navigator.serviceWorker.addEventListener('message', async (event) => {
+                if (event.data && event.data.type === 'TIMER_ENDED') {
+                    handlePomodoroPhaseEnd(event.data);
+                }
+            });
+
+            // --- Drag and Drop Functionality for Subjects (Event listeners only) ---
+            const subjectListContainer = document.getElementById('subject-selection-list');
+            if (subjectListContainer) {
+                subjectListContainer.addEventListener('dragstart', (e) => { console.log('Drag started for subject.'); });
+                subjectListContainer.addEventListener('dragover', (e) => { e.preventDefault(); console.log('Drag over subject.'); });
+                subjectListContainer.addEventListener('dragenter', (e) => { e.preventDefault(); console.log('Drag entered subject.'); });
+                subjectListContainer.addEventListener('dragleave', (e) => { console.log('Drag left subject.'); });
+                subjectListContainer.addEventListener('drop', async (e) => { e.preventDefault(); console.log('Subject dropped.'); await updateSubjectOrderInFirestore(); });
+                subjectListContainer.addEventListener('dragend', () => { console.log('Drag ended for subject.'); });
+                subjectListContainer.addEventListener('click', async (e) => { console.log('Subject item clicked for edit/delete.'); });
             }
 
             // Service Worker Registration
