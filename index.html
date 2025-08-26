@@ -16,6 +16,9 @@
     <!-- Tone.js for generating alarm sounds -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
 
+    <!-- NEW: Link to external style.css -->
+    <link rel="stylesheet" href="./style.css">
+
     <style>
         /* Essential layout and visibility styles */
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
@@ -271,6 +274,12 @@
     <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form">...</form></div></div>
     <div id="edit-session-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Edit Session</div><button class="close-modal">&times;</button></div><form id="edit-session-form">...</form></div></div>
     <div id="edit-subject-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Edit Subject</div><button class="close-modal">&times;</button></div><form id="edit-subject-form">...</form></div></div>
+
+    <!-- NEW: Links to external JavaScript files -->
+    <script type="module" src="./utils.js"></script>
+    <script type="module" src="./ui.js"></script>
+    <script type="module" src="./auth.js"></script>
+    <script type="module" src="./main.js"></script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
