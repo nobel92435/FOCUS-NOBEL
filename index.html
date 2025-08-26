@@ -263,7 +263,7 @@
     <!-- Modals -->
     <div id="add-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Subject</div><button class="close-modal">&times;</button></div><form id="add-subject-form">...</form></div></div>
     <div id="start-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Start New Session</div><button id="close-start-session-modal" class="close-modal">&times;</button></div><form id="start-session-form">...</form></div></div>
-    <div id="add-task-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Task</div><button class="close-modal">&times;</button></div><form id="add-task-form">...</form></div></div>
+    <div id="add-task-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Add New Task</div><button class="close-modal">&times;</button></div><form id="add-task-form">...</form></div></div>
     <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form">...</form></div></div>
     <div id="confirmation-modal" class="modal"><div class="modal-content"><div class="modal-header><h2 id="confirmation-modal-title" class="modal-title">Are you sure?</h2><button class="close-modal">&times;</button></div><p id="confirmation-modal-message">...</p><div id="confirmation-modal-buttons">...</div></div></div>
     <div id="edit-profile-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Edit Profile</div><button class="close-modal">&times;</button></div><form id="edit-profile-form">...</form></div></div>
@@ -283,6 +283,7 @@
             arrayUnion, updateDoc, deleteDoc, getDocs, serverTimestamp,
             query, orderBy, limit, increment, where, runTransaction
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js"; // Added getAnalytics import
 
         // --- Achievement Definitions ---
         const ACHIEVEMENTS = {
@@ -440,9 +441,11 @@
   measurementId: "G-2YBNMYQK3D"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+            // Initialize Firebase
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app); // Assign the auth object here
+            db = getFirestore(app); // Assign the db object here
+            const analytics = getAnalytics(app);
 
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
