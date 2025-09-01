@@ -11,960 +11,2256 @@
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel='icon' href="favicon.ico">
+    <link rel='icon' href="favicon.ico"
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Tone.js for generating alarm sounds -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
 
-    <!-- Corrected path to the local stylesheet, using a root-relative path -->
-    <link rel="stylesheet" href="/style.css">
-
     <style>
-        /* Essential layout and visibility styles */
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        /* Base styles */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
+        }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .nav-item.active svg, .nav-item.active p, .group-nav-item.active i, .group-nav-item.active p { color: #3B82F6; }
+
+        /* Page and container visibility */
         #auth-screen, .page, #app-container, .modal { display: none; }
         #auth-screen.active, .page.active, #app-container.active, .modal.active { display: flex; }
-        .timer-switch-btn.active { background-color: #3b82f6; color: white; } /* Basic active state */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        /* UI element styles */
+        .timer-text { font-weight: 900; letter-spacing: -0.05em; }
+        
+        /* Pomodoro Switch Styles */
+        .timer-switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #1f2937;
+            padding: 0.5rem;
+            border-radius: 9999px;
+            width: fit-content;
+        }
+        .timer-switch-btn {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            background-color: transparent;
+            color: #9ca3af;
+            font-weight: 600;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .timer-switch-btn.active {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+        }
+        #pomodoro-status {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #f59e0b; /* Amber color for breaks */
+            height: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Pomodoro Settings Modal Scroll Fix */
+        #pomodoro-settings-modal .modal-content {
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* Toggle Switch Styles */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4b5563;
+            transition: .4s;
+            border-radius: 28px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #3b82f6;
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        /* Volume Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #4b5563;
+            border-radius: 4px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+        }
+
+        /* Group study styles */
+        .group-card {
+            background: #1f2937;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+        }
+        .group-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+        .group-header {
+            padding: 16px;
+            background: linear-gradient(135deg, #4361ee 0%, #4895ef 100%);
+            color: white;
+        }
+        .group-category {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            opacity: 0.9;
+        }
+        .group-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .group-name .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+        }
+        .group-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+        }
+        .stat-item { text-align: center; }
+        .stat-value { font-size: 1.1rem; font-weight: 700; }
+        .stat-label { font-size: 0.75rem; opacity: 0.8; }
+        .group-body { padding: 16px; }
+        .group-goal {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #374151;
+        }
+        .goal-text { font-weight: 600; color: white; margin-bottom: 6px; }
+        .leader {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            color: #3B82F6;
+        }
+        .leader i { color: gold; }
+        .group-description {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+        .group-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #9CA3AF;
+            font-size: 0.8rem;
+            margin-top: 12px;
+        }
+        .join-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: #4cc9f0;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 12px;
+        }
+        .join-btn:hover { background: #4895ef; }
+        .join-btn:disabled { background: #6c757d; cursor: not-allowed; }
+        .joined-badge {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: #3B82F6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: center;
+            margin-top: 12px;
+        }
+        .empty-group {
+            text-align: center;
+            padding: 40px 20px;
+            color: #9CA3AF;
+        }
+        .empty-group i { font-size: 3rem; color: #374151; margin-bottom: 16px; }
+        .empty-group h3 { font-size: 1.5rem; margin-bottom: 12px; color: white; }
+        .empty-group p { font-size: 1rem; max-width: 500px; margin: 0 auto 20px; }
+        .category-option, .time-option {
+            padding: 12px;
+            text-align: center;
+            background: #374151;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            font-weight: 600;
+        }
+        .category-option:hover, .time-option:hover { background: #4B5563; }
+        .category-option.selected, .time-option.selected {
+            background: #3B82F6;
+            color: white;
+            border-color: #2563EB;
+        }
+        .create-group-btn {
+            position: fixed;
+            bottom: 80px; /* Adjusted for main nav */
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: #3B82F6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 30;
+        }
+        .create-group-btn:hover { background: #2563EB; transform: scale(1.05); }
+
+        /* Group Ranking Styles */
+        .group-filter-btn {
+            padding: 6px 12px;
+            background-color: transparent;
+            border-radius: 6px;
+            font-weight: 500;
+            color: #9CA3AF;
+            transition: all 0.2s;
+        }
+        .group-filter-btn.active {
+            background-color: #3B82F6;
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+        .group-card.ranking {
+            cursor: default;
+        }
+        .group-card.ranking:hover {
+            transform: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* Stats page styles */
+        .stats-container { padding: 20px; }
+        .stat-card {
+            background: #1F2937;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #E5E7EB;
+        }
+        
+        /* Ranking page styles */
+        .ranking-list { padding: 20px; }
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #1F2937;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .rank {
+            font-weight: 700;
+            margin-right: 15px;
+            width: 30px;
+            text-align: center;
+        }
+        .rank-1 { color: gold; }
+        .rank-2 { color: silver; }
+        .rank-3 { color: #cd7f32; }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #374151;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .user-info { flex-grow: 1; }
+        .user-name { font-weight: 600; }
+        .user-time { color: #9CA3AF; font-size: 0.9rem; }
+        .ranking-tab-btn {
+            background-color: #374151;
+            color: #9CA3AF;
+            transition: all 0.2s;
+        }
+        .ranking-tab-btn.active {
+            background-color: #1F2937;
+            color: white;
+            border-bottom: 2px solid #3B82F6;
+        }
+        
+        /* Planner page styles */
+        .planner-container { padding: 20px; }
+        .planner-day {
+            background: #1F2937;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .day-header {
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .planner-task {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #374151;
+        }
+        .task-checkbox { margin-right: 10px; }
+        .task-name { flex-grow: 1; }
+        .task-name.completed { text-decoration: line-through; color: #6B7280; }
+        
+        /* New Planner Styles */
+        #page-planner {
+            /* The .active class handles display. This rule ensures the page is opaque and controls overflow. */
+            background-color: #111827;
+            overflow: hidden;
+        }
+        .planner-main-layout {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        #planner-sidebar {
+            width: 250px;
+            flex-shrink: 0;
+            background-color: #111827;
+            border-right: 1px solid #374151;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease-in-out;
+        }
+         #planner-sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .planner-sidebar-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .planner-sidebar-item:hover {
+            background-color: #374151;
+        }
+        .planner-sidebar-item.active {
+            background-color: #3B82F6;
+            color: white;
+        }
+         #planner-main-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+         #planner-task-details {
+            width: 350px;
+            flex-shrink: 0;
+            background-color: #111827;
+            border-left: 1px solid #374151;
+            overflow-y: auto;
+            transition: width 0.3s ease;
+        }
+        #planner-task-details.hidden {
+            width: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        /* Task Item */
+        .task-item {
+            border-left-width: 4px;
+        }
+
+        /* Kanban Board */
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+        .kanban-column {
+            background-color: #1f2937;
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+        }
+        .kanban-card {
+             background-color: #374151;
+        }
+
+        /* NEW Calendar View Styles */
+        .calendar-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 1rem;
+        }
+        .calendar-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .calendar-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .calendar-nav-btn {
+            background-color: #374151;
+            border: 1px solid #4b5563;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .calendar-nav-btn:hover {
+            background-color: #4b5563;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            flex-grow: 1;
+            border-top: 1px solid #374151;
+            border-left: 1px solid #374151;
+        }
+        .calendar-day-header, .calendar-day-cell {
+            padding: 0.5rem;
+            border-right: 1px solid #374151;
+            border-bottom: 1px solid #374151;
+        }
+        .calendar-day-header {
+            text-align: center;
+            font-weight: 500;
+            color: #9ca3af;
+            font-size: 0.875rem;
+        }
+        .calendar-day-cell {
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.2s;
+        }
+        .calendar-day-cell:not(.other-month):hover {
+            background-color: #1f2937;
+        }
+        .day-number {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        .day-number.today {
+            background-color: #3b82f6;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .calendar-day-cell.other-month .day-number {
+            color: #6b7280;
+        }
+        .calendar-tasks-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .calendar-task {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: background-color 0.2s;
+        }
+        .calendar-task:hover {
+            opacity: 0.8;
+        }
+        .calendar-task.completed {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+        .calendar-task.priority-high { background-color: #ef4444; }
+        .calendar-task.priority-medium { background-color: #f59e0b; }
+        .calendar-task.priority-low { background-color: #3b82f6; }
+        .calendar-task.priority-none { background-color: #6b7280; }
+        
+        /* Planner Responsive Adjustments */
+        @media (max-width: 768px) {
+            .planner-main-layout {
+                flex-direction: column;
+            }
+            #planner-sidebar {
+                position: fixed;
+                top: 73px; /* Height of header */
+                left: 0;
+                bottom: 57px; /* Height of nav */
+                height: auto;
+                z-index: 40;
+                transform: translateX(-100%);
+            }
+            #planner-sidebar.open {
+                transform: translateX(0);
+            }
+            #planner-task-details {
+                position: fixed;
+                top: 73px;
+                right: 0;
+                bottom: 57px;
+                height: auto;
+                width: 85%;
+                max-width: 350px;
+                z-index: 40;
+                transform: translateX(100%);
+                border-left: 1px solid #374151;
+            }
+            #planner-task-details.open {
+                transform: translateX(0);
+            }
+            #planner-task-details.hidden {
+                transform: translateX(100%);
+            }
+            .kanban-board {
+                display: flex;
+                overflow-x: auto;
+                padding-bottom: 1rem;
+            }
+            .kanban-column {
+                min-width: 280px;
+                flex-shrink: 0;
+            }
+            .calendar-grid {
+                gap: 2px;
+            }
+            .calendar-cell {
+                min-height: 80px;
+                padding: 4px;
+            }
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #1F2937;
+            border-radius: 12px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-title { font-size: 1.3rem; font-weight: 600; }
+        .close-modal {
+            background: none;
+            border: none;
+            color: #9CA3AF;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        /* Profile Settings */
+        .profile-container { padding: 20px; }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #374151;
+            margin-right: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            position: relative;
+            overflow: hidden; /* To contain the image */
+        }
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profile-name { font-size: 1.3rem; font-weight: 600; }
+        .profile-email { color: #9CA3AF; }
+        .settings-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #374151;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .settings-item:hover {
+            background-color: #37415120;
+        }
+        .settings-label { font-weight: 600; margin-bottom: 5px; }
+        .settings-value { color: #9CA3AF; }
+        
+        /* Loading spinner */
+        .fa-spinner { animation: spin 1s linear infinite; }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Responsive fixes */
+        @media (max-width: 640px) {
+            .group-card { margin-bottom: 1rem; }
+            .group-stats { flex-direction: column; gap: 0.5rem; }
+            .stat-item { display: flex; justify-content: space-between; align-items: center; }
+            .create-group-btn { bottom: 70px; right: 15px; }
+            #session-timer { font-size: 4rem; }
+        }
+        .subject-color-picker {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); /* Responsive grid */
+            gap: 8px; /* Space between dots */
+        }
+        .subject-color-picker .color-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            outline: 2px solid transparent;
+            transition: outline-color 0.2s, transform 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Subtle shadow */
+        }
+        .subject-color-picker .color-dot:hover {
+            transform: scale(1.1); /* Pop effect on hover */
+        }
+        .subject-color-picker .color-dot.selected {
+            outline-color: #3B82F6; /* Blue outline for selected */
+            transform: scale(1.05); /* Slightly larger when selected */
+        }
+        .subject-item {
+            cursor: grab; /* Indicate draggable */
+            border: 2px solid #374151;
+            position: relative; /* For options menu positioning */
+            transition: all 0.2s ease; /* Smooth transitions for drag feedback */
+        }
+        .subject-item.selected {
+            border-color: #3B82F6;
+            background-color: #2563eb30;
+        }
+        .subject-item.dragging {
+            opacity: 0.5;
+            border: 2px dashed #3B82F6;
+            background-color: #2563eb10;
+        }
+        .subject-item.drag-over {
+            border: 2px solid #10B981; /* Green border for drag over target */
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        .subject-options-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9CA3AF;
+            padding: 5px;
+        }
+        .subject-options-menu {
+            display: none;
+            position: absolute;
+            right: 25px;
+            top: 25px;
+            background-color: #111827;
+            border: 1px solid #374151;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            z-index: 10;
+            overflow: hidden; /* Ensure buttons don't spill */
+        }
+        .subject-options-menu.active {
+            display: block;
+        }
+        .subject-options-menu button {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            text-align: left;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+        .subject-options-menu button:hover {
+            background-color: #374151;
+        }
+        .subject-options-menu .delete-btn:hover {
+            background-color: #ef4444;
+        }
+        /* Group Detail Page */
+        .member-list-card {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background-color: #1F2937;
+            border-radius: 0.75rem;
+            width: 100%;
+        }
+        .member-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: #4B5563;
+            margin-right: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .member-avatar.studying {
+            outline: 3px solid #10B981;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+        }
+        .member-status-icon {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 20px;
+            height: 20px;
+            background-color: #10B981;
+            border-radius: 50%;
+            border: 3px solid #1F2937;
+        }
+        .member-name {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .member-time {
+            color: #9CA3AF;
+            font-size: 0.9rem;
+        }
+        #group-detail-nav {
+            display: none;
+        }
+        .chat-message {
+            margin-bottom: 1rem;
+            display: flex;
+        }
+        .chat-message.sent {
+            justify-content: flex-end;
+        }
+        .chat-bubble {
+            max-width: 75%;
+            padding: 0.75rem;
+            border-radius: 1rem;
+        }
+        .chat-bubble.sent {
+            background-color: #3B82F6;
+            color: white;
+            border-bottom-right-radius: 0.25rem;
+        }
+        .chat-bubble.received {
+            background-color: #374151;
+            color: white;
+            border-bottom-left-radius: 0.25rem;
+        }
+        .chat-sender {
+            font-size: 0.75rem;
+            color: #9CA3AF;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Attendance Page Styles */
+        .attendance-container {
+            padding: 16px;
+        }
+        .attendance-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .attendance-nav-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #374151;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .attendance-nav-btn:hover {
+            background: #4B5563;
+        }
+        .attendance-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+        }
+        .calendar-header {
+            text-align: center;
+            padding: 8px;
+            font-size: 0.8rem;
+            color: #9CA3AF;
+        }
+        .calendar-day {
+            aspect-ratio: 1/1;
+            background: #1F2937;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .calendar-day.empty {
+            background: transparent;
+        }
+        .day-number {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .day-time {
+            font-size: 0.7rem;
+            color: #10B981;
+        }
+        .calendar-day.today .day-number {
+            color: #3B82F6;
+            font-weight: 700;
+        }
+        .calendar-day.active {
+            background: #3B82F6;
+        }
+        .calendar-day.active .day-number {
+            color: white;
+        }
+        .calendar-day.active .day-time {
+            color: white;
+        }
+        .attendance-stats {
+            margin-top: 20px;
+            padding: 16px;
+            background: #1F2937;
+            border-radius: 12px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 12px;
+        }
+        .stat-box {
+            background: #111827;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: #9CA3AF;
+        }
+        .attendance-member-list {
+            margin-top: 20px;
+        }
+        .member-row {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #1F2937;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .member-avatar-sm {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #4B5563;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        .member-info {
+            flex-grow: 1;
+        }
+        .member-name-sm {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .member-time-sm {
+            font-size: 0.8rem;
+            color: #9CA3AF;
+        }
+        .attendance-progress {
+            height: 6px;
+            background: #374151;
+            border-radius: 3px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #3B82F6;
+            border-radius: 3px;
+        }
+        
+        /* Group Settings Modal */
+        .group-settings-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .group-settings-item:hover {
+            background-color: #374151;
+        }
+        .group-settings-item i {
+            width: 20px;
+            margin-right: 12px;
+            color: #9CA3AF;
+        }
+        
+        /* Edit Group Info Modal Styles */
+        #edit-group-info-modal .modal-content {
+            max-width: 500px;
+        }
+        .edit-group-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background-color: #374151;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .edit-group-item:hover {
+            background-color: #4B5563;
+        }
+        .edit-group-item .value {
+            color: #9CA3AF;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .toast {
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast.info { background-color: #3B82F6; }
+        .toast.success { background-color: #10B981; }
+        .toast.error { background-color: #EF4444; }
+
+        /* Confirmation Modal */
+        #confirmation-modal .modal-content {
+            text-align: center;
+        }
+        #confirmation-modal-message {
+            margin-bottom: 20px;
+            color: #D1D5DB;
+        }
+        #confirmation-modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        #confirmation-modal-buttons button {
+            flex-grow: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #confirm-btn { background-color: #EF4444; color: white; }
+        #confirm-btn:hover { background-color: #DC2626; }
+        #cancel-btn { background-color: #4B5563; color: white; }
+        #cancel-btn:hover { background-color: #6B7280; }
+
+        /* New Dashboard Styles */
+        #insights-container {
+            background-color: #0f172a; /* slate-900 */
+            color: #f1f5f9; /* slate-100 */
+        }
+        .card {
+            background-color: #1e293b; /* slate-800 */
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid #334155; /* slate-700 */
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 255, 255, 0.1);
+        }
+        .nav-btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+        .nav-btn.active {
+            background-color: #0ea5e9; /* sky-500 */
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.5);
+        }
+        .nav-btn:not(.active) {
+            background-color: #334155; /* slate-700 */
+            color: #cbd5e1; /* slate-300 */
+        }
+        .nav-btn:not(.active):hover {
+            background-color: #475569; /* slate-600 */
+        }
+        .view {
+            display: none;
+        }
+        .view.active {
+            display: grid;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        .session-log-item {
+            position: relative;
+        }
+        .log-options-menu {
+            display: none;
+            position: absolute;
+            right: 1rem;
+            top: 2.5rem;
+            background-color: #334155;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            z-index: 20;
+            overflow: hidden;
+        }
+        .log-options-menu.active {
+            display: block;
+        }
+        .log-options-menu button {
+            display: block;
+            width: 100%;
+            padding: 0.5rem 1rem;
+            text-align: left;
+            color: #f1f5f9;
+        }
+        .log-options-menu button:hover {
+            background-color: #475569;
+        }
+        #pull-to-refresh {
+            text-align: center;
+            padding: 10px;
+            color: #94a3b8;
+            transition: height 0.3s ease;
+            overflow: hidden;
+            height: 0;
+        }
+
+        /* New Group Study Button */
+        #group-study-timer-btn {
+            background-color: #1f2937;
+            color: #9ca3af;
+            font-weight: 600;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: fit-content;
+            margin: 1rem auto 0; /* Center it below the switch */
+            padding: 0.5rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        #group-study-timer-btn:hover {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Group Detail Header Dropdown */
+        .group-detail-header-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .group-detail-header-dropdown select {
+            background-color: #1f2937;
+            color: white;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            padding-right: 30px; /* Space for arrow */
+            cursor: pointer;
+            outline: none;
+        }
+
+        .group-detail-header-dropdown::after {
+            content: '▼';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9CA3AF;
+            pointer-events: none;
+        }
+
+        /* Avatar Selection Styles */
+        .avatar-picker {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+        .avatar-option {
+            position: relative;
+            cursor: pointer;
+            border: 3px solid transparent;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .avatar-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        .avatar-option.selected {
+            border-color: #3B82F6;
+            transform: scale(1.1);
+        }
+        .avatar-upload-label {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background-color: rgba(0,0,0,0.6);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
     </style>
 </head>
 <body class="bg-gray-900 text-white flex flex-col h-screen antialiased">
 
-    <!-- Authentication Screen -->
-    <div id="auth-screen" class="active flex-col items-center justify-center h-full p-4">
+    <input type="file" id="image-upload-input" class="hidden" accept="image/*">
+    <input type="file" id="profile-picture-upload" class="hidden" accept="image/*">
+
+    <div id="auth-screen" class="active flex-col items-center justify-center h-full p-4 fade-in">
         <div class="w-full max-w-sm text-center">
-            <h1 class="text-4xl font-bold mb-2">FocusFlow</h1>
-            <p class="text-gray-400 mb-8">Login or Create Account</p>
+            <h1 class="text-4xl font-bold text-white mb-2">FocusFlow</h1>
+            <p class="text-gray-400 mb-8">Your Ultimate Study Companion</p>
             <div id="auth-form-container" class="bg-gray-800 p-8 rounded-2xl shadow-lg">
                 <form id="login-form" class="space-y-4">
-                    <h2 class="text-2xl font-bold mb-4">Login</h2>
-                    <input type="email" id="login-email" placeholder="Email" class="w-full bg-gray-700 rounded-lg p-3" required>
-                    <input type="password" id="login-password" placeholder="Password" class="w-full bg-gray-700 rounded-lg p-3" required>
-                    <button type="submit" class="w-full bg-blue-600 py-3 rounded-lg">Sign In</button>
+                    <h2 class="text-2xl font-bold text-white mb-4">Login</h2>
+                    <input type="email" id="login-email" placeholder="Email" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <input type="password" id="login-password" placeholder="Password" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Sign In</button>
                 </form>
                 <form id="signup-form" class="hidden space-y-4">
-                    <h2 class="text-2xl font-bold mb-4">Create Account</h2>
-                    <input type="email" id="signup-email" placeholder="Email" class="w-full bg-gray-700 rounded-lg p-3" required>
-                    <input type="password" id="signup-password" placeholder="Password" class="w-full bg-gray-700 rounded-lg p-3" required minlength="6">
-                    <button type="submit" class="w-full bg-blue-600 py-3 rounded-lg">Sign Up</button>
+                    <h2 class="text-2xl font-bold text-white mb-4">Create Account</h2>
+                    <input type="email" id="signup-email" placeholder="Email" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <input type="password" id="signup-password" placeholder="Password (min. 6 characters)" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required minlength="6">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Sign Up</button>
                 </form>
                 <p id="auth-error" class="text-red-400 text-sm mt-4 h-5"></p>
-                <div class="flex items-center my-6"><hr class="flex-grow border-gray-600"><span class="mx-4 text-gray-500">OR</span><hr class="flex-grow border-gray-600"></div>
-                <button id="google-signin-btn" class="w-full bg-white text-gray-800 py-3 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 mr-3" viewBox="0 0 48 48">...</svg> Sign in with Google
+                <div class="flex items-center my-6">
+                    <hr class="flex-grow border-gray-600">
+                    <span class="mx-4 text-gray-500">OR</span>
+                    <hr class="flex-grow border-gray-600">
+                </div>
+                <button id="google-signin-btn" class="w-full bg-white text-gray-800 font-semibold py-3 rounded-lg flex items-center justify-center transition hover:bg-gray-200">
+                    <svg class="w-6 h-6 mr-3" viewBox="0 0 48 48">
+                        <path fill="#4285F4" d="M43.611 20.083H24v8.838h11.002c-0.463 2.878-2.18 5.424-4.852 7.199l7.217 5.626C43.02 37.21 46 29.54 46 20.083z"/>
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.897-5.781l-7.217-5.626c-2.13 1.442-4.852 2.308-7.68 2.308-5.878 0-10.845-3.965-12.624-9.26l-7.42 5.781C6.383 39.04 14.46 48 24 48z"/>
+                        <path fill="#FBBC05" d="M11.376 28.71c-0.565-1.71-0.565-3.526 0-5.236l-7.42-5.781C1.678 21.24 0 26.52 0 32.14c0 5.62 1.678 10.9 4.053 14.18l7.323-5.61z"/>
+                        <path fill="#EA4335" d="M24 10.73c3.52 0 6.565 1.218 9.015 3.655l6.345-6.345C35.93 2.13 30.48 0 24 0 14.46 0 6.383 8.96 2.053 17.71l7.42 5.781c1.779-5.295 6.746-9.26 12.624-9.26z"/>
+                    </svg>
+                    Sign in with Google
                 </button>
                 <p class="mt-8 text-sm text-gray-400">
                     <span id="login-toggle-text">Don't have an account?</span>
-                    <button id="auth-toggle-btn" class="font-semibold text-blue-400">Sign Up</button>
+                    <button id="auth-toggle-btn" class="font-semibold text-blue-400 hover:text-blue-300">Sign Up</button>
                 </p>
             </div>
         </div>
     </div>
 
-    <!-- Username Setup Page -->
-    <div id="page-username-setup" class="page flex-col items-center justify-center h-full p-4">
+    <div id="page-username-setup" class="page flex-col items-center justify-center h-full p-4 fade-in">
         <div class="w-full max-w-sm text-center">
-            <h1 class="text-3xl font-bold mb-2">Welcome!</h1>
-            <p class="text-gray-400 mb-8">Set up your username.</p>
+            <h1 class="text-3xl font-bold text-white mb-2">Welcome to FocusFlow!</h1>
+            <p class="text-gray-400 mb-8">Let's set up your profile.</p>
             <div class="bg-gray-800 p-8 rounded-2xl shadow-lg">
                 <form id="username-setup-form" class="space-y-4">
-                    <input type="text" id="username-input" placeholder="Enter your username" class="w-full bg-gray-700 rounded-lg p-3" required minlength="3">
+                    <div class="avatar-picker" id="username-avatar-picker">
+                        <!-- Avatar options will be injected here -->
+                    </div>
+                    <input type="text" id="username-input" placeholder="Enter your username" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required minlength="3">
                     <p id="username-error" class="text-red-400 text-sm h-5"></p>
-                    <button type="submit" class="w-full bg-blue-600 py-3 rounded-lg">Save Username</button>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Save Profile</button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Main Application Container -->
     <div id="app-container" class="flex-col h-screen">
         <main class="flex-grow overflow-y-auto no-scrollbar">
-            <!-- Timer Page -->
             <div id="page-timer" class="page active flex-col h-full">
-                <header class="p-4 flex items-center justify-between">
-                    <h1 class="text-2xl font-bold">FocusFlow</h1>
+                <header class="p-4 md:p-6 flex items-center justify-between z-20">
+                    <h1 class="text-2xl font-bold text-white">FocusFlow</h1>
                     <div class="flex items-center space-x-4">
-                        <button id="groups-btn" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">...</svg></button>
-                        <button id="profile-btn" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden"><div id="header-avatar">U</div></button>
+                        <button id="groups-btn" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-gray-400 hover:bg-gray-600 transition">
+                            <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                            </svg>
+                        </button>
+                        <button id="profile-btn" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-gray-400 hover:bg-gray-600 transition overflow-hidden">
+                            <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
+                        </button>
                     </div>
                 </header>
-                <div class="relative flex-grow flex items-center justify-center">
-                    <div class="relative text-center z-10 p-4 sm:p-8 rounded-full">
-                        <div class="timer-switch-container">
+                <div class="relative flex-grow flex items-center justify-center -mt-16">
+                    <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
+                        <div class="timer-switch-container mx-auto mb-4">
                             <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
                             <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
                         </div>
-                        <button id="group-study-timer-btn" class="text-sm"><i class="fas fa-users-line"></i> Group Study</button>
-                        <p id="active-subject-display" class="text-xl font-semibold h-7 mb-2"></p>
+                        <!-- New Group Study button -->
+                        <button id="group-study-timer-btn" class="text-sm">
+                            <i class="fas fa-users-line"></i> Group Study
+                        </button>
+                        <p id="active-subject-display" class="text-xl font-semibold text-blue-400 h-7 mb-2"></p>
                         <p id="pomodoro-status"></p>
-                        <h2 id="session-timer" class="text-7xl md:text-8xl">00:00:00</h2>
+                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
                         <p id="total-time-display" class="text-gray-400 mt-2">Total Today: 00:00:00</p>
+                        <!-- New element for Total Break Time -->
                         <p id="total-break-time-display" class="text-gray-400 mt-1">Total Break: 00:00:00</p>
                         <div id="timer-controls" class="mt-8">
-                            <button id="start-studying-btn" class="bg-blue-600 py-4 px-8 rounded-full text-lg">Start Studying</button>
-                            <button id="stop-studying-btn" class="hidden bg-red-600 py-4 px-10 rounded-full text-lg">Stop</button>
-                            <button id="manual-start-btn" class="hidden bg-green-600 py-4 px-8 rounded-full text-lg">Start Next</button>
-                            <button id="pause-btn" class="hidden bg-yellow-500 py-4 px-10 rounded-full text-lg">Pause</button>
-                            <button id="resume-btn" class="hidden bg-green-500 py-4 px-8 rounded-full text-lg">Resume</button>
+                            <button id="start-studying-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Studying</button>
+                            <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
+                            <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
+                            <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
+                            <button id="resume-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Resume</button>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Stats Page -->
+            
             <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button" data-target="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
-                    <h1 class="text-xl font-bold">Stats & Insights</h1>
-                    <div class="w-6"></div>
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h1 class="text-xl font-bold text-gray-100">Stats & Insights</h1>
+                    <div class="w-6"></div> 
                 </header>
-                <div id="insights-container" class="p-4">
-                    <!-- Dashboard content will be injected here -->
+                <div id="insights-container" class="p-4 md:p-6">
+                    <!-- New Dashboard HTML will be injected here -->
                 </div>
             </div>
-
-            <!-- Ranking Page -->
+            
             <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button" data-target="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
-                    <h1 class="text-xl font-bold">Leaderboard</h1>
-                    <div class="w-6"></div>
-                </header>
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h1 class="text-xl font-bold text-gray-100">Leaderboard</h1>
+                    <div class="w-6"></div> </header>
                 <div class="px-4 pt-4 border-b border-gray-800">
                     <div class="flex space-x-1" id="ranking-period-tabs">
-                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg active" data-period="weekly">Last 7 Days</button>
-                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg" data-period="monthly">Last 30 Days</button>
+                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm" data-period="daily">Daily</button>
+                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm active" data-period="weekly">Last 7 Days</button>
+                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm" data-period="monthly">Last 30 Days</button>
                     </div>
                 </div>
                 <div id="ranking-list" class="ranking-list">
-                    <!-- Leaderboard items will be rendered here -->
-                </div>
+                                        </div>
             </div>
-
-            <!-- Planner Page -->
+            
             <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button" data-target="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
-                    <h1 class="text-xl font-bold">Study Planner</h1>
-                    <button id="add-task-btn" class="text-blue-500">Add Task</button>
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                     <div class="flex items-center gap-2">
+                        <button id="planner-menu-toggle" class="p-2 rounded-full hover:bg-gray-700 md:hidden"><i class="fas fa-bars"></i></button>
+                        <h1 id="planner-header-title" class="text-xl font-bold text-gray-100">Planner</h1>
+                     </div>
+                    <div id="planner-view-controls" class="flex items-center bg-gray-700 rounded-md p-1">
+                         <button data-view="list" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-list mr-1"></i>List</button>
+                         <button data-view="board" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-grip-horizontal mr-1"></i>Board</button>
+                         <button data-view="calendar" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-calendar-alt mr-1"></i>Calendar</button>
+                    </div>
                 </header>
-                <div id="planner-list" class="planner-container">
-                    <!-- Planner tasks will be rendered here -->
+                <div class="planner-main-layout">
+                    <aside id="planner-sidebar"></aside>
+                    <main id="planner-main-content">
+                        <!-- Content for the selected view will be rendered here -->
+                    </main>
+                    <aside id="planner-task-details" class="hidden">
+                        <!-- Selected task details will be rendered here -->
+                    </aside>
                 </div>
             </div>
 
-            <!-- Profile Page -->
             <div id="page-profile" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button" data-target="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
-                    <h1 class="text-xl font-bold">Profile Settings</h1>
-                    <div class="w-6"></div>
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h1 class="text-xl font-bold text-gray-100">Profile & Settings</h1>
+                    <div class="w-6"></div> 
                 </header>
-                <div class="profile-container p-4">
-                    <div class="profile-header"><div id="profile-page-avatar" class="profile-avatar">U</div><div><div id="profile-page-name" class="profile-name">User Name</div><div id="profile-page-email" class="profile-email">user@example.com</div></div></div>
-                    <div class="card text-center p-4 bg-yellow-500/10 border-yellow-500/30 mb-6 rounded-lg">
-                        <h3 class="font-bold text-lg text-yellow-400">Current Streak</h3>
-                        <p class="text-4xl font-black text-white" id="profile-streak-display">0 days</p>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-bold mb-4">Achievements</h3>
-                        <div id="achievements-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-4 text-center">
-                            <!-- Achievements will be rendered here by JavaScript -->
+                <div class="profile-container">
+                    <div class="profile-header">
+                        <div id="profile-page-avatar" class="profile-avatar bg-blue-500">
+                             <!-- Profile image or initial will be here -->
+                        </div>
+                        <div>
+                            <div id="profile-page-name" class="profile-name">User Name</div>
+                            <div id="profile-page-email" class="profile-email">user@example.com</div>
                         </div>
                     </div>
+                    <div class="card text-center p-4 bg-yellow-500/10 border-yellow-500/30 mb-6 rounded-lg">
+    <h3 class="font-bold text-lg text-yellow-400">Current Streak</h3>
+    <p class="text-4xl font-black text-white" id="profile-streak-display">0 days</p>
+</div>
+
+<div>
+    <h3 class="text-xl font-bold mb-4">Achievements</h3>
+    <div id="achievements-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-4 text-center">
+        <!-- Achievements will be rendered here by JavaScript -->
+    </div>
+</div>
                     <div id="settings-account" class="settings-item"><div class="settings-label">Account</div><div class="settings-value">Edit profile information</div></div>
                     <div id="settings-pomodoro" class="settings-item"><div class="settings-label">Pomodoro Timer</div><div class="settings-value">Customize durations & sounds</div></div>
                     <div id="settings-study-goal" class="settings-item"><div class="settings-label">Study Goals</div><div id="study-goal-value" class="settings-value">Not set</div></div>
-                    <button id="sign-out-btn" class="w-full mt-8 py-3 bg-red-600 rounded-lg">Sign Out</button>
+                    <div id="sign-out-btn" class="mt-6 text-center text-red-400 font-semibold cursor-pointer py-3 bg-red-500/10 rounded-lg hover:bg-red-500/20">Sign Out</div>
                 </div>
             </div>
 
-            <!-- My Groups Page -->
             <div id="page-my-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button" data-target="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
-                    <h1 class="text-xl font-bold">My Groups</h1>
-                    <button id="notification-btn" class="text-gray-400"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h1 class="text-xl font-bold text-gray-100">My Groups</h1>
+                    <button id="go-to-find-groups-btn" class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-700 hover:bg-gray-600">
+                        <i class="fas fa-search"></i>
+                    </button>
                 </header>
-                <div id="my-groups-list" class="p-4 space-y-3 flex-grow"></div>
-                <button id="go-to-find-groups-btn" class="create-group-btn"><i class="fas fa-plus text-xl"></i></button>
+                <div id="my-groups-list" class="p-4"></div>
             </div>
-
-            <!-- Find Groups Page -->
+            
             <div id="page-find-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button" data-target="my-groups"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
-                    <h1 class="text-xl font-bold">Study Groups</h1>
-                    <button id="search-groups-btn" class="text-gray-400"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button text-gray-400 hover:text-white" data-target="my-groups">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h1 class="text-xl font-bold text-gray-100">Group Rankings</h1>
+                    <div class="w-10"></div>
                 </header>
-                <div id="all-groups-list" class="p-4 space-y-3 flex-grow"></div>
-                <button id="go-to-create-group-btn" class="create-group-btn"><i class="fas fa-plus text-xl"></i></button>
+                <!-- NEW Sorting and Filtering UI -->
+                <div class="p-4 border-b border-gray-800 sticky top-[73px] bg-gray-900 z-10">
+                    <div class="flex space-x-1 bg-gray-800 p-1 rounded-lg mb-4" id="group-ranking-sort-tabs">
+                        <button class="group-filter-btn flex-1" data-sort="new">New</button>
+                        <button class="group-filter-btn flex-1" data-sort="attendance">Attendance</button>
+                        <button class="group-filter-btn flex-1 active" data-sort="studytime">Studytime</button>
+                    </div>
+                    <div class="flex items-center justify-center space-x-6 text-sm" id="group-ranking-filters">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" data-filter="univ" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
+                            <span>Univ</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" data-filter="available" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
+                            <span>Available</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" data-filter="public" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
+                            <span>Public</span>
+                        </label>
+                    </div>
+                </div>
+                <!-- END NEW UI -->
+                <div id="all-groups-list" class="p-4"></div>
+                <button id="go-to-create-group-btn" class="create-group-btn">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
-
-            <!-- Create Group Page -->
+            
             <div id="page-create-group" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button" data-target="find-groups"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
-                    <h1 class="text-xl font-bold">Create Group</h1>
-                    <button id="create-group-done-btn" class="font-semibold text-blue-500">Done</button>
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button text-gray-400 hover:text-white" data-target="find-groups">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h1 class="text-xl font-bold text-gray-100">Create New Group</h1>
+                    <button id="create-group-done-btn" class="px-4 py-2 bg-blue-600 rounded-lg font-semibold">Done</button>
                 </header>
-                <div class="p-4">
-                    <form id="create-group-form" class="space-y-4">
-                        <div class="form-group"><label for="group-name-input" class="block mb-2">Group Name</label><input type="text" id="group-name-input" placeholder="Enter group name" class="w-full bg-gray-800 rounded-lg p-3" required></div>
-                        <div class="form-group"><label for="group-password-input" class="block mb-2">Password (Optional)</label><input type="password" id="group-password-input" placeholder="Set a password" class="w-full bg-gray-800 rounded-lg p-3"></div>
-                        <div class="form-group"><label class="block mb-2">Category</label><div class="grid grid-cols-2 gap-3"><div class="category-option selected">Secondary School</div><div>...</div></div></div>
-                        <div class="form-group"><label class="block mb-2">Daily Time Goal</label><div class="grid grid-cols-3 gap-2"><div class="time-option selected">3 hours</div><div>...</div></div></div>
-                        <div class="form-group"><label class="block mb-2">Capacity</label><div class="flex items-center space-x-3"><button id="decrease-capacity" type="button" class="w-10 h-10 bg-gray-800 rounded-lg">-</button><div id="capacity-value" class="text-xl font-bold w-12 text-center">15</div><button id="increase-capacity" type="button" class="w-10 h-10 bg-gray-800 rounded-lg">+</button></div></div>
-                        <div class="form-group"><label for="group-description-input" class="block mb-2">Group Description</label><textarea id="group-description-input" placeholder="Describe your group" class="w-full bg-gray-800 rounded-lg p-3" rows="4" required></textarea></div>
+                <div class="p-4 md:p-6">
+                    <form id="create-group-form" class="space-y-6">
+                        <div><label class="block mb-2 font-semibold">Group Name</label><input id="group-name-input" type="text" class="w-full bg-gray-700 rounded-lg p-3" placeholder="e.g., University Calculus" required></div>
+                        <div><label class="block mb-2 font-semibold">Password (optional)</label><input id="group-password-input" type="text" class="w-full bg-gray-700 rounded-lg p-3" placeholder="Leave blank for public group"></div>
+                        <div><label class="block mb-2 font-semibold">Category</label><div class="grid grid-cols-2 gap-2"><div class="category-option selected">General study</div><div class="category-option">Language study</div><div class="category-option">Secondary School</div><div class="category-option">University</div></div></div>
+                        <div><label class="block mb-2 font-semibold">Time Goal</label><div class="grid grid-cols-3 gap-2"><div class="time-option selected">1</div><div class="time-option">2</div><div class="time-option">3</div><div class="time-option">4</div><div class="time-option">5</div><div class="time-option">6</div></div></div>
+                        <div><label class="block mb-2 font-semibold">Capacity</label><div class="flex items-center justify-center bg-gray-700 rounded-lg p-3"><button type="button" id="decrease-capacity" class="px-4 text-xl">-</button><div id="capacity-value" class="flex-grow text-center font-bold text-lg">15</div><button type="button" id="increase-capacity" class="px-4 text-xl">+</button></div></div>
+                        <div><label class="block mb-2 font-semibold">Description</label><textarea id="group-description-input" class="w-full bg-gray-700 rounded-lg p-3 h-24" placeholder="Describe your group's purpose" required></textarea></div>
                     </form>
                 </div>
             </div>
+            
+            <div id="page-group-detail" class="page flex-col h-full overflow-y-auto no-scrollbar">
+                <header class="p-4 md:p-6 flex items-center z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                    <button class="back-button text-gray-400 hover:text-white" data-target="my-groups">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <div id="group-selector-container" class="group-detail-header-dropdown">
+                         <select id="group-selector"></select>
+                    </div>
+                    
+                    <button id="group-rules-header-btn" class="ml-2 text-gray-400 hover:text-white p-2 rounded-full flex items-center justify-center hover:bg-gray-700 transition" title="Group Rules">
+                        <i class="fas fa-gavel"></i>
+                    </button>
 
-            <!-- Group Detail Page -->
-            <div id="page-group-detail" class="page flex-col h-full">
-                <header class="p-4 flex items-center justify-between border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button" data-target="my-groups"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg></button>
-                    <div class="flex-grow flex items-center justify-center gap-4">
-                        <div class="group-detail-header-dropdown">
-                            <select id="group-selector" class="w-full">...</select>
+                    <div class="ml-auto flex items-center gap-2">
+                        <!-- New Ranking Switch -->
+                        <div id="ranking-scope-switch" class="hidden timer-switch-container bg-gray-800 p-1">
+                            <button id="group-ranking-scope-btn" class="timer-switch-btn text-xs px-3 py-1 active">Group</button>
+                            <button id="global-ranking-scope-btn" class="timer-switch-btn text-xs px-3 py-1">Global</button>
                         </div>
-                        <div id="ranking-scope-switch" class="hidden">
-                            <button id="group-ranking-scope-btn" class="timer-switch-btn active">Group</button>
-                            <button id="global-ranking-scope-btn" class="timer-switch-btn">Global</button>
+
+                        <!-- Desktop Home Controls -->
+                        <div id="group-desktop-controls" class="hidden">
+                            <div class="hidden md:flex items-center gap-2">
+                                <div id="group-view-switch" class="timer-switch-container bg-gray-800 p-1">
+                                    <button id="realtime-view-btn" data-view-target="realtime" class="timer-switch-btn text-xs px-3 py-1 active">Realtime</button>
+                                    <button id="studicon-view-btn" data-view-target="studicon" class="timer-switch-btn text-xs px-3 py-1">Studicon</button>
+                                </div>
+                                <button id="studicon-store-btn" class="text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700">
+                                    <i class="fas fa-store"></i>
+                                </button>
+                                <div id="group-settings-btn-container" class="w-10 h-10"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="w-6"></div>
                 </header>
+                <div id="group-mobile-controls" class="md:hidden sticky top-[73px] bg-gray-900 z-10 border-b border-gray-800 p-2 flex items-center justify-between hidden">
+                    <div id="group-view-switch-mobile" class="timer-switch-container bg-gray-800 p-1 m-0">
+                        <button id="realtime-view-btn-mobile" data-view-target="realtime" class="timer-switch-btn text-xs px-3 py-1 active">Realtime</button>
+                        <button id="studicon-view-btn-mobile" data-view-target="studicon" class="timer-switch-btn text-xs px-3 py-1">Studicon</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="studicon-store-btn-mobile" class="text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700">
+                            <i class="fas fa-store"></i>
+                        </button>
+                        <div id="group-settings-btn-container-mobile" class="w-10 h-10">
+                        </div>
+                    </div>
+                </div>
                 <div id="group-detail-content" class="flex-grow overflow-y-auto no-scrollbar">
-                    <!-- Group sub-page content (home, attendance, rankings, invite, chat) will be rendered here -->
                 </div>
                 <nav id="group-detail-nav" class="bg-gray-800 border-t border-gray-700 grid grid-cols-5 sticky bottom-0">
-                    <button class="group-nav-item active" data-subpage="home"><i class="fas fa-home"></i><p class="text-xs mt-1">Home</p></button>
-                    <button class="group-nav-item" data-subpage="attendance"><i class="fas fa-calendar-check"></i><p class="text-xs mt-1">Attendance</p></button>
-                    <button class="group-nav-item" data-subpage="rankings"><i class="fas fa-chart-bar"></i><p class="text-xs mt-1">Rankings</p></button>
-                    <button class="group-nav-item" data-subpage="invite"><i class="fas fa-user-plus"></i><p class="text-xs mt-1">Invite</p></button>
-                    <button class="group-nav-item" data-subpage="chat"><i class="fas fa-comments"></i><p class="text-xs mt-1">Chat</p></button>
+                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors active" data-subpage="home">
+                        <i class="fas fa-home"></i>
+                        <p class="text-xs mt-1">Home</p>
+                    </button>
+                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="attendance">
+                        <i class="fas fa-calendar-check"></i>
+                        <p class="text-xs mt-1">Attendance</p>
+                    </button>
+                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="rankings">
+                        <i class="fas fa-chart-bar"></i>
+                        <p class="text-xs mt-1">Rankings</p>
+                    </button>
+                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="invite">
+                        <i class="fas fa-user-plus"></i>
+                        <p class="text-xs mt-1">Invite</p>
+                    </button>
+                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="chat">
+                        <i class="fas fa-comments"></i>
+                        <p class="text-xs mt-1">Chat</p>
+                    </button>
                 </nav>
             </div>
         </main>
-
-        <!-- Main Navigation Bar -->
         <nav id="main-nav" class="bg-gray-800 border-t border-gray-700 grid grid-cols-5 sticky bottom-0">
-            <button class="nav-item active" data-page="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">...</svg><p class="text-xs mt-1">Timer</p></button>
-            <button class="nav-item" data-page="stats"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">...</svg><p class="text-xs mt-1">Stats</p></button>
-            <button class="nav-item" data-page="ranking"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">...</svg><p class="text-xs mt-1">Ranking</p></button>
-            <button class="nav-item" data-page="planner"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">...</svg><p class="text-xs mt-1">Planner</p></button>
-            <button id="add-subject-btn" class="nav-item"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">...</svg><p class="text-xs mt-1">Add Subject</p></button>
+            <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors active" data-page="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p class="text-xs mt-1">Timer</p></button>
+            <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="stats"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg><p class="text-xs mt-1">Stats</p></button>
+            <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="ranking"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg><p class="text-xs mt-1">Ranking</p></button>
+            <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="planner"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg><p class="text-xs mt-1">Planner</p></button>
+            <button id="add-subject-btn" class="p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors"><svg class="w-6 h-6 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p class="text-xs mt-1 text-blue-400">Add Subject</p></button>
         </nav>
     </div>
 
-    <!-- Toast Container for notifications -->
     <div id="toast-container"></div>
+    <div id="add-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Subject</div><button class="close-modal">&times;</button></div><form id="add-subject-form"><div class="mb-4"><label for="add-subject-name" class="block text-gray-300 mb-2">Subject Name</label><input type="text" id="add-subject-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required></div><div class="mb-4"><label class="block text-gray-300 mb-2">Color</label><div class="subject-color-picker"><div class="color-dot bg-red-500" data-color="bg-red-500"></div><div class="color-dot bg-blue-500 selected" data-color="bg-blue-500"></div><div class="color-dot bg-green-500" data-color="bg-green-500"></div><div class="color-dot bg-yellow-500" data-color="bg-yellow-500"></div><div class="color-dot bg-purple-500" data-color="bg-purple-500"></div><div class="color-dot bg-pink-500" data-color="bg-pink-500"></div><div class="color-dot bg-indigo-500" data-color="bg-indigo-500"></div><div class="color-dot bg-teal-500" data-color="bg-teal-500"></div><div class="color-dot bg-orange-500" data-color="bg-orange-500"></div><div class="color-dot bg-cyan-500" data-color="bg-cyan-500"></div><div class="color-dot bg-lime-500" data-color="bg-lime-500"></div><div class="color-dot bg-fuchsia-500" data-color="bg-fuchsia-500"></div><div class="color-dot bg-rose-500" data-color="bg-rose-500"></div><div class="color-dot bg-sky-500" data-color="bg-sky-500"></div><div class="color-dot bg-emerald-500" data-color="bg-emerald-500"></div><div class="color-dot bg-amber-500" data-color="bg-amber-500"></div><div class="color-dot bg-violet-500" data-color="bg-violet-500"></div></div></div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Add Subject</button></form></div></div>
+    <div id="start-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Start New Session</div><button id="close-start-session-modal" class="close-modal">&times;</button></div><form id="start-session-form"><div id="subject-selection-list" class="mb-4 max-h-60 overflow-y-auto space-y-2"></div><div class="flex items-center gap-4 mt-4"><button type="button" id="open-add-subject-modal-from-start" class="w-full text-center py-3 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium transition">Add New Subject</button><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Start Timer</button></div></form></div></div>
+    <div id="add-task-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Task</div><button class="close-modal">&times;</button></div><form id="add-task-form"><div class="mb-4"><label for="add-task-name" class="block text-gray-300 mb-2">Task Description</label><input type="text" id="add-task-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required></div><div class="mb-4"><label for="add-task-date" class="block text-gray-300 mb-2">Date</label><input type="date" id="add-task-date" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required></div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Add Task</button></form></div></div>
+    <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form"><input type="password" id="group-password-prompt-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required><div class="flex gap-2 mt-4"><button type="button" class="close-modal w-full py-2 bg-gray-600 rounded-lg">Cancel</button><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition">Submit</button></div></form></div></div>
+    <div id="confirmation-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 id="confirmation-modal-title" class="modal-title">Are you sure?</h2><button class="close-modal">&times;</button></div><p id="confirmation-modal-message">This action cannot be undone.</p><div id="confirmation-modal-buttons"><button id="cancel-btn">Cancel</button><button id="confirm-btn">Confirm</button></div></div></div>
+    
+    <!-- Edit Profile Modal -->
+    <div id="edit-profile-modal" class="modal">
+        <div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Profile</div><button class="close-modal">&times;</button></div><form id="edit-profile-form"><div class="mb-4"><label for="edit-username-input" class="block text-gray-300 mb-2">Username</label><input type="text" id="edit-username-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required minlength="3"></div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Save Changes</button></form></div></div>
+    </div>
+    
+    <!-- Study Goal Modal -->
+    <div id="study-goal-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form"><div class="mb-4"><label for="study-goal-input" class="block text-gray-300 mb-2">Daily Study Goal (hours)</label><input type="number" id="study-goal-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required min="1" max="24"></div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Set Goal</button></form></div></div>
 
-    <!-- Modals -->
-    <div id="add-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Subject</div><button class="close-modal">&times;</button></div><form id="add-subject-form">...</form></div></div>
-    <div id="start-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Start New Session</div><button id="close-start-session-modal" class="close-modal">&times;</button></div><form id="start-session-form">...</form></div></div>
-    <div id="add-task-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Add New Task</div><button class="close-modal">&times;</button></div><form id="add-task-form">...</form></div></div>
-    <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form">...</form></div></div>
-    <div id="confirmation-modal" class="modal"><div class="modal-content"><div class="modal-header><h2 id="confirmation-modal-title" class="modal-title">Are you sure?</h2><button class="close-modal">&times;</button></div><p id="confirmation-modal-message">...</p><div id="confirmation-modal-buttons">...</div></div></div>
-    <div id="edit-profile-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Edit Profile</div><button class="close-modal">&times;</button></div><form id="edit-profile-form">...</form></div></div>
-    <div id="study-goal-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form">...</form></div></div>
-    <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form">...</form></div></div>
-    <div id="edit-session-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Edit Session</div><button class="close-modal">&times;</button></div><form id="edit-session-form">...</form></div></div>
-    <div id="edit-subject-modal" class="modal"><div class="modal-content"><div class="modal-header><div class="modal-title">Edit Subject</div><button class="close-modal">&times;</button></div><form id="edit-subject-form">...</form></div></div>
+    <!-- Pomodoro Settings Modal -->
+    <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-4"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-gray-300">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-gray-300">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-gray-300">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-gray-300">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="2" required></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-gray-300">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-gray-300">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-gray-300">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-gray-300">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Automation</h3><div class="space-y-3"> <div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition mt-4">Save Settings</button></form></div></div>
 
-    <!-- Corrected paths to the local JavaScript files, using root-relative paths -->
-    <script type="module" src="/utils.js"></script>
-    <script type="module" src="/ui.js"></script>
-    <script type="module" src="/auth.js"></script>
-    <script type="module" src="/main.js"></script>
+    <!-- Edit Session Modal -->
+    <div id="edit-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Session</div><button class="close-modal">&times;</button></div><form id="edit-session-form"><div class="mb-4"><label for="edit-session-duration" class="block text-gray-300 mb-2">Duration (minutes)</label><input type="number" id="edit-session-duration" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required min="1"></div><input type="hidden" id="edit-session-id"><input type="hidden" id="edit-session-old-duration"><input type="hidden" id="edit-session-ended-at"><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Save Changes</button></form></div></div>
+    
+    <!-- Edit Subject Modal -->
+    <div id="edit-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Subject</div><button class="close-modal">&times;</button></div><form id="edit-subject-form"><input type="hidden" id="edit-subject-id"><div class="mb-4"><label for="edit-subject-name" class="block text-gray-300 mb-2">Subject Name</label><input type="text" id="edit-subject-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required></div><div class="mb-4"><label class="block text-gray-300 mb-2">Color</label><div class="subject-color-picker" id="edit-subject-color-picker"></div></div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Save Changes</button></form></div></div>
+
+        <div id="group-settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Group Settings</div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="space-y-2">
+                <div class="group-settings-item" data-action="edit-info"><i class="fas fa-edit"></i><span>Change Group Info</span></div>
+                <div class="group-settings-item" data-action="group-rules"><i class="fas fa-gavel"></i><span>Group Rules</span></div>
+                <div class="group-settings-item" data-action="kick-member"><i class="fas fa-user-slash"></i><span>Kick Member</span></div>
+                <div class="group-settings-item" data-action="promote-member"><i class="fas fa-user-shield"></i><span>Promote Member</span></div>
+                <div class="group-settings-item" data-action="member-logs"><i class="fas fa-history"></i><span>Member Logs</span></div>
+                <div class="group-settings-item" data-action="group-ranking"><i class="fas fa-trophy"></i><span>External Rankings</span></div>
+                <div class="group-settings-item" data-action="group-settings"><i class="fas fa-cog"></i><span>General Settings</span></div>
+                <div class="group-settings-item text-cyan-400 hover:bg-cyan-500/10" data-action="wake-up-group"><i class="fas fa-bell"></i><span>Wake Up Idle Members</span></div>
+                <hr class="border-gray-600 !my-3">
+                <div class="group-settings-item text-red-400 hover:bg-red-500/10" data-action="leave-group">
+                    <i class="fas fa-sign-out-alt"></i><span>Leave Group</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Group Info Modal -->
+    <div id="edit-group-info-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Edit Group Info</div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="edit-group-info-form" class="space-y-4">
+                <input type="hidden" id="edit-group-id-input">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Group Name</label>
+                    <input type="text" id="edit-group-name" class="w-full bg-gray-700 rounded-lg p-3" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Group introduction/rules</label>
+                    <textarea id="edit-group-description" class="w-full bg-gray-700 rounded-lg p-3 h-24" required></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Category</label>
+                    <select id="edit-group-category" class="w-full bg-gray-700 rounded-lg p-3">
+                        <option>General study</option>
+                        <option>Language study</option>
+                        <option>Secondary School</option>
+                        <option>University</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Change Daily Goal</label>
+                    <input type="number" id="edit-group-goal" class="w-full bg-gray-700 rounded-lg p-3" min="1" max="24" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Change Capacity</label>
+                    <input type="number" id="edit-group-capacity" class="w-full bg-gray-700 rounded-lg p-3" min="2" max="100" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Change Password</label>
+                    <input type="text" id="edit-group-password" class="w-full bg-gray-700 rounded-lg p-3" placeholder="Leave blank for public">
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition mt-4">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="image-view-modal" class="modal bg-black/80"><div class="modal-content bg-transparent shadow-none p-0 w-full h-full flex items-center justify-center"><button class="close-modal absolute top-4 right-4 text-white text-4xl z-10">&times;</button><img id="fullscreen-image" src="" class="max-w-[95vw] max-h-[95vh] object-contain"></div></div>
+
+    <!-- Avatar Character Selection Modal -->
+    <div id="avatar-character-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Choose Character</div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div id="avatar-character-picker" class="avatar-picker">
+                <!-- Character options will be injected here -->
+            </div>
+            <button id="save-character-avatar-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition mt-4">Save Character</button>
+        </div>
+    </div>
+
+    <!-- Studicon Store Modal -->
+    <div id="studicon-store-modal" class="modal">
+        <div class="modal-content max-w-2xl w-full">
+            <div class="modal-header">
+                <div class="modal-title">Studicon Store</div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div id="studicon-store-content">
+                <div id="studicon-category-tabs" class="flex space-x-1 border-b border-gray-700 mb-4">
+                    <!-- Category tabs will be injected here -->
+                </div>
+                <div id="studicon-picker" class="max-h-[60vh] overflow-y-auto avatar-picker grid-cols-5">
+                    <!-- Studicons will be injected here -->
+                </div>
+            </div>
+            <button id="save-studicon-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition mt-4">Save Studicon</button>
+        </div>
+    </div>
+
+    <!-- User Profile Modal -->
+    <div id="user-profile-modal" class="modal">
+        <div class="modal-content max-w-sm w-full">
+            <div class="modal-header">
+                <div class="modal-title">User Profile</div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div id="user-profile-content" class="text-center">
+                <!-- Loading state -->
+                <div id="user-profile-loading" class="py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+                <!-- Content state -->
+                <div id="user-profile-details" class="hidden">
+                    <div id="user-profile-avatar" class="profile-avatar mx-auto mb-4 w-24 h-24 text-4xl overflow-hidden"></div>
+                    <h2 id="user-profile-name" class="text-2xl font-bold"></h2>
+                    <div class="mt-6 p-4 bg-gray-800 rounded-lg">
+                        <p class="text-4xl font-bold text-cyan-400" id="user-profile-total-today">00:00:00</p>
+                        <p class="text-sm text-gray-400">Total Study Time Today</p>
+                    </div>
+                    <div class="mt-4 grid grid-cols-2 gap-4 text-left text-sm">
+                        <div class="bg-gray-800 p-3 rounded-lg">
+                            <p class="text-gray-400">Overall Study Time</p>
+                            <p class="font-semibold text-white" id="user-profile-total-overall">--</p>
+                        </div>
+                        <div class="bg-gray-800 p-3 rounded-lg">
+                            <p class="text-gray-400">Last Active</p>
+                            <p class="font-semibold text-white" id="user-profile-last-active">--</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Add Task Modal -->
+    <div id="quick-add-task-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Add Task for <span id="quick-add-task-date"></span></div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="quick-add-task-form">
+                <input type="hidden" id="quick-add-task-date-input">
+                <input type="text" id="quick-add-task-title-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Task title..." required>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition mt-4">Add Task</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Group Rules Modal -->
+    <div id="group-rules-modal" class="modal">
+        <div class="modal-content max-w-lg w-full">
+            <div class="modal-header">
+                <div class="modal-title">Group Rules</div>
+                <div class="flex items-center gap-4">
+                    <div id="group-rules-controls">
+                        <!-- Edit button for leader goes here -->
+                    </div>
+                    <button class="close-modal">&times;</button>
+                </div>
+            </div>
+            <div id="group-rules-display" class="prose prose-invert max-w-none text-gray-300 whitespace-pre-wrap p-1 mt-4">
+                <!-- Rules text will be displayed here -->
+            </div>
+            <div id="group-rules-edit-container" class="hidden mt-4">
+                <textarea id="group-rules-textarea" class="w-full bg-gray-800 rounded-lg p-3 h-48 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter group rules..."></textarea>
+                <button id="save-group-rules-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition mt-4">Save Rules</button>
+            </div>
+        </div>
+    </div>
+
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, 
-            signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, doc, setDoc, getDoc, addDoc, collection, onSnapshot,
-            arrayUnion, updateDoc, deleteDoc, getDocs, serverTimestamp,
-            query, orderBy, limit, increment, where, runTransaction
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js"; // Added getAnalytics import
-
-        // --- Achievement Definitions ---
-        const ACHIEVEMENTS = {
-            'novice_scholar': { name: 'Novice Scholar', description: 'Study for a total of 1 hour.' },
-            'dedicated_learner': { name: 'Dedicated Learner', description: 'Study for a total of 10 hours.' },
-            'marathoner': { name: 'Marathoner', description: 'Complete a single study session over 2 hours.' },
-            'consistent_coder': { name: 'Consistent Coder', description: 'Maintain a 7-day study streak.' }
-        };
-
-        // --- Web Worker Implementation (Simplified) ---
-        const workerCode = `
-            let timerInterval = null;
-            let endTime = 0;
-            let remainingTimeOnPause = 0;
-            let isPaused = false;
-            let currentPhaseDuration = 0;
-
-            function tick() {
-                // Simplified tick logic
-                self.postMessage({ type: 'tick', timeLeft: Math.round((endTime - Date.now()) / 1000) });
-                if (Math.round((endTime - Date.now()) / 1000) <= 0) {
-                    clearInterval(timerInterval);
-                    timerInterval = null;
-                    self.postMessage({ type: 'phase_ended' });
-                }
-            }
-
-            self.onmessage = function(e) {
-                const { command, duration } = e.data;
-                switch(command) {
-                    case 'start': // Simplified start
-                        if (timerInterval) clearInterval(timerInterval);
-                        endTime = Date.now() + duration * 1000;
-                        timerInterval = setInterval(tick, 1000);
-                        tick();
-                        break;
-                    case 'pause': // Simplified pause
-                        if (timerInterval) { clearInterval(timerInterval); isPaused = true; remainingTimeOnPause = endTime - Date.now(); timerInterval = null; }
-                        break;
-                    case 'resume': // Simplified resume
-                        if (isPaused && remainingTimeOnPause > 0) { isPaused = false; endTime = Date.now() + remainingTimeOnPause; timerInterval = setInterval(tick, 1000); tick(); remainingTimeOnPause = 0; }
-                        break;
-                    case 'stop': // Simplified stop
-                        if (timerInterval) clearInterval(timerInterval);
-                        timerInterval = null; endTime = 0; remainingTimeOnPause = 0; isPaused = false;
-                        break;
-                }
-            };
-        `;
-        const blob = new Blob([workerCode], { type: 'application/javascript' });
-        const pomodoroWorker = new Worker(URL.createObjectURL(blob));
-
-        // --- Service Worker Communication Functions (Placeholders) ---
-        function scheduleSWAlarm(payload) {
-            console.log('Scheduling SW alarm:', payload);
-        }
-        function cancelSWAlarm(timerId) {
-            console.log('Cancelling SW alarm:', timerId);
-        }
-
-        // --- Application State ---
-        let db, auth;
-        let currentUser = null;
-        let currentUserData = {};
-        let dashboardCharts = {};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    // Firebase SDKS 
+    import { 
+// ... existing code ... -->
         let userSessions = []; 
         let isAudioUnlocked = false;
-        let isAddingSubjectFromStartSession = false;
+        let isAddingSubjectFromStartSession = false; // Flag to track modal origin
+        let fcmToken;
+        let sendPomodoroNotification;
+        let sendWakeUpNotification;
+        let sendGroupWakeUpNotification;
+        // --- NEW CLOUD FUNCTION CALLABLES ---
+        let logStudySession;
+        let managePlannerTask;
+        let updateUserProfile;
 
-        // Timer State
-        let isPaused = false;
-        let pauseStartTime = 0;
-        let timerInterval = null;
-        let sessionStartTime = 0;
-        let totalTimeTodayInSeconds = 0;
-        let totalBreakTimeTodayInSeconds = 0;
-        let activeSubject = '';
-        let groupDetailUnsubscribers = [];
-        let memberTimerIntervals = [];
-        let currentGroupId = null;
-        let groupRealtimeData = { members: {}, sessions: {} };
+/**
+ * Initializes push notifications: requests permission, gets FCM token, and saves it to Firestore.
+// ... existing code ... -->
+        // --- MOVE THESE TWO LINES HERE ---
         
-        // Break Timer State
-        let breakTimerInterval = null;
-        let breakStartTime = 0;
+        sendPomodoroNotification = httpsCallable(functions, 'sendPomodoroNotification'); // Assign callable function
+        sendWakeUpNotification = httpsCallable(functions, 'sendWakeUpNotification');
+        sendGroupWakeUpNotification = httpsCallable(functions, 'sendGroupWakeUpNotification');
+        // --- NEW CLOUD FUNCTION CALLABLES ---
+        logStudySession = httpsCallable(functions, 'logStudySession');
+        managePlannerTask = httpsCallable(functions, 'managePlannerTask');
+        updateUserProfile = httpsCallable(functions, 'updateUserProfile');
+        // ---------------------------------
 
-        // Drag & Drop State
-        let draggedItem = null;
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        currentUser = user;
+// ... existing code ... -->
+                        pomodoroSettings = {...pomodoroSettings, ...currentUserData.pomodoroSettings};
+                        }
+                        if (currentUserData.pomodoroSounds) {
+                            pomodoroSounds = {...pomodoroSounds, ...currentUserData.pomodoroSounds};
+                        }
+                        pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings });
 
-        // Pomodoro State
-        let timerMode = 'normal';
-        let pomodoroState = 'idle';
-        let nextPomodoroPhase = null;
-        let pomodoroSettings = { work: 25, short_break: 5, long_break: 15, long_break_interval: 4, autoStartBreak: true, autoStartFocus: true };
-        let pomodoroSounds = { start: "tone_simple_beep", focus: "tone_chime_chord", break: "tone_metal_bell", volume: 1.0 };
-        const availableSounds = { 'None': '', 'Simple Beep': 'tone_simple_beep', 'Chime Chord': 'tone_chime_chord', 'Metal Bell': 'tone_metal_bell', /* ... other sounds ... */ };
 
-        // Attendance State
-        let attendanceMonth = new Date().getMonth();
-        let attendanceYear = new Date().getFullYear();
-
-        // UI Elements (references populated in window.onload)
-        let authError, sessionTimerDisplay, totalTimeDisplay, totalBreakTimeDisplay, activeSubjectDisplay, pomodoroStatusDisplay;
-
-        // --- UI Helper Functions ---
-        function getCurrentDate() { return new Date(); }
-
-        function playSound(soundId, volume) {
-            console.log(`Playing sound: ${soundId} at volume ${volume}`);
-            // Tone.js sound generation logic (simplified for skeleton)
-        }
-
-        function unlockAudio() {
-            console.log('Attempting to unlock audio.');
-        }
-
-        function showToast(message, type = 'info', duration = 3000) {
-            console.log(`Toast (${type}): ${message}`);
-            // Actual toast display logic removed
-        }
-
-        function showConfirmationModal(title, message, onConfirm) {
-            console.log(`Confirmation: ${title} - ${message}`);
-            // Actual modal display logic removed
-            // Simulate confirmation for skeleton
-            // onConfirm(); 
-        }
-
-        function formatTime(seconds, includeSeconds = true) {
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            const s = Math.floor(seconds % 60);
-            if (includeSeconds) return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-            return `${h > 0 ? h + 'h ' : ''}${m}m`;
-        }
-
-        function formatPomodoroTime(seconds) {
-            const m = Math.floor(seconds / 60);
-            const s = Math.floor(seconds % 60);
-            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
-
-        // --- Firebase Initialization ---
-        function initializeFirebase() {
-            console.log('Initializing Firebase...');
-            // NOTE: Replace with your actual Firebase config
-            const firebaseConfig = {
-  apiKey: "AIzaSyCOK3nyWnRYDpu9SvY7oxLhb1A-85Qva5o",
-  authDomain: "focus-flow-bfcd1.firebaseapp.com",
-  projectId: "focus-flow-bfcd1",
-  storageBucket: "focus-flow-bfcd1.firebasestorage.app",
-  messagingSenderId: "637758725334",
-  appId: "1:637758725334:web:556ec4feda0e0d42ed3d77",
-  measurementId: "G-2YBNMYQK3D"
-};
-
-            // Initialize Firebase
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app); // Assign the auth object here
-            db = getFirestore(app); // Assign the db object here
-            const analytics = getAnalytics(app);
-
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    currentUser = user;
-                    const userDoc = await getOrCreateUserDocument(user);
-                    currentUserData = userDoc.data();
-                    if (!currentUserData || !currentUserData.username) {
-                        showPage('page-username-setup');
-                    } else {
-                        updateProfileUI(currentUserData);
-                        showPage('page-timer');
-                        setupRealtimeListeners();
-                        loadDailyTotal();
-                    }
-                } else {
-                    currentUser = null;
-                    currentUserData = {};
-                    showPage('auth-screen');
-                }
-            });
-        }
-
-        // --- Page Navigation ---
-        function showPage(pageId) {
-            console.log(`Navigating to page: ${pageId}`);
-            // Logic to hide/show pages and navigation bars
-            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-            document.getElementById(pageId).classList.add('active');
-
-            // Handle auth screen visibility
-            if (pageId === 'auth-screen') {
-                document.getElementById('auth-screen').classList.add('active');
-                document.getElementById('app-container').classList.remove('active');
-            } else if (pageId === 'page-username-setup') {
-                document.getElementById('auth-screen').classList.remove('active');
-                document.getElementById('app-container').classList.remove('active');
-                document.getElementById('page-username-setup').classList.add('active');
-            }
-            else {
-                document.getElementById('auth-screen').classList.remove('active');
-                document.getElementById('page-username-setup').classList.remove('active');
-                document.getElementById('app-container').classList.add('active');
-            }
-
-            // Update active navigation item
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            const activeNavItem = document.querySelector(`.nav-item[data-page="${pageId.replace('page-', '')}"]`);
-            if (activeNavItem) {
-                activeNavItem.classList.add('active');
-            }
-        }
-
+                        if (!currentUserData || !currentUserData.username) {
+// ... existing code ... -->
         async function startTimer(subject) {
-            console.log(`Starting timer for: ${subject} in ${timerMode} mode.`);
-            // Timer start logic (normal or Pomodoro)
-            // Save idle break if any
-            // Update studying status in Firestore
+            if (!subject) {
+                showToast("Please select a subject first.", "error");
+                return;
+// ... existing code ... -->
+            if (breakTimerInterval) {
+                clearInterval(breakTimerInterval);
+                const elapsedBreakSeconds = Math.floor((Date.now() - breakStartTime) / 1000);
+                if (elapsedBreakSeconds > 0) {
+                    await saveSession('Break', elapsedBreakSeconds, 'break'); // Save break session
+                }
+                breakTimerInterval = null;
+                breakStartTime = 0;
+            }
+            // Clear break status from UI
+            pomodoroStatusDisplay.textContent = ''; // Clear the "On Break" status
+
+            // The logic to check for idle time between sessions is complex and better handled
+            // by the backend. The 'logStudySession' function can determine if an 'Idle Break'
+            // session needs to be created based on the user's last session time.
+            // We are removing the frontend logic for this to avoid race conditions and simplify the client.
+
+
+            activeSubject = subject;
+            activeSubjectDisplay.textContent = activeSubject;
+            
+// ... existing code ... -->
+            document.getElementById('manual-start-btn').classList.add('hidden');
+
+            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+            // This is an optimistic UI update. The actual 'studying' state will be managed
+            // by the backend when the session is logged. For real-time group features,
+            // this frontend update provides immediate feedback.
+            await updateDoc(userRef, { studying: { subject: activeSubject, startTime: serverTimestamp(), type: 'study' } });
         }
         
         async function stopTimer() {
-            console.log('Stopping timer.');
-            // Stop timer logic, save session
-            // Reset UI and Firestore studying status
-        }
+// ... existing code ... -->
+            document.getElementById('resume-btn').classList.add('hidden');
+            document.getElementById('manual-start-btn').classList.add('hidden');
 
-        function pauseTimer() {
-            console.log('Pausing timer.');
-            // Pause timer logic
-        }
-
-        function resumeTimer() {
-            console.log('Resuming timer.');
-            // Resume timer logic
-        }
-
-        async function handlePomodoroPhaseEnd({ newState, oldState }) {
-            console.log(`Pomodoro phase ended: ${oldState} -> ${newState}`);
-            // Logic to save session, play sound, and transition to next phase (auto/manual)
-        }
-
-        function startNextPomodoroPhase(state) {
-            console.log(`Starting next Pomodoro phase: ${state}`);
-            // Logic to set timer, update UI, and schedule next SW alarm
-        }
-
-        function updateBreakTimerDisplay() {
-            // Logic to update break timer on UI
+            // Update user status in Firestore to show they are no longer studying
+            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+            // Optimistic UI update. The backend will handle the definitive state.
+            await updateDoc(userRef, { studying: null });
         }
         
+        function pauseTimer() {
+// ... existing code ... -->
         function updateTotalTimeDisplay() {
-            if (totalTimeDisplay && totalBreakTimeDisplay) {
-                totalTimeDisplay.textContent = `Total Today: ${formatTime(totalTimeTodayInSeconds)}`;
-                totalBreakTimeTodayDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
-            }
+            totalTimeDisplay.textContent = `Total Today: ${formatTime(totalTimeTodayInSeconds)}`;
+            totalBreakTimeDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
         }
 
         async function saveSession(subject, durationSeconds, sessionType = 'study') {
-            console.log(`Saving ${sessionType} session: ${subject} for ${durationSeconds} seconds.`);
-            // Firestore transaction to save session and update totals/streaks/achievements
-        }
+            if (!currentUser || durationSeconds <= 0) {
+                return;
+            }
 
-        async function checkAndAwardAchievements(completedSessionDuration) {
-            console.log('Checking for achievements...');
-            // Logic to compare study data against ACHIEVEMENTS and update Firestore
+            // Cap break time at 3 hours (10800 seconds)
+            const MAX_BREAK_SECONDS = 3 * 3600; // 3 hours in seconds
+            const cappedDuration = (sessionType === 'break' && durationSeconds > MAX_BREAK_SECONDS) ? MAX_BREAK_SECONDS : durationSeconds;
+
+            try {
+                // --- BACKEND CALL ---
+                // The Cloud Function will handle all database writes:
+                // 1. Creating the session document.
+                // 2. Updating user aggregate stats (private and public).
+                // 3. Updating streak information.
+                // 4. Checking for and awarding achievements.
+                await logStudySession({
+                    subject: subject,
+                    durationSeconds: cappedDuration,
+                    sessionType: sessionType
+                });
+                // --- END BACKEND CALL ---
+                
+                // Optimistic UI update for immediate feedback.
+                // The onSnapshot listener on the user document will eventually sync this with the backend's source of truth.
+                const todayStr = getCurrentDate().toISOString().split('T')[0];
+                const userDocData = currentUserData; 
+
+                if (sessionType === 'study') {
+                    let currentDailyStudySeconds = 0;
+                    if (userDocData.totalTimeToday && userDocData.totalTimeToday.date === todayStr) {
+                        currentDailyStudySeconds = userDocData.totalTimeToday.seconds || 0;
+                    }
+                    totalTimeTodayInSeconds = currentDailyStudySeconds + cappedDuration;
+                } else { // 'break'
+                    let currentDailyBreakSeconds = 0;
+                    if (userDocData.totalBreakTimeToday && userDocData.totalBreakTimeToday.date === todayStr) {
+                        currentDailyBreakSeconds = userDocData.totalBreakTimeToday.seconds || 0;
+                    }
+                    totalBreakTimeTodayInSeconds = currentDailyBreakSeconds + cappedDuration;
+                }
+
+                updateTotalTimeDisplay();
+                showToast(`Session of ${formatTime(cappedDuration, false)} saved!`, "success");
+                // The achievement check is now handled by the backend Cloud Function.
+                
+            } catch (error) {
+                console.error("Error saving session via Cloud Function: ", error);
+                // Optionally, implement a retry mechanism or a way to save sessions locally to sync later.
+                showToast("Error saving session. Please check your connection.", "error");
+            }
         }
+        async function checkAndAwardAchievements(completedSessionDuration) {
+    if (!currentUser) return;
+
+// ... existing code ... -->
+            if (newlyUnlocked.length > 0) {
+                await updateDoc(userDocRef, { 
+                    unlockedAchievements: arrayUnion(...newlyUnlocked) 
+                });
+                
+                const achievement = ACHIEVEMENTS[newlyUnlocked[0]];
+                showToast(`Achievement Unlocked: ${achievement.name}!`, 'success');
+            }
+        } catch (error) {
+            console.error("Error checking achievements:", error);
+        }
+}
 
         async function loadDailyTotal() {
-            console.log('Loading daily totals...');
-            // Fetch daily totals from Firestore
+            if (!currentUser) return;
+// ... existing code ... -->
+                    totalBreakTimeTodayInSeconds = 0;
+                }
+
+            } else {
+                totalTimeTodayInSeconds = 0;
+                totalBreakTimeTodayInSeconds = 0;
+            }
+            if(totalTimeDisplay && totalBreakTimeDisplay) { // Should refer to the HTML element
+                updateTotalTimeDisplay();
+            }
         }
 
         async function getOrCreateUserDocument(user) {
-            console.log(`Getting or creating user document for: ${user.uid}`);
-            // Fetch or create user document in Firestore with initial data
-            // In a real app, this would query Firestore:
-            // const userRef = doc(db, "users", user.uid);
-            // const userSnap = await getDoc(userRef);
-            // if (userSnap.exists()) { return userSnap; }
-            // else {
-            //     await setDoc(userRef, {
-            //         username: user.displayName || 'New User',
-            //         email: user.email,
-            //         createdAt: serverTimestamp(),
-            //         totalStudyTime: 0,
-            //         totalBreakTime: 0,
-            //         streak: 0,
-            //         lastStudyDate: null,
-            //         achievements: []
-            //     });
-            //     return await getDoc(userRef);
-            // }
-            return { exists: () => true, data: () => ({ username: user.displayName || user.email, email: user.email }) }; // Simplified return for skeleton
-        }
-
-        function updateProfileUI(userData) {
-            console.log('Updating profile UI with:', userData.username);
-            // Update username, email, avatar, streak, and achievements display
-            const headerAvatar = document.getElementById('header-avatar');
-            const profilePageAvatar = document.getElementById('profile-page-avatar');
-            const profilePageName = document.getElementById('profile-page-name');
-            const profilePageEmail = document.getElementById('profile-page-email');
-
-            if (headerAvatar) headerAvatar.textContent = userData.username ? userData.username.charAt(0).toUpperCase() : 'U';
-            if (profilePageAvatar) profilePageAvatar.textContent = userData.username ? userData.username.charAt(0).toUpperCase() : 'U';
-            if (profilePageName) profilePageName.textContent = userData.username || 'User Name';
-            if (profilePageEmail) profilePageEmail.textContent = userData.email || 'user@example.com';
-        }
-
-        function setupRealtimeListeners() {
-            console.log('Setting up real-time Firestore listeners...');
-            // onSnapshot listeners for user data, subjects, sessions, groups, planner tasks
-        }
-        
-        async function renderLeaderboard(period = 'weekly', containerId = 'ranking-list') {
-            console.log(`Rendering leaderboard for period: ${period} in ${containerId}`);
-            // Fetch and sort public user study data, then render HTML
-        }
-
-        function renderStatsPage(focusSessions) {
-            console.log('Rendering stats page...');
-            // Initialize dashboard UI, nav, and charts
-        }
-
-        function initializeDashboard(focusSessions, insightsContainer) {
-            console.log('Initializing dashboard charts and insights...');
-            // Process session data, initialize Chart.js graphs, generate AI Insight
-        }
-
-        function generateAIInsight(sessions) {
-            console.log('Generating AI insight...');
-            // Logic to analyze sessions and generate textual insights
-        }
-
-        function renderPeriodView() {
-            console.log('Rendering Period View for dashboard...');
-            // Render specific charts and data for period view
-        }
-
-        function renderMonthView() {
-            console.log('Rendering Month View for dashboard...');
-            // Render specific charts and data for month view
-        }
-
-        function renderTrendView() {
-            console.log('Rendering Trend View for dashboard...');
-            // Render specific charts and data for trend view
-        }
-        
-        function renderDayView() {
-            console.log('Rendering Day View for dashboard...');
-            // Render specific charts and data for day view
-        }
-
-        function renderSessionLog(sessions, containerId) {
-            console.log(`Rendering session log in ${containerId}`);
-            // Render list of sessions with edit/delete options
-        }
-        
-        async function deleteSession(sessionId, durationSeconds, endedAt) {
-            console.log(`Deleting session: ${sessionId}`);
-            // Firestore deletion and total updates
-        }
-
-        async function renderJoinedGroups() {
-            console.log('Rendering joined groups...');
-            // Fetch and display groups the current user is a member of
-        }
-
-        async function renderAvailableGroups() {
-            console.log('Rendering available groups...');
-            // Fetch and display groups the current user can join
-        }
-
-        async function joinGroup(groupId) {
-            console.log(`Joining group: ${groupId}`);
-            // Add user to group in Firestore
-        }
-
-        function renderSubjectSelectionList(subjects, newlyAddedSubjectName = null) {
-            console.log('Rendering subject selection list...');
-            // Display draggable list of subjects
-        }
-        
-        function renderPlanner(tasks) {
-            console.log('Rendering planner tasks...');
-            // Display tasks grouped by date
-        }
-        
-        async function renderGroupDetail(groupId) {
-            console.log(`Rendering group detail for: ${groupId}`);
-            // Set current group, populate dropdown, set up member listeners
-        }
-
-        function setupGroupMemberListeners(memberIds) {
-            console.log('Setting up group member listeners for:', memberIds);
-            // onSnapshot listeners for group members' status and sessions
-        }
-
-        function renderGroupSubPage(subpage) {
-            console.log(`Rendering group sub-page: ${subpage}`);
-            // Switch content based on subpage (home, attendance, rankings, invite, chat)
-        }
-        
-        function renderGroupMembers() {
-            console.log('Rendering group members...');
-            // Display list of group members with their study status
-        }
-        
-        function renderGroupLeaderboard(period) {
-            console.log(`Rendering group leaderboard for period: ${period}`);
-            // Filter and sort group member sessions, then render
-        }
-
-        function renderGroupAttendance() {
-            console.log('Rendering group attendance...');
-            // Display calendar, stats, and member attendance for the selected month
-        }
-        
-        function isToday(year, month, day) {
-            // Check if a given date is today
-            return false;
-        }
-        
-        function setupGroupChat(groupId) {
-            console.log(`Setting up group chat for: ${groupId}`);
-            // onSnapshot for messages, and form submission for sending messages
-        }
-
-        async function updateSubjectOrderInFirestore() {
-            console.log('Updating subject order in Firestore...');
-            // Update 'order' field for subjects in Firestore
-        }
-
-        // --- Event Listeners Helper ---
-        const ael = (id, event, callback) => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener(event, callback);
-                console.log(`Attached listener for #${id} on ${event}`); // Debugging line
-            } else {
-                console.warn(`Element with ID '${id}' not found for event '${event}'.`);
-            }
-        };
-
-        window.onload = () => {
-            console.log("DOM fully loaded and parsed. Initializing application.");
-
-            authError = document.getElementById('auth-error');
-            sessionTimerDisplay = document.getElementById('session-timer');
-            totalTimeDisplay = document.getElementById('total-time-display');
-            totalBreakTimeDisplay = document.getElementById('total-break-time-display');
-            activeSubjectDisplay = document.getElementById('active-subject-display');
-            pomodoroStatusDisplay = document.getElementById('pomodoro-status');
+// ... existing code ... -->
+        async function addPlannerTask(title, dueDateStr = null) {
+            if (!currentUser || !title.trim()) return;
             
-            initializeFirebase();
-
-            // --- Authentication Listeners ---
-            ael('login-form', 'submit', async (e) => {
-                e.preventDefault();
-                console.log('Login attempt...');
-                const email = document.getElementById('login-email').value;
-                const password = document.getElementById('login-password').value;
-                try {
-                    await signInWithEmailAndPassword(auth, email, password);
-                } catch (error) {
-                    authError.textContent = error.message;
-                    console.error("Login error:", error);
-                }
-            });
-
-            ael('signup-form', 'submit', async (e) => {
-                e.preventDefault();
-                console.log('Signup attempt...');
-                const email = document.getElementById('signup-email').value;
-                const password = document.getElementById('signup-password').value;
-                try {
-                    await createUserWithEmailAndPassword(auth, email, password);
-                } catch (error) {
-                    authError.textContent = error.message;
-                    console.error("Signup error:", error);
-                }
-            });
-
-            ael('google-signin-btn', 'click', async () => {
-                console.log('Google Sign-in attempt...');
-                const provider = new GoogleAuthProvider();
-                try {
-                    await signInWithPopup(auth, provider);
-                } catch (error) {
-                    authError.textContent = error.message;
-                    console.error("Google Sign-in error:", error);
-                }
-            });
-
-            ael('auth-toggle-btn', 'click', () => {
-                console.log('Toggling auth form...');
-                const loginForm = document.getElementById('login-form');
-                const signupForm = document.getElementById('signup-form');
-                const loginToggleText = document.getElementById('login-toggle-text');
-                const authToggleButton = document.getElementById('auth-toggle-btn');
-
-                if (loginForm.classList.contains('hidden')) {
-                    loginForm.classList.remove('hidden');
-                    signupForm.classList.add('hidden');
-                    loginToggleText.textContent = "Don't have an account?";
-                    authToggleButton.textContent = "Sign Up";
-                } else {
-                    loginForm.classList.add('hidden');
-                    signupForm.classList.remove('hidden');
-                    loginToggleText.textContent = "Already have an account?";
-                    authToggleButton.textContent = "Sign In";
-                }
-                authError.textContent = ''; // Clear any previous error
-            });
-
-            ael('sign-out-btn', 'click', async () => {
-                console.log('Signing out...');
-                try {
-                    await signOut(auth);
-                } catch (error) {
-                    console.error("Sign out error:", error);
-                }
-            });
-
-            ael('username-setup-form', 'submit', async (e) => {
-                e.preventDefault();
-                console.log('Saving username...');
-                const usernameInput = document.getElementById('username-input');
-                const username = usernameInput.value.trim();
-                const usernameError = document.getElementById('username-error');
-
-                if (username.length < 3) {
-                    usernameError.textContent = 'Username must be at least 3 characters.';
-                    return;
-                }
-                
-                if (currentUser && db) {
-                    try {
-                        const userRef = doc(db, "users", currentUser.uid);
-                        await updateDoc(userRef, { username: username });
-                        currentUserData.username = username; // Update local state
-                        updateProfileUI(currentUserData);
-                        showPage('page-timer'); // Go to the main app page
-                    } catch (error) {
-                        usernameError.textContent = 'Failed to save username. Please try again.';
-                        console.error("Error setting username:", error);
-                    }
-                }
-            });
-
-
-            // --- Navigation Listeners ---
-            document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', function() {
-                const targetPage = this.dataset.page;
-                console.log('Nav item clicked:', targetPage);
-                showPage(`page-${targetPage}`);
-            }));
-            document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function() {
-                const targetPage = this.dataset.target;
-                console.log('Back button clicked to:', targetPage);
-                showPage(`page-${targetPage}`);
-            }));
-            ael('groups-btn', 'click', () => { console.log('Go to groups...'); showPage('page-my-groups'); });
-            ael('go-to-find-groups-btn', 'click', () => { console.log('Go to find groups...'); showPage('page-find-groups'); });
-            ael('go-to-create-group-btn', 'click', () => { console.log('Go to create group...'); showPage('page-create-group'); });
-            ael('profile-btn', 'click', () => { console.log('Go to profile...'); showPage('page-profile'); });
-            ael('group-study-timer-btn', 'click', () => { console.log('Group study button clicked.'); });
-
-            // --- Group Creation Listeners ---
-            ael('create-group-done-btn', 'click', async () => { console.log('Creating group...'); });
-            document.querySelectorAll('.category-option, .time-option').forEach(option => { option.addEventListener('click', () => { console.log('Category/time option selected.'); }); });
-            ael('increase-capacity', 'click', () => { console.log('Increasing capacity...'); });
-            ael('decrease-capacity', 'click', () => { console.log('Decreasing capacity...'); });
-            
-            // --- Modals & Timer Controls ---
-            ael('add-subject-btn', 'click', () => { console.log('Open add subject modal...'); });
-            ael('add-subject-form', 'submit', async (e) => { e.preventDefault(); console.log('Adding subject...'); });
-            ael('edit-subject-form', 'submit', async (e) => { e.preventDefault(); console.log('Editing subject...'); });
-            ael('start-studying-btn', 'click', () => { console.log('Open start session modal...'); });
-            ael('open-add-subject-modal-from-start', 'click', () => { console.log('Open add subject from start session modal...'); });
-            ael('start-session-form', 'submit', (e) => { e.preventDefault(); console.log('Starting session from modal...'); });
-            ael('stop-studying-btn', 'click', stopTimer);
-            ael('pause-btn', 'click', pauseTimer);
-            ael('resume-btn', 'click', resumeTimer);
-            ael('manual-start-btn', 'click', () => { console.log('Manual start button clicked...'); });
-            ael('normal-timer-btn', 'click', () => { console.log('Switch to normal timer...'); });
-            ael('pomodoro-timer-btn', 'click', () => { console.log('Switch to Pomodoro timer...'); });
-            ael('add-task-btn', 'click', () => { console.log('Open add task modal...'); });
-            ael('add-task-form', 'submit', async (e) => { e.preventDefault(); console.log('Adding task...'); });
-            document.getElementById('planner-list').addEventListener('change', async (e) => { console.log('Task checkbox changed...'); });
-            document.getElementById('ranking-period-tabs').addEventListener('click', (e) => { console.log('Ranking period tab clicked...'); });
-            document.getElementById('my-groups-list').addEventListener('click', (e) => { console.log('Group card clicked...'); });
-            document.getElementById('group-detail-nav').addEventListener('click', (e) => { console.log('Group detail nav item clicked...'); });
-            ael('group-ranking-scope-btn', 'click', () => { console.log('Group ranking scope switched to Group...'); });
-            ael('global-ranking-scope-btn', 'click', () => { console.log('Group ranking scope switched to Global...'); });
-            ael('settings-account', 'click', () => { console.log('Open edit profile modal...'); });
-            ael('edit-profile-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving profile changes...'); });
-            ael('settings-study-goal', 'click', () => { console.log('Open study goal modal...'); });
-            ael('study-goal-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving study goal...'); });
-            ael('settings-pomodoro', 'click', () => { console.log('Open Pomodoro settings modal...'); });
-            ael('pomodoro-settings-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving Pomodoro settings...'); });
-            ael('edit-session-form', 'submit', async (e) => { e.preventDefault(); console.log('Saving edited session...'); });
-
-
-            const pomodoroSettingsForm = document.getElementById('pomodoro-settings-form');
-            if (pomodoroSettingsForm) {
-                pomodoroSettingsForm.addEventListener('change', (e) => {
-                    const target = e.target;
-                    if (target.matches('select[id^="pomodoro-"]')) {
-                        playSound(target.value, parseFloat(document.getElementById('pomodoro-volume').value));
-                    } else if (target.id === 'pomodoro-volume') {
-                        playSound(document.getElementById('pomodoro-focus-sound').value, parseFloat(target.value));
+            try {
+                // The Cloud Function will handle creating the task document with the correct
+                // ownership and member fields based on the list.
+                await managePlannerTask({
+                    action: 'add',
+                    payload: {
+                        title: title.trim(),
+                        listId: plannerState.activeListId,
+                        dueDate: dueDateStr ? new Date(dueDateStr + 'T00:00:00') : null,
                     }
                 });
+            } catch (error) {
+                console.error("Error adding task via Cloud Function:", error);
+                showToast("Failed to add task.", "error");
             }
-
-            // General Modal closing
-            document.querySelectorAll('.modal').forEach(modal => {
-                modal.addEventListener('click', (e) => { if (e.target === modal) { modal.classList.remove('active'); } });
-                modal.querySelectorAll('.close-modal').forEach(btn => { btn.addEventListener('click', () => { modal.classList.remove('active'); }); });
-            });
+        }
+        
+        async function updatePlannerTask(taskId, data) {
+            if (!currentUser || !taskId) return;
             
-            // --- Web Worker Message Listener ---
-            pomodoroWorker.onmessage = (e) => {
-                const { type, timeLeft } = e.data;
-                if (type === 'tick') {
-                    sessionTimerDisplay.textContent = formatPomodoroTime(timeLeft);
-                } else if (type === 'phase_ended') {
-                    handlePomodoroPhaseEnd({ /* ... determine newState, oldState ... */ });
-                }
-            };
+            try {
+                // The Cloud Function will verify that the current user has permission
+                // to update this task before applying the changes.
+                await managePlannerTask({
+                    action: 'update',
+                    payload: {
+                        taskId: taskId,
+                        updateData: data
+                    }
+                });
+            } catch (error) {
+                console.error("Error updating task via Cloud Function:", error);
+                showToast("Failed to update task.", "error");
+            }
+        }
 
-            // --- Service Worker Message Listener ---
-            navigator.serviceWorker.addEventListener('message', async (event) => {
-                if (event.data && event.data.type === 'TIMER_ENDED') {
-                    handlePomodoroPhaseEnd(event.data);
+        async function deletePlannerTask(taskId) {
+            if (!currentUser || !taskId) return;
+            
+            try {
+                // The Cloud Function will verify ownership before deleting the task.
+                await managePlannerTask({
+                    action: 'delete',
+                    payload: {
+                        taskId: taskId
+                    }
+                });
+                // The onSnapshot listener will automatically remove the task from the UI.
+                // We just need to handle the local state for the details panel.
+                if (plannerState.selectedTaskId === taskId) {
+                    plannerState.selectedTaskId = null;
+                    renderPlannerTaskDetails(); // Hide the panel
+                }
+            } catch (error) {
+                console.error("Error deleting task via Cloud Function:", error);
+                showToast("Failed to delete task.", "error");
+            }
+        }
+        
+        // =================================================================================
+        // ============================= NEW PLANNER LOGIC END =============================
+// ... existing code ... -->
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            try {
+                // Replace direct Firestore writes with a single Cloud Function call.
+                // The backend function is responsible for updating both the private and public user documents.
+                await updateUserProfile({ updateData: { username, photoURL } });
+                
+                // After the backend call succeeds, we can fetch the latest user document
+                // to update the UI state. The onSnapshot listener will also catch this,
+                // but fetching it directly provides quicker feedback.
+                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+                const updatedUserDoc = await getDoc(userRef);
+                currentUserData = updatedUserDoc.data();
+                
+                updateProfileUI(currentUserData);
+                showPage('page-timer');
+                setupRealtimeListeners();
+                await loadDailyTotal();
+                initializePushNotifications();
+
+            } catch (error) {
+                console.error("Error setting username via Cloud Function:", error);
+                usernameError.textContent = 'Failed to save profile. Please try again.';
+            } finally {
+// ... existing code ... -->
+        ael('edit-profile-form', 'submit', async(e) => {
+             e.preventDefault();
+            if (!currentUser) return;
+            const newUsername = document.getElementById('edit-username-input').value.trim();
+            if (newUsername.length < 3) {
+                showToast('Username must be at least 3 characters long.', 'error');
+                return;
+            }
+
+            try {
+                // Replace direct Firestore writes with a call to the backend function.
+                await updateUserProfile({ updateData: { username: newUsername } });
+                
+                // The onSnapshot listener will update the UI automatically.
+                editProfileModal.classList.remove('active');
+                showToast('Profile updated!', 'success');
+            } catch (error) {
+                console.error("Error updating profile via Cloud Function: ", error);
+                showToast('Failed to update profile.', 'error');
+            }
+        });
+
+        ael('edit-session-form', 'submit', async (e) => {
+// ... existing code ... -->
+            if (isNaN(goal) || goal < 1 || goal > 24) {
+                showToast('Please enter a valid goal between 1 and 24.', 'error');
+                return;
+            }
+            
+            try {
+                await updateUserProfile({ updateData: { studyGoalHours: goal } });
+                studyGoalModal.classList.remove('active');
+                showToast("Study goal updated!", "success");
+            } catch (error) {
+                console.error("Error updating study goal:", error);
+                showToast("Failed to update study goal.", "error");
+            }
+        });
+
+        ael('page-find-groups', 'click', (e) => {
+// ... existing code ... -->
+        ael('pomodoro-settings-form', 'submit', async (e) => {
+            e.preventDefault();
+            const newSettings = {
+// ... existing code ... -->
+                showToast("Please enter valid, positive numbers for all duration settings.", "error");
+                return;
+            }
+            
+            try {
+                // Use the backend function to securely update user settings.
+                await updateUserProfile({ 
+                    updateData: { 
+                        pomodoroSettings: newSettings,
+                        pomodoroSounds: newSounds
+                    }
+                });
+    
+                // Optimistically update local state for immediate UI response.
+                // The onSnapshot listener will confirm this change from Firestore.
+                pomodoroSettings = newSettings;
+                pomodoroSounds = newSounds;
+                pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings });
+                
+                pomodoroSettingsModal.classList.remove('active');
+                showToast("Pomodoro settings saved!", "success");
+            } catch (error) {
+                console.error("Error saving pomodoro settings:", error);
+                showToast("Failed to save settings.", "error");
+            }
+        });
+        
+        function renderStudiconPicker(category) {
+// ... existing code ... -->
+            const saveBtn = e.target.closest('#save-studicon-btn');
+            if (saveBtn) {
+                const selectedStudicon = document.querySelector('#studicon-picker .avatar-option.selected')?.dataset.url;
+                if (selectedStudicon && currentUser) {
+                    try {
+                        // Use the backend function to update the studicon URL.
+                        await updateUserProfile({ updateData: { studiconURL: selectedStudicon } });
+
+                        document.getElementById('studicon-store-modal').classList.remove('active');
+                        showToast('Studicon updated!', 'success');
+                    } catch (error) {
+                        console.error("Studicon update failed via Cloud Function:", error);
+                        showToast('Failed to update studicon.', 'error');
+                    }
+                } else {
+                    showToast('Please select a studicon.', 'info');
+                }
+            }
+        });
+
+        ael('edit-group-info-form', 'submit', async (e) => {
+// ... existing code ... -->
+            ael('save-character-avatar-btn', 'click', async () => {
+                const selectedAvatar = document.querySelector('#avatar-character-picker .avatar-option.selected img')?.src;
+                if (selectedAvatar && currentUser) {
+                    try {
+                        // Use the backend function to update profile picture.
+                        await updateUserProfile({ updateData: { photoURL: selectedAvatar } });
+
+                        document.getElementById('avatar-character-modal').classList.remove('active');
+                        showToast('Avatar updated!', 'success');
+                    } catch (error) {
+                        console.error("Avatar update failed via Cloud Function:", error);
+                        showToast('Failed to update avatar.', 'error');
+                    }
+                } else {
+                    showToast('Please select a character.', 'info');
                 }
             });
 
-            // --- Drag and Drop Functionality for Subjects (Event listeners only) ---
-            const subjectListContainer = document.getElementById('subject-selection-list');
-            if (subjectListContainer) {
-                subjectListContainer.addEventListener('dragstart', (e) => { console.log('Drag started for subject.'); });
-                subjectListContainer.addEventListener('dragover', (e) => { e.preventDefault(); console.log('Drag over subject.'); });
-                subjectListContainer.addEventListener('dragenter', (e) => { e.preventDefault(); console.log('Drag entered subject.'); });
-                subjectListContainer.addEventListener('dragleave', (e) => { console.log('Drag left subject.'); });
-                subjectListContainer.addEventListener('drop', async (e) => { e.preventDefault(); console.log('Subject dropped.'); await updateSubjectOrderInFirestore(); });
-                subjectListContainer.addEventListener('dragend', () => { console.log('Drag ended for subject.'); });
-                subjectListContainer.addEventListener('click', async (e) => { console.log('Subject item clicked for edit/delete.'); });
-            }
-
-            // Service Worker Registration
-            if ('serviceWorker' in navigator) {
-                if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-                    // Corrected path for the service worker registration to be relative to the site's root
-                    navigator.serviceWorker
-                        .register('/service-worker.js', { scope: '/' })
-                        .then(registration => {
-                            console.log('Service Worker registered successfully:', registration.scope);
-                            registration.onupdatefound = () => { /* ... update logic ... */ };
-                        })
-                        .catch(error => {
-                            console.error('Service Worker registration failed:', error);
-                        });
-                    navigator.serviceWorker.addEventListener('controllerchange', () => { window.location.reload(); });
-                } else {
-                    console.warn('Service Worker not registered. Requires HTTPS or localhost.');
-                }
-            }
-        };
+        });
     </script>
 </body>
 </html>
