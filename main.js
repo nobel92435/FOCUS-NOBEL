@@ -1,4 +1,3 @@
-    <script type="module"
     // Firebase SDKS 
     import { 
     getMessaging, 
@@ -5989,4 +5988,3 @@ if (achievementsGrid) {
             });
 
         });
-    </script>
