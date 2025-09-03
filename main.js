@@ -1,4 +1,4 @@
-    <script type="module">
+    <script type="module"
     // Firebase SDKS 
     import { 
     getMessaging, 
