@@ -1700,7 +1700,7 @@ let pauseStartTime = 0;
                 const detailsPanel = target.closest('#planner-task-details');
                 if(detailsPanel) {
                     const taskId = plannerState.selectedTaskId;
-                    if (!taskId) return;
+                    if (!taskId) {return};
                     
                     // Priority menu toggle
                     if (target.closest('#task-detail-priority-btn')) {
