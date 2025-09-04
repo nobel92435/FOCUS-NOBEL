@@ -1,3 +1,15 @@
+
+        // A helper function to add event listeners to multiple elements
+        // ael = add event listener
+        function ael(selector, event, listener) {
+            const elements = document.querySelectorAll(selector);
+            if (elements.length > 0) {
+                elements.forEach(el => el.addEventListener(event, listener));
+            } else {
+                console.warn(`No elements found for selector: ${selector}`);
+            }
+        }
+        
         // --- App State ---
         let db, auth, messaging, functions;
         let currentUser = null;
@@ -1087,3 +1099,4 @@
             lucide.createIcons();
         }
     };
+
