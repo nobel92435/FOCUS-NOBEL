@@ -2983,6 +2983,3 @@ let pauseStartTime = 0;
         </div>
     </div>
 
-</body>
-</html>
-
