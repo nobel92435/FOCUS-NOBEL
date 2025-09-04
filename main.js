@@ -66,6 +66,10 @@
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         currentUser = user;
+        
+                    }
+                });
+
         async function saveSession(subject, durationSeconds, sessionType = 'study') {
             if (!currentUser || durationSeconds <= 0) {
                 return;
@@ -120,6 +124,7 @@
         async function loadDailyTotal() {
             if (!currentUser) return;
             const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+        }
         async function addPlannerTask(title, dueDateStr = null) {
             if (!currentUser || !title.trim()) return;
             
@@ -1973,4 +1978,5 @@
             });
 
         });
+
 
