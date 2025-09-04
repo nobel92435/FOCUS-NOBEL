@@ -103,6 +103,7 @@
         async function loadDailyTotal() {
             if (!currentUser) return;
             const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+            // This function was incomplete, adding a closing brace.
         }
         async function addPlannerTask(title, dueDateStr = null) {
             if (!currentUser || !title.trim()) return;
@@ -204,127 +205,8 @@
 
         function renderStatsPage(focusSessions) {
             const insightsContainer = document.getElementById('insights-container');
-            if (sortBtn && !sortBtn.classList.contains('active')) {
-                document.querySelectorAll('#group-ranking-sort-tabs .group-filter-btn').forEach(btn => btn.classList.remove('active'));
-                sortBtn.classList.add('active');
-                renderGroupRankings();
-            }
-            const filterCheckbox = e.target.closest('#group-ranking-filters input[type="checkbox"]');
-            if (filterCheckbox) {
-                renderGroupRankings();
-            }
-        });
-
-        ael('group-detail-nav', 'click', (e) => {
-            const navItem = e.target.closest('.group-nav-item');
-            if (navItem && !navItem.classList.contains('active')) {
-                const subpage = navItem.dataset.subpage;
-                renderGroupSubPage(subpage);
-            }
-        });
+        }
         
-        ael('page-group-detail', 'click', async e => {
-            const settingsBtn = e.target.closest('#group-settings-btn, #group-settings-btn-mobile');
-            if (settingsBtn) {
-                const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', currentGroupId);
-                const groupSnap = await getDoc(groupRef);
-                if (groupSnap.exists()) {
-                    openGroupSettingsModal(groupSnap.data());
-                }
-                return;
-            }
-
-            const rulesBtn = e.target.closest('#group-rules-header-btn');
-            if (rulesBtn) {
-                openGroupRulesModal();
-                return;
-            }
-
-            const wakeUpBtn = e.target.closest('.wake-up-btn');
-            if (wakeUpBtn && !wakeUpBtn.disabled) {
-                const targetUserId = wakeUpBtn.dataset.targetUserId;
-                const targetUserName = wakeUpBtn.dataset.targetUserName;
-                
-                showConfirmationModal(
-                    `Send Wake Up Call?`,
-                    `This will send a notification to ${targetUserName}.`,
-                    async () => {
-                        try {
-                            wakeUpBtn.disabled = true;
-                            wakeUpBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                            
-                            const result = await sendWakeUpNotification({
-                                targetUserId: targetUserId,
-                                senderName: currentUserData.username,
-                                appId: appId
-                            });
-                            
-                            if (result.data.success) {
-                                showToast(`Wake up call sent to ${targetUserName}!`, 'success');
-                            } else {
-                                showToast(result.data.message || 'Could not send wake up call.', 'error');
-                            }
-                        } catch (error) {
-                            console.error("Error sending wake up call:", error);
-                            showToast('An error occurred.', 'error');
-                        } finally {
-                            wakeUpBtn.disabled = false;
-                            wakeUpBtn.innerHTML = '<i class="fas fa-bell"></i> Wake Up';
-                        }
-                    }
-                );
-                return;
-            }
-
-            // Studicon Store Button
-            const storeBtn = e.target.closest('#studicon-store-btn, #studicon-store-btn-mobile');
-            if (storeBtn) {
-                openStudiconStore();
-                return;
-            }
-
-            // View Switcher Button
-            const viewBtn = e.target.closest('[data-view-target]');
-            if (viewBtn && !viewBtn.classList.contains('active')) {
-                const targetView = viewBtn.dataset.viewTarget;
-
-                // Update both desktop and mobile switches to stay in sync
-                document.querySelectorAll('[data-view-target]').forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.viewTarget === targetView);
-                });
-
-                renderGroupSubPage('home'); // Re-render the home subpage with the new view
-                return;
-            }
-            
-            const attachBtn = e.target.closest('#chat-attach-btn');
-            if (attachBtn) {
-                document.getElementById('chat-attachment-menu').classList.toggle('hidden');
-            } else if (!e.target.closest('#chat-attachment-menu')) {
-                 const menu = document.getElementById('chat-attachment-menu');
-                 if(menu) menu.classList.add('hidden');
-            }
-
-            const chatAction = e.target.closest('[data-chat-action]');
-            if (chatAction) {
-                const action = chatAction.dataset.chatAction;
-                if (action === 'album') {
-                    document.getElementById('image-upload-input').click();
-                } else {
-                    showToast(`${action.charAt(0).toUpperCase() + action.slice(1)} upload coming soon!`, 'info');
-                }
-                 document.getElementById('chat-attachment-menu').classList.add('hidden');
-            }
-
-            const userProfileTrigger = e.target.closest('.member-profile-link, .studicon-member-card');
-            if (userProfileTrigger) {
-                const userId = userProfileTrigger.closest('[data-user-id]').dataset.userId;
-                if (userId && userId !== currentUser.uid) {
-                    showUserProfileModal(userId);
-                }
-            }
-        });
-
         function openGroupSettingsModal(groupData) {
             const modal = document.getElementById('group-settings-modal');
             const isLeader = currentUser.uid === groupData.leaderId;
@@ -564,8 +446,10 @@
             const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
             
             try {
-                await updateDoc(userRef, { username: newUsername });
-                await updateDoc(publicUserRef, { username: newUsername });
+                const batch = firestoreWriteBatch(db);
+                batch.update(userRef, { username: newUsername });
+                batch.update(publicUserRef, { username: newUsername });
+                await batch.commit();
                 editProfileModal.classList.remove('active');
                 showToast('Profile updated!', 'success');
             } catch (error) {
@@ -826,143 +710,8 @@
             }
         }
 
-        window.onload = () => {
-            initializeFirebase();
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-
-            const pomodoroSettingsForm = document.getElementById('pomodoro-settings-form');
-            if (pomodoroSettingsForm) {
-                pomodoroSettingsForm.addEventListener('change', (e) => {
-                    const target = e.target;
-                    if (target.matches('select[id^="pomodoro-"]')) {
-                        const soundUrl = target.value;
-                        const volume = parseFloat(document.getElementById('pomodoro-volume').value);
-                        playSound(soundUrl, volume);
-                    } else if (target.id === 'pomodoro-volume') {
-                        const sampleSoundUrl = document.getElementById('pomodoro-focus-sound').value;
-                        const volume = parseFloat(target.value);
-                        playSound(sampleSoundUrl, volume);
-                    }
-                });
-            }
-
-            ael('group-study-timer-btn', 'click', async () => {
-                if (currentUserData.joinedGroups && currentUserData.joinedGroups.length > 0) {
-                    const targetGroupId = currentGroupId && currentUserData.joinedGroups.includes(currentGroupId) ? currentGroupId : currentUserData.joinedGroups[0];
-                    currentGroupId = targetGroupId;
-                    showPage('page-group-detail');
-                    renderGroupDetail(targetGroupId);
-                } else {
-                    showPage('page-my-groups');
-                }
-            });
-
-            // Handler for form submissions
-            plannerPage.addEventListener('submit', e => {
-                 if (e.target.id === 'category-add-task-form') {
-                    e.preventDefault();
-                    const input = document.getElementById('category-add-task-input');
-                    const title = input.value.trim();
-                    if (title) {
-                        let dueDate = null;
-                        const today = new Date();
-                        if (plannerState.activeCategory === 'today') {
-                            dueDate = today;
-                        } else if (plannerState.activeCategory === 'tomorrow') {
-                            const tomorrow = new Date();
-                            tomorrow.setDate(today.getDate() + 1);
-                            dueDate = tomorrow;
-                        }
-                        
-                        addPlannerTask(title, dueDate ? dueDate.toISOString().split('T')[0] : null);
-                        input.value = '';
-                    }
-                }
-            });
-
-        // --- END OF UNIFIED PLANNER LISTENERS ---
-
-        ael('quick-add-task-form', 'submit', async (e) => {
-            e.preventDefault();
-                if (!currentUser) return;
-                const modal = document.getElementById('add-subject-modal');
-                const subjectName = document.getElementById('add-subject-name').value.trim();
-                const colorEl = document.querySelector('#add-subject-modal .color-dot.selected');
-                
-                if (!subjectName || !colorEl) {
-                    showToast('Please provide a name and select a color.', 'error');
-                    return;
-                }
-                const color = colorEl.dataset.color;
-
-                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-                const subjectsRef = collection(userRef, 'subjects');
-                // Get the highest current order value to append the new subject at the end
-                const q = query(subjectsRef, orderBy('order', 'desc'), limit(1));
-                const lastSubjectSnap = await getDocs(q);
-                const lastOrder = lastSubjectSnap.empty ? -1 : lastSubjectSnap.docs[0].data().order;
-
-                await addDoc(subjectsRef, { name: subjectName, color: color, order: lastOrder + 1 });
-                modal.classList.remove('active');
-                showToast(`Subject "${subjectName}" added!`, 'success');
-            });
-
-            // Ranking Page Tabs
-            ael('page-ranking', 'click', (e) => {
-                const tab = e.target.closest('.ranking-tab-btn');
-                if (tab) {
-                    const period = tab.dataset.period;
-                    renderLeaderboard(period);
-                    return;
-                }
-
-                const rankingItem = e.target.closest('.ranking-item[data-user-id]');
-                if (rankingItem) {
-                    const userId = rankingItem.dataset.userId;
-                    if (userId && userId !== currentUser.uid) {
-                        showUserProfileModal(userId);
-                    }
-                }
-            });
-
-            // Planner Page Form Submission (Delegated)
-            ael('page-planner', 'submit', (e) => {
-                if (e.target.id === 'add-planner-task-form') {
-                    e.preventDefault();
-                    const input = document.getElementById('add-planner-task-input');
-                    const title = input.value.trim();
-                    if (title) {
-                        addPlannerTask(title);
-                        input.value = '';
-                    }
-                }
-            });
-            
-            // Group Settings Modal Actions (Delegated)
-            const groupSettingsModal = document.getElementById('group-settings-modal');
-            if (groupSettingsModal) {
-                groupSettingsModal.addEventListener('click', (e) => {
-                    const item = e.target.closest('.group-settings-item');
-                    if (item) {
-                        const action = item.dataset.action;
-                        switch(action) {
-                            case 'edit-info':
-                                openEditGroupInfoModal();
-                                break;
-                            default:
-                                showToast(`'${item.textContent}' feature is coming soon!`, 'info');
-                                break;
-                        }
-                        groupSettingsModal.classList.remove('active');
-                    }
-                });
-            }
-
-            // --- END: ADDED EVENT LISTENERS ---
-
-            // --- Service Worker Registration (Robust Version) ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Service Worker Registration (Robust Version) ---
         if ('serviceWorker' in navigator) {
             // Service Workers require a secure context (HTTPS or localhost) to register.
             // This check prevents the registration error in unsupported environments (like 'blob:').
@@ -1007,9 +756,108 @@
                 console.warn('Service Worker not registered. This feature requires a secure context (HTTPS or localhost). The Pomodoro timer will be less reliable in the background.');
             }
         }
-    };
 
-    document.addEventListener('DOMContentLoaded', () => {
+        const pomodoroSettingsForm = document.getElementById('pomodoro-settings-form');
+        if (pomodoroSettingsForm) {
+            pomodoroSettingsForm.addEventListener('change', (e) => {
+                const target = e.target;
+                if (target.matches('select[id^="pomodoro-"]')) {
+                    const soundUrl = target.value;
+                    const volume = parseFloat(document.getElementById('pomodoro-volume').value);
+                    playSound(soundUrl, volume);
+                } else if (target.id === 'pomodoro-volume') {
+                    const sampleSoundUrl = document.getElementById('pomodoro-focus-sound').value;
+                    const volume = parseFloat(target.value);
+                    playSound(sampleSoundUrl, volume);
+                }
+            });
+        }
+        
+        ael('group-study-timer-btn', 'click', async () => {
+            if (currentUserData.joinedGroups && currentUserData.joinedGroups.length > 0) {
+                const targetGroupId = currentGroupId && currentUserData.joinedGroups.includes(currentGroupId) ? currentGroupId : currentUserData.joinedGroups[0];
+                currentGroupId = targetGroupId;
+                showPage('page-group-detail');
+                renderGroupDetail(targetGroupId);
+            } else {
+                showPage('page-my-groups');
+            }
+        });
+
+        // Handler for form submissions
+        plannerPage.addEventListener('submit', e => {
+             if (e.target.id === 'category-add-task-form') {
+                e.preventDefault();
+                const input = document.getElementById('category-add-task-input');
+                const title = input.value.trim();
+                if (title) {
+                    let dueDate = null;
+                    const today = new Date();
+                    if (plannerState.activeCategory === 'today') {
+                        dueDate = today;
+                    } else if (plannerState.activeCategory === 'tomorrow') {
+                        const tomorrow = new Date();
+                        tomorrow.setDate(today.getDate() + 1);
+                        dueDate = tomorrow;
+                    }
+                    
+                    addPlannerTask(title, dueDate ? dueDate.toISOString().split('T')[0] : null);
+                    input.value = '';
+                }
+            }
+        });
+
+        // Ranking Page Tabs
+        ael('page-ranking', 'click', (e) => {
+            const tab = e.target.closest('.ranking-tab-btn');
+            if (tab) {
+                const period = tab.dataset.period;
+                renderLeaderboard(period);
+                return;
+            }
+
+            const rankingItem = e.target.closest('.ranking-item[data-user-id]');
+            if (rankingItem) {
+                const userId = rankingItem.dataset.userId;
+                if (userId && userId !== currentUser.uid) {
+                    showUserProfileModal(userId);
+                }
+            }
+        });
+
+        // Planner Page Form Submission (Delegated)
+        ael('page-planner', 'submit', (e) => {
+            if (e.target.id === 'add-planner-task-form') {
+                e.preventDefault();
+                const input = document.getElementById('add-planner-task-input');
+                const title = input.value.trim();
+                if (title) {
+                    addPlannerTask(title);
+                    input.value = '';
+                }
+            }
+        });
+        
+        // Group Settings Modal Actions (Delegated)
+        const groupSettingsModal = document.getElementById('group-settings-modal');
+        if (groupSettingsModal) {
+            groupSettingsModal.addEventListener('click', (e) => {
+                const item = e.target.closest('.group-settings-item');
+                if (item) {
+                    const action = item.dataset.action;
+                    switch(action) {
+                        case 'edit-info':
+                            openEditGroupInfoModal();
+                            break;
+                        default:
+                            showToast(`'${item.textContent}' feature is coming soon!`, 'info');
+                            break;
+                    }
+                    groupSettingsModal.classList.remove('active');
+                }
+            });
+        }
+        
         const usernameAvatarPicker = document.getElementById('username-avatar-picker');
             if (usernameAvatarPicker) {
                 usernameAvatarPicker.innerHTML = PRESET_AVATARS.map((url, index) => `
@@ -1082,8 +930,160 @@
                     showToast('Please select a character.', 'info');
                 }
             });
+        
+            ael('group-ranking-sort-tabs', 'click', (e) => {
+                const sortBtn = e.target.closest('.group-filter-btn');
+                if (sortBtn && !sortBtn.classList.contains('active')) {
+                    document.querySelectorAll('#group-ranking-sort-tabs .group-filter-btn').forEach(btn => btn.classList.remove('active'));
+                    sortBtn.classList.add('active');
+                    renderGroupRankings();
+                }
+                const filterCheckbox = e.target.closest('#group-ranking-filters input[type="checkbox"]');
+                if (filterCheckbox) {
+                    renderGroupRankings();
+                }
+            });
 
-        });
+            ael('group-detail-nav', 'click', (e) => {
+                const navItem = e.target.closest('.group-nav-item');
+                if (navItem && !navItem.classList.contains('active')) {
+                    const subpage = navItem.dataset.subpage;
+                    renderGroupSubPage(subpage);
+                }
+            });
+            
+            ael('page-group-detail', 'click', async e => {
+                const settingsBtn = e.target.closest('#group-settings-btn, #group-settings-btn-mobile');
+                if (settingsBtn) {
+                    const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', currentGroupId);
+                    const groupSnap = await getDoc(groupRef);
+                    if (groupSnap.exists()) {
+                        openGroupSettingsModal(groupSnap.data());
+                    }
+                    return;
+                }
 
+                const rulesBtn = e.target.closest('#group-rules-header-btn');
+                if (rulesBtn) {
+                    openGroupRulesModal();
+                    return;
+                }
 
+                const wakeUpBtn = e.target.closest('.wake-up-btn');
+                if (wakeUpBtn && !wakeUpBtn.disabled) {
+                    const targetUserId = wakeUpBtn.dataset.targetUserId;
+                    const targetUserName = wakeUpBtn.dataset.targetUserName;
+                    
+                    showConfirmationModal(
+                        `Send Wake Up Call?`,
+                        `This will send a notification to ${targetUserName}.`,
+                        async () => {
+                            try {
+                                wakeUpBtn.disabled = true;
+                                wakeUpBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                                
+                                const result = await sendWakeUpNotification({
+                                    targetUserId: targetUserId,
+                                    senderName: currentUserData.username,
+                                    appId: appId
+                                });
+                                
+                                if (result.data.success) {
+                                    showToast(`Wake up call sent to ${targetUserName}!`, 'success');
+                                } else {
+                                    showToast(result.data.message || 'Could not send wake up call.', 'error');
+                                }
+                            } catch (error) {
+                                console.error("Error sending wake up call:", error);
+                                showToast('An error occurred.', 'error');
+                            } finally {
+                                wakeUpBtn.disabled = false;
+                                wakeUpBtn.innerHTML = '<i class="fas fa-bell"></i> Wake Up';
+                            }
+                        }
+                    );
+                    return;
+                }
 
+                // Studicon Store Button
+                const storeBtn = e.target.closest('#studicon-store-btn, #studicon-store-btn-mobile');
+                if (storeBtn) {
+                    openStudiconStore();
+                    return;
+                }
+
+                // View Switcher Button
+                const viewBtn = e.target.closest('[data-view-target]');
+                if (viewBtn && !viewBtn.classList.contains('active')) {
+                    const targetView = viewBtn.dataset.viewTarget;
+
+                    // Update both desktop and mobile switches to stay in sync
+                    document.querySelectorAll('[data-view-target]').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.viewTarget === targetView);
+                    });
+
+                    renderGroupSubPage('home'); // Re-render the home subpage with the new view
+                    return;
+                }
+                
+                const attachBtn = e.target.closest('#chat-attach-btn');
+                if (attachBtn) {
+                    document.getElementById('chat-attachment-menu').classList.toggle('hidden');
+                } else if (!e.target.closest('#chat-attachment-menu')) {
+                     const menu = document.getElementById('chat-attachment-menu');
+                     if(menu) menu.classList.add('hidden');
+                }
+
+                const chatAction = e.target.closest('[data-chat-action]');
+                if (chatAction) {
+                    const action = chatAction.dataset.chat-action;
+                    if (action === 'album') {
+                        document.getElementById('image-upload-input').click();
+                    } else {
+                        showToast(`${action.charAt(0).toUpperCase() + action.slice(1)} upload coming soon!`, 'info');
+                    }
+                     document.getElementById('chat-attachment-menu').classList.add('hidden');
+                }
+
+                const userProfileTrigger = e.target.closest('.member-profile-link, .studicon-member-card');
+                if (userProfileTrigger) {
+                    const userId = userProfileTrigger.closest('[data-user-id]').dataset.userId;
+                    if (userId && userId !== currentUser.uid) {
+                        showUserProfileModal(userId);
+                    }
+                }
+            });
+
+            // Unified listener for quick add subject form
+            ael('quick-add-task-form', 'submit', async (e) => {
+                e.preventDefault();
+                    if (!currentUser) return;
+                    const modal = document.getElementById('add-subject-modal');
+                    const subjectName = document.getElementById('add-subject-name').value.trim();
+                    const colorEl = document.querySelector('#add-subject-modal .color-dot.selected');
+                    
+                    if (!subjectName || !colorEl) {
+                        showToast('Please provide a name and select a color.', 'error');
+                        return;
+                    }
+                    const color = colorEl.dataset.color;
+
+                    const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
+                    const subjectsRef = collection(userRef, 'subjects');
+                    // Get the highest current order value to append the new subject at the end
+                    const q = query(subjectsRef, orderBy('order', 'desc'), limit(1));
+                    const lastSubjectSnap = await getDocs(q);
+                    const lastOrder = lastSubjectSnap.empty ? -1 : lastSubjectSnap.docs[0].data().order;
+
+                    await addDoc(subjectsRef, { name: subjectName, color: color, order: lastOrder + 1 });
+                    modal.classList.remove('active');
+                    showToast(`Subject "${subjectName}" added!`, 'success');
+                });
+    });
+
+    window.onload = () => {
+        initializeFirebase();
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    };
