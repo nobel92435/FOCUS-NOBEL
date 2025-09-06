@@ -16,7 +16,8 @@ import {
             createUserWithEmailAndPassword, 
             signInWithEmailAndPassword, 
             signInWithPopup, 
-            GoogleAuthProvider
+            GoogleAuthProvider,
+            signInAnonymously // <-- ADD THIS
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
             getFirestore, 
@@ -1397,34 +1398,58 @@ let pauseStartTime = 0;
         // ---------------------------------
 
                 onAuthStateChanged(auth, async (user) => {
+                    // --- START: MODIFIED AUTH LOGIC ---
                     if (user) {
                         currentUser = user;
-                        const userDoc = await getOrCreateUserDocument(user);
-                        currentUserData = userDoc.data();
-                        
-                        if (currentUserData.pomodoroSettings) {
-                            pomodoroSettings = {...pomodoroSettings, ...currentUserData.pomodoroSettings};
-                        }
-                        if (currentUserData.pomodoroSounds) {
-                            pomodoroSounds = {...pomodoroSounds, ...currentUserData.pomodoroSounds};
-                        }
-                        pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings });
+                        let setupComplete = false;
 
-
-                        if (!currentUserData || !currentUserData.username) {
-                            showPage('page-username-setup');
+                        if (user.isAnonymous) {
+                            console.log("User is anonymous");
+                            currentUserData = { username: 'Guest', joinedGroups: [] }; // Set minimal data for guest
+                            setupComplete = true; // No profile setup needed for guests
                         } else {
-                            updateProfileUI(currentUserData);
+                            // Regular authenticated user
+                            const userDoc = await getOrCreateUserDocument(user);
+                            currentUserData = userDoc.data();
+                            if (currentUserData && currentUserData.username) {
+                                setupComplete = true;
+                            }
+                        }
+                        
+                        if (setupComplete) {
+                            // This runs for both complete profiles and anonymous users
+                            updateProfileUI(user.isAnonymous ? null : currentUserData);
                             showPage('page-timer');
-                            setupRealtimeListeners();
-                            await loadDailyTotal();
-                            initializePushNotifications();
+                            
+                            // Load settings from Firestore or use defaults for guests
+                            if (!user.isAnonymous && currentUserData.pomodoroSettings) {
+                                pomodoroSettings = {...pomodoroSettings, ...currentUserData.pomodoroSettings};
+                            } else {
+                                pomodoroSettings = { work: 25, short_break: 5, long_break: 15, long_break_interval: 4, autoStartBreak: true, autoStartFocus: true };
+                            }
+                            if (!user.isAnonymous && currentUserData.pomodoroSounds) {
+                                pomodoroSounds = {...pomodoroSounds, ...currentUserData.pomodoroSounds};
+                            } else {
+                                pomodoroSounds = { start: "tone_simple_beep", focus: "tone_chime_chord", break: "tone_metal_bell", volume: 1.0 };
+                            }
+                            pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings });
+                            
+                            await loadDailyTotal(); // Has an isAnonymous check
+                            
+                            if (!user.isAnonymous) {
+                                setupRealtimeListeners();
+                                initializePushNotifications();
+                            }
+                        } else {
+                            // New registered user needs to set up profile
+                            showPage('page-username-setup');
                         }
                     } else {
                         currentUser = null;
                         currentUserData = {};
                         showPage('auth-screen');
                     }
+                    // --- END: MODIFIED AUTH LOGIC ---
                 });
 
             } catch (e) {
@@ -1739,6 +1764,20 @@ let pauseStartTime = 0;
                 return;
             }
 
+            // --- START: ADDED GUEST LOGIC ---
+            // For anonymous users, just update local state without saving to Firestore
+            if (currentUser.isAnonymous) {
+                if (sessionType === 'study') {
+                    totalTimeTodayInSeconds += durationSeconds;
+                } else {
+                    totalBreakTimeTodayInSeconds += durationSeconds;
+                }
+                updateTotalTimeDisplay();
+                showToast(`Session of ${formatTime(durationSeconds, false)} saved locally! Sign up to save your progress.`, "success", 4000);
+                return;
+            }
+            // --- END: ADDED GUEST LOGIC ---
+
             // Cap break time at 3 hours (10800 seconds)
             const MAX_BREAK_SECONDS = 3 * 3600; // 3 hours in seconds
             const cappedDuration = (sessionType === 'break' && durationSeconds > MAX_BREAK_SECONDS) ? MAX_BREAK_SECONDS : durationSeconds;
@@ -1901,6 +1940,16 @@ if (sessionType === 'study') {
 
         async function loadDailyTotal() {
             if (!currentUser) return;
+
+            // --- START: ADDED GUEST LOGIC ---
+            if (currentUser.isAnonymous) {
+                totalTimeTodayInSeconds = 0;
+                totalBreakTimeTodayInSeconds = 0;
+                updateTotalTimeDisplay();
+                return;
+            }
+            // --- END: ADDED GUEST LOGIC ---
+            
             const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
             const userDoc = await getDoc(userRef);
 
@@ -1988,7 +2037,24 @@ if (sessionType === 'study') {
         }
 
         function updateProfileUI(userData) {
-            if (!userData) return;
+            // --- START: MODIFIED PROFILE UI LOGIC ---
+            const profileAuthView = document.getElementById('profile-authenticated-view');
+            const profileAnonView = document.getElementById('profile-anonymous-view');
+            const headerAvatar = document.getElementById('header-avatar');
+
+            if (!userData || (currentUser && currentUser.isAnonymous)) {
+                // Show guest view
+                if(profileAuthView) profileAuthView.classList.add('hidden');
+                if(profileAnonView) profileAnonView.classList.remove('hidden');
+                if(headerAvatar) headerAvatar.innerHTML = `<i class="fas fa-user-secret text-xl"></i>`;
+                return;
+            }
+
+            // Show authenticated view
+            if(profileAuthView) profileAuthView.classList.remove('hidden');
+            if(profileAnonView) profileAnonView.classList.add('hidden');
+            // --- END: MODIFIED PROFILE UI LOGIC ---
+
             currentUserData = userData; 
             const username = userData.username || 'Anonymous';
             const email = userData.email || '';
@@ -4395,6 +4461,24 @@ if (achievementsGrid) {
             if (el) el.addEventListener(event, callback);
         };
 
+        // --- START: NEW EVENT LISTENERS FOR GUEST MODE ---
+        // Anonymous Auth
+        ael('anonymous-signin-btn', 'click', async () => {
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Anonymous sign-in failed:", error);
+                if(authError) authError.textContent = "Could not sign in as guest. Please try again.";
+            }
+        });
+
+        ael('go-to-auth-btn', 'click', () => {
+            // Sign out the anonymous user and show the auth screen
+            signOut(auth);
+            // showPage will be called by onAuthStateChanged
+        });
+        // --- END: NEW EVENT LISTENERS FOR GUEST MODE ---
+
         // Auth
         ael('login-form', 'submit', async (e) => {
             e.preventDefault();
@@ -4526,9 +4610,32 @@ if (achievementsGrid) {
             }
         }));
 
-        ael('groups-btn', 'click', () => { renderJoinedGroups(); showPage('page-my-groups'); });
-        ael('go-to-find-groups-btn', 'click', () => { renderGroupRankings(); showPage('page-find-groups'); });
-        ael('go-to-create-group-btn', 'click', () => { showPage('page-create-group'); });
+        // --- START: ADDED GUARDS FOR GUEST USERS ---
+        ael('groups-btn', 'click', () => { 
+            if (currentUser && currentUser.isAnonymous) {
+                showToast('Please create an account to use study groups.', 'info');
+                showPage('page-profile');
+                return;
+            }
+            renderJoinedGroups(); 
+            showPage('page-my-groups'); 
+        });
+        ael('go-to-find-groups-btn', 'click', () => { 
+             if (currentUser && currentUser.isAnonymous) {
+                showToast('Please create an account to use study groups.', 'info');
+                return;
+            }
+            renderGroupRankings(); 
+            showPage('page-find-groups'); 
+        });
+        ael('go-to-create-group-btn', 'click', () => { 
+             if (currentUser && currentUser.isAnonymous) {
+                showToast('Please create an account to use study groups.', 'info');
+                return;
+            }
+            showPage('page-create-group'); 
+        });
+        // --- END: ADDED GUARDS FOR GUEST USERS ---
         ael('profile-btn', 'click', () => { showPage('page-profile'); });
         
         // --- FIXES START HERE ---
