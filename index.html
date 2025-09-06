@@ -1589,52 +1589,57 @@
     <div id="auth-screen" class="active flex-col items-center justify-center h-full p-4 fade-in">
         <div class="w-full max-w-sm text-center">
              <div class="flex items-center justify-center mb-6">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo)"></path>
-                    <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
-                    <defs>
-                        <linearGradient id="paint0_linear_logo" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#14B8A6"></stop>
-                            <stop offset="1" stop-color="#0EA5E9"></stop>
-                        </linearGradient>
-                    </defs>
-                </svg>
-                <span class="text-4xl font-bold ml-3 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
-            </div>
-            <p class="text-gray-400 mb-8">Your Ultimate Study Companion</p>
-            <div id="auth-form-container" class="bg-gray-800 p-8 rounded-2xl shadow-lg">
-                <form id="login-form" class="space-y-4">
-                    <h2 class="text-2xl font-bold text-white mb-4">Login</h2>
-                    <input type="email" id="login-email" placeholder="Email" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required>
-                    <input type="password" id="login-password" placeholder="Password" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required>
-                    <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Sign In</button>
-                </form>
-                <form id="signup-form" class="hidden space-y-4">
-                    <h2 class="text-2xl font-bold text-white mb-4">Create Account</h2>
-                    <input type="email" id="signup-email" placeholder="Email" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required>
-                    <input type="password" id="signup-password" placeholder="Password (min. 6 characters)" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required minlength="6">
-                    <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Sign Up</button>
-                </form>
-                <p id="auth-error" class="text-red-400 text-sm mt-4 h-5"></p>
-                <div class="flex items-center my-6">
-                    <hr class="flex-grow border-gray-600">
-                    <span class="mx-4 text-gray-500">OR</span>
-                    <hr class="flex-grow border-gray-600">
-                </div>
-                <button id="google-signin-btn" class="w-full bg-white text-gray-800 font-semibold py-3 rounded-lg flex items-center justify-center transition hover:bg-gray-200">
-                    <svg class="w-6 h-6 mr-3" viewBox="0 0 48 48">
-                        <path fill="#4285F4" d="M43.611 20.083H24v8.838h11.002c-0.463 2.878-2.18 5.424-4.852 7.199l7.217 5.626C43.02 37.21 46 29.54 46 20.083z"/>
-                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.897-5.781l-7.217-5.626c-2.13 1.442-4.852 2.308-7.68 2.308-5.878 0-10.845-3.965-12.624-9.26l-7.42 5.781C6.383 39.04 14.46 48 24 48z"/>
-                        <path fill="#FBBC05" d="M11.376 28.71c-0.565-1.71-0.565-3.526 0-5.236l-7.42-5.781C1.678 21.24 0 26.52 0 32.14c0 5.62 1.678 10.9 4.053 14.18l7.323-5.61z"/>
-                        <path fill="#EA4335" d="M24 10.73c3.52 0 6.565 1.218 9.015 3.655l6.345-6.345C35.93 2.13 30.48 0 24 0 14.46 0 6.383 8.96 2.053 17.71l7.42 5.781c1.779-5.295 6.746-9.26 12.624-9.26z"/>
-                    </svg>
-                    Sign in with Google
-                </button>
-                <p class="mt-8 text-sm text-gray-400">
-                    <span id="login-toggle-text">Don't have an account?</span>
-                    <button id="auth-toggle-btn" class="font-semibold text-blue-400 hover:text-blue-300">Sign Up</button>
-                </p>
-            </div>
+                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                     <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo)"></path>
+                     <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
+                     <defs>
+                         <linearGradient id="paint0_linear_logo" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+                             <stop stop-color="#14B8A6"></stop>
+                             <stop offset="1" stop-color="#0EA5E9"></stop>
+                         </linearGradient>
+                     </defs>
+                 </svg>
+                 <span class="text-4xl font-bold ml-3 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
+             </div>
+             <p class="text-gray-400 mb-8">Your Ultimate Study Companion</p>
+             <div id="auth-form-container" class="bg-gray-800 p-8 rounded-2xl shadow-lg">
+                 <form id="login-form" class="space-y-4">
+                     <h2 class="text-2xl font-bold text-white mb-4">Login</h2>
+                     <input type="email" id="login-email" placeholder="Email" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required>
+                     <input type="password" id="login-password" placeholder="Password" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required>
+                     <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Sign In</button>
+                 </form>
+                 <form id="signup-form" class="hidden space-y-4">
+                     <h2 class="text-2xl font-bold text-white mb-4">Create Account</h2>
+                     <input type="email" id="signup-email" placeholder="Email" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required>
+                     <input type="password" id="signup-password" placeholder="Password (min. 6 characters)" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required minlength="6">
+                     <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Sign Up</button>
+                 </form>
+                 <p id="auth-error" class="text-red-400 text-sm mt-4 h-5"></p>
+                 <div class="flex items-center my-6">
+                     <hr class="flex-grow border-gray-600">
+                     <span class="mx-4 text-gray-500">OR</span>
+                     <hr class="flex-grow border-gray-600">
+                 </div>
+                 <button id="google-signin-btn" class="w-full bg-white text-gray-800 font-semibold py-3 rounded-lg flex items-center justify-center transition hover:bg-gray-200">
+                     <svg class="w-6 h-6 mr-3" viewBox="0 0 48 48">
+                         <path fill="#4285F4" d="M43.611 20.083H24v8.838h11.002c-0.463 2.878-2.18 5.424-4.852 7.199l7.217 5.626C43.02 37.21 46 29.54 46 20.083z"/>
+                         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.897-5.781l-7.217-5.626c-2.13 1.442-4.852 2.308-7.68 2.308-5.878 0-10.845-3.965-12.624-9.26l-7.42 5.781C6.383 39.04 14.46 48 24 48z"/>
+                         <path fill="#FBBC05" d="M11.376 28.71c-0.565-1.71-0.565-3.526 0-5.236l-7.42-5.781C1.678 21.24 0 26.52 0 32.14c0 5.62 1.678 10.9 4.053 14.18l7.323-5.61z"/>
+                         <path fill="#EA4335" d="M24 10.73c3.52 0 6.565 1.218 9.015 3.655l6.345-6.345C35.93 2.13 30.48 0 24 0 14.46 0 6.383 8.96 2.053 17.71l7.42 5.781c1.779-5.295 6.746-9.26 12.624-9.26z"/>
+                     </svg>
+                     Sign in with Google
+                 </button>
+                 
+                 <button id="anonymous-signin-btn" class="w-full mt-4 bg-gray-600 text-white font-semibold py-3 rounded-lg flex items-center justify-center transition hover:bg-gray-500">
+                    <i class="fas fa-user-secret mr-3"></i>
+                    Continue as Guest
+                 </button>
+                 <p class="mt-8 text-sm text-gray-400">
+                     <span id="login-toggle-text">Don't have an account?</span>
+                     <button id="auth-toggle-btn" class="font-semibold text-blue-400 hover:text-blue-300">Sign Up</button>
+                 </p>
+             </div>
         </div>
     </div>
 
@@ -1645,8 +1650,7 @@
             <div class="bg-gray-800 p-8 rounded-2xl shadow-lg">
                 <form id="username-setup-form" class="space-y-4">
                     <div class="avatar-picker" id="username-avatar-picker">
-                        <!-- Avatar options will be injected here -->
-                    </div>
+                        </div>
                     <input type="text" id="username-input" placeholder="Enter your username" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required minlength="3">
                     <p id="username-error" class="text-red-400 text-sm h-5"></p>
                     <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Save Profile</button>
@@ -1660,28 +1664,28 @@
             <div id="page-timer" class="page active flex-col h-full">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20">
                      <div class="flex items-center">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
-                            <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
-                            <defs>
-                                <linearGradient id="paint0_linear_logo_header" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
-                                    <stop stop-color="#14B8A6"></stop>
-                                    <stop offset="1" stop-color="#0EA5E9"></stop>
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                        <span class="text-2xl font-bold ml-2 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <button id="groups-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition">
-                            <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                            </svg>
-                        </button>
-                        <button id="profile-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition overflow-hidden">
-                            <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
-                        </button>
-                    </div>
+                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                             <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
+                             <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
+                             <defs>
+                                 <linearGradient id="paint0_linear_logo_header" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+                                     <stop stop-color="#14B8A6"></stop>
+                                     <stop offset="1" stop-color="#0EA5E9"></stop>
+                                 </linearGradient>
+                             </defs>
+                         </svg>
+                         <span class="text-2xl font-bold ml-2 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
+                     </div>
+                     <div class="flex items-center space-x-4">
+                         <button id="groups-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition">
+                             <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                 <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                             </svg>
+                         </button>
+                         <button id="profile-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition overflow-hidden">
+                             <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
+                         </button>
+                     </div>
                 </header>
                 <div class="relative flex-grow flex items-center justify-center -mt-16">
                     <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
@@ -1689,7 +1693,6 @@
                             <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
                             <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
                         </div>
-                        <!-- New Group Study button -->
                         <button id="group-study-timer-btn" class="text-sm">
                             <i class="fas fa-users-line"></i> Group Study
                         </button>
@@ -1697,7 +1700,6 @@
                         <p id="pomodoro-status"></p>
                         <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
                         <p id="total-time-display" class="text-gray-400 mt-2">Total Today: 00:00:00</p>
-                        <!-- New element for Total Break Time -->
                         <p id="total-break-time-display" class="text-gray-400 mt-1">Total Break: 00:00:00</p>
                         <div id="timer-controls" class="mt-8">
                             <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
@@ -1721,8 +1723,7 @@
                     <div class="w-6"></div> 
                 </header>
                 <div id="insights-container" class="p-4 md:p-6 bg-[#0d1117]">
-                    <!-- New Dashboard HTML will be injected here -->
-                </div>
+                    </div>
             </div>
             
             <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar">
@@ -1742,7 +1743,7 @@
                     </div>
                 </div>
                 <div id="ranking-list" class="ranking-list">
-                                        </div>
+                                    </div>
             </div>
             
             <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar">
@@ -1753,8 +1754,8 @@
                         </svg>
                     </button>
                      <div class="flex items-center gap-2">
-                        <button id="planner-menu-toggle" class="p-2 rounded-full hover:bg-gray-700 md:hidden"><i class="fas fa-bars"></i></button>
-                        <h1 id="planner-header-title" class="text-xl font-bold text-gray-100">Planner</h1>
+                         <button id="planner-menu-toggle" class="p-2 rounded-full hover:bg-gray-700 md:hidden"><i class="fas fa-bars"></i></button>
+                         <h1 id="planner-header-title" class="text-xl font-bold text-gray-100">Planner</h1>
                      </div>
                     <div id="planner-view-controls" class="flex items-center bg-gray-700 rounded-md p-1">
                          <button data-view="list" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-list mr-1"></i>List</button>
@@ -1765,11 +1766,9 @@
                 <div class="planner-main-layout">
                     <aside id="planner-sidebar"></aside>
                     <main id="planner-main-content">
-                        <!-- Content for the selected view will be rendered here -->
-                    </main>
+                        </main>
                     <aside id="planner-task-details" class="hidden">
-                        <!-- Selected task details will be rendered here -->
-                    </aside>
+                        </aside>
                 </div>
             </div>
 
@@ -1784,31 +1783,40 @@
                     <div class="w-6"></div> 
                 </header>
                 <div class="profile-container">
-                    <div class="profile-header">
-                        <div id="profile-page-avatar" class="profile-avatar bg-blue-500">
-                             <!-- Profile image or initial will be here -->
+                    <div id="profile-authenticated-view">
+                        <div class="profile-header">
+                            <div id="profile-page-avatar" class="profile-avatar bg-blue-500">
+                                 </div>
+                            <div>
+                                <div id="profile-page-name" class="profile-name">User Name</div>
+                                <div id="profile-page-email" class="profile-email">user@example.com</div>
+                            </div>
+                        </div>
+                        <div class="card text-center p-4 bg-yellow-500/10 border-yellow-500/30 mb-6 rounded-lg">
+                            <h3 class="font-bold text-lg text-yellow-400">Current Streak</h3>
+                            <p class="text-4xl font-black text-white" id="profile-streak-display">0 days</p>
                         </div>
                         <div>
-                            <div id="profile-page-name" class="profile-name">User Name</div>
-                            <div id="profile-page-email" class="profile-email">user@example.com</div>
+                            <h3 class="text-xl font-bold mb-4">Achievements</h3>
+                            <div id="achievements-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-4 text-center">
+                                </div>
                         </div>
+                        <div id="settings-account" class="settings-item"><div class="settings-label">Account</div><div class="settings-value">Edit profile information</div></div>
+                        <div id="settings-pomodoro" class="settings-item"><div class="settings-label">Pomodoro Timer</div><div class="settings-value">Customize durations & sounds</div></div>
+                        <div id="settings-study-goal" class="settings-item"><div class="settings-label">Study Goals</div><div id="study-goal-value" class="settings-value">Not set</div></div>
+                        <div id="sign-out-btn" class="mt-6 text-center text-red-400 font-semibold cursor-pointer py-3 bg-red-500/10 rounded-lg hover:bg-red-500/20">Sign Out</div>
                     </div>
-                    <div class="card text-center p-4 bg-yellow-500/10 border-yellow-500/30 mb-6 rounded-lg">
-    <h3 class="font-bold text-lg text-yellow-400">Current Streak</h3>
-    <p class="text-4xl font-black text-white" id="profile-streak-display">0 days</p>
-</div>
+                    
+                    <div id="profile-anonymous-view" class="hidden text-center p-8">
+                        <i class="fas fa-user-secret text-6xl text-gray-500 mb-4"></i>
+                        <h2 class="text-2xl font-bold mb-2">You are using FocusFlow as a guest.</h2>
+                        <p class="text-gray-400 mb-6">Create an account to save your progress, join groups, and access all features.</p>
+                        <button id="go-to-auth-btn" class="w-full max-w-xs mx-auto bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">
+                            Sign Up / Log In
+                        </button>
+                    </div>
 
-<div>
-    <h3 class="text-xl font-bold mb-4">Achievements</h3>
-    <div id="achievements-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-4 text-center">
-        <!-- Achievements will be rendered here by JavaScript -->
-    </div>
-</div>
-                    <div id="settings-account" class="settings-item"><div class="settings-label">Account</div><div class="settings-value">Edit profile information</div></div>
-                    <div id="settings-pomodoro" class="settings-item"><div class="settings-label">Pomodoro Timer</div><div class="settings-value">Customize durations & sounds</div></div>
-                    <div id="settings-study-goal" class="settings-item"><div class="settings-label">Study Goals</div><div id="study-goal-value" class="settings-value">Not set</div></div>
-                    <div id="sign-out-btn" class="mt-6 text-center text-red-400 font-semibold cursor-pointer py-3 bg-red-500/10 rounded-lg hover:bg-red-500/20">Sign Out</div>
-                </div>
+                    </div>
             </div>
 
             <div id="page-my-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
@@ -1836,7 +1844,6 @@
                     <h1 class="text-xl font-bold text-gray-100">Group Rankings</h1>
                     <div class="w-10"></div>
                 </header>
-                <!-- NEW Sorting and Filtering UI -->
                 <div class="p-4 border-b border-gray-800 sticky top-[73px] bg-gray-900 z-10">
                     <div class="flex space-x-1 bg-gray-800 p-1 rounded-lg mb-4" id="group-ranking-sort-tabs">
                         <button class="group-filter-btn flex-1" data-sort="new">New</button>
@@ -1858,7 +1865,6 @@
                         </label>
                     </div>
                 </div>
-                <!-- END NEW UI -->
                 <div id="all-groups-list" class="p-4"></div>
                 <button id="go-to-create-group-btn" class="create-group-btn">
                     <i class="fas fa-plus"></i>
@@ -1903,13 +1909,11 @@
                     </button>
 
                     <div class="ml-auto flex items-center gap-2">
-                        <!-- New Ranking Switch -->
                         <div id="ranking-scope-switch" class="hidden timer-switch-container bg-gray-800 p-1">
                             <button id="group-ranking-scope-btn" class="timer-switch-btn text-xs px-3 py-1 active">Group</button>
                             <button id="global-ranking-scope-btn" class="timer-switch-btn text-xs px-3 py-1">Global</button>
                         </div>
 
-                        <!-- Desktop Home Controls -->
                         <div id="group-desktop-controls" class="hidden">
                             <div class="hidden md:flex items-center gap-2">
                                 <div id="group-view-switch" class="timer-switch-container bg-gray-800 p-1">
@@ -1979,238 +1983,79 @@
     <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form"><input type="password" id="group-password-prompt-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required><div class="flex gap-2 mt-4"><button type="button" class="close-modal w-full py-2 bg-gray-600 rounded-lg">Cancel</button><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Submit</button></div></form></div></div>
     <div id="confirmation-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 id="confirmation-modal-title" class="modal-title">Are you sure?</h2><button class="close-modal">&times;</button></div><p id="confirmation-modal-message">This action cannot be undone.</p><div id="confirmation-modal-buttons"><button id="cancel-btn">Cancel</button><button id="confirm-btn">Confirm</button></div></div></div>
     
-    <!-- Edit Profile Modal -->
     <div id="edit-profile-modal" class="modal">
         <div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Profile</div><button class="close-modal">&times;</button></div><form id="edit-profile-form"><div class="mb-4"><label for="edit-username-input" class="block text-gray-300 mb-2">Username</label><input type="text" id="edit-username-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required minlength="3"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Save Changes</button></form></div></div>
     </div>
     
-    <!-- Study Goal Modal -->
     <div id="study-goal-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form"><div class="mb-4"><label for="study-goal-input" class="block text-gray-300 mb-2">Daily Study Goal (hours)</label><input type="number" id="study-goal-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required min="1" max="24"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Set Goal</button></form></div></div>
 
-    <!-- Pomodoro Settings Modal -->
     <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-4"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-gray-300">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-gray-300">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-gray-300">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-gray-300">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="2" required></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-gray-300">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-gray-300">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-gray-300">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-gray-300">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Automation</h3><div class="space-y-3"> <div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Settings</button></form></div></div>
 
-    <!-- Edit Session Modal -->
-    <div id="edit-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Session</div><button class="close-modal">&times;</button></div><form id="edit-session-form"><div class="mb-4"><label for="edit-session-duration" class="block text-gray-300 mb-2">Duration (minutes)</label><input type="number" id="edit-session-duration" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required min="1"></div><input type="hidden" id="edit-session-id"><input type="hidden" id="edit-session-old-duration"><input type="hidden" id="edit-session-ended-at"><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Save Changes</button></form></div></div>
-    
-    <!-- Edit Subject Modal -->
-    <div id="edit-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Subject</div><button class="close-modal">&times;</button></div><form id="edit-subject-form"><input type="hidden" id="edit-subject-id"><div class="mb-4"><label for="edit-subject-name" class="block text-gray-300 mb-2">Subject Name</label><input type="text" id="edit-subject-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div class="mb-4"><label class="block text-gray-300 mb-2">Color</label><div class="subject-color-picker" id="edit-subject-color-picker"></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Save Changes</button></form></div></div>
-
-        <div id="group-settings-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">Group Settings</div>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="space-y-2">
-                <div class="group-settings-item" data-action="edit-info"><i class="fas fa-edit"></i><span>Change Group Info</span></div>
-                <div class="group-settings-item" data-action="group-rules"><i class="fas fa-gavel"></i><span>Group Rules</span></div>
-                <div class="group-settings-item" data-action="kick-member"><i class="fas fa-user-slash"></i><span>Kick Member</span></div>
-                <div class="group-settings-item" data-action="promote-member"><i class="fas fa-user-shield"></i><span>Promote Member</span></div>
-                <div class="group-settings-item" data-action="member-logs"><i class="fas fa-history"></i><span>Member Logs</span></div>
-                <div class="group-settings-item" data-action="group-ranking"><i class="fas fa-trophy"></i><span>External Rankings</span></div>
-                <div class="group-settings-item" data-action="group-settings"><i class="fas fa-cog"></i><span>General Settings</span></div>
-                <div class="group-settings-item text-cyan-400 hover:bg-cyan-500/10" data-action="wake-up-group"><i class="fas fa-bell"></i><span>Wake Up Idle Members</span></div>
-                <hr class="border-gray-600 !my-3">
-                <div class="group-settings-item text-red-400 hover:bg-red-500/10" data-action="leave-group">
-                    <i class="fas fa-sign-out-alt"></i><span>Leave Group</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Group Info Modal -->
-    <div id="edit-group-info-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">Edit Group Info</div>
-                <button class="close-modal">&times;</button>
-            </div>
-            <form id="edit-group-info-form" class="space-y-4">
-                <input type="hidden" id="edit-group-id-input">
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-1">Group Name</label>
-                    <input type="text" id="edit-group-name" class="w-full bg-gray-700 rounded-lg p-3" required>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-1">Group introduction/rules</label>
-                    <textarea id="edit-group-description" class="w-full bg-gray-700 rounded-lg p-3 h-24" required></textarea>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-1">Category</label>
-                    <select id="edit-group-category" class="w-full bg-gray-700 rounded-lg p-3">
-                        <option>General study</option>
-                        <option>Language study</option>
-                        <option>Secondary School</option>
-                        <option>University</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-1">Change Daily Goal</label>
-                    <input type="number" id="edit-group-goal" class="w-full bg-gray-700 rounded-lg p-3" min="1" max="24" required>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-1">Change Capacity</label>
-                    <input type="number" id="edit-group-capacity" class="w-full bg-gray-700 rounded-lg p-3" min="2" max="100" required>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-1">Change Password</label>
-                    <input type="text" id="edit-group-password" class="w-full bg-gray-700 rounded-lg p-3" placeholder="Leave blank for public">
-                </div>
-
-                <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Changes</button>
-            </form>
-        </div>
-    </div>
-
-    <div id="image-view-modal" class="modal bg-black/80"><div class="modal-content bg-transparent shadow-none p-0 w-full h-full flex items-center justify-center"><button class="close-modal absolute top-4 right-4 text-white text-4xl z-10">&times;</button><img id="fullscreen-image" src="" class="max-w-[95vw] max-h-[95vh] object-contain"></div></div>
-
-    <!-- Avatar Character Selection Modal -->
-    <div id="avatar-character-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">Choose Character</div>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div id="avatar-character-picker" class="avatar-picker">
-                <!-- Character options will be injected here -->
-            </div>
-            <button id="save-character-avatar-btn" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Character</button>
-        </div>
-    </div>
-
-    <!-- Studicon Store Modal -->
-    <div id="studicon-store-modal" class="modal">
-        <div class="modal-content max-w-2xl w-full">
-            <div class="modal-header">
-                <div class="modal-title">Studicon Store</div>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div id="studicon-store-content">
-                <div id="studicon-category-tabs" class="flex space-x-1 border-b border-gray-700 mb-4">
-                    <!-- Category tabs will be injected here -->
-                </div>
-                <div id="studicon-picker" class="max-h-[60vh] overflow-y-auto avatar-picker grid-cols-5">
-                    <!-- Studicons will be injected here -->
-                </div>
-            </div>
-            <button id="save-studicon-btn" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Studicon</button>
-        </div>
-    </div>
-
-    <!-- User Profile Modal -->
-    <div id="user-profile-modal" class="modal">
-        <div class="modal-content max-w-sm w-full">
-            <div class="modal-header">
-                <div class="modal-title">User Profile</div>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div id="user-profile-content" class="text-center">
-                <!-- Loading state -->
-                <div id="user-profile-loading" class="py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
-                <!-- Content state -->
-                <div id="user-profile-details" class="hidden">
-                    <div id="user-profile-avatar" class="profile-avatar mx-auto mb-4 w-24 h-24 text-4xl overflow-hidden"></div>
-                    <h2 id="user-profile-name" class="text-2xl font-bold"></h2>
-                    <div class="mt-6 p-4 bg-gray-800 rounded-lg">
-                        <p class="text-4xl font-bold text-cyan-400" id="user-profile-total-today">00:00:00</p>
-                        <p class="text-sm text-gray-400">Total Study Time Today</p>
-                    </div>
-                    <div class="mt-4 grid grid-cols-2 gap-4 text-left text-sm">
-                        <div class="bg-gray-800 p-3 rounded-lg">
-                            <p class="text-gray-400">Overall Study Time</p>
-                            <p class="font-semibold text-white" id="user-profile-total-overall">--</p>
-                        </div>
-                        <div class="bg-gray-800 p-3 rounded-lg">
-                            <p class="text-gray-400">Last Active</p>
-                            <p class="font-semibold text-white" id="user-profile-last-active">--</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Add Task Modal -->
-    <div id="quick-add-task-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">Add Task for <span id="quick-add-task-date"></span></div>
-                <button class="close-modal">&times;</button>
-            </div>
-            <form id="quick-add-task-form">
-                <input type="hidden" id="quick-add-task-date-input">
-                <input type="text" id="quick-add-task-title-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" placeholder="Task title..." required>
-                <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Add Task</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Group Rules Modal -->
-    <div id="group-rules-modal" class="modal">
-        <div class="modal-content max-w-lg w-full">
-            <div class="modal-header">
-                <div class="modal-title">Group Rules</div>
-                <div class="flex items-center gap-4">
-                    <div id="group-rules-controls">
-                        <!-- Edit button for leader goes here -->
-                    </div>
-                    <button class="close-modal">&times;</button>
-                </div>
-            </div>
-            <div id="group-rules-display" class="prose prose-invert max-w-none text-gray-300 whitespace-pre-wrap p-1 mt-4">
-                <!-- Rules text will be displayed here -->
-            </div>
-            <div id="group-rules-edit-container" class="hidden mt-4">
-                <textarea id="group-rules-textarea" class="w-full bg-gray-800 rounded-lg p-3 h-48 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" placeholder="Enter group rules..."></textarea>
-                <button id="save-group-rules-btn" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Rules</button>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- NEW MODALS FOR TASK DETAILS -->
-    <div id="project-select-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">Select Project</div>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div id="project-select-list" class="space-y-2 max-h-60 overflow-y-auto">
-                <!-- Project list will be rendered here by JS -->
-            </div>
-        </div>
-    </div>
-
-    <div id="repeat-settings-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">Repeat Task</div>
-                <button class="close-modal">&times;</button>
-            </div>
-            <form id="repeat-settings-form">
-                <div class="space-y-4">
-                    <select id="repeat-type-select" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400">
-                        <option value="none">Does not repeat</option>
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="yearly">Yearly</option>
-                    </select>
-                </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition mt-6">Save</button>
-            </form>
-        </div>
-    </div>
-    <!-- END NEW MODALS -->
-
     <script type="module" src="main.js"></script>
+    <script>
+        // In your main.js file, you'll need to add the logic to handle these new buttons and views.
+        // Here's a conceptual guide:
 
+        /*
+        1. Get references to the new elements:
+        const anonymousSignInBtn = document.getElementById('anonymous-signin-btn');
+        const goToAuthBtn = document.getElementById('go-to-auth-btn');
+        const profileAuthenticatedView = document.getElementById('profile-authenticated-view');
+        const profileAnonymousView = document.getElementById('profile-anonymous-view');
+        const authScreen = document.getElementById('auth-screen');
+        const appContainer = document.getElementById('app-container');
+
+        2. Add an event listener for the "Continue as Guest" button:
+        anonymousSignInBtn.addEventListener('click', async () => {
+            try {
+                await signInAnonymously(auth); // Use your Firebase auth instance
+                // The onAuthStateChanged listener below will handle showing the app
+            } catch (error) {
+                console.error("Anonymous sign-in failed", error);
+                // Show an error message to the user
+            }
+        });
+        
+        3. Add an event listener for the "Sign Up / Log In" button on the profile page:
+        goToAuthBtn.addEventListener('click', () => {
+            // This button takes the guest user back to the sign-in screen
+            appContainer.classList.remove('active');
+            authScreen.classList.add('active');
+        });
+
+        4. Modify your onAuthStateChanged listener:
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in.
+                
+                // Check if the user is anonymous
+                if (user.isAnonymous) {
+                    console.log('User is anonymous');
+                    // Show the "guest" profile view
+                    profileAuthenticatedView.style.display = 'none';
+                    profileAnonymousView.style.display = 'block';
+                } else {
+                    console.log('User is authenticated');
+                    // Show the normal profile view
+                    profileAuthenticatedView.style.display = 'block';
+                    profileAnonymousView.style.display = 'none';
+                    
+                    // Check if they need to set up a username (existing logic)
+                    // ... your logic for checking if profile data exists
+                }
+
+                // Show the main app and hide the auth screen
+                authScreen.classList.remove('active');
+                appContainer.classList.add('active');
+                // ... rest of your initialization logic (fetch data, etc.)
+
+            } else {
+                // User is signed out, show the auth screen
+                authScreen.classList.add('active');
+                appContainer.classList.remove('active');
+            }
+        });
+        */
+    </script>
 </body>
 </html>
