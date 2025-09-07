@@ -1,46 +1,5 @@
-    // Firebase SDKS 
-    import { 
-    getMessaging, 
-    getToken, 
-    onMessage 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-messaging.js";
-import { 
-    getFunctions, 
-    httpsCallable 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
-            onAuthStateChanged, 
-            signOut,
-            createUserWithEmailAndPassword, 
-            signInWithEmailAndPassword, 
-            signInWithPopup, 
-            GoogleAuthProvider,
-            signInAnonymously // <-- ADD THIS
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            doc, 
-            setDoc, 
-            getDoc, 
-            addDoc, 
-            collection, 
-            onSnapshot,
-            arrayUnion,
-            arrayRemove,
-            updateDoc,
-            deleteDoc,
-            getDocs,
-            serverTimestamp,
-            query,
-            orderBy,
-            limit,
-            increment,
-            where,
-            runTransaction,
-            writeBatch as firestoreWriteBatch // <-- Alias it here
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    // Supabase SDK
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
         const ACHIEVEMENTS = {
     'novice_scholar': { name: 'Novice Scholar', description: 'Study for a total of 1 hour.' },
     'dedicated_learner': { name: 'Dedicated Learner', description: 'Study for a total of 10 hours.' },
@@ -207,18 +166,14 @@ import {
         const getCurrentDate = () => new Date();
 
         // --- App State ---
-        let db, auth, messaging, functions;
+        let supabase, db, auth, storage;
         let currentUser = null;
         let currentUserData = {};
         let dashboardCharts = {};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        let userSessions = []; 
+        let userSessions = [];
         let isAudioUnlocked = false;
         let isAddingSubjectFromStartSession = false; // Flag to track modal origin
-        let fcmToken;
-        let sendPomodoroNotification;
-        let sendWakeUpNotification;
-        let sendGroupWakeUpNotification;
 
         // --- FIX START: Add the function to handle Pomodoro phase transitions ---
         async function handlePomodoroPhaseEnd(data) {
@@ -255,92 +210,28 @@ import {
         // --- FIX END ---
 
 /**
- * Initializes push notifications: requests permission, gets FCM token, and saves it to Firestore.
- */
-async function initializePushNotifications() {
-    try {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            console.log('Notification permission granted.');
-
-            // Use the service worker registration that is already active.
-            const swRegistration = await navigator.serviceWorker.ready;
-            console.log('Using active Service Worker registration:', swRegistration);
-
-            // Get the FCM token, passing in the service worker registration.
-            const currentToken = await getToken(messaging, {
-                vapidKey: "BAcCHOb3rceEak-258f017-UZ07XB-ra_MFDEdfhHwyA0tZy1RuYlyasY3u5ibF0CBMVoBMmFCPO3Btvp0nrsJXQ",
-                serviceWorkerRegistration: swRegistration
-            });
-
-            if (currentToken) {
-                fcmToken = currentToken;
-                console.log('FCM Token:', fcmToken);
-                if (currentUser) {
-                    await saveFcmTokenToFirestore(fcmToken, currentUser.uid);
-                }
-            } else {
-                console.log('No registration token available. Request permission to generate one.');
-                showToast('Could not get notification token.', 'warning');
-            }
-        } else {
-            console.log('Unable to get permission to notify.');
-            showToast('Notification permission denied.', 'warning');
-        }
-    } catch (error) {
-        console.error('Error getting FCM token or permission:', error);
-        showToast('Failed to enable push notifications.', 'error');
-    }
-}
-
-
-/**
- * Saves the FCM registration token to Firestore for the current user.
- * @param {string} token - The FCM registration token.
- * @param {string} userId - The ID of the current user.
- */
-async function saveFcmTokenToFirestore(token, userId) {
-    if (!userId) {
-        console.error('Cannot save FCM token: User ID is null.');
-        return;
-    }
-    try {
-        // Store token in a user-specific collection
-        const tokenRef = doc(db, `artifacts/${appId}/users/${userId}/fcmTokens`, token);
-        await setDoc(tokenRef, { token: token, userId: userId, timestamp: new Date() }, { merge: true });
-        console.log('FCM token saved to Firestore.');
-    } catch (error) {
-        console.error('Error saving FCM token to Firestore:', error);
-        showToast('Failed to save notification preferences.', 'error');
-    }
-}
-
-// Listen for incoming messages while the app is in the foreground
-// MOVED this block inside initializeFirebase()
-
-/**
- * Helper function to trigger the Cloud Function for sending Pomodoro notifications.
- * This replaces your local `scheduleSWAlarm` for Pomodoro transitions.
- * @param {object} messageData - Data to send to the Cloud Function, includes title, body, newState, oldState.
+ * Sends a notification request to the Supabase Edge Function.
+ * @param {object} messageData - Includes title, options.body, newState and oldState.
  */
 async function triggerServerNotification(messageData) {
-    if (!currentUser || !currentUser.uid) {
+    if (!currentUser) {
         console.error('User not authenticated, cannot send server notification.');
         showToast('Please sign in to enable server notifications.', 'error');
         return;
     }
     try {
-        // Call the Cloud Function
-        const result = await sendPomodoroNotification({
-            userId: currentUser.uid, // Required by your Cloud Function
-            appId: appId,            // Required by your Cloud Function to build Firestore path
-            title: messageData.title,
-            body: messageData.options.body, // Use 'options.body' as FCM notification body
-            newState: messageData.newState,
-            oldState: messageData.oldState,
-            // Any other data you want to send and retrieve in the notification click handler
+        const { data, error } = await supabase.functions.invoke('send-pomodoro-notification', {
+            body: {
+                userId: currentUser.id,
+                appId,
+                title: messageData.title,
+                body: messageData.options.body,
+                newState: messageData.newState,
+                oldState: messageData.oldState
+            }
         });
-        console.log('Server notification triggered:', result.data);
+        if (error) throw error;
+        console.log('Server notification triggered:', data);
     } catch (error) {
         console.error('Error triggering server notification:', error);
         showToast('Failed to schedule notification.', 'error');
@@ -531,45 +422,27 @@ let pauseStartTime = 0;
             }
             showToast('Uploading profile picture...', 'info');
 
-            const toBase64 = file => new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => {
-                    const img = new Image();
-                    img.src = reader.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 400; // Smaller size for profile pics
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.8)); // Use JPEG for smaller size
-                    };
-                };
-                reader.onerror = error => reject(error);
-            });
-
             try {
-                const base64Image = await toBase64(file);
-                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-                const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-                
-                const batch = firestoreWriteBatch(db);
-                batch.update(userRef, { photoURL: base64Image });
-                batch.update(publicUserRef, { photoURL: base64Image });
-                await batch.commit();
+                const fileExt = file.name.split('.').pop();
+                const filePath = `${currentUser.id}/profile.${fileExt}`;
+                const { error: uploadError } = await storage
+                    .from('profile-pictures')
+                    .upload(filePath, file, { upsert: true });
+                if (uploadError) throw uploadError;
+
+                const { data: publicUrlData } = storage
+                    .from('profile-pictures')
+                    .getPublicUrl(filePath);
+                const publicUrl = publicUrlData.publicUrl;
+
+                const { error: updateError } = await auth.updateUser({
+                    data: { photoURL: publicUrl }
+                });
+                if (updateError) throw updateError;
 
                 showToast('Profile picture updated!', 'success');
             } catch (error) {
-                console.error("Error uploading profile picture:", error);
+                console.error('Error uploading profile picture:', error);
                 showToast('Profile picture upload failed.', 'error');
             }
         }
@@ -586,46 +459,40 @@ let pauseStartTime = 0;
             }
             showToast('Uploading image...', 'info');
 
-            const toBase64 = file => new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => {
-                    const img = new Image();
-                    img.src = reader.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800;
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.8));
-                    };
-                };
-                reader.onerror = error => reject(error);
-            });
-
             try {
-                const base64Image = await toBase64(file);
-                const messagesRef = collection(db, 'artifacts', appId, 'public', 'data', 'groups', groupId, 'messages');
-                const userDoc = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid));
-                
-                await addDoc(messagesRef, {
-                    imageUrl: base64Image,
-                    text: '',
-                    senderId: currentUser.uid,
-                    senderName: userDoc.data().username,
-                    timestamp: serverTimestamp()
-                });
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}.${fileExt}`;
+                const filePath = `${groupId}/${fileName}`;
+                const { error: uploadError } = await storage
+                    .from('group-images')
+                    .upload(filePath, file);
+                if (uploadError) throw uploadError;
+
+                const { data: publicUrlData } = storage
+                    .from('group-images')
+                    .getPublicUrl(filePath);
+                const publicUrl = publicUrlData.publicUrl;
+
+                const { data: userData, error: userError } = await db
+                    .from('users')
+                    .select('username')
+                    .eq('id', currentUser.id)
+                    .single();
+                if (userError) throw userError;
+
+                const { error: insertError } = await db
+                    .from('group_messages')
+                    .insert({
+                        group_id: groupId,
+                        image_url: publicUrl,
+                        text: '',
+                        sender_id: currentUser.id,
+                        sender_name: userData.username,
+                        created_at: new Date().toISOString()
+                    });
+                if (insertError) throw insertError;
             } catch (error) {
-                console.error("Error uploading image:", error);
+                console.error('Error uploading image:', error);
                 showToast('Image upload failed.', 'error');
             }
         }
@@ -1356,104 +1223,32 @@ let pauseStartTime = 0;
             }
         }
 
-        // --- Firebase Initialization ---
-        function initializeFirebase() {
+        // --- Supabase Initialization ---
+        function initializeSupabase() {
             try {
-                const firebaseConfig = {
-                    apiKey: "AIzaSyBSCrL6ravOzFnwOa7A0Jl_W68vEfZVcNw",
-                    authDomain: "focus-flow-34c07.firebaseapp.com",
-                    projectId: "focus-flow-34c07",
-                    storageBucket: "focus-flow-34c07.appspot.com",
-                    messagingSenderId: "473980178825",
-                    appId: "1:473980178825:web:164566ec8b068da3281158",
-                    measurementId: "G-RRFK3LY0E4"
-                };
+                const supabaseUrl = 'https://your-supabase-url.supabase.co';
+                const supabaseAnonKey = 'your-anon-key';
 
-                console.log("Initializing Firebase with config:", firebaseConfig); // Add this line for debugging
+                supabase = createClient(supabaseUrl, supabaseAnonKey);
+                auth = supabase.auth;
+                db = supabase;
+                storage = supabase.storage;
 
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                messaging = getMessaging(app); // Initialize Firebase Messaging service
-        functions = getFunctions(app); // Initialize Firebase Functions service
-
-        // --- PASTE THE onMessage LISTENER HERE ---
-        onMessage(messaging, (payload) => {
-            console.log('Foreground Push Message received:', payload);
-            // If a foreground message signals a timer end, handle it.
-            // This is useful if the server sends a message that also impacts the UI immediately.
-            if (payload.data && payload.data.type === 'TIMER_ENDED') {
-                handlePomodoroPhaseEnd(payload.data);
-                showToast(payload.notification?.body || 'Timer ended!', 'info');
-            }
-            // You can handle other types of foreground messages here
-        });
-
-        // --- MOVE THESE TWO LINES HERE ---
-        
-        sendPomodoroNotification = httpsCallable(functions, 'sendPomodoroNotification'); // Assign callable function
-        sendWakeUpNotification = httpsCallable(functions, 'sendWakeUpNotification');
-        sendGroupWakeUpNotification = httpsCallable(functions, 'sendGroupWakeUpNotification');
-        // ---------------------------------
-
-                onAuthStateChanged(auth, async (user) => {
-                    // --- START: MODIFIED AUTH LOGIC ---
-                    if (user) {
-                        currentUser = user;
-                        let setupComplete = false;
-
-                        if (user.isAnonymous) {
-                            console.log("User is anonymous");
-                            currentUserData = { username: 'Guest', joinedGroups: [] }; // Set minimal data for guest
-                            setupComplete = true; // No profile setup needed for guests
-                        } else {
-                            // Regular authenticated user
-                            const userDoc = await getOrCreateUserDocument(user);
-                            currentUserData = userDoc.data();
-                            if (currentUserData && currentUserData.username) {
-                                setupComplete = true;
-                            }
-                        }
-                        
-                        if (setupComplete) {
-                            // This runs for both complete profiles and anonymous users
-                            updateProfileUI(user.isAnonymous ? null : currentUserData);
-                            showPage('page-timer');
-                            
-                            // Load settings from Firestore or use defaults for guests
-                            if (!user.isAnonymous && currentUserData.pomodoroSettings) {
-                                pomodoroSettings = {...pomodoroSettings, ...currentUserData.pomodoroSettings};
-                            } else {
-                                pomodoroSettings = { work: 25, short_break: 5, long_break: 15, long_break_interval: 4, autoStartBreak: true, autoStartFocus: true };
-                            }
-                            if (!user.isAnonymous && currentUserData.pomodoroSounds) {
-                                pomodoroSounds = {...pomodoroSounds, ...currentUserData.pomodoroSounds};
-                            } else {
-                                pomodoroSounds = { start: "tone_simple_beep", focus: "tone_chime_chord", break: "tone_metal_bell", volume: 1.0 };
-                            }
-                            pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings });
-                            
-                            await loadDailyTotal(); // Has an isAnonymous check
-                            
-                            if (!user.isAnonymous) {
-                                setupRealtimeListeners();
-                                initializePushNotifications();
-                            }
-                        } else {
-                            // New registered user needs to set up profile
-                            showPage('page-username-setup');
-                        }
+                auth.onAuthStateChange((_event, session) => {
+                    if (session && session.user) {
+                        currentUser = session.user;
+                        // Preserve Firebase-style UID property for legacy code
+                        currentUser.uid = session.user.id;
+                        updateProfileUI(session.user.user_metadata || {});
+                        showPage('page-timer');
                     } else {
                         currentUser = null;
                         currentUserData = {};
                         showPage('auth-screen');
                     }
-                    // --- END: MODIFIED AUTH LOGIC ---
                 });
-
             } catch (e) {
-                console.error("Firebase initialization failed:", e);
+                console.error("Supabase initialization failed:", e);
                 showToast("Could not connect to the backend.", "error");
             }
         }
@@ -4574,7 +4369,6 @@ if (achievementsGrid) {
                 showPage('page-timer');
                 setupRealtimeListeners();
                 await loadDailyTotal();
-                initializePushNotifications();
 
             } catch (error) {
                 console.error("Error setting username:", error);
@@ -5307,16 +5101,18 @@ if (achievementsGrid) {
                             wakeUpBtn.disabled = true;
                             wakeUpBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                             
-                            const result = await sendWakeUpNotification({
-                                targetUserId: targetUserId,
-                                senderName: currentUserData.username,
-                                appId: appId
+                            const { data, error } = await supabase.functions.invoke('send-wake-up-notification', {
+                                body: {
+                                    targetUserId,
+                                    senderName: currentUserData.username,
+                                    appId
+                                }
                             });
-                            
-                            if (result.data.success) {
+
+                            if (!error && data?.success) {
                                 showToast(`Wake up call sent to ${targetUserName}!`, 'success');
                             } else {
-                                showToast(result.data.message || 'Could not send wake up call.', 'error');
+                                showToast(data?.message || 'Could not send wake up call.', 'error');
                             }
                         } catch (error) {
                             console.error("Error sending wake up call:", error);
@@ -5784,18 +5580,20 @@ if (achievementsGrid) {
                         'This will send a notification to every member who is not currently studying.',
                         async () => {
                             try {
-                                const result = await sendGroupWakeUpNotification({
-                                    groupId: currentGroupId,
-                                    senderId: currentUser.uid,
-                                    appId: appId
+                                const { data, error } = await supabase.functions.invoke('send-group-wake-up-notification', {
+                                    body: {
+                                        groupId: currentGroupId,
+                                        senderId: currentUser.id,
+                                        appId
+                                    }
                                 });
-                                if (result.data.success) {
-                                    showToast(`Wake up call sent to ${result.data.sentCount} members.`, 'success');
+                                if (!error && data?.success) {
+                                    showToast(`Wake up call sent to ${data.sentCount} members.`, 'success');
                                 } else {
-                                    showToast(result.data.message || 'Could not send wake up call.', 'error');
+                                    showToast(data?.message || 'Could not send wake up call.', 'error');
                                 }
                             } catch (error) {
-                                console.error("Error sending group wake up call:", error);
+                                console.error('Error sending group wake up call:', error);
                                 showToast('An error occurred.', 'error');
                             }
                         }
@@ -5838,7 +5636,7 @@ if (achievementsGrid) {
         });
 
         window.onload = () => {
-            initializeFirebase();
+            initializeSupabase();
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
