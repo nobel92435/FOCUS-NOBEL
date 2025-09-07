@@ -4372,13 +4372,24 @@ if (achievementsGrid) {
         ael('login-form', 'submit', async (e) => {
             e.preventDefault();
             authError.textContent = '';
-            const email = document.getElementById('login-email').value;
+
+            const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
+            if (!email || !password) {
+                authError.textContent = 'Email and password are required.';
+                return;
+            }
+
             try {
                 const { error } = await auth.signInWithPassword({ email, password });
-                if (error) throw error;
-            } catch (error) {
-                authError.textContent = error.message;
+                if (error) {
+                    authError.textContent = error.message;
+                    return;
+                }
+                await ensureProfileRow();
+            } catch (err) {
+                console.error('Login failed:', err);
+                authError.textContent = 'Login failed. Please check your credentials.';
             }
         });
 
