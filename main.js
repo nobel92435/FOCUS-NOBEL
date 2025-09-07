@@ -1226,8 +1226,8 @@ let pauseStartTime = 0;
         // --- Supabase Initialization ---
         function initializeSupabase() {
             try {
-                const supabaseUrl = 'https://your-supabase-url.supabase.co';
-                const supabaseAnonKey = 'your-anon-key';
+                const supabaseUrl = 'https://ofysppndssyllkolxjky.supabase.co';
+                const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meXNwcG5kc3N5bGxrb2x4amt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNDg1MTAsImV4cCI6MjA3MjcyNDUxMH0.x6_aRXrbxSOP7I71oSooWx8x8dedczrtemoUEWiDta8';
 
                 supabase = createClient(supabaseUrl, supabaseAnonKey);
                 auth = supabase.auth;
