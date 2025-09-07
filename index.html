@@ -1992,70 +1992,12 @@
     <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-4"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-gray-300">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-gray-300">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-gray-300">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-gray-300">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="2" required></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-gray-300">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-gray-300">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-gray-300">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-gray-300">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Automation</h3><div class="space-y-3"> <div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Settings</button></form></div></div>
 
     <script type="module" src="main.js"></script>
-    <script>
-        // In your main.js file, you'll need to add the logic to handle these new buttons and views.
-        // Here's a conceptual guide:
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-        /*
-        1. Get references to the new elements:
-        const anonymousSignInBtn = document.getElementById('anonymous-signin-btn');
-        const goToAuthBtn = document.getElementById('go-to-auth-btn');
-        const profileAuthenticatedView = document.getElementById('profile-authenticated-view');
-        const profileAnonymousView = document.getElementById('profile-anonymous-view');
-        const authScreen = document.getElementById('auth-screen');
-        const appContainer = document.getElementById('app-container');
-
-        2. Add an event listener for the "Continue as Guest" button:
-        anonymousSignInBtn.addEventListener('click', async () => {
-            try {
-                await signInAnonymously(auth); // Use your Firebase auth instance
-                // The onAuthStateChanged listener below will handle showing the app
-            } catch (error) {
-                console.error("Anonymous sign-in failed", error);
-                // Show an error message to the user
-            }
-        });
-        
-        3. Add an event listener for the "Sign Up / Log In" button on the profile page:
-        goToAuthBtn.addEventListener('click', () => {
-            // This button takes the guest user back to the sign-in screen
-            appContainer.classList.remove('active');
-            authScreen.classList.add('active');
-        });
-
-        4. Modify your onAuthStateChanged listener:
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // User is signed in.
-                
-                // Check if the user is anonymous
-                if (user.isAnonymous) {
-                    console.log('User is anonymous');
-                    // Show the "guest" profile view
-                    profileAuthenticatedView.style.display = 'none';
-                    profileAnonymousView.style.display = 'block';
-                } else {
-                    console.log('User is authenticated');
-                    // Show the normal profile view
-                    profileAuthenticatedView.style.display = 'block';
-                    profileAnonymousView.style.display = 'none';
-                    
-                    // Check if they need to set up a username (existing logic)
-                    // ... your logic for checking if profile data exists
-                }
-
-                // Show the main app and hide the auth screen
-                authScreen.classList.remove('active');
-                appContainer.classList.add('active');
-                // ... rest of your initialization logic (fetch data, etc.)
-
-            } else {
-                // User is signed out, show the auth screen
-                authScreen.classList.add('active');
-                appContainer.classList.remove('active');
-            }
-        });
-        */
+        const supabaseUrl = 'https://ofysppndssyllkolxjky.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meXNwcG5kc3N5bGxrb2x4amt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNDg1MTAsImV4cCI6MjA3MjcyNDUxMH0.x6_aRXrbxSOP7I71oSooWx8x8dedczrtemoUEWiDta8';
+        window.supabase = createClient(supabaseUrl, supabaseAnonKey);
     </script>
 </body>
 </html>
