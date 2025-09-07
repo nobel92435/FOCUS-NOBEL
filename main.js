@@ -1,8 +1,29 @@
     // Supabase SDK
-    import { createClient } from '@supabase/supabase-js';
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
     const supabaseUrl = 'https://ofysppndssyllkolxjky.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meXNwcG5kc3N5bGxrb2x4amt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNDg1MTAsImV4cCI6MjA3MjcyNDUxMH0.x6_aRXrbxSOP7I71oSooWx8x8dedczrtemoUEWiDta8';
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const db = supabase;
+    const auth = supabase.auth;
+    const storage = supabase.storage;
+
+    let currentUser = null;
+
+    // restore user on page load + watch changes
+    async function restoreUser() {
+        const { data: { user } } = await auth.getUser();
+        currentUser = user ?? null;
+    }
+    auth.onAuthStateChange((_evt, session) => {
+        currentUser = session?.user ?? null;
+    });
+
+    // ensure profile row exists (call after sign up / first login)
+    async function ensureProfileRow() {
+        if (!currentUser) return;
+        await db.from('profiles')
+            .upsert({ id: currentUser.id, email: currentUser.email }, { onConflict: 'id' });
+    }
         const ACHIEVEMENTS = {
     'novice_scholar': { name: 'Novice Scholar', description: 'Study for a total of 1 hour.' },
     'dedicated_learner': { name: 'Dedicated Learner', description: 'Study for a total of 10 hours.' },
@@ -169,8 +190,6 @@
         const getCurrentDate = () => new Date();
 
         // --- App State ---
-        let db, auth, storage;
-        let currentUser = null;
         let currentUserData = {};
         let dashboardCharts = {};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -413,41 +432,69 @@ let pauseStartTime = 0;
             }
         }
 
+        const PROFILE_BUCKET = 'profile-pictures';
+        const BUCKET_IS_PRIVATE = false; // <-- set to true if your bucket is private
+
         async function uploadProfilePicture(file) {
-            if (!currentUser) return;
-            if (!file.type.startsWith('image/')) {
-                showToast('Please select an image file.', 'error');
-                return;
-            }
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                showToast('Image is too large (max 5MB).', 'error');
-                return;
-            }
-            showToast('Uploading profile picture...', 'info');
-
             try {
-                const fileExt = file.name.split('.').pop();
-                const filePath = `${currentUser.id}/profile.${fileExt}`;
-                const { error: uploadError } = await storage
-                    .from('profile-pictures')
-                    .upload(filePath, file, { upsert: true });
-                if (uploadError) throw uploadError;
+                if (!currentUser) { showToast('Please sign in first.', 'info'); return; }
+                if (!file || !file.type?.startsWith('image/')) { showToast('Pick a valid image.', 'error'); return; }
+                if (file.size > 5 * 1024 * 1024) { showToast('Max size 5MB.', 'error'); return; }
 
-                const { data: publicUrlData } = storage
-                    .from('profile-pictures')
-                    .getPublicUrl(filePath);
-                const publicUrl = publicUrlData.publicUrl;
+                const ext = file.name.split('.').pop();
+                const filePath = `${currentUser.id}/profile.${ext}`;
 
-                const { error: updateError } = await auth.updateUser({
-                    data: { photoURL: publicUrl }
-                });
-                if (updateError) throw updateError;
+                // upload with contentType + upsert
+                const { error: upErr } = await storage
+                    .from(PROFILE_BUCKET)
+                    .upload(filePath, file, { upsert: true, contentType: file.type });
+                if (upErr) throw upErr;
 
+                // public or signed URL
+                let publicUrl = '';
+                if (!BUCKET_IS_PRIVATE) {
+                    const { data } = storage.from(PROFILE_BUCKET).getPublicUrl(filePath);
+                    publicUrl = data?.publicUrl ?? '';
+                } else {
+                    const { data, error: sErr } = await storage
+                        .from(PROFILE_BUCKET)
+                        .createSignedUrl(filePath, 60 * 60 * 24); // 24h
+                    if (sErr) throw sErr;
+                    publicUrl = data?.signedUrl ?? '';
+                }
+                if (!publicUrl) throw new Error('Could not get file URL');
+
+                // save URL in your profiles table column: photo_url
+                const { error: upProfileErr } = await db
+                    .from('profiles')
+                    .update({ photo_url: publicUrl })
+                    .eq('id', currentUser.id);
+                if (upProfileErr) throw upProfileErr;
+
+                // (optional) also mirror in auth metadata if your UI reads it:
+                // await auth.updateUser({ data: { photo_url: publicUrl } });
+
+                // refresh UI
+                await loadMyProfile();
                 showToast('Profile picture updated!', 'success');
-            } catch (error) {
-                console.error('Error uploading profile picture:', error);
-                showToast('Profile picture upload failed.', 'error');
+            } catch (e) {
+                console.error('uploadProfilePicture error', e);
+                showToast('Upload failed. Check RLS/storage policies & bucket visibility.', 'error');
             }
+        }
+
+        // helper to load your own profile (photo + username, etc.)
+        async function loadMyProfile() {
+            if (!currentUser) return;
+            const { data, error } = await db
+                .from('profiles')
+                .select('username, photo_url, email')
+                .eq('id', currentUser.id)
+                .single();
+            if (error) { console.error(error); return; }
+            // TODO: update your DOM
+            // avatarImg.src = data.photo_url || '/assets/default-avatar.png';
+            // usernameEl.textContent = data.username || data.email || 'User';
         }
 
 
@@ -497,6 +544,81 @@ let pauseStartTime = 0;
             } catch (error) {
                 console.error('Error uploading image:', error);
                 showToast('Image upload failed.', 'error');
+            }
+        }
+
+        // call when a Pomodoro finishes
+        // studySeconds: number of seconds studied in the session
+        async function recordPomodoroSession(studySeconds = 25 * 60) {
+            try {
+                if (!currentUser) { showToast('Sign in to record progress.', 'info'); return; }
+
+                // read existing counters (simple & safe without RPC)
+                const { data: prof, error: readErr } = await db
+                    .from('profiles')
+                    .select('total_study_sessions, current_streak, last_study_date')
+                    .eq('id', currentUser.id)
+                    .single();
+                if (readErr) throw readErr;
+
+                const today = new Date().toISOString().slice(0, 10);
+                const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+                const prevStreak = prof?.current_streak ?? 0;
+                const prevLast = prof?.last_study_date ?? null;
+
+                let newStreak = prevStreak;
+                if (prevLast === today) {
+                    // already studied today → streak unchanged
+                } else if (prevLast === yesterday) {
+                    newStreak = prevStreak + 1;
+                } else {
+                    newStreak = 1;
+                }
+
+                const newSessions = (prof?.total_study_sessions ?? 0) + 1;
+
+                const { error: upErr } = await db
+                    .from('profiles')
+                    .update({
+                        total_study_sessions: newSessions,
+                        current_streak: newStreak,
+                        last_study_date: today
+                    })
+                    .eq('id', currentUser.id);
+                if (upErr) throw upErr;
+
+                showToast('Session saved!', 'success');
+                // refresh leaderboard if visible
+                // await loadLeaderboard();
+            } catch (e) {
+                console.error('recordPomodoroSession error', e);
+                showToast('Could not save session. Check RLS on profiles.', 'error');
+            }
+        }
+
+        // fetch & render leaderboard
+        async function loadLeaderboard(limit = 50) {
+            try {
+                const { data, error } = await db
+                    .from('profiles')
+                    .select('id, username, photo_url, total_study_sessions, current_streak')
+                    .order('total_study_sessions', { ascending: false })
+                    .limit(limit);
+
+                if (error) throw error;
+
+                // TODO: render in your UI
+                // leaderboardEl.innerHTML = data.map((u, i) => `
+                //   <li>
+                //     <img src="${u.photo_url || '/assets/default-avatar.png'}" />
+                //     <span>#${i+1}</span>
+                //     <span>${u.username || 'Anon'}</span>
+                //     <span>${u.total_study_sessions} sessions</span>
+                //   </li>`).join('');
+            } catch (e) {
+                console.error('loadLeaderboard error', e);
+                showToast('Could not load leaderboard. Check RLS (select on profiles).', 'error');
             }
         }
 
@@ -1223,32 +1345,6 @@ let pauseStartTime = 0;
                 console.error("Error fetching user profile:", error);
                 modal.classList.remove('active');
                 showToast('Could not load user profile.', 'error');
-            }
-        }
-
-        // --- Supabase Initialization ---
-        function initializeSupabase() {
-            try {
-                auth = supabase.auth;
-                db = supabase;
-                storage = supabase.storage;
-
-                auth.onAuthStateChange((_event, session) => {
-                    if (session && session.user) {
-                        currentUser = session.user;
-                        // Preserve Firebase-style UID property for legacy code
-                        currentUser.uid = session.user.id;
-                        updateProfileUI(session.user.user_metadata || {});
-                        showPage('page-timer');
-                    } else {
-                        currentUser = null;
-                        currentUserData = {};
-                        showPage('auth-screen');
-                    }
-                });
-            } catch (e) {
-                console.error("Supabase initialization failed:", e);
-                showToast("Could not connect to the backend.", "error");
             }
         }
 
@@ -4258,16 +4354,16 @@ if (achievementsGrid) {
         // Anonymous Auth
         ael('anonymous-signin-btn', 'click', async () => {
             try {
-                await signInAnonymously(auth);
+                await auth.signInAnonymously();
             } catch (error) {
                 console.error("Anonymous sign-in failed:", error);
                 if(authError) authError.textContent = "Could not sign in as guest. Please try again.";
             }
         });
 
-        ael('go-to-auth-btn', 'click', () => {
+        ael('go-to-auth-btn', 'click', async () => {
             // Sign out the anonymous user and show the auth screen
-            signOut(auth);
+            await auth.signOut();
             // showPage will be called by onAuthStateChanged
         });
         // --- END: NEW EVENT LISTENERS FOR GUEST MODE ---
@@ -4276,12 +4372,24 @@ if (achievementsGrid) {
         ael('login-form', 'submit', async (e) => {
             e.preventDefault();
             authError.textContent = '';
-            const email = document.getElementById('login-email').value;
+
+            const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
+            if (!email || !password) {
+                authError.textContent = 'Email and password are required.';
+                return;
+            }
+
             try {
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                authError.textContent = error.message;
+                const { error } = await auth.signInWithPassword({ email, password });
+                if (error) {
+                    authError.textContent = error.message;
+                    return;
+                }
+                await ensureProfileRow();
+            } catch (err) {
+                console.error('Login failed:', err);
+                authError.textContent = 'Login failed. Please check your credentials.';
             }
         });
 
@@ -4290,12 +4398,14 @@ if (achievementsGrid) {
             authError.textContent = '';
             const email = document.getElementById('signup-email').value;
             const password = document.getElementById('signup-password').value;
-             if (password.length < 6) {
+            if (password.length < 6) {
                 authError.textContent = 'Password must be at least 6 characters long.';
                 return;
             }
             try {
-                await createUserWithEmailAndPassword(auth, email, password);
+                const { error } = await auth.signUp({ email, password });
+                if (error) throw error;
+                await ensureProfileRow();
             } catch (error) {
                 authError.textContent = error.message;
             }
@@ -4360,20 +4470,14 @@ if (achievementsGrid) {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
             try {
-                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-                const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-                
-                const batch = firestoreWriteBatch(db);
-                batch.update(userRef, { username, photoURL });
-                batch.update(publicUserRef, { username, photoURL });
-                await batch.commit();
-                
-                const updatedUserDoc = await getDoc(userRef);
-                currentUserData = updatedUserDoc.data();
-                updateProfileUI(currentUserData);
+                const { error } = await db
+                    .from('profiles')
+                    .update({ username, photo_url: photoURL })
+                    .eq('id', currentUser.id);
+                if (error) throw error;
+
+                await loadMyProfile();
                 showPage('page-timer');
-                setupRealtimeListeners();
-                await loadDailyTotal();
 
             } catch (error) {
                 console.error("Error setting username:", error);
@@ -4384,11 +4488,13 @@ if (achievementsGrid) {
             }
         });
 
-        ael('sign-out-btn', 'click', () => {
-            signOut(auth).catch(error => {
+        ael('sign-out-btn', 'click', async () => {
+            try {
+                await auth.signOut();
+            } catch (error) {
                 console.error("Sign out error", error);
                 showToast("Failed to sign out.", "error");
-            });
+            }
         });
 
         // Navigation
@@ -5641,7 +5747,7 @@ if (achievementsGrid) {
         });
 
         window.onload = () => {
-            initializeSupabase();
+            restoreUser();
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
@@ -5879,15 +5985,15 @@ if (achievementsGrid) {
             ael('save-character-avatar-btn', 'click', async () => {
                 const selectedAvatar = document.querySelector('#avatar-character-picker .avatar-option.selected img')?.src;
                 if (selectedAvatar && currentUser) {
-                    const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-                    const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
                     try {
-                        const batch = firestoreWriteBatch(db);
-                        batch.update(userRef, { photoURL: selectedAvatar });
-                        batch.update(publicUserRef, { photoURL: selectedAvatar });
-                        await batch.commit();
+                        const { error } = await db
+                            .from('profiles')
+                            .update({ photo_url: selectedAvatar })
+                            .eq('id', currentUser.id);
+                        if (error) throw error;
                         document.getElementById('avatar-character-modal').classList.remove('active');
                         showToast('Avatar updated!', 'success');
+                        await loadMyProfile();
                     } catch (error) {
                         console.error("Avatar update failed:", error);
                         showToast('Failed to update avatar.', 'error');
