@@ -1859,7 +1859,6 @@ if (sessionType === 'study') {
             document.getElementById('profile-page-name').textContent = username;
             document.getElementById('profile-page-email').textContent = email;
             
-            const headerAvatar = document.getElementById('header-avatar');
             const profileAvatar = document.getElementById('profile-page-avatar');
             
             [headerAvatar, profileAvatar].forEach(el => {
