@@ -4354,16 +4354,16 @@ if (achievementsGrid) {
         // Anonymous Auth
         ael('anonymous-signin-btn', 'click', async () => {
             try {
-                await signInAnonymously(auth);
+                await auth.signInAnonymously();
             } catch (error) {
                 console.error("Anonymous sign-in failed:", error);
                 if(authError) authError.textContent = "Could not sign in as guest. Please try again.";
             }
         });
 
-        ael('go-to-auth-btn', 'click', () => {
+        ael('go-to-auth-btn', 'click', async () => {
             // Sign out the anonymous user and show the auth screen
-            signOut(auth);
+            await auth.signOut();
             // showPage will be called by onAuthStateChanged
         });
         // --- END: NEW EVENT LISTENERS FOR GUEST MODE ---
@@ -4375,7 +4375,8 @@ if (achievementsGrid) {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             try {
-                await signInWithEmailAndPassword(auth, email, password);
+                const { error } = await auth.signInWithPassword({ email, password });
+                if (error) throw error;
             } catch (error) {
                 authError.textContent = error.message;
             }
@@ -4386,12 +4387,14 @@ if (achievementsGrid) {
             authError.textContent = '';
             const email = document.getElementById('signup-email').value;
             const password = document.getElementById('signup-password').value;
-             if (password.length < 6) {
+            if (password.length < 6) {
                 authError.textContent = 'Password must be at least 6 characters long.';
                 return;
             }
             try {
-                await createUserWithEmailAndPassword(auth, email, password);
+                const { error } = await auth.signUp({ email, password });
+                if (error) throw error;
+                await ensureProfileRow();
             } catch (error) {
                 authError.textContent = error.message;
             }
@@ -4456,20 +4459,14 @@ if (achievementsGrid) {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
             try {
-                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-                const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-                
-                const batch = firestoreWriteBatch(db);
-                batch.update(userRef, { username, photoURL });
-                batch.update(publicUserRef, { username, photoURL });
-                await batch.commit();
-                
-                const updatedUserDoc = await getDoc(userRef);
-                currentUserData = updatedUserDoc.data();
-                updateProfileUI(currentUserData);
+                const { error } = await db
+                    .from('profiles')
+                    .update({ username, photo_url: photoURL })
+                    .eq('id', currentUser.id);
+                if (error) throw error;
+
+                await loadMyProfile();
                 showPage('page-timer');
-                setupRealtimeListeners();
-                await loadDailyTotal();
 
             } catch (error) {
                 console.error("Error setting username:", error);
@@ -4480,11 +4477,13 @@ if (achievementsGrid) {
             }
         });
 
-        ael('sign-out-btn', 'click', () => {
-            signOut(auth).catch(error => {
+        ael('sign-out-btn', 'click', async () => {
+            try {
+                await auth.signOut();
+            } catch (error) {
                 console.error("Sign out error", error);
                 showToast("Failed to sign out.", "error");
-            });
+            }
         });
 
         // Navigation
@@ -5975,15 +5974,15 @@ if (achievementsGrid) {
             ael('save-character-avatar-btn', 'click', async () => {
                 const selectedAvatar = document.querySelector('#avatar-character-picker .avatar-option.selected img')?.src;
                 if (selectedAvatar && currentUser) {
-                    const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-                    const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
                     try {
-                        const batch = firestoreWriteBatch(db);
-                        batch.update(userRef, { photoURL: selectedAvatar });
-                        batch.update(publicUserRef, { photoURL: selectedAvatar });
-                        await batch.commit();
+                        const { error } = await db
+                            .from('profiles')
+                            .update({ photo_url: selectedAvatar })
+                            .eq('id', currentUser.id);
+                        if (error) throw error;
                         document.getElementById('avatar-character-modal').classList.remove('active');
                         showToast('Avatar updated!', 'success');
+                        await loadMyProfile();
                     } catch (error) {
                         console.error("Avatar update failed:", error);
                         showToast('Failed to update avatar.', 'error');
