@@ -1991,6 +1991,18 @@
 
     <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-4"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-gray-300">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-gray-300">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-gray-300">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-gray-300">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="2" required></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-gray-300">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-gray-300">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-gray-300">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-gray-300">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Automation</h3><div class="space-y-3"> <div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Settings</button></form></div></div>
 
+    <img id="profileAvatar" alt="avatar" />
+    <h3 id="profileName">User Name</h3>
+    <p id="profileEmail">user@example.com</p>
+
+    <form id="profileForm">
+      <input id="usernameInput" type="text" placeholder="Display name" />
+      <input id="avatarInput" type="file" accept="image/*" />
+      <button type="submit">Save</button>
+    </form>
+
+    <div id="saveMsg" hidden>Profile updated!</div>
+
     <script type="module">
         // Supabase SDK
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -8366,12 +8378,93 @@ async function updateUsername(newName) {
     if (typeof showToast === 'function') showToast('Username updated!', 'success');
     if (typeof loadMyProfile === 'function') loadMyProfile();
   } catch (e) {
-    console.error('updateUsername crashed:', e);
+  console.error('updateUsername crashed:', e);
+  }
+}
+async function loadProfile() {
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) {
+    console.warn('Not signed in:', authErr);
+    return;
+  }
+
+  document.getElementById('profileEmail').textContent = user.email ?? '';
+
+  const { data: profile, error } = await supabase
+    .from('users')
+    .select('username, avatar_url')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Profile fetch error:', error);
+    return;
+  }
+
+  const name = profile?.username || 'Anonymous';
+  const avatar = profile?.avatar_url || '';
+
+  document.getElementById('profileName').textContent = name;
+
+  const imgEl = document.getElementById('profileAvatar');
+  if (avatar) {
+    imgEl.src = avatar;
+  } else {
+    imgEl.removeAttribute('src');
   }
 }
 
+loadProfile();
 
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
 
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const username = document.getElementById('usernameInput').value.trim();
+  const file = document.getElementById('avatarInput').files[0];
+
+  let avatarUrl = null;
+
+  if (file) {
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadErr) {
+      console.error('Avatar upload error:', uploadErr);
+    } else {
+      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      avatarUrl = pub?.publicUrl ?? null;
+    }
+  }
+
+  const update = {};
+  if (username) update.username = username;
+  if (avatarUrl) update.avatar_url = avatarUrl;
+
+  const { data, error } = await supabase
+    .from('users')
+    .update(update)
+    .eq('id', user.id)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error updating profile:', error);
+    return;
+  }
+
+  await loadProfile();
+
+  const msg = document.getElementById('saveMsg');
+  msg.hidden = false;
+  setTimeout(() => (msg.hidden = true), 2000);
+});
 
 // --- Bind UI events for profile settings (username + avatar) ---
 function bindProfileSettingsUI() {
