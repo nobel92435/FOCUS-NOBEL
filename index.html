@@ -7810,17 +7810,12 @@ if (achievementsGrid) {
                 return;
             }
 
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.id);
-            
             try {
-                await updateDoc(userRef, { username: newUsername });
-                await updateDoc(publicUserRef, { username: newUsername });
+                await updateUsername(newUsername);
                 editProfileModal.classList.remove('active');
-                showToast('Profile updated!', 'success');
             } catch (error) {
-                console.error("Error updating profile: ", error);
-                showToast('Failed to update profile.', 'error');
+                console.error('Error updating profile:', error);
+                if (typeof showToast === 'function') showToast('Failed to update profile.', 'error');
             }
         });
 
