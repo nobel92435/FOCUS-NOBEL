@@ -1,9 +1,32 @@
+    // Firebase Firestore SDK
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import {
+        getFirestore,
+        doc,
+        getDoc,
+        setDoc,
+        updateDoc,
+        collection,
+        addDoc,
+        getDocs,
+        query,
+        where,
+        orderBy
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    const firebaseConfig = {
+        apiKey: 'dummy',
+        authDomain: 'dummy.firebaseapp.com',
+        projectId: 'dummy'
+    };
+    const firebaseApp = initializeApp(firebaseConfig);
+    const db = getFirestore(firebaseApp);
+
     // Supabase SDK
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
     const supabaseUrl = 'https://ofysppndssyllkolxjky.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meXNwcG5kc3N5bGxrb2x4amt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNDg1MTAsImV4cCI6MjA3MjcyNDUxMH0.x6_aRXrbxSOP7I71oSooWx8x8dedczrtemoUEWiDta8';
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const db = supabase;
     const auth = supabase.auth;
     const storage = supabase.storage;
 
@@ -28,7 +51,7 @@
                        .toLowerCase().replace(/[^a-z0-9_]+/g, '_');
         const fallbackUsername = `${local}_${user.id.slice(0,6)}`;
 
-        await db.from('profiles').upsert(
+        await supabase.from('profiles').upsert(
             {
                 id: user.id,
                 email: user.email ?? null,
@@ -54,7 +77,7 @@
         await ensureProfileRow();
 
         // Read profile to check if setup is complete
-        const { data: prof, error } = await db
+        const { data: prof, error } = await supabase
             .from('profiles')
             .select('username, photo_url, completed_setup')
             .eq('id', currentUser.id)
@@ -522,7 +545,7 @@ let pauseStartTime = 0;
                 if (!publicUrl) throw new Error('Could not get file URL');
 
                 // save URL in your profiles table column: photo_url
-                const { error: upProfileErr } = await db
+                const { error: upProfileErr } = await supabase
                     .from('profiles')
                     .update({ photo_url: publicUrl })
                     .eq('id', currentUser.id);
@@ -543,7 +566,7 @@ let pauseStartTime = 0;
         // helper to load your own profile (photo + username, etc.)
         async function loadMyProfile() {
             if (!currentUser) return;
-            const { data, error } = await db
+            const { data, error } = await supabase
                 .from('profiles')
                 .select('username, photo_url, email')
                 .eq('id', currentUser.id)
@@ -580,13 +603,13 @@ let pauseStartTime = 0;
                     .getPublicUrl(filePath);
                 const publicUrl = publicUrlData.publicUrl;
 
-                const { data: userData, error: userError } = await db
+                const { data: userData, error: userError } = await supabase
                     .from('profiles').select('username')
                     .eq('id', currentUser.id)
                     .single();
                 if (userError) throw userError;
 
-                const { error: insertError } = await db
+                const { error: insertError } = await supabase
                     .from('group_messages')
                     .insert({
                         group_id: groupId,
@@ -610,7 +633,7 @@ let pauseStartTime = 0;
                 if (!currentUser) { showToast('Sign in to record progress.', 'info'); return; }
 
                 // read existing counters (simple & safe without RPC)
-                const { data: prof, error: readErr } = await db
+                const { data: prof, error: readErr } = await supabase
                     .from('profiles')
                     .select('total_study_sessions, current_streak, last_study_date')
                     .eq('id', currentUser.id)
@@ -634,7 +657,7 @@ let pauseStartTime = 0;
 
                 const newSessions = (prof?.total_study_sessions ?? 0) + 1;
 
-                const { error: upErr } = await db
+                const { error: upErr } = await supabase
                     .from('profiles')
                     .update({
                         total_study_sessions: newSessions,
@@ -656,7 +679,7 @@ let pauseStartTime = 0;
         // fetch & render leaderboard
         async function loadLeaderboard(limit = 50) {
             try {
-                const { data, error } = await db
+                const { data, error } = await supabase
                     .from('profiles')
                     .select('id, username, photo_url, total_study_sessions, current_streak')
                     .order('total_study_sessions', { ascending: false })
@@ -4546,13 +4569,13 @@ if (achievementsGrid) {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
             try {
-                const { error } = await db
+                const { error } = await supabase
                     .from('profiles')
                     .update({ username, photo_url: photoURL })
                     .eq('id', currentUser.id);
                 if (error) throw error;
 
-                await db.from('profiles')
+                await supabase.from('profiles')
                     .update({ completed_setup: true })
                     .eq('id', currentUser.id);
 
@@ -5235,11 +5258,17 @@ if (achievementsGrid) {
                 showToast('Please enter a valid goal between 1 and 24.', 'error');
                 return;
             }
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-            await updateDoc(userRef, { studyGoalHours: goal });
-
+            const { error: upErr } = await supabase
+                .from('profiles')
+                .update({ studyGoalHours: goal })
+                .eq('id', currentUser.id);
+            if (upErr) {
+                showToast('Failed to update study goal.', 'error');
+                return;
+            }
+            currentUserData.studyGoalHours = goal;
             studyGoalModal.classList.remove('active');
-            showToast("Study goal updated!", "success");
+            showToast('Study goal updated!', 'success');
         });
 
         ael('page-find-groups', 'click', (e) => {
@@ -5691,11 +5720,17 @@ if (achievementsGrid) {
                 showToast('Please enter a valid goal between 1 and 24.', 'error');
                 return;
             }
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid);
-            await updateDoc(userRef, { studyGoalHours: goal });
-
+            const { error: upErr } = await supabase
+                .from('profiles')
+                .update({ studyGoalHours: goal })
+                .eq('id', currentUser.id);
+            if (upErr) {
+                showToast('Failed to update study goal.', 'error');
+                return;
+            }
+            currentUserData.studyGoalHours = goal;
             studyGoalModal.classList.remove('active');
-            showToast("Study goal updated!", "success");
+            showToast('Study goal updated!', 'success');
         });
 
         // Ranking Scope Switch Listeners
@@ -6067,7 +6102,7 @@ if (achievementsGrid) {
                 const selectedAvatar = document.querySelector('#avatar-character-picker .avatar-option.selected img')?.src;
                 if (selectedAvatar && currentUser) {
                     try {
-                        const { error } = await db
+                        const { error } = await supabase
                             .from('profiles')
                             .update({ photo_url: selectedAvatar })
                             .eq('id', currentUser.id);
