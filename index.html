@@ -2025,7 +2025,10 @@
     }
 
     function doc(...args) {
-        if (args.length === 1 && args[0].path) {
+        if (args.length && typeof args[0] === 'object' && !args[0].path) {
+            args = args.slice(1);
+        }
+        if (args.length === 1 && args[0]?.path) {
             const path = [...args[0].path];
             const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
                 ? crypto.randomUUID().replace(/-/g, '')
@@ -2038,6 +2041,9 @@
     }
 
     function collection(...args) {
+        if (args.length && typeof args[0] === 'object' && !args[0].path) {
+            args = args.slice(1);
+        }
         const segments = flattenSegments(args);
         return { path: segments };
     }
@@ -8437,10 +8443,12 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
 
     if (uploadErr) {
       console.error('Avatar upload error:', uploadErr);
-    } else {
-      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      avatarUrl = pub?.publicUrl ?? null;
-    }
+      } else {
+        const { data: signed } = await supabase
+          .storage.from('avatars')
+          .createSignedUrl(filePath, 60 * 60);
+        avatarUrl = signed?.signedUrl ?? null;
+      }
   }
 
   const update = {};
@@ -8494,7 +8502,7 @@ function bindProfileSettingsUI() {
   }
 })();
 
-</script/>
+</script>
 
 </body>
 </html>
