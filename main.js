@@ -16,6 +16,7 @@
     }
     auth.onAuthStateChange((_evt, session) => {
         currentUser = session?.user ?? null;
+        routeAfterAuth();
     });
 
     // ensure profile row exists (call after sign up / first login)
@@ -58,6 +59,49 @@
             showToast('Failed to create your user profile.', 'error');
         }
         // --- FIX END ---
+    }
+
+    // Decide what to show after auth changes / signup / login
+    async function routeAfterAuth() {
+        const { data: { user } } = await auth.getUser();
+        currentUser = user ?? null;
+
+        // Not logged in → stay on auth screen
+        if (!currentUser) {
+            showPage('auth-screen');
+            return;
+        }
+
+        // Make sure a profile row exists
+        await ensureProfileRow();
+
+        // Read profile to check if setup is complete
+        const { data: prof, error } = await db
+            .from('profiles')
+            .select('username, photo_url, completed_setup')
+            .eq('id', currentUser.id)
+            .single();
+
+        if (error) {
+            console.error('profile fetch error', error);
+            // Fallback: send to setup if we can’t read
+            showPage('page-username-setup');
+            return;
+        }
+
+        // If username missing/placeholder or explicit flag not set → setup page
+        const needsSetup =
+            !prof ||
+            !prof.username ||
+            prof.username.trim().length < 3 ||
+            prof.completed_setup === false;
+
+        if (needsSetup) {
+            showPage('page-username-setup');
+        } else {
+            await loadMyProfile();
+            showPage('page-timer');
+        }
     }
         const ACHIEVEMENTS = {
     'novice_scholar': { name: 'Novice Scholar', description: 'Study for a total of 1 hour.' },
@@ -4422,7 +4466,7 @@ if (achievementsGrid) {
                         error.message || 'Login failed. Check credentials or confirm your email.';
                     return;
                 }
-                await ensureProfileRow();
+                await routeAfterAuth();
             } catch (err) {
                 console.error('Login failed:', err);
                 authError.textContent = 'Login failed. Please check your credentials.';
@@ -4458,8 +4502,8 @@ if (achievementsGrid) {
                     authError.textContent = error.message;
                     return;
                 }
-                // If email confirmation is ON, user must click the link before password login works.
-                await ensureProfileRow();
+                // If email confirmation is ON, session may be null until user verifies.
+                await routeAfterAuth();
             } catch (error) {
                 authError.textContent = error.message || 'Signup failed.';
             }
@@ -4530,8 +4574,13 @@ if (achievementsGrid) {
                     .eq('id', currentUser.id);
                 if (error) throw error;
 
+                await db.from('profiles')
+                    .update({ completed_setup: true })
+                    .eq('id', currentUser.id);
+
                 await loadMyProfile();
-                showPage('page-timer');
+                showToast('Profile set! Welcome 🎉', 'success');
+                routeAfterAuth();
 
             } catch (error) {
                 console.error("Error setting username:", error);
@@ -5801,7 +5850,7 @@ if (achievementsGrid) {
         });
 
         window.onload = () => {
-            restoreUser();
+            restoreUser().then(routeAfterAuth);
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
@@ -6089,13 +6138,3 @@ async function signInAnonymously(e) {
 }
 
 
-try {
-  supabase.auth.onAuthStateChange((_event, session) => {
-    const user = session?.user ?? null;
-    window.currentUser = user || null;
-    if (user) {
-      if (typeof ensureProfileRow === 'function') ensureProfileRow();
-      if (typeof loadMyProfile === 'function') loadMyProfile();
-    }
-  });
-} catch (e) { console.warn('Failed to attach onAuthStateChange:', e); }
