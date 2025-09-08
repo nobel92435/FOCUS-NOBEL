@@ -2000,6 +2000,198 @@
     const auth = supabase.auth;
     const storage = supabase.storage;
 
+    // Firestore compatibility layer implemented with Supabase
+    const db = {};
+
+    function flattenSegments(segs) {
+        return segs.flatMap(s => {
+            if (!s) return [];
+            if (typeof s === 'string') return s.split('/').filter(Boolean);
+            if (s.path) return s.path;
+            return [s];
+        });
+    }
+
+    function doc(...args) {
+        if (args.length === 1 && args[0].path) {
+            const path = [...args[0].path];
+            const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                ? crypto.randomUUID().replace(/-/g, '')
+                : Math.random().toString(36).slice(2);
+            path.push(id);
+            return { path };
+        }
+        const segments = flattenSegments(args);
+        return { path: segments };
+    }
+
+    function collection(...args) {
+        const segments = flattenSegments(args);
+        return { path: segments };
+    }
+
+    function stripArtifacts(segments) {
+        if (segments[0] === 'artifacts') return segments.slice(2);
+        return segments;
+    }
+
+    function stripPublic(segments) {
+        if (segments[0] === 'public' && segments[1] === 'data') {
+            return segments.slice(2);
+        }
+        return segments;
+    }
+
+    function parseDocPath(ref) {
+        let segments = stripArtifacts(ref.path);
+        segments = stripPublic(segments);
+        const table = segments[segments.length - 2];
+        const id = segments[segments.length - 1];
+        const parent = segments.length > 2 ? { table: segments[0], id: segments[1] } : null;
+        return { table, id, parent };
+    }
+
+    function parseCollectionPath(ref) {
+        let segments = stripArtifacts(ref.path);
+        segments = stripPublic(segments);
+        const table = segments[segments.length - 1];
+        const parent = segments.length > 1 ? { table: segments[0], id: segments[1] } : null;
+        return { table, parent };
+    }
+
+    function buildForeignKey(parent) {
+        if (!parent) return {};
+        return { [`${parent.table.slice(0, -1)}_id`]: parent.id };
+    }
+
+    function convertTimestamps(obj) {
+        if (!obj || typeof obj !== 'object') return obj;
+        for (const [key, value] of Object.entries(obj)) {
+            if (value && typeof value === 'object' && !('toDate' in value)) {
+                convertTimestamps(value);
+            } else if (typeof value === 'string' || value instanceof Date) {
+                const lower = key.toLowerCase();
+                if (lower.includes('time') || lower.includes('date')) {
+                    const d = new Date(value);
+                    if (!isNaN(d)) {
+                        obj[key] = { toDate: () => d };
+                    }
+                }
+            }
+        }
+        return obj;
+    }
+
+    async function getDoc(ref) {
+        const { table, id } = parseDocPath(ref);
+        const { data, error } = await supabase.from(table).select('*').eq('id', id).single();
+        if (error) throw error;
+        return { exists: () => !!data, data: () => convertTimestamps(data) };
+    }
+
+    async function setDoc(ref, data) {
+        const { table, id, parent } = parseDocPath(ref);
+        const payload = { id, ...buildForeignKey(parent), ...data };
+        const { error } = await supabase.from(table).upsert(payload);
+        if (error) throw error;
+    }
+
+    async function updateDoc(ref, data) {
+        const { table, id } = parseDocPath(ref);
+        const { data: existing } = await supabase.from(table).select('*').eq('id', id).single();
+        const payload = {};
+        for (const [k, v] of Object.entries(data)) {
+            if (v && v.__op === 'increment') {
+                payload[k] = (existing?.[k] || 0) + v.value;
+            } else if (v && v.__op === 'arrayUnion') {
+                const arr = new Set([...(existing?.[k] || []), v.value]);
+                payload[k] = Array.from(arr);
+            } else if (v && v.__op === 'arrayRemove') {
+                payload[k] = (existing?.[k] || []).filter(item => item !== v.value);
+            } else {
+                payload[k] = v;
+            }
+        }
+        const { error } = await supabase.from(table).update(payload).eq('id', id);
+        if (error) throw error;
+    }
+
+    async function addDoc(collRef, data) {
+        const { table, parent } = parseCollectionPath(collRef);
+        const payload = { ...buildForeignKey(parent), ...data };
+        const { data: inserted, error } = await supabase.from(table).insert(payload).select().single();
+        if (error) throw error;
+        return { id: inserted.id };
+    }
+
+    function query(collectionRef, ...mods) {
+        return { collectionRef, mods };
+    }
+
+    function orderBy(field, dir = 'asc') {
+        return { type: 'orderBy', field, dir };
+    }
+
+    function where(field, op, value) {
+        return { type: 'where', field, op, value };
+    }
+
+    function limit(count) {
+        return { type: 'limit', count };
+    }
+
+    async function getDocs(q) {
+        const { collectionRef, mods } = q;
+        const { table, parent } = parseCollectionPath(collectionRef);
+        let req = supabase.from(table).select('*');
+        if (parent) req = req.eq(`${parent.table.slice(0, -1)}_id`, parent.id);
+        for (const mod of mods) {
+            if (mod.type === 'orderBy') req = req.order(mod.field, { ascending: mod.dir !== 'desc' });
+            else if (mod.type === 'where') req = req.filter(mod.field, mod.op, mod.value);
+            else if (mod.type === 'limit') req = req.limit(mod.count);
+        }
+        const { data, error } = await req;
+        if (error) throw error;
+        return { docs: data.map(d => ({ id: d.id, data: () => convertTimestamps(d) })), empty: data.length === 0 };
+    }
+
+    function runTransaction(_db, fn) {
+        return fn({ get: getDoc, update: updateDoc, set: setDoc });
+    }
+
+    function serverTimestamp() {
+        const d = new Date();
+        return { toDate: () => d };
+    }
+
+    function increment(value) {
+        return { __op: 'increment', value };
+    }
+
+    function arrayUnion(value) {
+        return { __op: 'arrayUnion', value };
+    }
+
+    function arrayRemove(value) {
+        return { __op: 'arrayRemove', value };
+    }
+
+    function onSnapshot(refOrQuery, callback) {
+        if (refOrQuery.collectionRef) {
+            getDocs(refOrQuery).then(snapshot => {
+                const wrapped = {
+                    docs: snapshot.docs,
+                    empty: snapshot.empty,
+                    forEach: fn => snapshot.docs.forEach(doc => fn(doc))
+                };
+                callback(wrapped);
+            });
+        } else {
+            getDoc(refOrQuery).then(doc => callback(doc));
+        }
+        return () => {};
+    }
+
     let currentUser = null;
 
     // restore user on page load + watch changes
