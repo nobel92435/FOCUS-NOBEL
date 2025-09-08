@@ -21,44 +21,22 @@
 
     // ensure profile row exists (call after sign up / first login)
     async function ensureProfileRow() {
-        if (!currentUser) return;
+        const { data: { user } } = await auth.getUser();
+        if (!user) return;
 
-        // --- FIX START: More robust profile creation ---
-        // 1. Check if a profile already exists for the user.
-        const { data, error: selectError } = await db
-            .from('profiles')
-            .select('id')
-            .eq('id', currentUser.id)
-            .maybeSingle();
+        const local = (user.email || 'user').split('@')[0]
+                       .toLowerCase().replace(/[^a-z0-9_]+/g, '_');
+        const fallbackUsername = `${local}_${user.id.slice(0,6)}`;
 
-        // If a profile is found (data is not null), we don't need to do anything.
-        if (data) {
-            return;
-        }
-
-        // Handle potential errors, but ignore the "PGRST116" error which means "No rows found".
-        // This is expected if the user is new.
-        if (selectError && selectError.code !== 'PGRST116') {
-            console.error('Error checking for profile:', selectError);
-            return;
-        }
-
-        // 2. If no profile exists, create one with default values.
-        // This prevents the "400 Bad Request" error by providing required fields.
-        const usernameFromEmail = currentUser.email.split('@')[0]; // Use email prefix as a default username
-        
-        const { error: insertError } = await db.from('profiles').insert({
-            id: currentUser.id,
-            email: currentUser.email,
-            username: usernameFromEmail, // Provide a default username
-            photo_url: PRESET_AVATARS[0]  // Provide a default avatar
-        });
-
-        if (insertError) {
-            console.error('Error creating profile row:', insertError);
-            showToast('Failed to create your user profile.', 'error');
-        }
-        // --- FIX END ---
+        await db.from('profiles').upsert(
+            {
+                id: user.id,
+                email: user.email ?? null,
+                username: fallbackUsername,             // satisfies NOT NULL
+                photo_url: `https://api.dicebear.com/8.x/lorelei/svg?seed=${encodeURIComponent(local)}`
+            },
+            { onConflict: 'id' }
+        );
     }
 
     // Decide what to show after auth changes / signup / login
