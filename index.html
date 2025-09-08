@@ -1992,31 +1992,7 @@
     <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-4"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-gray-300">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-gray-300">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-gray-300">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-gray-300">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="2" required></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-gray-300">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-gray-300">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-gray-300">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-gray-300">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Automation</h3><div class="space-y-3"> <div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Settings</button></form></div></div>
 
     <script type="module">
-        // Firebase Firestore SDK
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-    import {
-        getFirestore,
-        doc,
-        getDoc,
-        setDoc,
-        updateDoc,
-        collection,
-        addDoc,
-        getDocs,
-        query,
-        where,
-        orderBy
-    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-
-    const firebaseConfig = {
-        apiKey: 'dummy',
-        authDomain: 'dummy.firebaseapp.com',
-        projectId: 'dummy'
-    };
-    const firebaseApp = initializeApp(firebaseConfig);
-    const db = getFirestore(firebaseApp);
-
-    // Supabase SDK
+        // Supabase SDK
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
     const supabaseUrl = 'https://ofysppndssyllkolxjky.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meXNwcG5kc3N5bGxrb2x4amt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNDg1MTAsImV4cCI6MjA3MjcyNDUxMH0.x6_aRXrbxSOP7I71oSooWx8x8dedczrtemoUEWiDta8';
@@ -7567,13 +7543,12 @@ if (achievementsGrid) {
             if (saveBtn) {
                 const selectedStudicon = document.querySelector('#studicon-picker .avatar-option.selected')?.dataset.url;
                 if (selectedStudicon && currentUser) {
-                    const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-                    const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.id);
                     try {
-                        const batch = firestoreWriteBatch(db);
-                        batch.update(userRef, { studiconURL: selectedStudicon });
-                        batch.update(publicUserRef, { studiconURL: selectedStudicon });
-                        await batch.commit();
+                        const { error } = await supabase
+                            .from('profiles')
+                            .update({ studiconURL: selectedStudicon })
+                            .eq('id', currentUser.id);
+                        if (error) throw error;
                         document.getElementById('studicon-store-modal').classList.remove('active');
                         showToast('Studicon updated!', 'success');
                     } catch (error) {
@@ -7766,31 +7741,54 @@ if (achievementsGrid) {
                         'Are you sure you want to leave this group? This action cannot be undone.',
                         async () => {
                             if (!currentUser || !currentGroupId) return;
-                            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-                            const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', currentGroupId);
-                            
-                            const groupSnap = await getDoc(groupRef);
-                            if (groupSnap.exists()) {
-                                const groupData = groupSnap.data();
-                                if (groupData.leaderId === currentUser.id && groupData.members.length > 1) {
-                                    showToast('Please transfer leadership or kick all members before leaving.', 'error');
-                                    return;
-                                }
+
+                            const { data: groupData, error: groupErr } = await supabase
+                                .from('groups')
+                                .select('leaderId, members')
+                                .eq('id', currentGroupId)
+                                .single();
+                            if (groupErr) {
+                                console.error('Error fetching group:', groupErr);
+                                showToast('Failed to leave the group.', 'error');
+                                return;
+                            }
+                            if (groupData.leaderId === currentUser.id && (groupData.members?.length || 0) > 1) {
+                                showToast('Please transfer leadership or kick all members before leaving.', 'error');
+                                return;
                             }
 
-                            try {
-                                const batch = firestoreWriteBatch(db);
-                                batch.update(userRef, { joinedGroups: arrayRemove(currentGroupId) });
-                                batch.update(groupRef, { members: arrayRemove(currentUser.id) });
-                                await batch.commit();
-
-                                showToast('You have left the group.', 'success');
-                                renderJoinedGroups();
-                                showPage('page-my-groups');
-                            } catch (error) {
-                                console.error("Error leaving group:", error);
-                                showToast("Failed to leave the group.", "error");
+                            const { data: userData, error: userErr } = await supabase
+                                .from('profiles')
+                                .select('joinedGroups')
+                                .eq('id', currentUser.id)
+                                .single();
+                            if (userErr) {
+                                console.error('Error fetching user profile:', userErr);
+                                showToast('Failed to leave the group.', 'error');
+                                return;
                             }
+
+                            const updatedJoinedGroups = (userData.joinedGroups || []).filter(id => id !== currentGroupId);
+                            const updatedMembers = (groupData.members || []).filter(id => id !== currentUser.id);
+
+                            const { error: upUserErr } = await supabase
+                                .from('profiles')
+                                .update({ joinedGroups: updatedJoinedGroups })
+                                .eq('id', currentUser.id);
+                            const { error: upGroupErr } = await supabase
+                                .from('groups')
+                                .update({ members: updatedMembers })
+                                .eq('id', currentGroupId);
+
+                            if (upUserErr || upGroupErr) {
+                                console.error('Error leaving group:', upUserErr || upGroupErr);
+                                showToast('Failed to leave the group.', 'error');
+                                return;
+                            }
+
+                            showToast('You have left the group.', 'success');
+                            renderJoinedGroups();
+                            showPage('page-my-groups');
                         }
                     );
                     break;
