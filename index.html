@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1991,19 +1992,7 @@
 
     <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-4"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-gray-300">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-gray-300">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-gray-300">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-gray-300">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="2" required></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-gray-300">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-gray-300">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-gray-300">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-gray-300">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Automation</h3><div class="space-y-3"> <div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Settings</button></form></div></div>
 
-    <img id="profileAvatar" alt="avatar" />
-    <h3 id="profileName">User Name</h3>
-    <p id="profileEmail">user@example.com</p>
-
-    <form id="profileForm">
-      <input id="usernameInput" type="text" placeholder="Display name" />
-      <input id="avatarInput" type="file" accept="image/*" />
-      <button type="submit">Save</button>
-    </form>
-
-    <div id="saveMsg" hidden>Profile updated!</div>
-
-    <script type="module">
+        <script type="module">
         // Supabase SDK
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
     const supabaseUrl = 'https://ofysppndssyllkolxjky.supabase.co';
@@ -2061,19 +2050,44 @@
     }
 
     function parseDocPath(ref) {
+        if (!ref || !ref.path || ref.path.length < 2) {
+            console.error("Invalid doc reference passed to parseDocPath:", ref);
+            return { table: undefined, id: undefined, parent: null };
+        }
         let segments = stripArtifacts(ref.path);
         segments = stripPublic(segments);
-        const table = segments[segments.length - 2];
+        if (segments.length < 2) {
+             console.error("Invalid doc segments after stripping:", segments);
+            return { table: undefined, id: undefined, parent: null };
+        }
+        let table = segments[segments.length - 2];
+        if (table === 'users') {
+            table = 'profiles'; // Remap 'users' to 'profiles'
+        }
         const id = segments[segments.length - 1];
-        const parent = segments.length > 2 ? { table: segments[0], id: segments[1] } : null;
+        let parent = segments.length > 2 ? { table: segments[0], id: segments[1] } : null;
+        if (parent && parent.table === 'users') {
+            parent.table = 'profiles';
+        }
         return { table, id, parent };
     }
 
     function parseCollectionPath(ref) {
+        if (!ref || !ref.path || ref.path.length < 1) {
+            console.error("Invalid collection reference passed to parseCollectionPath:", ref);
+            return { table: undefined, parent: null };
+        }
         let segments = stripArtifacts(ref.path);
         segments = stripPublic(segments);
+        if (segments.length < 1) {
+             console.error("Invalid collection segments after stripping:", segments);
+             return { table: undefined, parent: null };
+        }
         const table = segments[segments.length - 1];
-        const parent = segments.length > 1 ? { table: segments[0], id: segments[1] } : null;
+        let parent = segments.length > 1 ? { table: segments[0], id: segments[1] } : null;
+        if (parent && parent.table === 'users') {
+            parent.table = 'profiles';
+        }
         return { table, parent };
     }
 
@@ -2163,10 +2177,44 @@
         const { table, parent } = parseCollectionPath(collectionRef);
         let req = supabase.from(table).select('*');
         if (parent) req = req.eq(`${parent.table.slice(0, -1)}_id`, parent.id);
+        
+        const operatorMap = {
+            '==': 'eq',
+            '<': 'lt',
+            '<=': 'lte',
+            '>': 'gt',
+            '>=': 'gte',
+            '!=': 'neq',
+            'array-contains': 'cs',
+            'in': 'in',
+            'array-contains-any': 'cs', // Supabase `cs` (contains) is the closest for arrays of strings/numbers
+        };
+
         for (const mod of mods) {
-            if (mod.type === 'orderBy') req = req.order(mod.field, { ascending: mod.dir !== 'desc' });
-            else if (mod.type === 'where') req = req.filter(mod.field, mod.op, mod.value);
-            else if (mod.type === 'limit') req = req.limit(mod.count);
+            if (mod.type === 'orderBy') {
+                req = req.order(mod.field, { ascending: mod.dir !== 'desc' });
+            } else if (mod.type === 'where') {
+                const supabaseOp = operatorMap[mod.op] || mod.op;
+                let value = mod.value;
+                if (value instanceof Date) {
+                    value = value.toISOString(); // Convert Date objects to ISO string
+                }
+                
+                // Special handling for 'in' operator which expects a string like '(val1, val2)'
+                if (supabaseOp === 'in' && Array.isArray(value)) {
+                    value = `(${value.map(v => typeof v === 'string' ? `"${v}"` : v).join(',')})`;
+                }
+
+                // FINAL FIX: Correctly format the value for array columns.
+                // For uuid[] columns, the value should be in the format '{uuid-string}', without quotes inside.
+                if ((supabaseOp === 'cs' || supabaseOp === 'cd') && !Array.isArray(value)) {
+                    value = `{${value}}`;
+                }
+
+                req = req.filter(mod.field, supabaseOp, value);
+            } else if (mod.type === 'limit') {
+                req = req.limit(mod.count);
+            }
         }
         const { data, error } = await req;
         if (error) throw error;
@@ -2178,8 +2226,7 @@
     }
 
     function serverTimestamp() {
-        const d = new Date();
-        return { toDate: () => d };
+        return new Date().toISOString();
     }
 
     function increment(value) {
@@ -2195,19 +2242,60 @@
     }
 
     function onSnapshot(refOrQuery, callback) {
-        if (refOrQuery.collectionRef) {
-            getDocs(refOrQuery).then(snapshot => {
-                const wrapped = {
-                    docs: snapshot.docs,
-                    empty: snapshot.empty,
-                    forEach: fn => snapshot.docs.forEach(doc => fn(doc))
-                };
-                callback(wrapped);
-            });
+        // This is a real-time implementation using Supabase channels.
+        // It refetches the entire query on any change to the underlying table.
+        const isQuery = !!refOrQuery.collectionRef;
+        const ref = isQuery ? refOrQuery.collectionRef : refOrQuery;
+        
+        let table;
+        if (isQuery) {
+            ({ table } = parseCollectionPath(ref));
         } else {
-            getDoc(refOrQuery).then(doc => callback(doc));
+            ({ table } = parseDocPath(ref));
         }
-        return () => {};
+        
+        // Create a unique channel name to avoid conflicts
+        const channel = supabase.channel(`table-changes-${table}-${Math.random()}`);
+
+        const fetchData = async () => {
+            try {
+                const snapshot = await (isQuery ? getDocs(refOrQuery) : getDoc(refOrQuery));
+                if (isQuery) {
+                    callback({
+                        docs: snapshot.docs,
+                        empty: snapshot.empty,
+                        forEach: fn => snapshot.docs.forEach(doc => fn(doc))
+                    });
+                } else {
+                    callback(snapshot);
+                }
+            } catch (error) {
+                console.error(`Real-time fetch error for table '${table}':`, error);
+            }
+        };
+
+        channel
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: table },
+                (payload) => {
+                    // Refetch data on any change
+                    fetchData();
+                }
+            )
+            .subscribe((status, err) => {
+                 if (status === 'SUBSCRIBED') {
+                    // Fetch the initial data once the connection is established
+                    fetchData();
+                } else if (err) {
+                    console.error(`Failed to subscribe to real-time changes for table '${table}':`, err);
+                }
+            });
+
+        // Return an unsubscribe function for cleanup
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }
 
     let currentUser = null;
@@ -2281,6 +2369,8 @@
             showPage('page-username-setup');
         } else {
             await loadMyProfile();
+            // This is the critical fix: Attach all real-time listeners after the user is verified.
+            setupRealtimeListeners(); 
             showPage('page-timer');
         }
     }
@@ -3927,121 +4017,70 @@ let pauseStartTime = 0;
             }
             // --- END: ADDED GUEST LOGIC ---
 
-            // Cap break time at 3 hours (10800 seconds)
             const MAX_BREAK_SECONDS = 3 * 3600; // 3 hours in seconds
             const cappedDuration = (sessionType === 'break' && durationSeconds > MAX_BREAK_SECONDS) ? MAX_BREAK_SECONDS : durationSeconds;
 
             try {
-                await runTransaction(db, async (transaction) => {
-                    const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-                    const publicUserDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.id);
-                    
-                    const userDoc = await transaction.get(userDocRef);
-                    const publicUserDoc = await transaction.get(publicUserDocRef);
-                    const userDataForStreak = userDoc.data();
-if (sessionType === 'study') {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                // Get references to documents
+                const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
+                const publicUserDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.id);
+                const sessionsCollectionRef = collection(userDocRef, 'sessions');
 
-    const lastStudyDay = userDataForStreak.lastStudyDay || '';
-    let currentStreak = userDataForStreak.currentStreak || 0;
-
-    if (lastStudyDay !== todayStr) {
-        if (lastStudyDay === yesterdayStr) {
-            currentStreak++; // Continued the streak
-        } else {
-            currentStreak = 1; // Streak was broken, reset to 1
-        }
-        transaction.update(userDocRef, {
-            currentStreak: currentStreak,
-            lastStudyDay: todayStr
-        });
-    }
-}
-
-                    if (!userDoc.exists()) {
-                        throw new Error("Transaction failed: User document not found.");
-                    }
-
-                    const data = userDoc.data();
-                    const todayStr = getCurrentDate().toISOString().split('T')[0];
-
-                    let currentDailyStudySeconds = 0;
-                    if (data.totalTimeToday && data.totalTimeToday.date === todayStr) {
-                        currentDailyStudySeconds = data.totalTimeToday.seconds || 0;
-                    }
-                    let currentDailyBreakSeconds = 0;
-                    if (data.totalBreakTimeToday && data.totalBreakTimeToday.date === todayStr) {
-                        currentDailyBreakSeconds = data.totalBreakTimeToday.seconds || 0;
-                    }
-
-                    const newSessionDocRef = doc(collection(db, 'artifacts', appId, 'users', currentUser.id, 'sessions'));
-                    transaction.set(newSessionDocRef, {
-                        subject: subject,
-                        durationSeconds: cappedDuration, // Use capped duration
-                        endedAt: serverTimestamp(),
-                        type: sessionType // Store session type
-                    });
-
-                    const updateData = {};
-                    if (sessionType === 'study') {
-                        updateData.totalStudySeconds = increment(cappedDuration);
-                        updateData.totalTimeToday = {
-                            date: todayStr,
-                            seconds: currentDailyStudySeconds + cappedDuration
-                        };
-                    } else { // 'break'
-                        updateData.totalBreakSeconds = increment(cappedDuration);
-                        updateData.totalBreakTimeToday = {
-                            date: todayStr,
-                            seconds: currentDailyBreakSeconds + cappedDuration
-                        };
-                    }
-                    transaction.update(userDocRef, updateData);
-
-                    if (sessionType === 'study') {
-                        if (!publicUserDoc.exists()) {
-                            transaction.set(publicUserDocRef, {
-                                username: currentUserData.username || 'Anonymous',
-                                email: currentUserData.email || currentUser.email || '',
-                                totalStudySeconds: 0,
-                                totalBreakSeconds: 0 // Initialize break time for public too
-                            });
-                        }
-                        transaction.update(publicUserDocRef, {
-                            totalStudySeconds: increment(cappedDuration)
-                        });
-                    } else { // 'break' - update public break time
-                         if (!publicUserDoc.exists()) {
-                            transaction.set(publicUserDocRef, {
-                                username: currentUserData.username || 'Anonymous',
-                                email: currentUserData.email || currentUser.email || '',
-                                totalStudySeconds: 0,
-                                totalBreakSeconds: 0
-                            });
-                        }
-                        transaction.update(publicUserDocRef, {
-                            totalBreakSeconds: increment(cappedDuration)
-                        });
-                    }
-
-                    // Update local state after successful transaction
-                    if (sessionType === 'study') {
-                        totalTimeTodayInSeconds = currentDailyStudySeconds + cappedDuration;
-                    } else {
-                        totalBreakTimeTodayInSeconds = currentDailyBreakSeconds + cappedDuration;
-                    }
-                });
+                // 1. Get current user data to perform calculations
+                const userDoc = await getDoc(userDocRef);
+                if (!userDoc.exists()) throw new Error("User document not found.");
                 
-                updateTotalTimeDisplay(); // This now updates both
+                const userData = userDoc.data();
+                const todayStr = new Date().toISOString().split('T')[0];
+
+                // 2. Prepare updates for the user's profile
+                const profileUpdate = {};
+                const publicProfileUpdate = {};
+
+                if (sessionType === 'study') {
+                    const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                    const lastStudyDay = userData.lastStudyDay || '';
+                    let currentStreak = userData.currentStreak || 0;
+                    if (lastStudyDay !== todayStr) {
+                        currentStreak = (lastStudyDay === yesterdayStr) ? currentStreak + 1 : 1;
+                        profileUpdate.currentStreak = currentStreak;
+                        profileUpdate.lastStudyDay = todayStr;
+                    }
+
+                    const currentDailyStudy = (userData.totalTimeToday?.date === todayStr) ? userData.totalTimeToday.seconds : 0;
+                    profileUpdate.totalStudySeconds = increment(cappedDuration);
+                    profileUpdate.totalTimeToday = { date: todayStr, seconds: currentDailyStudy + cappedDuration };
+                    publicProfileUpdate.totalStudySeconds = increment(cappedDuration);
+                    totalTimeTodayInSeconds = currentDailyStudy + cappedDuration;
+                } else { // 'break'
+                    const currentDailyBreak = (userData.totalBreakTimeToday?.date === todayStr) ? userData.totalBreakTimeToday.seconds : 0;
+                    profileUpdate.totalBreakSeconds = increment(cappedDuration);
+                    profileUpdate.totalBreakTimeToday = { date: todayStr, seconds: currentDailyBreak + cappedDuration };
+                    publicProfileUpdate.totalBreakSeconds = increment(cappedDuration);
+                    totalBreakTimeTodayInSeconds = currentDailyBreak + cappedDuration;
+                }
+
+                // 3. Execute all database operations
+                await Promise.all([
+                    updateDoc(userDocRef, profileUpdate),
+                    updateDoc(publicUserDocRef, publicProfileUpdate),
+                    addDoc(sessionsCollectionRef, {
+                        subject: subject,
+                        durationSeconds: cappedDuration,
+                        endedAt: serverTimestamp(),
+                        type: sessionType
+                    })
+                ]);
+
+                // 4. Update UI and check for achievements
+                updateTotalTimeDisplay();
                 showToast(`Session of ${formatTime(cappedDuration, false)} saved!`, "success");
-                // After saving, check if any achievements were unlocked for this study session
-if (sessionType === 'study') {
-    await checkAndAwardAchievements(cappedDuration);
-}
+                if (sessionType === 'study') {
+                    await checkAndAwardAchievements(cappedDuration);
+                }
 
             } catch (error) {
-                console.error("Error saving session in transaction: ", error);
+                console.error("Error saving session: ", error);
                 showToast("Error saving session.", "error");
             }
         }
@@ -4261,8 +4300,7 @@ if (achievementsGrid) {
             // Fetch subjects ordered by 'order' field
             const subjectsCollectionRef = query(collection(userDocRef, 'subjects'), orderBy('order', 'asc'));
             const sessionsCollectionRef = collection(userDocRef, 'sessions');
-            const plannerTasksRef = collection(userDocRef, 'plannerTasks');
-
+            
             onSnapshot(userDocRef, (doc) => {
                 if (doc.exists()) {
                     const data = doc.data();
@@ -4291,7 +4329,7 @@ if (achievementsGrid) {
                 }
             });
             
-            onSnapshot(groupsCollectionRef, () => {
+            onSnapshot(query(groupsCollectionRef), () => {
                 if (document.getElementById('page-find-groups').classList.contains('active')) {
                    renderGroupRankings();
                 }
@@ -4307,7 +4345,7 @@ if (achievementsGrid) {
                 renderSubjectSelectionList(subjects);
             });
             
-            onSnapshot(usersCollectionRef, () => {
+            onSnapshot(query(usersCollectionRef), () => {
                 if (document.getElementById('page-ranking').classList.contains('active')) {
                     const activeTab = document.querySelector('#ranking-period-tabs .ranking-tab-btn.active');
                     renderLeaderboard(activeTab ? activeTab.dataset.period : 'weekly');
@@ -4332,11 +4370,7 @@ if (achievementsGrid) {
                     renderLeaderboard(activeTab ? activeTab.dataset.period : 'weekly');
                 }
             });
-            // --- DEPRECATED ---
-            onSnapshot(query(plannerTasksRef, orderBy("date")), (snapshot) => {
-                // This is now handled by the new planner logic
-            });
-            
+
             // --- NEW PLANNER LISTENERS ---
             setupPlannerListeners();
         }
@@ -5025,7 +5059,7 @@ if (achievementsGrid) {
             container.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
 
             const usersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-            const usersSnapshot = await getDocs(usersCollectionRef);
+            const usersSnapshot = await getDocs(query(usersCollectionRef));
 
             const userPromises = usersSnapshot.docs.map(async (userDoc) => {
                 const userData = userDoc.data();
@@ -5054,7 +5088,7 @@ if (achievementsGrid) {
                 const sessionsSnapshot = await getDocs(q);
                 
                 let totalSeconds = 0;
-                sessionsSnapshot.forEach(sessionDoc => {
+                sessionsSnapshot.docs.forEach(sessionDoc => {
                     // Only count study sessions for ranking
                     if (sessionDoc.data().type === 'study') {
                         totalSeconds += sessionDoc.data().durationSeconds;
@@ -7217,6 +7251,9 @@ if (achievementsGrid) {
 
             await addDoc(subjectsRef, { name: subjectName, color: color, order: lastOrder + 1 });
             
+            // The onSnapshot listener now handles the UI update automatically.
+            // The redundant manual refresh code that was here has been removed.
+
             subjectNameInput.value = '';
             modal.classList.remove('active');
             showToast(`Subject "${subjectName}" added!`, 'success');
@@ -7224,13 +7261,6 @@ if (achievementsGrid) {
             if (isAddingSubjectFromStartSession) {
                 setTimeout(() => {
                     document.getElementById('start-session-modal').classList.add('active');
-                    // The onSnapshot listener will automatically re-render the list.
-                    // This logic selects the newly added item.
-                    const newSubjectEl = Array.from(document.querySelectorAll('#subject-selection-list .subject-item')).find(el => el.dataset.subjectName === subjectName);
-                    if(newSubjectEl) {
-                        document.querySelectorAll('#subject-selection-list .subject-item').forEach(el => el.classList.remove('selected'));
-                        newSubjectEl.classList.add('selected');
-                    }
                 }, 300); 
             }
         });
@@ -8496,8 +8526,21 @@ function bindProfileSettingsUI() {
     bindProfileSettingsUI();
   }
 })();
-
 </script>
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
