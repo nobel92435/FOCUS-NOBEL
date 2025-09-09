@@ -4401,7 +4401,8 @@ if (achievementsGrid) {
             // 1. Listener for Lists
             const listsQuery = query(
                 collection(db, `/artifacts/${appId}/public/data/lists`),
-                where('members', 'array-contains', currentUser.id)
+                // Supabase doesn't support `@>` on text columns, so use `ilike` to check membership
+                where('members', 'ilike', `%${currentUser.id}%`)
             );
             const listsUnsub = onSnapshot(listsQuery, (snapshot) => {
                 plannerState.lists = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -4412,7 +4413,8 @@ if (achievementsGrid) {
             // 2. Listener for Tasks
             const tasksQuery = query(
                 collection(db, `/artifacts/${appId}/public/data/tasks`),
-                where('members', 'array-contains', currentUser.id)
+                // Use `ilike` instead of array containment for text-based member lists
+                where('members', 'ilike', `%${currentUser.id}%`)
             );
             const tasksUnsub = onSnapshot(tasksQuery, (snapshot) => {
                 plannerState.tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -8530,17 +8532,3 @@ function bindProfileSettingsUI() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
