@@ -2370,7 +2370,9 @@
         } else {
             await loadMyProfile();
             // This is the critical fix: Attach all real-time listeners after the user is verified.
-            setupRealtimeListeners(); 
+            setupRealtimeListeners();
+            // Ensure daily totals persist across refreshes
+            await loadDailyTotal();
             showPage('page-timer');
         }
     }
@@ -8414,121 +8416,9 @@ async function updateUsername(newName) {
   console.error('updateUsername crashed:', e);
   }
 }
-async function loadProfile() {
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) {
-    console.warn('Not signed in:', authErr);
-    return;
-  }
 
-  document.getElementById('profileEmail').textContent = user.email ?? '';
-
-  const { data: profile, error } = await supabase
-    .from('users')
-    .select('username, avatar_url')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Profile fetch error:', error);
-    return;
-  }
-
-  const name = profile?.username || 'Anonymous';
-  const avatar = profile?.avatar_url || '';
-
-  document.getElementById('profileName').textContent = name;
-
-  const imgEl = document.getElementById('profileAvatar');
-  if (avatar) {
-    imgEl.src = avatar;
-  } else {
-    imgEl.removeAttribute('src');
-  }
-}
-
-loadProfile();
-
-document.getElementById('profileForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  const username = document.getElementById('usernameInput').value.trim();
-  const file = document.getElementById('avatarInput').files[0];
-
-  let avatarUrl = null;
-
-  if (file) {
-    const fileExt = file.name.split('.').pop();
-    const filePath = `${user.id}/${Date.now()}.${fileExt}`;
-
-    const { error: uploadErr } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, file, { upsert: true });
-
-    if (uploadErr) {
-      console.error('Avatar upload error:', uploadErr);
-      } else {
-        const { data: signed } = await supabase
-          .storage.from('avatars')
-          .createSignedUrl(filePath, 60 * 60);
-        avatarUrl = signed?.signedUrl ?? null;
-      }
-  }
-
-  const update = {};
-  if (username) update.username = username;
-  if (avatarUrl) update.avatar_url = avatarUrl;
-
-  const { data, error } = await supabase
-    .from('users')
-    .update(update)
-    .eq('id', user.id)
-    .select()
-    .maybeSingle();
-
-  if (error) {
-    console.error('Error updating profile:', error);
-    return;
-  }
-
-  await loadProfile();
-
-  const msg = document.getElementById('saveMsg');
-  msg.hidden = false;
-  setTimeout(() => (msg.hidden = true), 2000);
-});
-
-// --- Bind UI events for profile settings (username + avatar) ---
-function bindProfileSettingsUI() {
-  const unameInput = document.getElementById('username-input');
-  const unameBtn = document.getElementById('save-username-btn');
-  const avatarInput = document.getElementById('avatar-input');
-  const avatarBtn = document.getElementById('upload-avatar-btn');
-
-  if (unameBtn && unameInput) {
-    unameBtn.addEventListener('click', () => updateUsername(unameInput.value));
-  }
-  if (avatarBtn && avatarInput) {
-    avatarBtn.addEventListener('click', () => {
-      const f = avatarInput.files && avatarInput.files[0];
-      if (!f) { if (typeof showToast==='function') showToast('Choose an image first.', 'info'); return; }
-      if (typeof uploadProfilePicture === 'function') uploadProfilePicture(f);
-    });
-  }
-}
-
-// Call binder after DOMContentLoaded
-(function() {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindProfileSettingsUI);
-  } else {
-    bindProfileSettingsUI();
-  }
-})();
 </script>
 
 </body>
 </html>
+
