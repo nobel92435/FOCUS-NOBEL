@@ -2370,7 +2370,9 @@
         } else {
             await loadMyProfile();
             // This is the critical fix: Attach all real-time listeners after the user is verified.
-            setupRealtimeListeners(); 
+            setupRealtimeListeners();
+            // Ensure daily totals persist across refreshes
+            await loadDailyTotal();
             showPage('page-timer');
         }
     }
@@ -8424,8 +8426,8 @@ async function loadProfile() {
   document.getElementById('profileEmail').textContent = user.email ?? '';
 
   const { data: profile, error } = await supabase
-    .from('users')
-    .select('username, avatar_url')
+    .from('profiles')
+    .select('username, photo_url')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -8435,7 +8437,7 @@ async function loadProfile() {
   }
 
   const name = profile?.username || 'Anonymous';
-  const avatar = profile?.avatar_url || '';
+  const avatar = profile?.photo_url || '';
 
   document.getElementById('profileName').textContent = name;
 
@@ -8480,10 +8482,10 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
 
   const update = {};
   if (username) update.username = username;
-  if (avatarUrl) update.avatar_url = avatarUrl;
+  if (avatarUrl) update.photo_url = avatarUrl;
 
   const { data, error } = await supabase
-    .from('users')
+    .from('profiles')
     .update(update)
     .eq('id', user.id)
     .select()
@@ -8495,6 +8497,7 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
   }
 
   await loadProfile();
+  if (typeof loadMyProfile === 'function') await loadMyProfile();
 
   const msg = document.getElementById('saveMsg');
   msg.hidden = false;
