@@ -2096,6 +2096,10 @@
         return { [`${parent.table.slice(0, -1)}_id`]: parent.id };
     }
 
+    function toPgArray(arr) {
+        return `{${arr.map(v => typeof v === 'string' ? `"${v}"` : v).join(',')}}`;
+    }
+
     function convertTimestamps(obj) {
         if (!obj || typeof obj !== 'object') return obj;
         for (const [key, value] of Object.entries(obj)) {
@@ -2124,6 +2128,9 @@
     async function setDoc(ref, data) {
         const { table, id, parent } = parseDocPath(ref);
         const payload = { id, ...buildForeignKey(parent), ...data };
+        for (const [k, v] of Object.entries(payload)) {
+            if (Array.isArray(v)) payload[k] = toPgArray(v);
+        }
         const { error } = await supabase.from(table).upsert(payload);
         if (error) throw error;
     }
@@ -2137,9 +2144,11 @@
                 payload[k] = (existing?.[k] || 0) + v.value;
             } else if (v && v.__op === 'arrayUnion') {
                 const arr = new Set([...(existing?.[k] || []), v.value]);
-                payload[k] = Array.from(arr);
+                payload[k] = toPgArray(Array.from(arr));
             } else if (v && v.__op === 'arrayRemove') {
-                payload[k] = (existing?.[k] || []).filter(item => item !== v.value);
+                payload[k] = toPgArray((existing?.[k] || []).filter(item => item !== v.value));
+            } else if (Array.isArray(v)) {
+                payload[k] = toPgArray(v);
             } else {
                 payload[k] = v;
             }
@@ -2151,6 +2160,9 @@
     async function addDoc(collRef, data) {
         const { table, parent } = parseCollectionPath(collRef);
         const payload = { ...buildForeignKey(parent), ...data };
+        for (const [k, v] of Object.entries(payload)) {
+            if (Array.isArray(v)) payload[k] = toPgArray(v);
+        }
         const { data: inserted, error } = await supabase.from(table).insert(payload).select().single();
         if (error) throw error;
         return { id: inserted.id };
@@ -2173,7 +2185,8 @@
     }
 
     async function getDocs(q) {
-        const { collectionRef, mods } = q;
+        const collectionRef = q && q.collectionRef ? q.collectionRef : q;
+        const mods = q && Array.isArray(q.mods) ? q.mods : [];
         const { table, parent } = parseCollectionPath(collectionRef);
         let req = supabase.from(table).select('*');
         if (parent) req = req.eq(`${parent.table.slice(0, -1)}_id`, parent.id);
@@ -5967,7 +5980,7 @@ if (achievementsGrid) {
             if (!currentUser) return;
             const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
             const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', groupId);
-            await setDoc(userRef, { joinedGroups: arrayUnion(groupId) }, { merge: true });
+            await updateDoc(userRef, { joinedGroups: arrayUnion(groupId) });
             await updateDoc(groupRef, { members: arrayUnion(currentUser.id) });
             showToast("Group joined successfully!", "success");
         }
