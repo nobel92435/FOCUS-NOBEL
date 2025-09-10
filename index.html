@@ -2152,7 +2152,8 @@
 
     async function updateDoc(ref, data) {
         const { table, id } = parseDocPath(ref);
-        const { data: existing } = await supabase.from(table).select('*').eq('id', id).single();
+        const { data: existingData } = await supabase.from(table).select('*').eq('id', id).single();
+        const existing = convertTimestamps(existingData);
         const payload = {};
         for (const [k, v] of Object.entries(data)) {
             if (v && v.__op === 'increment') {
@@ -8450,4 +8451,3 @@ async function updateUsername(newName) {
 
 </body>
 </html>
-
