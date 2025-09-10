@@ -2237,9 +2237,7 @@
         const collectionRef = q && q.collectionRef ? q.collectionRef : q;
         const mods = q && Array.isArray(q.mods) ? q.mods : [];
         const { table, parent } = parseCollectionPath(collectionRef);
-        let req = supabase.from(table).select('*');
-        if (parent) req = req.eq(`${parent.table.slice(0, -1)}_id`, parent.id);
-        
+
         const operatorMap = {
             '==': 'eq',
             '<': 'lt',
@@ -2252,33 +2250,53 @@
             'array-contains-any': 'cs', // Supabase `cs` (contains) is the closest for arrays of strings/numbers
         };
 
-        for (const mod of mods) {
-            if (mod.type === 'orderBy') {
-                req = req.order(mod.field, { ascending: mod.dir !== 'desc' });
-            } else if (mod.type === 'where') {
-                const supabaseOp = operatorMap[mod.op] || mod.op;
-                let value = mod.value;
-                if (value instanceof Date) {
-                    value = value.toISOString(); // Convert Date objects to ISO string
-                }
-                
-                // Special handling for 'in' operator which expects a string like '(val1, val2)'
-                if (supabaseOp === 'in' && Array.isArray(value)) {
-                    value = `(${value.map(v => typeof v === 'string' ? `"${v}"` : v).join(',')})`;
-                }
+        const buildRequest = (useFallback = false) => {
+            let req = supabase.from(table).select('*');
+            if (parent) req = req.eq(`${parent.table.slice(0, -1)}_id`, parent.id);
 
-                // FINAL FIX: Correctly format the value for array columns.
-                // For uuid[] columns, the value should be in the format '{uuid-string}', without quotes inside.
-                if ((supabaseOp === 'cs' || supabaseOp === 'cd') && !Array.isArray(value)) {
-                    value = `{${value}}`;
-                }
+            for (const mod of mods) {
+                if (mod.type === 'orderBy') {
+                    req = req.order(mod.field, { ascending: mod.dir !== 'desc' });
+                } else if (mod.type === 'where') {
+                    if (useFallback && (mod.op === 'array-contains' || mod.op === 'array-contains-any')) {
+                        req = req.filter(mod.field, 'ilike', `%${mod.value}%`);
+                        continue;
+                    }
 
-                req = req.filter(mod.field, supabaseOp, value);
-            } else if (mod.type === 'limit') {
-                req = req.limit(mod.count);
+                    const supabaseOp = operatorMap[mod.op] || mod.op;
+                    let value = mod.value;
+                    if (value instanceof Date) {
+                        value = value.toISOString(); // Convert Date objects to ISO string
+                    }
+
+                    // Special handling for 'in' operator which expects a string like '(val1, val2)'
+                    if (supabaseOp === 'in' && Array.isArray(value)) {
+                        value = `(${value.map(v => typeof v === 'string' ? `"${v}"` : v).join(',')})`;
+                    }
+
+                    // FINAL FIX: Correctly format the value for array columns.
+                    // For uuid[] columns, the value should be in the format '{uuid-string}', without quotes inside.
+                    if ((supabaseOp === 'cs' || supabaseOp === 'cd') && !Array.isArray(value)) {
+                        value = `{${value}}`;
+                    }
+
+                    req = req.filter(mod.field, supabaseOp, value);
+                } else if (mod.type === 'limit') {
+                    req = req.limit(mod.count);
+                }
             }
+            return req;
+        };
+
+        let { data, error } = await buildRequest(false);
+
+        // Fallback for text columns when using array operators (@>)
+        if (error && error.code === '42883' &&
+            mods.some(m => m.type === 'where' && (m.op === 'array-contains' || m.op === 'array-contains-any'))
+        ) {
+            ({ data, error } = await buildRequest(true));
         }
-        const { data, error } = await req;
+
         if (error) throw error;
         return { docs: data.map(d => ({ id: d.id, data: () => convertTimestamps(d) })), empty: data.length === 0 };
     }
