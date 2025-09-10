@@ -2096,11 +2096,30 @@
         return { [`${parent.table.slice(0, -1)}_id`]: parent.id };
     }
 
+    function toPgArray(arr) {
+        // FIX: Do not add double quotes around array elements. This is required for uuid[] columns in PostgreSQL,
+        // as it expects {uuid1,uuid2} not {"uuid1","uuid2"}. This assumes array elements
+        // do not contain special characters that would require quoting (e.g., commas, braces).
+        return `{${arr.join(',')}}`;
+    }
+
+    // NEW HELPER FUNCTION TO PARSE POSTGRES ARRAY STRINGS
+    function fromPgArray(pgString) {
+        if (!pgString || typeof pgString !== 'string' || pgString.length < 2 || pgString === '{}') {
+            return [];
+        }
+        // Remove '{' and '}' and split by comma. Handles UUIDs correctly.
+        return pgString.slice(1, -1).split(',');
+    }
+
     function convertTimestamps(obj) {
         if (!obj || typeof obj !== 'object') return obj;
         for (const [key, value] of Object.entries(obj)) {
             if (value && typeof value === 'object' && !('toDate' in value)) {
                 convertTimestamps(value);
+            } else if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
+                // FIX: Parse PostgreSQL array strings into JavaScript arrays
+                obj[key] = fromPgArray(value);
             } else if (typeof value === 'string' || value instanceof Date) {
                 const lower = key.toLowerCase();
                 if (lower.includes('time') || lower.includes('date')) {
@@ -2124,6 +2143,9 @@
     async function setDoc(ref, data) {
         const { table, id, parent } = parseDocPath(ref);
         const payload = { id, ...buildForeignKey(parent), ...data };
+        for (const [k, v] of Object.entries(payload)) {
+            if (Array.isArray(v)) payload[k] = toPgArray(v);
+        }
         const { error } = await supabase.from(table).upsert(payload);
         if (error) throw error;
     }
@@ -2137,9 +2159,11 @@
                 payload[k] = (existing?.[k] || 0) + v.value;
             } else if (v && v.__op === 'arrayUnion') {
                 const arr = new Set([...(existing?.[k] || []), v.value]);
-                payload[k] = Array.from(arr);
+                payload[k] = toPgArray(Array.from(arr));
             } else if (v && v.__op === 'arrayRemove') {
-                payload[k] = (existing?.[k] || []).filter(item => item !== v.value);
+                payload[k] = toPgArray((existing?.[k] || []).filter(item => item !== v.value));
+            } else if (Array.isArray(v)) {
+                payload[k] = toPgArray(v);
             } else {
                 payload[k] = v;
             }
@@ -2151,6 +2175,9 @@
     async function addDoc(collRef, data) {
         const { table, parent } = parseCollectionPath(collRef);
         const payload = { ...buildForeignKey(parent), ...data };
+        for (const [k, v] of Object.entries(payload)) {
+            if (Array.isArray(v)) payload[k] = toPgArray(v);
+        }
         const { data: inserted, error } = await supabase.from(table).insert(payload).select().single();
         if (error) throw error;
         return { id: inserted.id };
@@ -2173,7 +2200,8 @@
     }
 
     async function getDocs(q) {
-        const { collectionRef, mods } = q;
+        const collectionRef = q && q.collectionRef ? q.collectionRef : q;
+        const mods = q && Array.isArray(q.mods) ? q.mods : [];
         const { table, parent } = parseCollectionPath(collectionRef);
         let req = supabase.from(table).select('*');
         if (parent) req = req.eq(`${parent.table.slice(0, -1)}_id`, parent.id);
@@ -5703,7 +5731,8 @@ if (achievementsGrid) {
             
             const todayStr = getCurrentDate().toISOString().split('T')[0];
 
-            const groupsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), where('__name__', 'in', joinedGroupIds));
+            // FIX: Use 'id' instead of Firestore's '__name__' for Supabase primary key lookup.
+            const groupsQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), where('id', 'in', joinedGroupIds));
             const snapshot = await getDocs(groupsQuery);
             
             const groupPromises = snapshot.docs.map(async (groupDoc) => {
@@ -5967,7 +5996,7 @@ if (achievementsGrid) {
             if (!currentUser) return;
             const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
             const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', groupId);
-            await setDoc(userRef, { joinedGroups: arrayUnion(groupId) }, { merge: true });
+            await updateDoc(userRef, { joinedGroups: arrayUnion(groupId) });
             await updateDoc(groupRef, { members: arrayUnion(currentUser.id) });
             showToast("Group joined successfully!", "success");
         }
