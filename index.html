@@ -2098,10 +2098,10 @@
     }
 
     function toPgArray(arr) {
-        // FIX: Do not add double quotes around array elements. This is required for uuid[] columns in PostgreSQL,
-        // as it expects {uuid1,uuid2} not {"uuid1","uuid2"}. This assumes array elements
-        // do not contain special characters that would require quoting (e.g., commas, braces).
-        return `{${arr.join(',')}}`;
+        // Supabase's PostgREST client accepts JavaScript arrays directly for array columns
+        // (such as uuid[]).  Returning the array as‑is avoids manual string formatting that
+        // can lead to "invalid input syntax for type uuid" errors.
+        return arr;
     }
 
     // NEW HELPER FUNCTION TO PARSE POSTGRES ARRAY STRINGS
