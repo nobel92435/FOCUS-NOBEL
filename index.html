@@ -3755,14 +3755,14 @@ let pauseStartTime = 0;
                 // Calculate total time today
                 const todayStr = getCurrentDate().toISOString().split('T')[0];
                 let totalTodaySeconds = 0;
-                if (privateData.totalTimeToday && privateData.totalTimeToday.date === todayStr) {
-                    totalTodaySeconds = privateData.totalTimeToday.seconds || 0;
+                if (privateData.total_time_today && privateData.total_time_today.date === todayStr) {
+                    totalTodaySeconds = privateData.total_time_today.seconds || 0;
                 }
 
                 // Update UI
                 const avatarEl = document.getElementById('user-profile-avatar');
-                if (publicData.photoURL) {
-                    avatarEl.innerHTML = `<img src="${publicData.photoURL}" alt="${publicData.username}" class="w-full h-full object-cover">`;
+                if (publicData.photo_url) {
+                    avatarEl.innerHTML = `<img src="${publicData.photo_url}" alt="${publicData.username}" class="w-full h-full object-cover">`;
                 } else {
                     const initial = publicData.username ? publicData.username.charAt(0).toUpperCase() : 'U';
                     avatarEl.innerHTML = `<span>${initial}</span>`;
@@ -3770,7 +3770,7 @@ let pauseStartTime = 0;
                 
                 document.getElementById('user-profile-name').textContent = publicData.username || 'Anonymous';
                 document.getElementById('user-profile-total-today').textContent = formatTime(totalTodaySeconds);
-                document.getElementById('user-profile-total-overall').textContent = formatTime(publicData.totalStudySeconds || 0, false);
+                document.getElementById('user-profile-total-overall').textContent = formatTime(publicData.total_study_seconds || 0, false);
                 document.getElementById('user-profile-last-active').textContent = lastActiveText;
 
                 loadingEl.classList.add('hidden');
@@ -4125,24 +4125,24 @@ let pauseStartTime = 0;
 
                 if (sessionType === 'study') {
                     const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-                    const lastStudyDay = userData.lastStudyDay || '';
-                    let currentStreak = userData.currentStreak || 0;
+                    const lastStudyDay = userData.last_study_day || '';
+                    let currentStreak = userData.current_streak || 0;
                     if (lastStudyDay !== todayStr) {
                         currentStreak = (lastStudyDay === yesterdayStr) ? currentStreak + 1 : 1;
-                        profileUpdate.currentStreak = currentStreak;
-                        profileUpdate.lastStudyDay = todayStr;
+                        profileUpdate.current_streak = currentStreak;
+                        profileUpdate.last_study_day = todayStr;
                     }
 
-                    const currentDailyStudy = (userData.totalTimeToday?.date === todayStr) ? userData.totalTimeToday.seconds : 0;
-                    profileUpdate.totalStudySeconds = increment(cappedDuration);
-                    profileUpdate.totalTimeToday = { date: todayStr, seconds: currentDailyStudy + cappedDuration };
-                    publicProfileUpdate.totalStudySeconds = increment(cappedDuration);
+                    const currentDailyStudy = (userData.total_time_today?.date === todayStr) ? userData.total_time_today.seconds : 0;
+                    profileUpdate.total_study_seconds = increment(cappedDuration);
+                    profileUpdate.total_time_today = { date: todayStr, seconds: currentDailyStudy + cappedDuration };
+                    publicProfileUpdate.total_study_seconds = increment(cappedDuration);
                     totalTimeTodayInSeconds = currentDailyStudy + cappedDuration;
                 } else { // 'break'
-                    const currentDailyBreak = (userData.totalBreakTimeToday?.date === todayStr) ? userData.totalBreakTimeToday.seconds : 0;
-                    profileUpdate.totalBreakSeconds = increment(cappedDuration);
-                    profileUpdate.totalBreakTimeToday = { date: todayStr, seconds: currentDailyBreak + cappedDuration };
-                    publicProfileUpdate.totalBreakSeconds = increment(cappedDuration);
+                    const currentDailyBreak = (userData.total_break_time_today?.date === todayStr) ? userData.total_break_time_today.seconds : 0;
+                    profileUpdate.total_break_seconds = increment(cappedDuration);
+                    profileUpdate.total_break_time_today = { date: todayStr, seconds: currentDailyBreak + cappedDuration };
+                    publicProfileUpdate.total_break_seconds = increment(cappedDuration);
                     totalBreakTimeTodayInSeconds = currentDailyBreak + cappedDuration;
                 }
 
@@ -4179,15 +4179,15 @@ let pauseStartTime = 0;
         if (!userDoc.exists()) return;
 
         const userData = userDoc.data();
-        const unlocked = userData.unlockedAchievements || [];
+        const unlocked = userData.unlocked_achievements || [];
         let newlyUnlocked = [];
 
         // Rule 1: Study for a total of 1 hour
-        if (!unlocked.includes('novice_scholar') && userData.totalStudySeconds >= 3600) {
+        if (!unlocked.includes('novice_scholar') && userData.total_study_seconds >= 3600) {
             newlyUnlocked.push('novice_scholar');
         }
         // Rule 2: Study for a total of 10 hours
-        if (!unlocked.includes('dedicated_learner') && userData.totalStudySeconds >= 36000) {
+        if (!unlocked.includes('dedicated_learner') && userData.total_study_seconds >= 36000) {
             newlyUnlocked.push('dedicated_learner');
         }
         // Rule 3: Complete a single session over 2 hours
@@ -4195,13 +4195,13 @@ let pauseStartTime = 0;
             newlyUnlocked.push('marathoner');
         }
         // Rule 4: Maintain a 7-day study streak
-        if (!unlocked.includes('consistent_coder') && userData.currentStreak >= 7) {
+        if (!unlocked.includes('consistent_coder') && userData.current_streak >= 7) {
             newlyUnlocked.push('consistent_coder');
         }
 
         if (newlyUnlocked.length > 0) {
             await updateDoc(userDocRef, { 
-                unlockedAchievements: arrayUnion(...newlyUnlocked) 
+                unlocked_achievements: arrayUnion(...newlyUnlocked) 
             });
             
             const achievement = ACHIEVEMENTS[newlyUnlocked[0]];
@@ -4231,15 +4231,15 @@ let pauseStartTime = 0;
                 const data = userDoc.data();
                 const todayStr = getCurrentDate().toISOString().split('T')[0];
                 
-                if (data.totalTimeToday && data.totalTimeToday.date === todayStr) {
-                    totalTimeTodayInSeconds = data.totalTimeToday.seconds || 0;
+                if (data.total_time_today && data.total_time_today.date === todayStr) {
+                    totalTimeTodayInSeconds = data.total_time_today.seconds || 0;
                 } else {
                     totalTimeTodayInSeconds = 0;
                     // The update to Firestore for a new day's totalTimeToday will be handled by saveSession's transaction.
                 }
 
-                if (data.totalBreakTimeToday && data.totalBreakTimeToday.date === todayStr) {
-                    totalBreakTimeTodayInSeconds = data.totalBreakTimeToday.seconds || 0;
+                if (data.total_break_time_today && data.total_break_time_today.date === todayStr) {
+                    totalBreakTimeTodayInSeconds = data.total_break_time_today.seconds || 0;
                 } else {
                     totalBreakTimeTodayInSeconds = 0;
                     // The update to Firestore for a new day's totalBreakTimeToday will be handled by saveSession's transaction.
@@ -4262,18 +4262,18 @@ let pauseStartTime = 0;
                 const initialData = {
                     email: user.email,
                     username: user.displayName,
-                    photoURL: PRESET_AVATARS[0], // Default avatar
-                    studiconURL: 'https://api.dicebear.com/8.x/miniavs/svg?seed=Angel', // Default studicon
-                    joinedGroups: [],
-                    createdAt: serverTimestamp(),
-                    totalStudySeconds: 0,
-                    totalBreakSeconds: 0, // New field
-                    currentStreak: 0,
-                    lastStudyDay: '',
-                    unlockedAchievements: [],
+                    photo_url: PRESET_AVATARS[0], // Default avatar
+                    studicon_url: 'https://api.dicebear.com/8.x/miniavs/svg?seed=Angel', // Default studicon
+                    joined_groups: [],
+                    created_at: serverTimestamp(),
+                    total_study_seconds: 0,
+                    total_break_seconds: 0, // New field
+                    current_streak: 0,
+                    last_study_day: '',
+                    unlocked_achievements: [],
                     studying: null,
-                    studyGoalHours: 4,
-                    pomodoroSettings: {
+                    study_goal_hours: 4,
+                    pomodoro_settings: {
                         work: 25,
                         short_break: 5,
                         long_break: 15,
@@ -4281,17 +4281,17 @@ let pauseStartTime = 0;
                         autoStartBreak: true,
                         autoStartFocus: true
                     },
-                    pomodoroSounds: {
+                    pomodoro_sounds: {
                         start: "tone_simple_beep",
                         focus: "tone_chime_chord",
                         break: "tone_metal_bell",
                         volume: 1.0
                     },
-                    totalTimeToday: { 
+                    total_time_today: { 
                         date: getCurrentDate().toISOString().split('T')[0],
                         seconds: 0
                     },
-                    totalBreakTimeToday: { // New field
+                    total_break_time_today: { // New field
                         date: getCurrentDate().toISOString().split('T')[0],
                         seconds: 0
                     }
@@ -4300,10 +4300,10 @@ let pauseStartTime = 0;
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.id), {
                     username: user.displayName,
                     email: user.email,
-                    totalStudySeconds: 0,
-                    totalBreakSeconds: 0, // Initialize for public too
-                    photoURL: PRESET_AVATARS[0], // Public profile needs it too
-                    studiconURL: 'https://api.dicebear.com/8.x/miniavs/svg?seed=Angel',
+                    total_study_seconds: 0,
+                    total_break_seconds: 0, // Initialize for public too
+                    photo_url: PRESET_AVATARS[0], // Public profile needs it too
+                    studicon_url: 'https://api.dicebear.com/8.x/miniavs/svg?seed=Angel',
                 });
                 userDoc = await getDoc(userDocRef);
             }
@@ -4332,8 +4332,8 @@ let pauseStartTime = 0;
             currentUserData = userData; 
             const username = userData.username || 'Anonymous';
             const email = userData.email || '';
-            const photoURL = userData.photoURL;
-            const studyGoal = userData.studyGoalHours;
+            const photoURL = userData.photo_url;
+            const studyGoal = userData.study_goal_hours;
 
             document.getElementById('profile-page-name').textContent = username;
             document.getElementById('profile-page-email').textContent = email;
@@ -4358,13 +4358,13 @@ let pauseStartTime = 0;
             }
             const streakDisplay = document.getElementById('profile-streak-display');
 if (streakDisplay) {
-    const streak = userData.currentStreak || 0;
+    const streak = userData.current_streak || 0;
     streakDisplay.textContent = `${streak} day${streak === 1 ? '' : 's'}`;
 }
 
 const achievementsGrid = document.getElementById('achievements-grid');
 if (achievementsGrid) {
-    const unlocked = userData.unlockedAchievements || [];
+    const unlocked = userData.unlocked_achievements || [];
     achievementsGrid.innerHTML = Object.keys(ACHIEVEMENTS).map(key => {
         const hasUnlocked = unlocked.includes(key);
         const achievement = ACHIEVEMENTS[key];
@@ -4392,23 +4392,23 @@ if (achievementsGrid) {
                     const data = doc.data();
                     currentUserData = data;
                     const todayStr = getCurrentDate().toISOString().split('T')[0];
-                    if (!data.totalTimeToday || data.totalTimeToday.date !== todayStr || !data.totalBreakTimeToday || data.totalBreakTimeToday.date !== todayStr) {
+                    if (!data.total_time_today || data.total_time_today.date !== todayStr || !data.total_break_time_today || data.total_break_time_today.date !== todayStr) {
                         loadDailyTotal(); 
                     } else {
-                        totalTimeTodayInSeconds = data.totalTimeToday.seconds;
-                        totalBreakTimeTodayInSeconds = data.totalBreakTimeToday.seconds;
+                        totalTimeTodayInSeconds = data.total_time_today.seconds;
+                        totalBreakTimeTodayInSeconds = data.total_break_time_today.seconds;
                         updateTotalTimeDisplay();
                     }
 
-                    if (data.pomodoroSettings) {
-                        pomodoroSettings = {...pomodoroSettings, ...data.pomodoroSettings};
+                    if (data.pomodoro_settings) {
+                        pomodoroSettings = {...pomodoroSettings, ...data.pomodoro_settings};
                         pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings });
                     }
-                    if (data.pomodoroSounds) {
-                        pomodoroSounds = {...pomodoroSounds, ...data.pomodoroSounds};
+                    if (data.pomodoro_sounds) {
+                        pomodoroSounds = {...pomodoroSounds, ...data.pomodoro_sounds};
                     }
                     updateProfileUI(data);
-                    // This listener updates joinedGroups, so we call the render function
+                    // This listener updates joined_groups, so we call the render function
                     if (document.getElementById('page-my-groups').classList.contains('active')) {
                         renderJoinedGroups();
                     }
@@ -4926,7 +4926,7 @@ if (achievementsGrid) {
             }
 
             const listName = selectedTask.listId === 'inbox' ? 'Tasks' : (plannerState.lists.find(l => l.id === selectedTask.listId)?.name || 'Tasks');
-            const createdDate = selectedTask.createdAt ? new Date(selectedTask.createdAt.seconds * 1000).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) : 'Today';
+            const createdDate = selectedTask.created_at ? new Date(selectedTask.created_at.seconds * 1000).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) : 'Today';
 
             const priorityClasses = {
                 high: 'text-red-500',
@@ -5025,7 +5025,7 @@ if (achievementsGrid) {
                     completed: false,
                     priority: 'none',
                     listId: plannerState.activeListId,
-                    createdAt: serverTimestamp(),
+                    created_at: serverTimestamp(),
                     createdBy: currentUser.id,
                     members: currentList.members || [currentUser.id],
                     notes: '',
@@ -5095,12 +5095,12 @@ if (achievementsGrid) {
                     <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
                         ${membersArray.map(member => {
                             const isStudying = !!member.studying;
-                            const studiconUrl = member.studiconURL || 'https://api.dicebear.com/8.x/miniavs/svg?seed=Angel';
+                            const studiconUrl = member.studicon_url || 'https://api.dicebear.com/8.x/miniavs/svg?seed=Angel';
 
                             // --- NEW: Calculate total time today for display ---
                             let totalTodaySeconds = 0;
-                            if (member.totalTimeToday && member.totalTimeToday.date === todayStr) {
-                                totalTodaySeconds = member.totalTimeToday.seconds || 0;
+                            if (member.total_time_today && member.total_time_today.date === todayStr) {
+                                totalTodaySeconds = member.total_time_today.seconds || 0;
                             }
                             const currentSessionElapsed = (isStudying && member.studying.type === 'study' && member.studying.startTime) 
                                 ? (Date.now() - member.studying.startTime.toDate()) / 1000 
@@ -5184,13 +5184,13 @@ if (achievementsGrid) {
                 return {
                     id: userDoc.id,
                     username: userData.username || 'Anonymous',
-                    photoURL: userData.photoURL,
-                    totalStudySeconds: totalSeconds
+                    photo_url: userData.photo_url,
+                    total_study_seconds: totalSeconds
                 };
             });
 
             const userScores = await Promise.all(userPromises);
-            userScores.sort((a, b) => b.totalStudySeconds - a.totalStudySeconds);
+            userScores.sort((a, b) => b.total_study_seconds - a.total_study_seconds);
 
             const periodText = period === 'daily' ? 'today' : period === 'weekly' ? 'in the last 7 days' : 'in the last 30 days';
 
@@ -5201,8 +5201,8 @@ if (achievementsGrid) {
                 if (rank === 2) rankClass = 'rank-2';
                 if (rank === 3) rankClass = 'rank-3';
 
-                const avatarHTML = user.photoURL 
-                    ? `<img src="${user.photoURL}" class="w-full h-full object-cover">`
+                const avatarHTML = user.photo_url 
+                    ? `<img src="${user.photo_url}" class="w-full h-full object-cover">`
                     : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                 return `
@@ -5211,7 +5211,7 @@ if (achievementsGrid) {
                         <div class="user-avatar bg-gray-600 overflow-hidden">${avatarHTML}</div>
                         <div class="user-info">
                             <div class="user-name">${user.username}</div>
-                            <div class="user-time">${formatTime(user.totalStudySeconds, false)} ${periodText}</div>
+                            <div class="user-time">${formatTime(user.total_study_seconds, false)} ${periodText}</div>
                         </div>
                     </div>
                 `;
@@ -5731,11 +5731,11 @@ if (achievementsGrid) {
                 await deleteDoc(sessionRef);
 
                 if (sessionType === 'study') {
-                    await updateDoc(userRef, { totalStudySeconds: increment(-durationSeconds) });
-                    await updateDoc(publicUserRef, { totalStudySeconds: increment(-durationSeconds) });
+                    await updateDoc(userRef, { total_study_seconds: increment(-durationSeconds) });
+                    await updateDoc(publicUserRef, { total_study_seconds: increment(-durationSeconds) });
                 } else { // 'break'
-                    await updateDoc(userRef, { totalBreakSeconds: increment(-durationSeconds) });
-                    await updateDoc(publicUserRef, { totalBreakSeconds: increment(-durationSeconds) });
+                    await updateDoc(userRef, { total_break_seconds: increment(-durationSeconds) });
+                    await updateDoc(publicUserRef, { total_break_seconds: increment(-durationSeconds) });
                 }
 
                 const sessionDateStr = endedAt.toISOString().split('T')[0];
@@ -5745,7 +5745,7 @@ if (achievementsGrid) {
                         totalTimeTodayInSeconds -= durationSeconds;
                         if (totalTimeTodayInSeconds < 0) totalTimeTodayInSeconds = 0;
                         await updateDoc(userRef, {
-                            totalTimeToday: {
+                            total_time_today: {
                                 date: todayStr,
                                 seconds: totalTimeTodayInSeconds
                             }
@@ -5754,7 +5754,7 @@ if (achievementsGrid) {
                         totalBreakTimeTodayInSeconds -= durationSeconds;
                         if (totalBreakTimeTodayInSeconds < 0) totalBreakTimeTodayInSeconds = 0;
                         await updateDoc(userRef, {
-                            totalBreakTimeToday: {
+                            total_break_time_today: {
                                 date: todayStr,
                                 seconds: totalBreakTimeTodayInSeconds
                             }
@@ -5776,7 +5776,7 @@ if (achievementsGrid) {
             
             container.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
 
-            const joinedGroupIds = currentUserData.joinedGroups || [];
+            const joinedGroupIds = currentUserData.joined_groups || [];
             
             if (joinedGroupIds.length === 0) {
                 container.innerHTML = `<div class="empty-group"><i class="fas fa-users-slash"></i><h3>No Groups Joined Yet</h3><p>You haven't joined any study groups. Join a group or create your own to get started!</p><button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition mt-4" id="explore-groups-btn">Explore Groups</button></div>`;
@@ -5804,8 +5804,8 @@ if (achievementsGrid) {
                     const userSnap = await getDoc(userDocRef);
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
-                        if (userData.totalTimeToday && userData.totalTimeToday.date === todayStr) {
-                            const memberSeconds = userData.totalTimeToday.seconds || 0;
+                        if (userData.total_time_today && userData.total_time_today.date === todayStr) {
+                            const memberSeconds = userData.total_time_today.seconds || 0;
                             if (memberSeconds > 0) {
                                 membersStudiedToday++;
                             }
@@ -5860,7 +5860,7 @@ if (achievementsGrid) {
                         </div>
                     </div>
                     <div class="bg-gray-700/50 px-5 py-3 flex justify-between items-center text-sm">
-                        <span class="text-gray-400">Started: ${(group.createdAt?.toDate ? group.createdAt.toDate() : new Date(group.createdAt)).toLocaleDateString()}</span>
+                        <span class="text-gray-400">Started: ${(group.created_at?.toDate ? group.created_at.toDate() : new Date(group.created_at)).toLocaleDateString()}</span>
                         ${group.newMessages > 0 ? `
                             <span class="flex items-center gap-2 text-blue-400 animate-pulse">
                                 <i class="fas fa-comment-dots"></i> ${group.newMessages} new
@@ -5919,7 +5919,7 @@ if (achievementsGrid) {
                     const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', memberId);
                     const publicUserSnap = await getDoc(publicUserRef);
                     if (publicUserSnap.exists()) {
-                        return publicUserSnap.data().totalStudySeconds || 0;
+                        return publicUserSnap.data().total_study_seconds || 0;
                     }
                     return 0;
                 });
@@ -5946,8 +5946,8 @@ if (achievementsGrid) {
                         if (b.attendance !== a.attendance) return b.attendance - a.attendance;
                         return (b.members?.length || 0) - (a.members?.length || 0);
                     case 'new':
-                        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
-                        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+                        const dateA = a.created_at?.toDate ? a.created_at.toDate() : new Date(a.created_at);
+                        const dateB = b.created_at?.toDate ? b.created_at.toDate() : new Date(b.created_at);
                         return dateB.getTime() - dateA.getTime();
                     case 'studytime':
                     default:
@@ -5968,7 +5968,7 @@ if (achievementsGrid) {
                 const memberCount = group.members ? group.members.length : 0;
                 const avgStudyTimePerMember = group.totalStudyTime / (memberCount || 1);
                 const isFull = memberCount >= group.capacity;
-                const isJoined = (currentUserData.joinedGroups || []).includes(group.id);
+                const isJoined = (currentUserData.joined_groups || []).includes(group.id);
 
                 return `
                 <div class="group-card ranking bg-gray-800 rounded-xl overflow-hidden shadow-lg" data-group-id="${group.id}">
@@ -5979,7 +5979,7 @@ if (achievementsGrid) {
                             </span>
                             <span class="flex items-center gap-2">
                                 ${Math.random() > 0.8 ? '<span class="bg-purple-500 text-white px-2 py-0.5 rounded-full text-xs font-bold">Promoted</span>' : ''}
-                                <span>${timeSince((group.createdAt?.toDate ? group.createdAt.toDate() : new Date(group.createdAt)))} ago</span>
+                                <span>${timeSince((group.created_at?.toDate ? group.created_at.toDate() : new Date(group.created_at)))} ago</span>
                             </span>
                         </div>
                         <h3 class="text-lg font-bold truncate mb-2 text-white">${group.name}</h3>
@@ -5989,7 +5989,7 @@ if (achievementsGrid) {
                             <span class="text-gray-400 col-span-3">Leader <b class="text-white">${group.leaderName}</b></span>
                             <span class="text-gray-400">Attendance <b class="text-white">${group.attendance}%</b></span>
                             <span class="text-gray-400 col-span-2">Time <b class="text-white">${formatTime(avgStudyTimePerMember, false)}</b></span>
-                            <span class="text-gray-400 col-span-3">Started <b class="text-white">${(group.createdAt?.toDate ? group.createdAt.toDate() : new Date(group.createdAt)).toLocaleDateString()}</b></span>
+                            <span class="text-gray-400 col-span-3">Started <b class="text-white">${(group.created_at?.toDate ? group.created_at.toDate() : new Date(group.created_at)).toLocaleDateString()}</b></span>
                         </div>
                         <p class="text-gray-400 text-sm mb-3 h-8 overflow-hidden">${group.description}</p>
                         
@@ -6002,7 +6002,7 @@ if (achievementsGrid) {
 
             document.querySelectorAll('.join-btn').forEach(button => {
                 button.addEventListener('click', async function() {
-                    if ((currentUserData.joinedGroups || []).includes(this.dataset.id)) {
+                    if ((currentUserData.joined_groups || []).includes(this.dataset.id)) {
                         showToast("You've already joined this group.", 'info');
                         return;
                     }
@@ -6039,7 +6039,7 @@ if (achievementsGrid) {
                 card.addEventListener('click', (e) => {
                     if(e.target.classList.contains('join-btn')) return;
                     const groupId = card.dataset.groupId;
-                    if ((currentUserData.joinedGroups || []).includes(groupId)) {
+                    if ((currentUserData.joined_groups || []).includes(groupId)) {
                          renderGroupDetail(groupId);
                          showPage('page-group-detail');
                     } else {
@@ -6056,7 +6056,7 @@ if (achievementsGrid) {
             }
             const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
             const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', groupId);
-            await updateDoc(userRef, { joinedGroups: arrayUnion(groupId) });
+            await updateDoc(userRef, { joined_groups: arrayUnion(groupId) });
             await updateDoc(groupRef, { members: arrayUnion(currentUser.id) });
             showToast("Group joined successfully!", "success");
         }
@@ -6151,7 +6151,7 @@ if (achievementsGrid) {
                 const allGroups = {};
                 allGroupsSnapshot.docs.forEach(doc => allGroups[doc.id] = { id: doc.id, ...doc.data() });
 
-                (currentUserData.joinedGroups || []).forEach(joinedGroupId => {
+                (currentUserData.joined_groups || []).forEach(joinedGroupId => {
                     const group = allGroups[joinedGroupId];
                     if (group) {
                         const option = document.createElement('option');
@@ -6390,8 +6390,8 @@ if (achievementsGrid) {
                 const memberData = groupRealtimeData.members[memberId];
                 let totalTodaySeconds = 0;
                 // Only count study time for the member list display
-                if (memberData.totalTimeToday && memberData.totalTimeToday.date === todayStr) {
-                    totalTodaySeconds = memberData.totalTimeToday.seconds;
+                if (memberData.total_time_today && memberData.total_time_today.date === todayStr) {
+                    totalTodaySeconds = memberData.total_time_today.seconds;
                 }
                 const isStudying = memberData.studying;
                 // If currently studying, add current session elapsed time to total today
@@ -6423,8 +6423,8 @@ if (achievementsGrid) {
                 const isStudying = member.isStudying;
                 const totalTodaySeconds = member.effectiveTotalToday; // Use the calculated effective total
 
-                const avatarHTML = memberData.photoURL
-                    ? `<img src="${memberData.photoURL}" class="w-full h-full object-cover">`
+                const avatarHTML = memberData.photo_url
+                    ? `<img src="${memberData.photo_url}" class="w-full h-full object-cover">`
                     : `<span>${(memberData.username || 'U').charAt(0).toUpperCase()}</span>`;
                 
                 const wakeUpButtonHTML = memberId !== currentUser.id
@@ -6452,7 +6452,7 @@ if (achievementsGrid) {
                             </div>
                         </div>
                         <div class="text-right flex-shrink-0 ml-4">
-                            <div class="text-xl font-semibold text-white" id="member-time-${memberId}" data-base-time="${member.data.totalTimeToday && member.data.totalTimeToday.date === todayStr ? member.data.totalTimeToday.seconds : 0}" data-start-time="${isStudying && memberData.studying.startTime ? memberData.studying.startTime.toDate().getTime() : 0}">
+                            <div class="text-xl font-semibold text-white" id="member-time-${memberId}" data-base-time="${member.data.total_time_today && member.data.total_time_today.date === todayStr ? member.data.total_time_today.seconds : 0}" data-start-time="${isStudying && memberData.studying.startTime ? memberData.studying.startTime.toDate().getTime() : 0}">
                                 ${formatTime(totalTodaySeconds)}
                             </div>
                             <div class="text-xs text-gray-500 mb-2">Total Today</div>
@@ -6522,12 +6522,12 @@ if (achievementsGrid) {
                 return {
                     id: memberId,
                     username: memberData.username || 'Anonymous',
-                    photoURL: memberData.photoURL,
-                    totalStudySeconds: totalSeconds
+                    photo_url: memberData.photo_url,
+                    total_study_seconds: totalSeconds
                 };
             });
 
-            userScores.sort((a, b) => b.totalStudySeconds - a.totalStudySeconds);
+            userScores.sort((a, b) => b.total_study_seconds - a.total_study_seconds);
             const periodText = period === 'daily' ? 'today' : period === 'weekly' ? 'in the last 7 days' : 'in the last 30 days';
 
             container.innerHTML = userScores.map((user, index) => {
@@ -6537,8 +6537,8 @@ if (achievementsGrid) {
                 if (rank === 2) rankClass = 'rank-2';
                 if (rank === 3) rankClass = 'rank-3';
 
-                const avatarHTML = user.photoURL
-                    ? `<img src="${user.photoURL}" class="w-full h-full object-cover">`
+                const avatarHTML = user.photo_url
+                    ? `<img src="${user.photo_url}" class="w-full h-full object-cover">`
                     : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                 return `
@@ -6547,7 +6547,7 @@ if (achievementsGrid) {
                         <div class="user-avatar bg-gray-600 overflow-hidden">${avatarHTML}</div>
                         <div class="user-info">
                             <div class="user-name">${user.username}</div>
-                            <div class="user-time">${formatTime(user.totalStudySeconds, false)} ${periodText}</div>
+                            <div class="user-time">${formatTime(user.total_study_seconds, false)} ${periodText}</div>
                         </div>
                     </div>
                 `;
@@ -6627,8 +6627,8 @@ if (achievementsGrid) {
                     const memberStats = memberAttendanceData[memberId] || { totalTime: 0, daysStudied: new Set() };
                     const memberAttendanceRate = Math.round((memberStats.daysStudied.size / daysInMonth) * 100);
                     
-                    const avatarHTML = userData.photoURL
-                        ? `<img src="${userData.photoURL}" class="w-full h-full object-cover">`
+                    const avatarHTML = userData.photo_url
+                        ? `<img src="${userData.photo_url}" class="w-full h-full object-cover">`
                         : `<span>${(userData.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                     return `
@@ -7423,12 +7423,12 @@ if (achievementsGrid) {
                 const newGroupRef = await addDoc(collection(db, `artifacts/${appId}/public/data/groups`), {
                     name, password: password || null, category, timeGoal, capacity, description,
                     leaderId: currentUser.id, leaderName: currentUserData.username,
-                    members: [currentUser.id], createdAt: serverTimestamp(),
+                    members: [currentUser.id], created_at: serverTimestamp(),
                     avgTime: '0h 0m', attendance: 0
                 });
         
                 const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-                await updateDoc(userRef, { joinedGroups: arrayUnion(newGroupRef.id) });
+                await updateDoc(userRef, { joined_groups: arrayUnion(newGroupRef.id) });
         
                 showToast('Group created successfully!', 'success');
                 renderGroupRankings();
@@ -7498,7 +7498,7 @@ if (achievementsGrid) {
         
         const studyGoalModal = document.getElementById('study-goal-modal');
         ael('settings-study-goal', 'click', () => {
-            document.getElementById('study-goal-input').value = currentUserData.studyGoalHours || '';
+            document.getElementById('study-goal-input').value = currentUserData.study_goal_hours || '';
             studyGoalModal.classList.add('active');
         });
 
@@ -7564,13 +7564,13 @@ if (achievementsGrid) {
             }
             const { error: upErr } = await supabase
                 .from('profiles')
-                .update({ studyGoalHours: goal })
+                .update({ study_goal_hours: goal })
                 .eq('id', currentUser.id);
             if (upErr) {
                 showToast('Failed to update study goal.', 'error');
                 return;
             }
-            currentUserData.studyGoalHours = goal;
+            currentUserData.study_goal_hours = goal;
             studyGoalModal.classList.remove('active');
             showToast('Study goal updated!', 'success');
         });
@@ -7813,8 +7813,8 @@ if (achievementsGrid) {
             
             const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
             await updateDoc(userRef, { 
-                pomodoroSettings: newSettings,
-                pomodoroSounds: newSounds
+                pomodoro_settings: newSettings,
+                pomodoro_sounds: newSounds
             });
 
             pomodoroSettings = newSettings;
@@ -7834,7 +7834,7 @@ if (achievementsGrid) {
                 </div>
             `).join('');
             
-            const currentStudicon = (currentUserData && groupRealtimeData.members[currentUser.id]) ? groupRealtimeData.members[currentUser.id].studiconURL : null;
+            const currentStudicon = (currentUserData && groupRealtimeData.members[currentUser.id]) ? groupRealtimeData.members[currentUser.id].studicon_url : null;
 
             if (currentStudicon) {
                 const selectedOption = pickerContainer.querySelector(`.avatar-option[data-url="${currentStudicon}"]`);
@@ -7880,7 +7880,7 @@ if (achievementsGrid) {
                     try {
                         const { error } = await supabase
                             .from('profiles')
-                            .update({ studiconURL: selectedStudicon })
+                            .update({ studicon_url: selectedStudicon })
                             .eq('id', currentUser.id);
                         if (error) throw error;
                         document.getElementById('studicon-store-modal').classList.remove('active');
@@ -7971,11 +7971,11 @@ if (achievementsGrid) {
                 await updateDoc(sessionRef, { durationSeconds: newDurationSeconds });
                 
                 if (sessionType === 'study') {
-                    await updateDoc(userRef, { totalStudySeconds: increment(durationDifference) });
-                    await updateDoc(publicUserRef, { totalStudySeconds: increment(durationDifference) });
+                    await updateDoc(userRef, { total_study_seconds: increment(durationDifference) });
+                    await updateDoc(publicUserRef, { total_study_seconds: increment(durationDifference) });
                 } else { // 'break'
-                    await updateDoc(userRef, { totalBreakSeconds: increment(durationDifference) });
-                    await updateDoc(publicUserRef, { totalBreakSeconds: increment(durationDifference) });
+                    await updateDoc(userRef, { total_break_seconds: increment(durationDifference) });
+                    await updateDoc(publicUserRef, { total_break_seconds: increment(durationDifference) });
                 }
 
                 const sessionDateStr = endedAt.toISOString().split('T')[0];
@@ -7985,7 +7985,7 @@ if (achievementsGrid) {
                         totalTimeTodayInSeconds += durationDifference;
                         if (totalTimeTodayInSeconds < 0) totalTimeTodayInSeconds = 0;
                         await updateDoc(userRef, {
-                            totalTimeToday: {
+                            total_time_today: {
                                 date: todayStr,
                                 seconds: totalTimeTodayInSeconds
                             }
@@ -7994,7 +7994,7 @@ if (achievementsGrid) {
                         totalBreakTimeTodayInSeconds += durationDifference;
                         if (totalBreakTimeTodayInSeconds < 0) totalBreakTimeTodayInSeconds = 0;
                         await updateDoc(userRef, {
-                            totalBreakTimeToday: {
+                            total_break_time_today: {
                                 date: todayStr,
                                 seconds: totalBreakTimeTodayInSeconds
                             }
@@ -8020,13 +8020,13 @@ if (achievementsGrid) {
             }
             const { error: upErr } = await supabase
                 .from('profiles')
-                .update({ studyGoalHours: goal })
+                .update({ study_goal_hours: goal })
                 .eq('id', currentUser.id);
             if (upErr) {
                 showToast('Failed to update study goal.', 'error');
                 return;
             }
-            currentUserData.studyGoalHours = goal;
+            currentUserData.study_goal_hours = goal;
             studyGoalModal.classList.remove('active');
             showToast('Study goal updated!', 'success');
         });
@@ -8088,7 +8088,7 @@ if (achievementsGrid) {
 
                             const { data: userData, error: userErr } = await supabase
                                 .from('profiles')
-                                .select('joinedGroups')
+                                .select('joined_groups')
                                 .eq('id', currentUser.id)
                                 .single();
                             if (userErr) {
@@ -8097,12 +8097,12 @@ if (achievementsGrid) {
                                 return;
                             }
 
-                            const updatedJoinedGroups = (userData.joinedGroups || []).filter(id => id !== currentGroupId);
+                            const updatedJoinedGroups = (userData.joined_groups || []).filter(id => id !== currentGroupId);
                             const updatedMembers = (groupData.members || []).filter(id => id !== currentUser.id);
 
                             const { error: upUserErr } = await supabase
                                 .from('profiles')
-                                .update({ joinedGroups: updatedJoinedGroups })
+                                .update({ joined_groups: updatedJoinedGroups })
                                 .eq('id', currentUser.id);
                             const { error: upGroupErr } = await supabase
                                 .from('groups')
@@ -8206,8 +8206,8 @@ if (achievementsGrid) {
             }
 
             ael('group-study-timer-btn', 'click', async () => {
-                if (currentUserData.joinedGroups && currentUserData.joinedGroups.length > 0) {
-                    const targetGroupId = currentGroupId && currentUserData.joinedGroups.includes(currentGroupId) ? currentGroupId : currentUserData.joinedGroups[0];
+                if (currentUserData.joined_groups && currentUserData.joined_groups.length > 0) {
+                    const targetGroupId = currentGroupId && currentUserData.joined_groups.includes(currentGroupId) ? currentGroupId : currentUserData.joined_groups[0];
                     currentGroupId = targetGroupId;
                     showPage('page-group-detail');
                     renderGroupDetail(targetGroupId);
@@ -8397,7 +8397,7 @@ if (achievementsGrid) {
                             const characterPickerModal = document.getElementById('avatar-character-modal');
                             const picker = document.getElementById('avatar-character-picker');
                             picker.innerHTML = PRESET_AVATARS.map(url => {
-                                const isSelected = currentUserData.photoURL === url;
+                                const isSelected = currentUserData.photo_url === url;
                                 return `<div class="avatar-option ${isSelected ? 'selected' : ''}"><img src="${url}" alt="Character"></div>`
                             }).join('');
                             characterPickerModal.classList.add('active');
