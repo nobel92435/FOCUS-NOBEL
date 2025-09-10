@@ -2020,8 +2020,9 @@
         if (args.length === 1 && args[0]?.path) {
             const path = [...args[0].path];
             const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
-                ? crypto.randomUUID().replace(/-/g, '')
-                : Math.random().toString(36).slice(2);
+                ? crypto.randomUUID()
+                : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+                    (c ^ Math.random() * 16 >> c / 4).toString(16));
             path.push(id);
             return { path };
         }
@@ -2096,20 +2097,38 @@
         return { [`${parent.table.slice(0, -1)}_id`]: parent.id };
     }
 
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    function isValidUUID(str) {
+        return typeof str === 'string' && UUID_REGEX.test(str);
+    }
+
     function toPgArray(arr) {
-        // FIX: Do not add double quotes around array elements. This is required for uuid[] columns in PostgreSQL,
-        // as it expects {uuid1,uuid2} not {"uuid1","uuid2"}. This assumes array elements
-        // do not contain special characters that would require quoting (e.g., commas, braces).
-        return `{${arr.join(',')}}`;
+        // Supabase's PostgREST client accepts JavaScript arrays directly for array columns
+        // (such as uuid[]).  Returning the array as‑is avoids manual string formatting that
+        // can lead to "invalid input syntax for type uuid" errors.
+        return arr;
     }
 
     // NEW HELPER FUNCTION TO PARSE POSTGRES ARRAY STRINGS
     function fromPgArray(pgString) {
-        if (!pgString || typeof pgString !== 'string' || pgString.length < 2 || pgString === '{}') {
-            return [];
+        if (!pgString) return [];
+        if (Array.isArray(pgString)) return pgString;
+        if (typeof pgString !== 'string') return [];
+        if (pgString === '{}' || pgString === '[]') return [];
+        // Handle JSON-style arrays (e.g. "[\"id1\",\"id2\"]")
+        if (pgString.trim().startsWith('[')) {
+            try {
+                return JSON.parse(pgString).map(v => String(v)).filter(isValidUUID);
+            } catch {
+                return [];
+            }
         }
-        // Remove '{' and '}' and split by comma. Handles UUIDs correctly.
-        return pgString.slice(1, -1).split(',');
+        // Handle Postgres array string format ("{id1,id2}")
+        return pgString
+            .slice(1, -1)
+            .split(',')
+            .map(v => v.replace(/^"|"$/g, ''))
+            .filter(isValidUUID);
     }
 
     function convertTimestamps(obj) {
@@ -2117,8 +2136,12 @@
         for (const [key, value] of Object.entries(obj)) {
             if (value && typeof value === 'object' && !('toDate' in value)) {
                 convertTimestamps(value);
-            } else if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
-                // FIX: Parse PostgreSQL array strings into JavaScript arrays
+            } else if (
+                typeof value === 'string' &&
+                ((value.startsWith('{') && value.endsWith('}')) ||
+                 (value.startsWith('[') && value.endsWith(']')))
+            ) {
+                // Parse Postgres or JSON array strings into JavaScript arrays
                 obj[key] = fromPgArray(value);
             } else if (typeof value === 'string' || value instanceof Date) {
                 const lower = key.toLowerCase();
@@ -2135,6 +2158,10 @@
 
     async function getDoc(ref) {
         const { table, id } = parseDocPath(ref);
+        if (!isValidUUID(id)) {
+            console.warn('getDoc called with invalid uuid', id);
+            return { exists: () => false, data: () => null };
+        }
         const { data, error } = await supabase.from(table).select('*').eq('id', id).single();
         if (error) throw error;
         return { exists: () => !!data, data: () => convertTimestamps(data) };
@@ -2152,6 +2179,10 @@
 
     async function updateDoc(ref, data) {
         const { table, id } = parseDocPath(ref);
+        if (!isValidUUID(id)) {
+            console.warn('updateDoc called with invalid uuid', id);
+            return;
+        }
         const { data: existingData } = await supabase.from(table).select('*').eq('id', id).single();
         const existing = convertTimestamps(existingData);
         const payload = {};
@@ -2159,10 +2190,12 @@
             if (v && v.__op === 'increment') {
                 payload[k] = (existing?.[k] || 0) + v.value;
             } else if (v && v.__op === 'arrayUnion') {
-                const arr = new Set([...(existing?.[k] || []), v.value]);
+                const existingArr = Array.isArray(existing?.[k]) ? existing[k] : fromPgArray(existing?.[k]);
+                const arr = new Set([...(existingArr || []), v.value]);
                 payload[k] = toPgArray(Array.from(arr));
             } else if (v && v.__op === 'arrayRemove') {
-                payload[k] = toPgArray((existing?.[k] || []).filter(item => item !== v.value));
+                const existingArr = Array.isArray(existing?.[k]) ? existing[k] : fromPgArray(existing?.[k]);
+                payload[k] = toPgArray((existingArr || []).filter(item => item !== v.value));
             } else if (Array.isArray(v)) {
                 payload[k] = toPgArray(v);
             } else {
@@ -2204,9 +2237,7 @@
         const collectionRef = q && q.collectionRef ? q.collectionRef : q;
         const mods = q && Array.isArray(q.mods) ? q.mods : [];
         const { table, parent } = parseCollectionPath(collectionRef);
-        let req = supabase.from(table).select('*');
-        if (parent) req = req.eq(`${parent.table.slice(0, -1)}_id`, parent.id);
-        
+
         const operatorMap = {
             '==': 'eq',
             '<': 'lt',
@@ -2219,33 +2250,53 @@
             'array-contains-any': 'cs', // Supabase `cs` (contains) is the closest for arrays of strings/numbers
         };
 
-        for (const mod of mods) {
-            if (mod.type === 'orderBy') {
-                req = req.order(mod.field, { ascending: mod.dir !== 'desc' });
-            } else if (mod.type === 'where') {
-                const supabaseOp = operatorMap[mod.op] || mod.op;
-                let value = mod.value;
-                if (value instanceof Date) {
-                    value = value.toISOString(); // Convert Date objects to ISO string
-                }
-                
-                // Special handling for 'in' operator which expects a string like '(val1, val2)'
-                if (supabaseOp === 'in' && Array.isArray(value)) {
-                    value = `(${value.map(v => typeof v === 'string' ? `"${v}"` : v).join(',')})`;
-                }
+        const buildRequest = (useFallback = false) => {
+            let req = supabase.from(table).select('*');
+            if (parent) req = req.eq(`${parent.table.slice(0, -1)}_id`, parent.id);
 
-                // FINAL FIX: Correctly format the value for array columns.
-                // For uuid[] columns, the value should be in the format '{uuid-string}', without quotes inside.
-                if ((supabaseOp === 'cs' || supabaseOp === 'cd') && !Array.isArray(value)) {
-                    value = `{${value}}`;
-                }
+            for (const mod of mods) {
+                if (mod.type === 'orderBy') {
+                    req = req.order(mod.field, { ascending: mod.dir !== 'desc' });
+                } else if (mod.type === 'where') {
+                    if (useFallback && (mod.op === 'array-contains' || mod.op === 'array-contains-any')) {
+                        req = req.filter(mod.field, 'ilike', `%${mod.value}%`);
+                        continue;
+                    }
 
-                req = req.filter(mod.field, supabaseOp, value);
-            } else if (mod.type === 'limit') {
-                req = req.limit(mod.count);
+                    const supabaseOp = operatorMap[mod.op] || mod.op;
+                    let value = mod.value;
+                    if (value instanceof Date) {
+                        value = value.toISOString(); // Convert Date objects to ISO string
+                    }
+
+                    // Special handling for 'in' operator which expects a string like '(val1, val2)'
+                    if (supabaseOp === 'in' && Array.isArray(value)) {
+                        value = `(${value.map(v => typeof v === 'string' ? `"${v}"` : v).join(',')})`;
+                    }
+
+                    // FINAL FIX: Correctly format the value for array columns.
+                    // For uuid[] columns, the value should be in the format '{uuid-string}', without quotes inside.
+                    if ((supabaseOp === 'cs' || supabaseOp === 'cd') && !Array.isArray(value)) {
+                        value = `{${value}}`;
+                    }
+
+                    req = req.filter(mod.field, supabaseOp, value);
+                } else if (mod.type === 'limit') {
+                    req = req.limit(mod.count);
+                }
             }
+            return req;
+        };
+
+        let { data, error } = await buildRequest(false);
+
+        // Fallback for text columns when using array operators (@>)
+        if (error && error.code === '42883' &&
+            mods.some(m => m.type === 'where' && (m.op === 'array-contains' || m.op === 'array-contains-any'))
+        ) {
+            ({ data, error } = await buildRequest(true));
         }
-        const { data, error } = await req;
+
         if (error) throw error;
         return { docs: data.map(d => ({ id: d.id, data: () => convertTimestamps(d) })), empty: data.length === 0 };
     }
@@ -2342,7 +2393,7 @@
     // ensure profile row exists (call after sign up / first login)
     async function ensureProfileRow() {
         const { data: { user } } = await auth.getUser();
-        if (!user) return;
+        if (!user || !isValidUUID(user.id)) return;
 
         const local = (user.email || 'user').split('@')[0]
                        .toLowerCase().replace(/[^a-z0-9_]+/g, '_');
@@ -2364,8 +2415,8 @@
         const { data: { user } } = await auth.getUser();
         currentUser = user ?? null;
 
-        // Not logged in → stay on auth screen
-        if (!currentUser) {
+        // Not logged in or malformed ID → stay on auth screen
+        if (!currentUser || !isValidUUID(currentUser.id)) {
             showPage('auth-screen');
             return;
         }
@@ -4423,7 +4474,7 @@ if (achievementsGrid) {
             calendarMonth: new Date().getMonth(),
         };
         function setupPlannerListeners() {
-            if (!currentUser) return;
+            if (!currentUser || !isValidUUID(currentUser.id)) return;
 
             // Clean up old listeners before setting new ones
             plannerState.plannerUnsubscribers.forEach(unsub => unsub());
@@ -4432,8 +4483,7 @@ if (achievementsGrid) {
             // 1. Listener for Lists
             const listsQuery = query(
                 collection(db, `/artifacts/${appId}/public/data/lists`),
-                // Supabase doesn't support `@>` on text columns, so use `ilike` to check membership
-                where('members', 'ilike', `%${currentUser.id}%`)
+                where('members', 'array-contains', currentUser.id)
             );
             const listsUnsub = onSnapshot(listsQuery, (snapshot) => {
                 plannerState.lists = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -4444,8 +4494,7 @@ if (achievementsGrid) {
             // 2. Listener for Tasks
             const tasksQuery = query(
                 collection(db, `/artifacts/${appId}/public/data/tasks`),
-                // Use `ilike` instead of array containment for text-based member lists
-                where('members', 'ilike', `%${currentUser.id}%`)
+                where('members', 'array-contains', currentUser.id)
             );
             const tasksUnsub = onSnapshot(tasksQuery, (snapshot) => {
                 plannerState.tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -5738,8 +5787,8 @@ if (achievementsGrid) {
             
             const groupPromises = snapshot.docs.map(async (groupDoc) => {
                 const group = { id: groupDoc.id, ...groupDoc.data() };
-                const members = group.members || [];
-                if (members.length === 0) {
+                const members = Array.isArray(group.members) ? group.members : fromPgArray(group.members);
+                if (!members || members.length === 0) {
                     return { ...group, attendance: 0, avgTime: 0, newMessages: 0 };
                 }
 
@@ -5770,8 +5819,8 @@ if (achievementsGrid) {
 
                 const attendance = members.length > 0 ? Math.round((membersStudiedToday / members.length) * 100) : 0;
                 const avgTime = members.length > 0 ? totalSecondsToday / members.length : 0;
-                
-                return { ...group, attendance, avgTime, newMessages: newMessagesSnap.size };
+
+                return { ...group, members, attendance, avgTime, newMessages: newMessagesSnap.size };
             });
 
             const groupsWithRealtimeData = await Promise.all(groupPromises);
@@ -5856,12 +5905,13 @@ if (achievementsGrid) {
             
             const groupDataPromises = groupsSnapshot.docs.map(async (groupDoc) => {
                 const group = { id: groupDoc.id, ...groupDoc.data() };
-                if (!group.members || group.members.length === 0) {
+                const members = Array.isArray(group.members) ? group.members : fromPgArray(group.members);
+                if (!members || members.length === 0) {
                     return { ...group, totalStudyTime: 0, attendance: 0 };
                 }
 
                 let totalStudyTime = 0;
-                const memberTimePromises = group.members.map(async (memberId) => {
+                const memberTimePromises = members.map(async (memberId) => {
                     const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', memberId);
                     const publicUserSnap = await getDoc(publicUserRef);
                     if (publicUserSnap.exists()) {
@@ -5874,7 +5924,7 @@ if (achievementsGrid) {
 
                 const mockAttendance = Math.floor(Math.random() * (100 - 70 + 1) + 70);
 
-                return { ...group, totalStudyTime, attendance: mockAttendance };
+                return { ...group, members, totalStudyTime, attendance: mockAttendance };
             });
 
             let allGroups = await Promise.all(groupDataPromises);
@@ -5994,7 +6044,10 @@ if (achievementsGrid) {
         }
 
         async function joinGroup(groupId) {
-            if (!currentUser) return;
+            if (!currentUser || !isValidUUID(groupId) || !isValidUUID(currentUser.id)) {
+                console.warn('joinGroup with invalid ids', groupId, currentUser?.id);
+                return;
+            }
             const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
             const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', groupId);
             await updateDoc(userRef, { joinedGroups: arrayUnion(groupId) });
