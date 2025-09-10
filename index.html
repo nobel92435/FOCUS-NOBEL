@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2103,10 +2104,8 @@
     }
 
     function toPgArray(arr) {
-        // Supabase's PostgREST client accepts JavaScript arrays directly for array columns
-        // (such as uuid[]).  Returning the array as‑is avoids manual string formatting that
-        // can lead to "invalid input syntax for type uuid" errors.
-        return arr;
+        // Format arrays for Postgres (e.g., {"id1","id2"}) to prevent uuid parsing errors.
+        return `{${arr.map(v => typeof v === 'string' ? `"${v}"` : v).join(',')}}`;
     }
 
     // NEW HELPER FUNCTION TO PARSE POSTGRES ARRAY STRINGS
@@ -2154,6 +2153,15 @@
             }
         }
         return obj;
+    }
+
+    function toDateOrNull(value) {
+        if (!value) return null;
+        if (typeof value.toDate === 'function') {
+            return value.toDate();
+        }
+        const d = new Date(value);
+        return isNaN(d) ? null : d;
     }
 
     async function getDoc(ref) {
@@ -3742,7 +3750,7 @@ let pauseStartTime = 0;
                 let lastActiveText = "No sessions yet";
                 if (!lastSessionSnapshot.empty) {
                     const lastSessionData = lastSessionSnapshot.docs[0].data();
-                    const endedAt = lastSessionData.endedAt?.toDate();
+                    const endedAt = toDateOrNull(lastSessionData.endedAt);
                     if (endedAt) {
                          lastActiveText = timeSince(endedAt) + ' ago';
                     }
@@ -5098,8 +5106,9 @@ if (achievementsGrid) {
                             if (member.totalTimeToday && member.totalTimeToday.date === todayStr) {
                                 totalTodaySeconds = member.totalTimeToday.seconds || 0;
                             }
-                            const currentSessionElapsed = (isStudying && member.studying.type === 'study' && member.studying.startTime) 
-                                ? (Date.now() - member.studying.startTime.toDate()) / 1000 
+                            const startTimeDate = toDateOrNull(member.studying?.startTime);
+                            const currentSessionElapsed = (isStudying && member.studying.type === 'study' && startTimeDate)
+                                ? (Date.now() - startTimeDate.getTime()) / 1000
                                 : 0;
                             const effectiveTotalToday = totalTodaySeconds + currentSessionElapsed;
                             // --- END NEW ---
@@ -5856,7 +5865,7 @@ if (achievementsGrid) {
                         </div>
                     </div>
                     <div class="bg-gray-700/50 px-5 py-3 flex justify-between items-center text-sm">
-                        <span class="text-gray-400">Started: ${group.createdAt?.toDate().toLocaleDateString()}</span>
+                        <span class="text-gray-400">Started: ${toDateOrNull(group.createdAt)?.toLocaleDateString() || ''}</span>
                         ${group.newMessages > 0 ? `
                             <span class="flex items-center gap-2 text-blue-400 animate-pulse">
                                 <i class="fas fa-comment-dots"></i> ${group.newMessages} new
@@ -5973,7 +5982,7 @@ if (achievementsGrid) {
                             </span>
                             <span class="flex items-center gap-2">
                                 ${Math.random() > 0.8 ? '<span class="bg-purple-500 text-white px-2 py-0.5 rounded-full text-xs font-bold">Promoted</span>' : ''}
-                                <span>${timeSince(group.createdAt?.toDate())} ago</span>
+                                <span>${timeSince(toDateOrNull(group.createdAt))} ago</span>
                             </span>
                         </div>
                         <h3 class="text-lg font-bold truncate mb-2 text-white">${group.name}</h3>
@@ -5983,7 +5992,7 @@ if (achievementsGrid) {
                             <span class="text-gray-400 col-span-3">Leader <b class="text-white">${group.leaderName}</b></span>
                             <span class="text-gray-400">Attendance <b class="text-white">${group.attendance}%</b></span>
                             <span class="text-gray-400 col-span-2">Time <b class="text-white">${formatTime(avgStudyTimePerMember, false)}</b></span>
-                            <span class="text-gray-400 col-span-3">Started <b class="text-white">${group.createdAt?.toDate().toLocaleDateString()}</b></span>
+                            <span class="text-gray-400 col-span-3">Started <b class="text-white">${toDateOrNull(group.createdAt)?.toLocaleDateString() || ''}</b></span>
                         </div>
                         <p class="text-gray-400 text-sm mb-3 h-8 overflow-hidden">${group.description}</p>
                         
@@ -6388,7 +6397,8 @@ if (achievementsGrid) {
                 }
                 const isStudying = memberData.studying;
                 // If currently studying, add current session elapsed time to total today
-                const currentSessionElapsed = (isStudying && memberData.studying.type === 'study' && memberData.studying.startTime) ? (Date.now() - memberData.studying.startTime.toDate()) / 1000 : 0;
+                const startTimeDate = toDateOrNull(memberData.studying?.startTime);
+                const currentSessionElapsed = (isStudying && memberData.studying.type === 'study' && startTimeDate) ? (Date.now() - startTimeDate.getTime()) / 1000 : 0;
                 const effectiveTotalToday = totalTodaySeconds + currentSessionElapsed;
 
                 return {
@@ -6445,7 +6455,7 @@ if (achievementsGrid) {
                             </div>
                         </div>
                         <div class="text-right flex-shrink-0 ml-4">
-                            <div class="text-xl font-semibold text-white" id="member-time-${memberId}" data-base-time="${member.data.totalTimeToday && member.data.totalTimeToday.date === todayStr ? member.data.totalTimeToday.seconds : 0}" data-start-time="${isStudying && memberData.studying.startTime ? memberData.studying.startTime.toDate().getTime() : 0}">
+                            <div class="text-xl font-semibold text-white" id="member-time-${memberId}" data-base-time="${member.data.totalTimeToday && member.data.totalTimeToday.date === todayStr ? member.data.totalTimeToday.seconds : 0}" data-start-time="${isStudying && memberData.studying.startTime ? toDateOrNull(memberData.studying.startTime)?.getTime() : 0}">
                                 ${formatTime(totalTodaySeconds)}
                             </div>
                             <div class="text-xs text-gray-500 mb-2">Total Today</div>
@@ -6698,7 +6708,7 @@ if (achievementsGrid) {
                             ${!isSent ? `<div class="chat-sender">${msg.senderName}</div>` : ''}
                             ${messageContent}
                             <div class="text-xs ${isSent ? 'text-blue-200' : 'text-gray-400'} text-right mt-1">
-                                ${msg.timestamp ? msg.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
+                                ${toDateOrNull(msg.timestamp)?.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) || ''}
                             </div>
                         </div>
                     `;
