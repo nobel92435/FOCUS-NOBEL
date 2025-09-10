@@ -2106,10 +2106,19 @@
 
     // NEW HELPER FUNCTION TO PARSE POSTGRES ARRAY STRINGS
     function fromPgArray(pgString) {
-        if (!pgString || typeof pgString !== 'string' || pgString.length < 2 || pgString === '{}') {
-            return [];
+        if (!pgString) return [];
+        if (Array.isArray(pgString)) return pgString;
+        if (typeof pgString !== 'string') return [];
+        if (pgString === '{}' || pgString === '[]') return [];
+        // Handle JSON-style arrays (e.g. "[\"id1\",\"id2\"]")
+        if (pgString.trim().startsWith('[')) {
+            try {
+                return JSON.parse(pgString).map(v => String(v));
+            } catch {
+                return [];
+            }
         }
-        // Remove surrounding braces, split by comma, and strip quotes from each element
+        // Handle Postgres array string format ("{id1,id2}")
         return pgString
             .slice(1, -1)
             .split(',')
@@ -2121,8 +2130,12 @@
         for (const [key, value] of Object.entries(obj)) {
             if (value && typeof value === 'object' && !('toDate' in value)) {
                 convertTimestamps(value);
-            } else if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
-                // FIX: Parse PostgreSQL array strings into JavaScript arrays
+            } else if (
+                typeof value === 'string' &&
+                ((value.startsWith('{') && value.endsWith('}')) ||
+                 (value.startsWith('[') && value.endsWith(']')))
+            ) {
+                // Parse Postgres or JSON array strings into JavaScript arrays
                 obj[key] = fromPgArray(value);
             } else if (typeof value === 'string' || value instanceof Date) {
                 const lower = key.toLowerCase();
@@ -2163,10 +2176,12 @@
             if (v && v.__op === 'increment') {
                 payload[k] = (existing?.[k] || 0) + v.value;
             } else if (v && v.__op === 'arrayUnion') {
-                const arr = new Set([...(existing?.[k] || []), v.value]);
+                const existingArr = Array.isArray(existing?.[k]) ? existing[k] : fromPgArray(existing?.[k]);
+                const arr = new Set([...(existingArr || []), v.value]);
                 payload[k] = toPgArray(Array.from(arr));
             } else if (v && v.__op === 'arrayRemove') {
-                payload[k] = toPgArray((existing?.[k] || []).filter(item => item !== v.value));
+                const existingArr = Array.isArray(existing?.[k]) ? existing[k] : fromPgArray(existing?.[k]);
+                payload[k] = toPgArray((existingArr || []).filter(item => item !== v.value));
             } else if (Array.isArray(v)) {
                 payload[k] = toPgArray(v);
             } else {
@@ -5742,8 +5757,8 @@ if (achievementsGrid) {
             
             const groupPromises = snapshot.docs.map(async (groupDoc) => {
                 const group = { id: groupDoc.id, ...groupDoc.data() };
-                const members = group.members || [];
-                if (members.length === 0) {
+                const members = Array.isArray(group.members) ? group.members : fromPgArray(group.members);
+                if (!members || members.length === 0) {
                     return { ...group, attendance: 0, avgTime: 0, newMessages: 0 };
                 }
 
@@ -5774,8 +5789,8 @@ if (achievementsGrid) {
 
                 const attendance = members.length > 0 ? Math.round((membersStudiedToday / members.length) * 100) : 0;
                 const avgTime = members.length > 0 ? totalSecondsToday / members.length : 0;
-                
-                return { ...group, attendance, avgTime, newMessages: newMessagesSnap.size };
+
+                return { ...group, members, attendance, avgTime, newMessages: newMessagesSnap.size };
             });
 
             const groupsWithRealtimeData = await Promise.all(groupPromises);
@@ -5860,12 +5875,13 @@ if (achievementsGrid) {
             
             const groupDataPromises = groupsSnapshot.docs.map(async (groupDoc) => {
                 const group = { id: groupDoc.id, ...groupDoc.data() };
-                if (!group.members || group.members.length === 0) {
+                const members = Array.isArray(group.members) ? group.members : fromPgArray(group.members);
+                if (!members || members.length === 0) {
                     return { ...group, totalStudyTime: 0, attendance: 0 };
                 }
 
                 let totalStudyTime = 0;
-                const memberTimePromises = group.members.map(async (memberId) => {
+                const memberTimePromises = members.map(async (memberId) => {
                     const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', memberId);
                     const publicUserSnap = await getDoc(publicUserRef);
                     if (publicUserSnap.exists()) {
@@ -5878,7 +5894,7 @@ if (achievementsGrid) {
 
                 const mockAttendance = Math.floor(Math.random() * (100 - 70 + 1) + 70);
 
-                return { ...group, totalStudyTime, attendance: mockAttendance };
+                return { ...group, members, totalStudyTime, attendance: mockAttendance };
             });
 
             let allGroups = await Promise.all(groupDataPromises);
