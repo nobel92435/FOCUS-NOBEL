@@ -2066,6 +2066,10 @@
         if (table === 'users') {
             table = 'profiles'; // Remap 'users' to 'profiles'
         }
+        // Map nested group messages collection to its table name
+        if (table === 'messages' && segments.includes('groups')) {
+            table = 'group_messages';
+        }
         const id = segments[segments.length - 1];
         let parent = segments.length > 2 ? { table: segments[0], id: segments[1] } : null;
         if (parent && parent.table === 'users') {
@@ -2085,10 +2089,14 @@
              console.error("Invalid collection segments after stripping:", segments);
              return { table: undefined, parent: null };
         }
-        const table = segments[segments.length - 1];
+        let table = segments[segments.length - 1];
         let parent = segments.length > 1 ? { table: segments[0], id: segments[1] } : null;
         if (parent && parent.table === 'users') {
             parent.table = 'profiles';
+        }
+        // Map nested group messages collection to its table name
+        if (table === 'messages' && segments.includes('groups')) {
+            table = 'group_messages';
         }
         return { table, parent };
     }
@@ -2283,9 +2291,9 @@
                     }
 
                     // FINAL FIX: Correctly format the value for array columns.
-                    // For uuid[] columns, the value should be in the format '{uuid-string}', without quotes inside.
+                    // Remove any extra quotes and wrap the value in curly braces for uuid[] filters.
                     if ((supabaseOp === 'cs' || supabaseOp === 'cd') && !Array.isArray(value)) {
-                        value = `{${value}}`;
+                        value = `{${String(value).replace(/"/g, '')}}`;
                     }
 
                     req = req.filter(mod.field, supabaseOp, value);
@@ -2306,7 +2314,8 @@
         }
 
         if (error) throw error;
-        return { docs: data.map(d => ({ id: d.id, data: () => convertTimestamps(d) })), empty: data.length === 0 };
+        const docs = data.map(d => ({ id: d.id, data: () => convertTimestamps(d) }));
+        return { docs, empty: docs.length === 0, forEach: fn => docs.forEach(doc => fn(doc)) };
     }
 
     function runTransaction(_db, fn) {
@@ -7851,7 +7860,12 @@ if (achievementsGrid) {
             const modal = document.getElementById('studicon-store-modal');
             const categoryTabsContainer = document.getElementById('studicon-category-tabs');
             const categories = Object.keys(STUDICONS);
-            
+
+            if (!categoryTabsContainer) {
+                console.error('Studicon category tabs container not found');
+                return;
+            }
+
             categoryTabsContainer.innerHTML = categories.map((cat, index) => `
                 <button class="studicon-category-tab flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm ${index === 0 ? 'ranking-tab-btn active' : 'ranking-tab-btn'}" data-category="${cat}">${cat}</button>
             `).join('');
