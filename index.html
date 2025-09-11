@@ -4506,7 +4506,7 @@ if (achievementsGrid) {
             // 1. Listener for Lists
             const listsQuery = query(
                 collection(db, `/artifacts/${appId}/public/data/lists`),
-                where('members', 'array-contains', currentUser.id)
+                where('createdBy', '==', currentUser.id)
             );
             const listsUnsub = onSnapshot(listsQuery, (snapshot) => {
                 plannerState.lists = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -4517,10 +4517,13 @@ if (achievementsGrid) {
             // 2. Listener for Tasks
             const tasksQuery = query(
                 collection(db, `/artifacts/${appId}/public/data/tasks`),
-                where('members', 'array-contains', currentUser.id)
+                where('createdBy', '==', currentUser.id)
             );
             const tasksUnsub = onSnapshot(tasksQuery, (snapshot) => {
-                plannerState.tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                plannerState.tasks = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return { id: doc.id, ...data, listId: data.listId || 'inbox' };
+                });
                 renderPlannerPage(); // Re-render the whole page on task changes
             });
             plannerState.plannerUnsubscribers.push(tasksUnsub);
@@ -5043,7 +5046,7 @@ if (achievementsGrid) {
                     title: title.trim(),
                     completed: false,
                     priority: 'none',
-                    listId: plannerState.activeListId,
+                    listId: plannerState.activeListId === 'inbox' ? null : plannerState.activeListId,
                     created_at: serverTimestamp(),
                     createdBy: currentUser.id,
                     members: currentList.members || [currentUser.id],
@@ -5062,6 +5065,7 @@ if (achievementsGrid) {
             if (!currentUser || !taskId) return;
             const taskRef = doc(db, `/artifacts/${appId}/public/data/tasks`, taskId);
             try {
+                if (data.listId === 'inbox') data.listId = null;
                 await updateDoc(taskRef, data);
             } catch (error) {
                 console.error("Error updating task:", error);
