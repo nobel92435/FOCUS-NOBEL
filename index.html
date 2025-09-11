@@ -7693,10 +7693,9 @@ if (achievementsGrid) {
                  document.getElementById('chat-attachment-menu').classList.add('hidden');
             }
 
-            const userProfileTrigger = e.target.closest('.member-profile-link, .studicon-member-card, .member-list-card');
-            if (userProfileTrigger && !e.target.closest('.wake-up-btn')) {
-                const userCard = userProfileTrigger.closest('[data-user-id]');
-                const userId = userCard ? userCard.dataset.userId : null;
+            const userCard = e.target.closest('[data-user-id]');
+            if (userCard && !e.target.closest('.wake-up-btn')) {
+                const userId = userCard.dataset.userId;
                 if (userId && userId !== currentUser.id) {
                     showUserProfileModal(userId);
                 }
