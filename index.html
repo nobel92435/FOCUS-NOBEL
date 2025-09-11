@@ -2081,6 +2081,10 @@
         if (parent && parent.table === 'users') {
             parent.table = 'profiles';
         }
+        if (parent && parent.table === 'groups') {
+            if (table === 'messages') table = 'group_messages';
+            if (table === 'members') table = 'group_members';
+        }
         return { table, id, parent };
     }
 
@@ -2095,10 +2099,15 @@
              console.error("Invalid collection segments after stripping:", segments);
              return { table: undefined, parent: null };
         }
-        const table = segments[segments.length - 1];
+        const seg = segments[segments.length - 1];
+        let table = seg;
         let parent = segments.length > 1 ? { table: segments[0], id: segments[1] } : null;
         if (parent && parent.table === 'users') {
             parent.table = 'profiles';
+        }
+        if (parent && parent.table === 'groups') {
+            if (seg === 'messages') table = 'group_messages';
+            if (seg === 'members') table = 'group_members';
         }
         return { table, parent };
     }
@@ -2168,7 +2177,12 @@
         }
         const { data, error } = await supabase.from(table).select('*').eq('id', id).single();
         if (error) throw error;
-        return { exists: () => !!data, data: () => convertTimestamps(data) };
+        return {
+            id,
+            ref: { path: [table, id] },
+            exists: () => !!data,
+            data: () => convertTimestamps(data)
+        };
     }
 
     async function setDoc(ref, data) {
@@ -2302,7 +2316,11 @@
         }
 
         if (error) throw error;
-        return { docs: data.map(d => ({ id: d.id, data: () => convertTimestamps(d) })), empty: data.length === 0 };
+        return {
+            docs: data.map(d => ({ id: d.id, data: () => convertTimestamps(d), ref: { path: [table, d.id] } })),
+            empty: data.length === 0,
+            size: data.length
+        };
     }
 
     function runTransaction(_db, fn) {
@@ -2973,6 +2991,7 @@ let pauseStartTime = 0;
                         text: '',
                         sender_id: currentUser.id,
                         sender_name: userData.username,
+                        timestamp: new Date().toISOString(),
                         created_at: new Date().toISOString()
                     });
                 if (insertError) throw insertError;
@@ -4487,7 +4506,7 @@ if (achievementsGrid) {
             // 1. Listener for Lists
             const listsQuery = query(
                 collection(db, `/artifacts/${appId}/public/data/lists`),
-                where('members', 'array-contains', currentUser.id)
+                where('createdBy', '==', currentUser.id)
             );
             const listsUnsub = onSnapshot(listsQuery, (snapshot) => {
                 plannerState.lists = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -4498,10 +4517,13 @@ if (achievementsGrid) {
             // 2. Listener for Tasks
             const tasksQuery = query(
                 collection(db, `/artifacts/${appId}/public/data/tasks`),
-                where('members', 'array-contains', currentUser.id)
+                where('createdBy', '==', currentUser.id)
             );
             const tasksUnsub = onSnapshot(tasksQuery, (snapshot) => {
-                plannerState.tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                plannerState.tasks = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return { id: doc.id, ...data, listId: data.listId || 'inbox' };
+                });
                 renderPlannerPage(); // Re-render the whole page on task changes
             });
             plannerState.plannerUnsubscribers.push(tasksUnsub);
@@ -5024,7 +5046,7 @@ if (achievementsGrid) {
                     title: title.trim(),
                     completed: false,
                     priority: 'none',
-                    listId: plannerState.activeListId,
+                    listId: plannerState.activeListId === 'inbox' ? null : plannerState.activeListId,
                     created_at: serverTimestamp(),
                     createdBy: currentUser.id,
                     members: currentList.members || [currentUser.id],
@@ -5043,6 +5065,7 @@ if (achievementsGrid) {
             if (!currentUser || !taskId) return;
             const taskRef = doc(db, `/artifacts/${appId}/public/data/tasks`, taskId);
             try {
+                if (data.listId === 'inbox') data.listId = null;
                 await updateDoc(taskRef, data);
             } catch (error) {
                 console.error("Error updating task:", error);
@@ -6689,20 +6712,20 @@ if (achievementsGrid) {
                 chatMessagesContainer.innerHTML = '';
                 snapshot.forEach(doc => {
                     const msg = doc.data();
-                    const isSent = msg.senderId === currentUser.id;
+                    const isSent = msg.sender_id === currentUser.id;
                     const messageEl = document.createElement('div');
                     messageEl.classList.add('chat-message', isSent ? 'sent' : 'received');
 
                     let messageContent = '';
                     if (msg.text) {
                         messageContent = `<div>${msg.text}</div>`;
-                    } else if (msg.imageUrl) {
-                        messageContent = `<img src="${msg.imageUrl}" class="rounded-lg max-w-full h-auto cursor-pointer" style="max-height: 300px;" onclick="viewImage(this.src)">`;
+                    } else if (msg.image_url) {
+                        messageContent = `<img src="${msg.image_url}" class="rounded-lg max-w-full h-auto cursor-pointer" style="max-height: 300px;" onclick="viewImage(this.src)">`;
                     }
 
                     messageEl.innerHTML = `
                         <div class="chat-bubble ${isSent ? 'sent' : 'received'}">
-                            ${!isSent ? `<div class="chat-sender">${msg.senderName}</div>` : ''}
+                            ${!isSent ? `<div class="chat-sender">${msg.sender_name}</div>` : ''}
                             ${messageContent}
                             <div class="text-xs ${isSent ? 'text-blue-200' : 'text-gray-400'} text-right mt-1">
                                 ${msg.timestamp ? msg.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
@@ -6722,8 +6745,8 @@ if (achievementsGrid) {
                     const userDoc = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.id));
                     await addDoc(messagesRef, {
                         text: text,
-                        senderId: currentUser.id,
-                        senderName: userDoc.data().username,
+                        sender_id: currentUser.id,
+                        sender_name: userDoc.data().username,
                         timestamp: serverTimestamp()
                     });
                     chatInput.value = '';
