@@ -5072,7 +5072,9 @@ if (achievementsGrid) {
             if (!container) return;
 
             // Use Object.entries to get member ID
-            const membersArray = Object.entries(groupRealtimeData.members).map(([uid, data]) => ({ uid, ...data })).sort((a, b) => {
+            const membersArray = Object.entries(groupRealtimeData.members)
+                .map(([id, data]) => ({ id, ...data }))
+                .sort((a, b) => {
                 const aIsStudying = !!a.studying;
                 const bIsStudying = !!b.studying;
                 if (aIsStudying !== bIsStudying) {
