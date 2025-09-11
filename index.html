@@ -5072,7 +5072,9 @@ if (achievementsGrid) {
             if (!container) return;
 
             // Use Object.entries to get member ID
-            const membersArray = Object.entries(groupRealtimeData.members).map(([uid, data]) => ({ uid, ...data })).sort((a, b) => {
+            const membersArray = Object.entries(groupRealtimeData.members)
+                .map(([id, data]) => ({ id, ...data }))
+                .sort((a, b) => {
                 const aIsStudying = !!a.studying;
                 const bIsStudying = !!b.studying;
                 if (aIsStudying !== bIsStudying) {
@@ -7691,9 +7693,9 @@ if (achievementsGrid) {
                  document.getElementById('chat-attachment-menu').classList.add('hidden');
             }
 
-            const userProfileTrigger = e.target.closest('.member-profile-link, .studicon-member-card');
-            if (userProfileTrigger) {
-                const userId = userProfileTrigger.closest('[data-user-id]').dataset.userId;
+            const userCard = e.target.closest('[data-user-id]');
+            if (userCard && !e.target.closest('.wake-up-btn')) {
+                const userId = userCard.dataset.userId;
                 if (userId && userId !== currentUser.id) {
                     showUserProfileModal(userId);
                 }
