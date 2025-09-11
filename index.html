@@ -2076,6 +2076,10 @@
         if (table === 'users') {
             table = 'profiles'; // Remap 'users' to 'profiles'
         }
+        // Map nested group messages collection to its table name
+        if (table === 'messages' && segments.includes('groups')) {
+            table = 'group_messages';
+        }
         const id = segments[segments.length - 1];
         let parent = segments.length > 2 ? { table: segments[0], id: segments[1] } : null;
         if (parent && parent.table === 'users') {
@@ -2095,10 +2099,14 @@
              console.error("Invalid collection segments after stripping:", segments);
              return { table: undefined, parent: null };
         }
-        const table = segments[segments.length - 1];
+        let table = segments[segments.length - 1];
         let parent = segments.length > 1 ? { table: segments[0], id: segments[1] } : null;
         if (parent && parent.table === 'users') {
             parent.table = 'profiles';
+        }
+        // Map nested group messages collection to its table name
+        if (table === 'messages' && segments.includes('groups')) {
+            table = 'group_messages';
         }
         return { table, parent };
     }
@@ -2279,9 +2287,9 @@
                     }
 
                     // FINAL FIX: Correctly format the value for array columns.
-                    // For uuid[] columns, the value should be in the format '{uuid-string}', without quotes inside.
+                    // Remove any extra quotes and wrap the value in curly braces for uuid[] filters.
                     if ((supabaseOp === 'cs' || supabaseOp === 'cd') && !Array.isArray(value)) {
-                        value = `{${value}}`;
+                        value = `{${String(value).replace(/"/g, '')}}`;
                     }
 
                     req = req.filter(mod.field, supabaseOp, value);
@@ -2302,7 +2310,8 @@
         }
 
         if (error) throw error;
-        return { docs: data.map(d => ({ id: d.id, data: () => convertTimestamps(d) })), empty: data.length === 0 };
+        const docs = data.map(d => ({ id: d.id, data: () => convertTimestamps(d) }));
+        return { docs, empty: docs.length === 0, forEach: fn => docs.forEach(doc => fn(doc)) };
     }
 
     function runTransaction(_db, fn) {
@@ -5815,16 +5824,20 @@ if (achievementsGrid) {
                 });
                 await Promise.all(memberPromises);
 
-                // Fetch new messages (in the last 24 hours)
+                // Fetch new messages (in the last 24 hours) using Supabase
                 const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-                const messagesRef = collection(groupDoc.ref, 'messages');
-                const newMessagesQuery = query(messagesRef, where('timestamp', '>=', twentyFourHoursAgo));
-                const newMessagesSnap = await getDocs(newMessagesQuery);
+                const { data: newMessagesData, error: newMessagesErr } = await supabase
+                    .from('group_messages')
+                    .select('id')
+                    .eq('group_id', group.id)
+                    .gte('timestamp', twentyFourHoursAgo.toISOString());
+                if (newMessagesErr) console.error('Failed to fetch new messages:', newMessagesErr);
+                const newMessagesCount = newMessagesData ? newMessagesData.length : 0;
 
                 const attendance = members.length > 0 ? Math.round((membersStudiedToday / members.length) * 100) : 0;
                 const avgTime = members.length > 0 ? totalSecondsToday / members.length : 0;
 
-                return { ...group, members, attendance, avgTime, newMessages: newMessagesSnap.size };
+                return { ...group, members, attendance, avgTime, newMessages: newMessagesCount };
             });
 
             const groupsWithRealtimeData = await Promise.all(groupPromises);
@@ -6682,13 +6695,20 @@ if (achievementsGrid) {
             const chatInput = document.getElementById('chat-input');
             if (!chatMessagesContainer || !chatForm) return;
 
-            const messagesRef = collection(db, 'artifacts', appId, 'public', 'data', 'groups', groupId, 'messages');
-            const q = query(messagesRef, orderBy("timestamp"));
+            const channel = supabase.channel(`group-chat-${groupId}`);
 
-            const chatUnsub = onSnapshot(q, (snapshot) => {
+            const fetchMessages = async () => {
+                const { data, error } = await supabase
+                    .from('group_messages')
+                    .select('*')
+                    .eq('group_id', groupId)
+                    .order('timestamp', { ascending: true });
+                if (error) {
+                    console.error('Failed to fetch messages:', error);
+                    return;
+                }
                 chatMessagesContainer.innerHTML = '';
-                snapshot.forEach(doc => {
-                    const msg = doc.data();
+                data.forEach(msg => {
                     const isSent = msg.senderId === currentUser.id;
                     const messageEl = document.createElement('div');
                     messageEl.classList.add('chat-message', isSent ? 'sent' : 'received');
@@ -6712,20 +6732,34 @@ if (achievementsGrid) {
                     chatMessagesContainer.appendChild(messageEl);
                 });
                 chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-            });
-            groupDetailUnsubscribers.push(chatUnsub);
+            };
+
+            channel.on('postgres_changes', { event: '*', schema: 'public', table: 'group_messages', filter: `group_id=eq.${groupId}` }, fetchMessages);
+            channel.subscribe();
+            groupDetailUnsubscribers.push(() => supabase.removeChannel(channel));
+            fetchMessages();
 
             chatForm.onsubmit = async (e) => {
                 e.preventDefault();
                 const text = chatInput.value.trim();
                 if (text && currentUser) {
-                    const userDoc = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.id));
-                    await addDoc(messagesRef, {
-                        text: text,
+                    const { data: userData, error: userErr } = await supabase
+                        .from('profiles')
+                        .select('username')
+                        .eq('id', currentUser.id)
+                        .single();
+                    if (userErr) {
+                        console.error('Failed to fetch user:', userErr);
+                        return;
+                    }
+                    const { error: insertErr } = await supabase.from('group_messages').insert({
+                        text,
                         senderId: currentUser.id,
-                        senderName: userDoc.data().username,
+                        senderName: userData.username,
+                        group_id: groupId,
                         timestamp: serverTimestamp()
                     });
+                    if (insertErr) console.error('Failed to send message:', insertErr);
                     chatInput.value = '';
                 }
             };
@@ -7848,7 +7882,12 @@ if (achievementsGrid) {
             const modal = document.getElementById('studicon-store-modal');
             const categoryTabsContainer = document.getElementById('studicon-category-tabs');
             const categories = Object.keys(STUDICONS);
-            
+
+            if (!categoryTabsContainer) {
+                console.error('Studicon category tabs container not found');
+                return;
+            }
+
             categoryTabsContainer.innerHTML = categories.map((cat, index) => `
                 <button class="studicon-category-tab flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm ${index === 0 ? 'ranking-tab-btn active' : 'ranking-tab-btn'}" data-category="${cat}">${cat}</button>
             `).join('');
