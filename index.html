@@ -2012,6 +2012,196 @@
     const auth = supabase.auth;
     const storage = supabase.storage;
 
+    // Helper to require an authenticated user
+    async function authUser() {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) throw new Error('Not signed in');
+        return user;
+        }
+
+    // --- Profiles ---
+    async function upsertProfile({ username, avatar_url, completed_setup = false }) {
+        const user = await authUser();
+        const { data, error } = await supabase
+            .from('profiles')
+            .upsert([{ id: user.id, username, avatar_url, completed_setup }], { onConflict: 'id' })
+            .select('id, username, avatar_url, completed_setup')
+            .single();
+        if (error) throw error;
+        return data;
+    }
+
+    async function getMyProfile() {
+        const user = await authUser();
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url, completed_setup, created_at, updated_at')
+            .eq('id', user.id)
+            .single();
+        if (error) throw error;
+        return data;
+    }
+
+    // --- Subjects ---
+    async function createSubject({ name, order = 0, color = null }) {
+        const user = await authUser();
+        const { data, error } = await supabase
+            .from('subjects')
+            .insert([{ profile_id: user.id, name, order, color }])
+            .select('id, profile_id, name, order, color, created_at')
+            .single();
+        if (error) throw error;
+        return data;
+    }
+
+    async function listMySubjects() {
+        const user = await authUser();
+        const { data, error } = await supabase
+            .from('subjects')
+            .select('id, name, order, color, created_at')
+            .eq('profile_id', user.id)
+            .order('order', { ascending: true });
+        if (error) throw error;
+        return data;
+    }
+
+    // --- Sessions ---
+    async function logSession({ subject, durationSec, type = 'study', endedAt = new Date().toISOString() }) {
+        const user = await authUser();
+        const { data, error } = await supabase
+            .from('sessions')
+            .insert([{ profile_id: user.id, subject, durationSec, type, endedAt }])
+            .select('id, profile_id, subject, durationSec, type, endedAt, created_at')
+            .single();
+        if (error) throw error;
+        return data;
+    }
+
+    async function weeklyLeaderboard(limit = 10) {
+        const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { data, error } = await supabase
+            .from('sessions')
+            .select('profile_id, durationSec')
+            .gte('created_at', since);
+        if (error) throw error;
+
+        const map = new Map();
+        for (const r of data) map.set(r.profile_id, (map.get(r.profile_id) || 0n) + BigInt(r.durationSec ?? 0));
+        const rows = [...map.entries()].map(([profile_id, total]) => ({ profile_id, total: Number(total) }));
+        rows.sort((a, b) => b.total - a.total);
+        const top = rows.slice(0, limit);
+
+        const ids = top.map(r => r.profile_id);
+        const { data: profiles } = await supabase.from('profiles').select('id, username, avatar_url').in('id', ids);
+        const byId = new Map((profiles || []).map(p => [p.id, p]));
+        return top.map(r => ({ ...r, user: byId.get(r.profile_id) }));
+    }
+
+    // --- Groups ---
+    async function createGroup({ name, password = null, category = null, timeGoal = null, capacity = null, description = null }) {
+        const user = await authUser();
+        const { data, error } = await supabase
+            .from('groups')
+            .insert([{ name, created_by: user.id, password, category, timeGoal, capacity, description }])
+            .select('id, name, created_by, created_at')
+            .single();
+        if (error) throw error;
+
+        await supabase.from('group_members').insert([{ group_id: data.id, user_id: user.id, role: 'owner' }]);
+        return data;
+    }
+
+    async function joinGroup({ group_id }) {
+        const user = await authUser();
+        const { data, error } = await supabase
+            .from('group_members')
+            .insert([{ group_id, user_id: user.id, role: 'member' }])
+            .select('group_id, user_id, role, joined_at')
+            .single();
+        if (error) throw error;
+        return data;
+    }
+
+    async function myGroups() {
+        const user = await authUser();
+        const { data, error } = await supabase
+            .from('group_members')
+            .select('group_id')
+            .eq('user_id', user.id);
+        if (error) throw error;
+        const ids = (data || []).map(r => r.group_id);
+        if (!ids.length) return [];
+        const { data: groups } = await supabase
+            .from('groups')
+            .select('id, name, created_by, created_at, category, timeGoal, capacity, description')
+            .in('id', ids);
+        return groups || [];
+    }
+
+    // --- Group messages ---
+    async function sendGroupMessage({ group_id, text, image_url = null }) {
+        const user = await authUser();
+        const { data: profile } = await supabase.from('profiles').select('username').eq('id', user.id).single();
+
+        const { data: row, error } = await supabase
+            .from('group_messages')
+            .insert([{ group_id, sender_id: user.id, sender_name: profile?.username, text, image_url, timestamp: new Date().toISOString() }])
+            .select('id, group_id, sender_id, sender_name, text, image_url, timestamp, created_at')
+            .single();
+        if (error) throw error;
+        return row;
+    }
+
+    function listenGroupMessages(group_id, onMessage) {
+        return supabase.channel(`grp:${group_id}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_messages', filter: `group_id=eq.${group_id}` }, payload => onMessage(payload.new))
+            .subscribe();
+    }
+
+    // --- Lists & Tasks ---
+    async function createList({ name }) {
+        const user = await authUser();
+        const { data, error } = await supabase
+            .from('lists')
+            .insert([{ name, createdBy: user.id }])
+            .select('id, name, createdBy, created_at')
+            .single();
+        if (error) throw error;
+        return data;
+    }
+
+    async function createTask({ title, listId, priority = null, notes = '', tags = '', dueDate = null }) {
+        const user = await authUser();
+        const { data, error } = await supabase
+            .from('tasks')
+            .insert([{ title, listId, priority, notes, tags, createdBy: user.id, members: user.id, dueDate }])
+            .select('id, title, listId, priority, notes, tags, completed, dueDate, createdBy, created_at')
+            .single();
+        if (error) throw error;
+        return data;
+    }
+
+    async function toggleTask({ id, completed }) {
+        const { data, error } = await supabase
+            .from('tasks')
+            .update({ completed, completedAt: completed ? new Date().toISOString() : null })
+            .eq('id', id)
+            .select('id, completed, completedAt')
+            .single();
+        if (error) throw error;
+        return data;
+    }
+
+    async function listTasks({ listId }) {
+        const { data, error } = await supabase
+            .from('tasks')
+            .select('id, title, priority, notes, tags, completed, dueDate, created_at')
+            .eq('listId', listId)
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        return data || [];
+    }
+
     // Firestore compatibility layer implemented with Supabase
     const db = {};
 
