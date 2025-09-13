@@ -4107,21 +4107,16 @@ let pauseStartTime = 0;
             const cappedDuration = (sessionType === 'break' && durationSeconds > MAX_BREAK_SECONDS) ? MAX_BREAK_SECONDS : durationSeconds;
 
             try {
-                // Get references to documents
-                const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-                const publicUserDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.id);
-                const sessionsCollectionRef = collection(userDocRef, 'sessions');
+                // Fetch current profile
+                const { data: userData, error: fetchErr } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
+                if (fetchErr) throw fetchErr;
 
-                // 1. Get current user data to perform calculations
-                const userDoc = await getDoc(userDocRef);
-                if (!userDoc.exists()) throw new Error("User document not found.");
-                
-                const userData = userDoc.data();
                 const todayStr = new Date().toISOString().split('T')[0];
-
-                // 2. Prepare updates for the user's profile
                 const profileUpdate = {};
-                const publicProfileUpdate = {};
 
                 if (sessionType === 'study') {
                     const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -4134,31 +4129,32 @@ let pauseStartTime = 0;
                     }
 
                     const currentDailyStudy = (userData.total_time_today?.date === todayStr) ? userData.total_time_today.seconds : 0;
-                    profileUpdate.total_study_seconds = increment(cappedDuration);
+                    profileUpdate.total_study_seconds = (userData.total_study_seconds || 0) + cappedDuration;
                     profileUpdate.total_time_today = { date: todayStr, seconds: currentDailyStudy + cappedDuration };
-                    publicProfileUpdate.total_study_seconds = increment(cappedDuration);
                     totalTimeTodayInSeconds = currentDailyStudy + cappedDuration;
                 } else { // 'break'
                     const currentDailyBreak = (userData.total_break_time_today?.date === todayStr) ? userData.total_break_time_today.seconds : 0;
-                    profileUpdate.total_break_seconds = increment(cappedDuration);
+                    profileUpdate.total_break_seconds = (userData.total_break_seconds || 0) + cappedDuration;
                     profileUpdate.total_break_time_today = { date: todayStr, seconds: currentDailyBreak + cappedDuration };
-                    publicProfileUpdate.total_break_seconds = increment(cappedDuration);
                     totalBreakTimeTodayInSeconds = currentDailyBreak + cappedDuration;
                 }
 
-                // 3. Execute all database operations
-                await Promise.all([
-                    updateDoc(userDocRef, profileUpdate),
-                    updateDoc(publicUserDocRef, publicProfileUpdate),
-                    addDoc(sessionsCollectionRef, {
-                        subject: subject,
-                        durationSeconds: cappedDuration,
-                        endedAt: serverTimestamp(),
-                        type: sessionType
-                    })
-                ]);
+                // Update profile totals
+                await supabase
+                    .from('profiles')
+                    .update(profileUpdate)
+                    .eq('id', currentUser.id);
 
-                // 4. Update UI and check for achievements
+                // Log session
+                await supabase.from('sessions').insert({
+                    profile_id: currentUser.id,
+                    subject: subject,
+                    durationSec: cappedDuration,
+                    endedAt: new Date().toISOString(),
+                    type: sessionType
+                });
+
+                // Update UI and check for achievements
                 updateTotalTimeDisplay();
                 showToast(`Session of ${formatTime(cappedDuration, false)} saved!`, "success");
                 if (sessionType === 'study') {
@@ -4380,85 +4376,82 @@ if (achievementsGrid) {
 
         function setupRealtimeListeners() {
             if (!currentUser) return;
-            const groupsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'groups');
-            const usersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-            const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            // Fetch subjects ordered by 'order' field
-            const subjectsCollectionRef = query(collection(userDocRef, 'subjects'), orderBy('order', 'asc'));
-            const sessionsCollectionRef = collection(userDocRef, 'sessions');
-            
-            onSnapshot(userDocRef, (doc) => {
-                if (doc.exists()) {
-                    const data = doc.data();
-                    currentUserData = data;
-                    const todayStr = getCurrentDate().toISOString().split('T')[0];
-                    if (!data.total_time_today || data.total_time_today.date !== todayStr || !data.total_break_time_today || data.total_break_time_today.date !== todayStr) {
-                        loadDailyTotal(); 
-                    } else {
-                        totalTimeTodayInSeconds = data.total_time_today.seconds;
-                        totalBreakTimeTodayInSeconds = data.total_break_time_today.seconds;
-                        updateTotalTimeDisplay();
-                    }
 
-                    if (data.pomodoro_settings) {
-                        pomodoroSettings = {...pomodoroSettings, ...data.pomodoro_settings};
-                        pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings });
-                    }
-                    if (data.pomodoro_sounds) {
-                        pomodoroSounds = {...pomodoroSounds, ...data.pomodoro_sounds};
-                    }
-                    updateProfileUI(data);
-                    // This listener updates joined_groups, so we call the render function
-                    if (document.getElementById('page-my-groups').classList.contains('active')) {
-                        renderJoinedGroups();
-                    }
-                }
-            });
-            
-            onSnapshot(query(groupsCollectionRef), () => {
-                if (document.getElementById('page-find-groups').classList.contains('active')) {
-                   renderGroupRankings();
-                }
-                if (document.getElementById('page-my-groups').classList.contains('active')) {
-                    renderJoinedGroups();
-                }
-            });
-            
-            onSnapshot(subjectsCollectionRef, (snapshot) => {
-                const subjects = [];
-                snapshot.forEach(doc => subjects.push({ id: doc.id, ...doc.data() }));
-                // When subjects change, re-render the list in the start session modal
-                renderSubjectSelectionList(subjects);
-            });
-            
-            onSnapshot(query(usersCollectionRef), () => {
-                if (document.getElementById('page-ranking').classList.contains('active')) {
-                    const activeTab = document.querySelector('#ranking-period-tabs .ranking-tab-btn.active');
-                    renderLeaderboard(activeTab ? activeTab.dataset.period : 'weekly');
-                }
-            });
+            // Profile updates
+            supabase.channel('profiles-changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'profiles',
+                    filter: `id=eq.${currentUser.id}`
+                }, () => loadMyProfile())
+                .subscribe();
 
-            onSnapshot(query(sessionsCollectionRef, orderBy("endedAt", "desc")), (snapshot) => {
-                userSessions = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        id: doc.id,
-                        ...data,
-                        endedAt: data.endedAt && typeof data.endedAt.toDate === 'function' ? data.endedAt.toDate() : null, // Ensure endedAt is converted only if it's a Timestamp
-                        type: data.type || 'study' // Ensure type is present, default to 'study'
-                    };
-                });
-                if (document.getElementById('page-stats').classList.contains('active')) {
-                    renderStatsPage(userSessions);
-                }
-                 if (document.getElementById('page-ranking').classList.contains('active')) {
-                    const activeTab = document.querySelector('#ranking-period-tabs .ranking-tab-btn.active');
-                    renderLeaderboard(activeTab ? activeTab.dataset.period : 'weekly');
-                }
-            });
+            // Subjects
+            supabase.channel('subjects-changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'subjects',
+                    filter: `profile_id=eq.${currentUser.id}`
+                }, () => loadSubjects())
+                .subscribe();
+            loadSubjects();
+
+            // Sessions
+            supabase.channel('sessions-changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'sessions',
+                    filter: `profile_id=eq.${currentUser.id}`
+                }, () => loadSessions())
+                .subscribe();
+            loadSessions();
 
             // --- NEW PLANNER LISTENERS ---
             setupPlannerListeners();
+        }
+
+        async function loadSubjects() {
+            if (!currentUser) return;
+            const { data, error } = await supabase
+                .from('subjects')
+                .select('*')
+                .eq('profile_id', currentUser.id)
+                .order('order');
+            if (error) {
+                console.error('Failed to load subjects', error);
+                return;
+            }
+            renderSubjectSelectionList(data || []);
+        }
+
+        async function loadSessions() {
+            if (!currentUser) return;
+            const { data, error } = await supabase
+                .from('sessions')
+                .select('*')
+                .eq('profile_id', currentUser.id)
+                .order('endedAt', { ascending: false });
+            if (error) {
+                console.error('Failed to load sessions', error);
+                return;
+            }
+            userSessions = (data || []).map(s => ({
+                id: s.id,
+                subject: s.subject,
+                durationSeconds: s.durationSec,
+                endedAt: s.endedAt ? new Date(s.endedAt) : null,
+                type: s.type || 'study'
+            }));
+            if (document.getElementById('page-stats').classList.contains('active')) {
+                renderStatsPage(userSessions);
+            }
+            if (document.getElementById('page-ranking').classList.contains('active')) {
+                const activeTab = document.querySelector('#ranking-period-tabs .ranking-tab-btn.active');
+                renderLeaderboard(activeTab ? activeTab.dataset.period : 'weekly');
+            }
         }
         
         // =================================================================================
@@ -7337,13 +7330,21 @@ if (achievementsGrid) {
             }
             const color = colorEl.dataset.color;
 
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            const subjectsRef = collection(userRef, 'subjects');
-            const q = query(subjectsRef, orderBy('order', 'desc'), limit(1));
-            const lastSubjectSnap = await getDocs(q);
-            const lastOrder = lastSubjectSnap.empty ? -1 : lastSubjectSnap.docs[0].data().order;
+            const { data: lastSubject } = await supabase
+                .from('subjects')
+                .select('order')
+                .eq('profile_id', currentUser.id)
+                .order('order', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            const lastOrder = lastSubject?.order ?? -1;
 
-            await addDoc(subjectsRef, { name: subjectName, color: color, order: lastOrder + 1 });
+            await supabase.from('subjects').insert({
+                profile_id: currentUser.id,
+                name: subjectName,
+                color,
+                order: lastOrder + 1
+            });
             
             // The onSnapshot listener now handles the UI update automatically.
             // The redundant manual refresh code that was here has been removed.
@@ -8254,14 +8255,21 @@ if (achievementsGrid) {
                 }
                 const color = colorEl.dataset.color;
 
-                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-                const subjectsRef = collection(userRef, 'subjects');
-                // Get the highest current order value to append the new subject at the end
-                const q = query(subjectsRef, orderBy('order', 'desc'), limit(1));
-                const lastSubjectSnap = await getDocs(q);
-                const lastOrder = lastSubjectSnap.empty ? -1 : lastSubjectSnap.docs[0].data().order;
+                const { data: lastSubject } = await supabase
+                    .from('subjects')
+                    .select('order')
+                    .eq('profile_id', currentUser.id)
+                    .order('order', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                const lastOrder = lastSubject?.order ?? -1;
 
-                await addDoc(subjectsRef, { name: subjectName, color: color, order: lastOrder + 1 });
+                await supabase.from('subjects').insert({
+                    profile_id: currentUser.id,
+                    name: subjectName,
+                    color,
+                    order: lastOrder + 1
+                });
                 modal.classList.remove('active');
                 showToast(`Subject "${subjectName}" added!`, 'success');
             });
