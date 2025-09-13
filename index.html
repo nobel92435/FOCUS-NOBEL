@@ -2251,55 +2251,37 @@
             '!=': 'neq',
             'array-contains': 'cs',
             'in': 'in',
-            'array-contains-any': 'cs', // Supabase `cs` (contains) is the closest for arrays of strings/numbers
+            'array-contains-any': 'cs',
         };
 
-        const buildRequest = (useFallback = false) => {
-            let req = supabase.from(table).select('*');
-            if (parent) req = req.eq(`${parent.table.slice(0, -1)}_id`, parent.id);
+        let req = supabase.from(table).select('*');
+        if (parent) req = req.eq(`${parent.table.slice(0, -1)}_id`, parent.id);
 
-            for (const mod of mods) {
-                if (mod.type === 'orderBy') {
-                    req = req.order(mod.field, { ascending: mod.dir !== 'desc' });
-                } else if (mod.type === 'where') {
-                    if (useFallback && (mod.op === 'array-contains' || mod.op === 'array-contains-any')) {
-                        req = req.filter(mod.field, 'ilike', `%${mod.value}%`);
-                        continue;
-                    }
-
-                    const supabaseOp = operatorMap[mod.op] || mod.op;
-                    let value = mod.value;
-                    if (value instanceof Date) {
-                        value = value.toISOString(); // Convert Date objects to ISO string
-                    }
-
-                    // Special handling for 'in' operator which expects a string like '(val1, val2)'
-                    if (supabaseOp === 'in' && Array.isArray(value)) {
-                        value = `(${value.map(v => typeof v === 'string' ? `"${v}"` : v).join(',')})`;
-                    }
-
-                    // FINAL FIX: Correctly format the value for array columns.
-                    // For uuid[] columns, the value should be in the format '{uuid-string}', without quotes inside.
-                    if ((supabaseOp === 'cs' || supabaseOp === 'cd') && !Array.isArray(value)) {
-                        value = `{${value}}`;
-                    }
-
-                    req = req.filter(mod.field, supabaseOp, value);
-                } else if (mod.type === 'limit') {
-                    req = req.limit(mod.count);
+        for (const mod of mods) {
+            if (mod.type === 'orderBy') {
+                req = req.order(mod.field, { ascending: mod.dir !== 'desc' });
+            } else if (mod.type === 'where') {
+                const supabaseOp = operatorMap[mod.op] || mod.op;
+                let value = mod.value;
+                if (value instanceof Date) {
+                    value = value.toISOString();
                 }
+
+                if (supabaseOp === 'in' && Array.isArray(value)) {
+                    value = `(${value.map(v => typeof v === 'string' ? `"${v}"` : v).join(',')})`;
+                }
+
+                if ((supabaseOp === 'cs' || supabaseOp === 'cd') && !Array.isArray(value)) {
+                    value = `{${value}}`;
+                }
+
+                req = req.filter(mod.field, supabaseOp, value);
+            } else if (mod.type === 'limit') {
+                req = req.limit(mod.count);
             }
-            return req;
-        };
-
-        let { data, error } = await buildRequest(false);
-
-        // Fallback for text columns when using array operators (@>)
-        if (error && error.code === '42883' &&
-            mods.some(m => m.type === 'where' && (m.op === 'array-contains' || m.op === 'array-contains-any'))
-        ) {
-            ({ data, error } = await buildRequest(true));
         }
+        
+        const { data, error } = await req;
 
         if (error) throw error;
         return { docs: data.map(d => ({ id: d.id, data: () => convertTimestamps(d) })), empty: data.length === 0 };
@@ -4107,21 +4089,16 @@ let pauseStartTime = 0;
             const cappedDuration = (sessionType === 'break' && durationSeconds > MAX_BREAK_SECONDS) ? MAX_BREAK_SECONDS : durationSeconds;
 
             try {
-                // Get references to documents
-                const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-                const publicUserDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.id);
-                const sessionsCollectionRef = collection(userDocRef, 'sessions');
+                // Fetch current profile
+                const { data: userData, error: fetchErr } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
+                if (fetchErr) throw fetchErr;
 
-                // 1. Get current user data to perform calculations
-                const userDoc = await getDoc(userDocRef);
-                if (!userDoc.exists()) throw new Error("User document not found.");
-                
-                const userData = userDoc.data();
                 const todayStr = new Date().toISOString().split('T')[0];
-
-                // 2. Prepare updates for the user's profile
                 const profileUpdate = {};
-                const publicProfileUpdate = {};
 
                 if (sessionType === 'study') {
                     const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -4134,31 +4111,32 @@ let pauseStartTime = 0;
                     }
 
                     const currentDailyStudy = (userData.total_time_today?.date === todayStr) ? userData.total_time_today.seconds : 0;
-                    profileUpdate.total_study_seconds = increment(cappedDuration);
+                    profileUpdate.total_study_seconds = (userData.total_study_seconds || 0) + cappedDuration;
                     profileUpdate.total_time_today = { date: todayStr, seconds: currentDailyStudy + cappedDuration };
-                    publicProfileUpdate.total_study_seconds = increment(cappedDuration);
                     totalTimeTodayInSeconds = currentDailyStudy + cappedDuration;
                 } else { // 'break'
                     const currentDailyBreak = (userData.total_break_time_today?.date === todayStr) ? userData.total_break_time_today.seconds : 0;
-                    profileUpdate.total_break_seconds = increment(cappedDuration);
+                    profileUpdate.total_break_seconds = (userData.total_break_seconds || 0) + cappedDuration;
                     profileUpdate.total_break_time_today = { date: todayStr, seconds: currentDailyBreak + cappedDuration };
-                    publicProfileUpdate.total_break_seconds = increment(cappedDuration);
                     totalBreakTimeTodayInSeconds = currentDailyBreak + cappedDuration;
                 }
 
-                // 3. Execute all database operations
-                await Promise.all([
-                    updateDoc(userDocRef, profileUpdate),
-                    updateDoc(publicUserDocRef, publicProfileUpdate),
-                    addDoc(sessionsCollectionRef, {
-                        subject: subject,
-                        durationSeconds: cappedDuration,
-                        endedAt: serverTimestamp(),
-                        type: sessionType
-                    })
-                ]);
+                // Update profile totals
+                await supabase
+                    .from('profiles')
+                    .update(profileUpdate)
+                    .eq('id', currentUser.id);
 
-                // 4. Update UI and check for achievements
+                // Log session
+                await supabase.from('sessions').insert({
+                    profile_id: currentUser.id,
+                    subject: subject,
+                    durationSec: cappedDuration,
+                    endedAt: new Date().toISOString(),
+                    type: sessionType
+                });
+
+                // Update UI and check for achievements
                 updateTotalTimeDisplay();
                 showToast(`Session of ${formatTime(cappedDuration, false)} saved!`, "success");
                 if (sessionType === 'study') {
@@ -4380,85 +4358,92 @@ if (achievementsGrid) {
 
         function setupRealtimeListeners() {
             if (!currentUser) return;
-            const groupsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'groups');
-            const usersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-            const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            // Fetch subjects ordered by 'order' field
-            const subjectsCollectionRef = query(collection(userDocRef, 'subjects'), orderBy('order', 'asc'));
-            const sessionsCollectionRef = collection(userDocRef, 'sessions');
-            
-            onSnapshot(userDocRef, (doc) => {
-                if (doc.exists()) {
-                    const data = doc.data();
-                    currentUserData = data;
-                    const todayStr = getCurrentDate().toISOString().split('T')[0];
-                    if (!data.total_time_today || data.total_time_today.date !== todayStr || !data.total_break_time_today || data.total_break_time_today.date !== todayStr) {
-                        loadDailyTotal(); 
-                    } else {
-                        totalTimeTodayInSeconds = data.total_time_today.seconds;
-                        totalBreakTimeTodayInSeconds = data.total_break_time_today.seconds;
-                        updateTotalTimeDisplay();
-                    }
 
-                    if (data.pomodoro_settings) {
-                        pomodoroSettings = {...pomodoroSettings, ...data.pomodoro_settings};
-                        pomodoroWorker.postMessage({ command: 'updateSettings', newSettings: pomodoroSettings });
-                    }
-                    if (data.pomodoro_sounds) {
-                        pomodoroSounds = {...pomodoroSounds, ...data.pomodoro_sounds};
-                    }
-                    updateProfileUI(data);
-                    // This listener updates joined_groups, so we call the render function
-                    if (document.getElementById('page-my-groups').classList.contains('active')) {
-                        renderJoinedGroups();
-                    }
-                }
-            });
-            
-            onSnapshot(query(groupsCollectionRef), () => {
-                if (document.getElementById('page-find-groups').classList.contains('active')) {
-                   renderGroupRankings();
-                }
-                if (document.getElementById('page-my-groups').classList.contains('active')) {
-                    renderJoinedGroups();
-                }
-            });
-            
-            onSnapshot(subjectsCollectionRef, (snapshot) => {
-                const subjects = [];
-                snapshot.forEach(doc => subjects.push({ id: doc.id, ...doc.data() }));
-                // When subjects change, re-render the list in the start session modal
-                renderSubjectSelectionList(subjects);
-            });
-            
-            onSnapshot(query(usersCollectionRef), () => {
-                if (document.getElementById('page-ranking').classList.contains('active')) {
-                    const activeTab = document.querySelector('#ranking-period-tabs .ranking-tab-btn.active');
-                    renderLeaderboard(activeTab ? activeTab.dataset.period : 'weekly');
-                }
-            });
+            // Profile updates
+            supabase.channel('profiles-changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'profiles',
+                    filter: `id=eq.${currentUser.id}`
+                }, () => loadMyProfile())
+                .subscribe();
 
-            onSnapshot(query(sessionsCollectionRef, orderBy("endedAt", "desc")), (snapshot) => {
-                userSessions = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        id: doc.id,
-                        ...data,
-                        endedAt: data.endedAt && typeof data.endedAt.toDate === 'function' ? data.endedAt.toDate() : null, // Ensure endedAt is converted only if it's a Timestamp
-                        type: data.type || 'study' // Ensure type is present, default to 'study'
-                    };
-                });
-                if (document.getElementById('page-stats').classList.contains('active')) {
-                    renderStatsPage(userSessions);
-                }
-                 if (document.getElementById('page-ranking').classList.contains('active')) {
-                    const activeTab = document.querySelector('#ranking-period-tabs .ranking-tab-btn.active');
-                    renderLeaderboard(activeTab ? activeTab.dataset.period : 'weekly');
-                }
-            });
+            // Subjects
+            supabase.channel('subjects-changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'subjects',
+                    filter: `profile_id=eq.${currentUser.id}`
+                }, () => loadSubjects())
+                .subscribe();
+            loadSubjects();
+
+            // Sessions
+            supabase.channel('sessions-changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'sessions',
+                    filter: `profile_id=eq.${currentUser.id}`
+                }, () => loadSessions())
+                .subscribe();
+            loadSessions();
 
             // --- NEW PLANNER LISTENERS ---
             setupPlannerListeners();
+        }
+
+        async function loadSubjects() {
+            if (!currentUser) return;
+            const { data, error } = await supabase
+                .from('subjects')
+                .select('*')
+                .eq('profile_id', currentUser.id)
+                .order('order');
+            if (error) {
+                console.error('Failed to load subjects', error);
+                return;
+            }
+            renderSubjectSelectionList(data || []);
+        }
+
+        async function loadSessions() {
+            if (!currentUser) return;
+            const { data, error } = await supabase
+                .from('sessions')
+                .select('*')
+                .eq('profile_id', currentUser.id)
+                .order('endedAt', { ascending: false });
+            if (error) {
+                console.error('Failed to load sessions', error);
+                return;
+            }
+            userSessions = (data || []).map(s => {
+                if (!s.endedAt) return null; // Skip sessions that somehow have no end date
+                const endedAtDate = new Date(s.endedAt);
+                // Check if the date is valid. An invalid date's time is NaN.
+                if (isNaN(endedAtDate.getTime())) {
+                    console.warn('Skipping session with invalid endedAt date:', s);
+                    return null;
+                }
+                return {
+                    id: s.id,
+                    subject: s.subject,
+                    durationSeconds: s.durationSec,
+                    endedAt: endedAtDate,
+                    type: s.type || 'study'
+                };
+            }).filter(Boolean); // Filter out any null entries from invalid dates
+            
+            if (document.getElementById('page-stats').classList.contains('active')) {
+                renderStatsPage(userSessions);
+            }
+            if (document.getElementById('page-ranking').classList.contains('active')) {
+                const activeTab = document.querySelector('#ranking-period-tabs .ranking-tab-btn.active');
+                renderLeaderboard(activeTab ? activeTab.dataset.period : 'weekly');
+            }
         }
         
         // =================================================================================
@@ -4477,35 +4462,86 @@ if (achievementsGrid) {
             calendarYear: new Date().getFullYear(),
             calendarMonth: new Date().getMonth(),
         };
-        function setupPlannerListeners() {
+        
+        async function setupPlannerListeners() {
             if (!currentUser || !isValidUUID(currentUser.id)) return;
-
-            // Clean up old listeners before setting new ones
+          
+            // 1. Stop old subscriptions
             plannerState.plannerUnsubscribers.forEach(unsub => unsub());
             plannerState.plannerUnsubscribers = [];
-
-            // 1. Listener for Lists
-            const listsQuery = query(
-                collection(db, `/artifacts/${appId}/public/data/lists`),
-                where('members', 'array-contains', currentUser.id)
-            );
-            const listsUnsub = onSnapshot(listsQuery, (snapshot) => {
-                plannerState.lists = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderPlannerPage(); // Re-render the whole page on list changes
-            });
-            plannerState.plannerUnsubscribers.push(listsUnsub);
-
-            // 2. Listener for Tasks
-            const tasksQuery = query(
-                collection(db, `/artifacts/${appId}/public/data/tasks`),
-                where('members', 'array-contains', currentUser.id)
-            );
-            const tasksUnsub = onSnapshot(tasksQuery, (snapshot) => {
-                plannerState.tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderPlannerPage(); // Re-render the whole page on task changes
-            });
-            plannerState.plannerUnsubscribers.push(tasksUnsub);
-        }
+          
+            // 2. Initial fetch of lists
+            const { data: lists, error: listsError } = await supabase
+              .from('lists')
+              .select('*')
+              .eq('created_by', currentUser.id)   // or whichever column marks ownership
+            if (listsError) {
+              console.error('Failed to load lists:', listsError);
+            } else {
+              plannerState.lists = lists || [];
+              renderPlannerPage();
+            }
+          
+            // 3. Initial fetch of tasks
+            const { data: tasks, error: tasksError } = await supabase
+              .from('tasks')
+              .select('*')
+              .eq('created_by', currentUser.id)
+            if (tasksError) {
+              console.error('Failed to load tasks:', tasksError);
+            } else {
+              plannerState.tasks = tasks || [];
+              renderPlannerPage();
+            }
+          
+            // 4. Realtime subscription for lists
+            const listsSub = supabase
+              .channel('lists-changes')
+              .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'lists' },
+                async (payload) => {
+                  console.log('List change:', payload);
+                  // simplest: refetch fresh data
+                  const { data, error } = await supabase
+                    .from('lists')
+                    .select('*')
+                    .eq('created_by', currentUser.id)
+                  if (!error) {
+                    plannerState.lists = data || [];
+                    renderPlannerPage();
+                  }
+                }
+              )
+              .subscribe();
+          
+            // 5. Realtime subscription for tasks
+            const tasksSub = supabase
+              .channel('tasks-changes')
+              .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'tasks' },
+                async (payload) => {
+                  console.log('Task change:', payload);
+                  const { data, error } = await supabase
+                    .from('tasks')
+                    .select('*')
+                    .eq('created_by', currentUser.id)
+                  if (!error) {
+                    plannerState.tasks = data || [];
+                    renderPlannerPage();
+                  }
+                }
+              )
+              .subscribe();
+          
+            // 6. Save unsubscribers
+            plannerState.plannerUnsubscribers = [
+              () => supabase.removeChannel(listsSub),
+              () => supabase.removeChannel(tasksSub),
+            ];
+          }
+          
 
         function renderPlannerPage() {
             if (!document.getElementById('page-planner').classList.contains('active')) return;
@@ -4518,200 +4554,200 @@ if (achievementsGrid) {
         function renderPlannerSidebar() {
             const sidebar = document.getElementById('planner-sidebar');
             if (!sidebar) return;
-
-            const inboxTasks = plannerState.tasks.filter(t => t.listId === 'inbox' && !t.completed).length;
-
+          
+            const inboxTasks = plannerState.tasks.filter(t => t.list_id === null && !t.completed).length;
+          
             sidebar.innerHTML = `
-                <div id="planner-sidebar-header">
-                    <h2 class="text-lg font-bold">Projects</h2>
-                    <button id="add-list-btn" class="p-1 rounded-full hover:bg-gray-700"><i class="fas fa-plus"></i></button>
+              <div id="planner-sidebar-header">
+                <h2 class="text-lg font-bold">Projects</h2>
+                <button id="add-list-btn" class="p-1 rounded-full hover:bg-gray-700"><i class="fas fa-plus"></i></button>
+              </div>
+              <nav class="flex-grow space-y-1">
+                <div class="planner-sidebar-item ${plannerState.activeListId === 'inbox' ? 'active' : ''}" data-list-id="inbox">
+                  <i class="fas fa-inbox w-5 mr-3"></i>
+                  <span class="flex-grow">Inbox</span>
+                  <span class="text-xs bg-gray-600 px-2 py-0.5 rounded-full">${inboxTasks}</span>
                 </div>
-                <nav class="flex-grow space-y-1">
-                    <div class="planner-sidebar-item ${plannerState.activeListId === 'inbox' ? 'active' : ''}" data-list-id="inbox">
-                        <i class="fas fa-inbox w-5 mr-3"></i>
-                        <span class="flex-grow">Inbox</span>
-                        <span class="text-xs bg-gray-600 px-2 py-0.5 rounded-full">${inboxTasks}</span>
+                ${plannerState.lists.map(list => {
+                  const taskCount = plannerState.tasks.filter(t => t.list_id === list.id && !t.completed).length;
+                  return `
+                    <div class="planner-sidebar-item ${plannerState.activeListId === list.id ? 'active' : ''}" data-list-id="${list.id}">
+                      <i class="fas fa-folder w-5 mr-3"></i>
+                      <span class="flex-grow">${list.name}</span>
+                      <span class="text-xs bg-gray-600 px-2 py-0.5 rounded-full">${taskCount}</span>
                     </div>
-                    ${plannerState.lists.map(list => {
-                        const taskCount = plannerState.tasks.filter(t => t.listId === list.id && !t.completed).length;
-                        return `
-                        <div class="planner-sidebar-item ${plannerState.activeListId === list.id ? 'active' : ''}" data-list-id="${list.id}">
-                            <i class="fas fa-folder w-5 mr-3"></i>
-                            <span class="flex-grow">${list.name}</span>
-                            <span class="text-xs bg-gray-600 px-2 py-0.5 rounded-full">${taskCount}</span>
-                        </div>
-                        `
-                    }).join('')}
-                </nav>
+                  `;
+                }).join('')}
+              </nav>
             `;
-        }
+          }          
 
-        function renderPlannerMainContent() {
+          function renderPlannerMainContent() {
             const mainContent = document.getElementById('planner-main-content');
             if (!mainContent) return;
-
+          
             const activeList = plannerState.activeListId === 'inbox'
-                ? { id: 'inbox', name: 'Inbox' }
-                : plannerState.lists.find(l => l.id === plannerState.activeListId);
-            
+              ? { id: 'inbox', name: 'Inbox' }
+              : plannerState.lists.find(l => l.id === plannerState.activeListId);
+          
             document.getElementById('planner-header-title').textContent = activeList?.name || 'Planner';
-            
+          
             document.querySelectorAll('.planner-view-btn').forEach(btn => {
-                btn.classList.toggle('bg-blue-600', btn.dataset.view === plannerState.currentView);
-                btn.classList.toggle('text-white', btn.dataset.view === plannerState.currentView);
+              btn.classList.toggle('bg-blue-600', btn.dataset.view === plannerState.currentView);
+              btn.classList.toggle('text-white', btn.dataset.view === plannerState.currentView);
             });
-            
-            const tasksForCurrentList = plannerState.tasks.filter(t => t.listId === plannerState.activeListId);
+          
+            const tasksForCurrentList = plannerState.tasks.filter(t => {
+              if (plannerState.activeListId === 'inbox') {
+                return t.list_id === null;
+              }
+              return t.list_id === plannerState.activeListId;
+            });
+          
             const sidebar = document.getElementById('planner-sidebar');
             const detailsPanel = document.getElementById('planner-task-details');
-
-            // Reset styles and visibility
-            if(sidebar) sidebar.style.display = '';
+          
+            if (sidebar) sidebar.style.display = '';
             mainContent.style.padding = '';
-            if(detailsPanel) detailsPanel.classList.add('hidden');
-
-
+            if (detailsPanel) detailsPanel.classList.add('hidden');
+          
             switch (plannerState.currentView) {
-                case 'list':
-                    if(sidebar) sidebar.style.display = 'none';
-                    if(detailsPanel) detailsPanel.classList.add('hidden');
-                    mainContent.style.padding = '0';
-                    
-                    if (plannerState.activeCategory && plannerState.activeCategory !== 'list') {
-                        // We are in a detailed category view
-                        renderPlannerCategoryView(plannerState.activeCategory);
-                    } else {
-                        // We are in the main list view
-                        document.getElementById('planner-header-title').textContent = 'Planner';
-                        renderPlannerListView(plannerState.tasks); // Pass all tasks for the list view
-                    }
-                    break;
-                case 'board':
-                    renderPlannerBoardView(tasksForCurrentList);
-                    break;
-                case 'calendar':
-                    renderPlannerCalendarView(tasksForCurrentList);
-                    break;
+              case 'list':
+                if (sidebar) sidebar.style.display = 'none';
+                if (detailsPanel) detailsPanel.classList.add('hidden');
+                mainContent.style.padding = '0';
+          
+                if (plannerState.activeCategory && plannerState.activeCategory !== 'list') {
+                  renderPlannerCategoryView(plannerState.activeCategory);
+                } else {
+                  document.getElementById('planner-header-title').textContent = 'Planner';
+                  renderPlannerListView(plannerState.tasks);
+                }
+                break;
+              case 'board':
+                renderPlannerBoardView(tasksForCurrentList);
+                break;
+              case 'calendar':
+                renderPlannerCalendarView(tasksForCurrentList);
+                break;
             }
-        }
+          }          
         
-        function renderPlannerListView(allTasks) {
+          function renderPlannerListView(allTasks) {
             const mainContent = document.getElementById('planner-main-content');
-            
-            // Date helpers
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(today.getDate() + 1);
-            
+          
+            const today = new Date(); today.setHours(0,0,0,0);
+            const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+          
             const startOfWeek = new Date(today);
-            const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon
-            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // adjust when day is sunday
+            const dayOfWeek = today.getDay();
+            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
             startOfWeek.setDate(diff);
-
+          
             const endOfWeek = new Date(startOfWeek);
             endOfWeek.setDate(startOfWeek.getDate() + 6);
             endOfWeek.setHours(23,59,59,999);
-
-            const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-
-            // Filter tasks
-            const todayTasks = allTasks.filter(t => t.dueDate && isSameDay(new Date(t.dueDate.seconds * 1000), today) && !t.completed);
-            const tomorrowTasks = allTasks.filter(t => t.dueDate && isSameDay(new Date(t.dueDate.seconds * 1000), tomorrow) && !t.completed);
+          
+            const isSameDay = (d1, d2) =>
+              d1.getFullYear() === d2.getFullYear() &&
+              d1.getMonth() === d2.getMonth() &&
+              d1.getDate() === d2.getDate();
+          
+            const todayTasks = allTasks.filter(t => t.due_date && isSameDay(new Date(t.due_date), today) && !t.completed);
+            const tomorrowTasks = allTasks.filter(t => t.due_date && isSameDay(new Date(t.due_date), tomorrow) && !t.completed);
             const thisWeekTasks = allTasks.filter(t => {
-                if (!t.dueDate || t.completed) return false;
-                const taskDate = new Date(t.dueDate.seconds * 1000);
-                return taskDate >= startOfWeek && taskDate <= endOfWeek;
+              if (!t.due_date || t.completed) return false;
+              const taskDate = new Date(t.due_date);
+              return taskDate >= startOfWeek && taskDate <= endOfWeek;
             });
-            const plannedTasks = allTasks.filter(t => t.dueDate && !t.completed);
+            const plannedTasks = allTasks.filter(t => t.due_date && !t.completed);
             const completedTasks = allTasks.filter(t => t.completed);
-            const inboxTasks = allTasks.filter(t => t.listId === 'inbox' && !t.completed);
-
+            const inboxTasks = allTasks.filter(t => t.list_id === null && !t.completed);
+          
             const categories = [
-                { name: 'Today', icon: 'fa-sun', color: 'bg-yellow-500', count: todayTasks.length },
-                { name: 'Tomorrow', icon: 'fa-cloud-sun', color: 'bg-orange-400', count: tomorrowTasks.length },
-                { name: 'This Week', icon: 'fa-calendar-week', color: 'bg-purple-500', count: thisWeekTasks.length },
-                { name: 'Planned', icon: 'fa-calendar-alt', color: 'bg-blue-500', count: plannedTasks.length },
-                { name: 'Events', icon: 'fa-calendar-star', color: 'bg-green-500', count: 0 }, // Placeholder
-                { name: 'Completed', icon: 'fa-check-circle', color: 'bg-gray-500', count: completedTasks.length },
-                { name: 'Tasks', icon: 'fa-tasks', color: 'bg-indigo-500', count: inboxTasks.length },
+              { name: 'Today', icon: 'fa-sun', color: 'bg-yellow-500', count: todayTasks.length },
+              { name: 'Tomorrow', icon: 'fa-cloud-sun', color: 'bg-orange-400', count: tomorrowTasks.length },
+              { name: 'This Week', icon: 'fa-calendar-week', color: 'bg-purple-500', count: thisWeekTasks.length },
+              { name: 'Planned', icon: 'fa-calendar-alt', color: 'bg-blue-500', count: plannedTasks.length },
+              { name: 'Events', icon: 'fa-calendar-star', color: 'bg-green-500', count: 0 },
+              { name: 'Completed', icon: 'fa-check-circle', color: 'bg-gray-500', count: completedTasks.length },
+              { name: 'Tasks', icon: 'fa-tasks', color: 'bg-indigo-500', count: inboxTasks.length },
             ];
-
+          
             mainContent.innerHTML = `
-                <div id="planner-list-view-container">
-                    <div class="planner-search-bar">
-                        <i class="fas fa-search"></i>
-                        <input type="text" placeholder="Search">
-                    </div>
-                    <div class="planner-list-section no-scrollbar">
-                        ${categories.map(cat => `
-                            <div class="planner-list-item" data-category="${cat.name.toLowerCase()}">
-                                <div class="icon ${cat.color}"><i class="fas ${cat.icon}"></i></div>
-                                <span class="text">${cat.name}</span>
-                                <div class="counts">${cat.count}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="planner-actions">
-                        <button class="planner-add-project-btn">
-                            <i class="fas fa-plus-circle"></i>
-                            <span>Add Project</span>
-                        </button>
-                        <div class="action-icons">
-                            <i class="fas fa-flag"></i>
-                            <i class="fas fa-folder-open"></i>
-                        </div>
-                    </div>
+              <div id="planner-list-view-container">
+                <div class="planner-search-bar">
+                  <i class="fas fa-search"></i>
+                  <input type="text" placeholder="Search">
                 </div>
+                <div class="planner-list-section no-scrollbar">
+                  ${categories.map(cat => `
+                    <div class="planner-list-item" data-category="${cat.name.toLowerCase()}">
+                      <div class="icon ${cat.color}"><i class="fas ${cat.icon}"></i></div>
+                      <span class="text">${cat.name}</span>
+                      <div class="counts">${cat.count}</div>
+                    </div>
+                  `).join('')}
+                </div>
+                <div class="planner-actions">
+                  <button class="planner-add-project-btn">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Add Project</span>
+                  </button>
+                  <div class="action-icons">
+                    <i class="fas fa-flag"></i>
+                    <i class="fas fa-folder-open"></i>
+                  </div>
+                </div>
+              </div>
             `;
-        }
+          }          
 
-        function renderPlannerCategoryView(category) {
+          function renderPlannerCategoryView(category) {
             const mainContent = document.getElementById('planner-main-content');
-
-            // --- 1. Filter Tasks ---
             const allTasks = plannerState.tasks;
             let tasksToShow = [];
             let title = category.charAt(0).toUpperCase() + category.slice(1);
-            
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(today.getDate() + 1);
-            const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-
+          
+            const today = new Date(); today.setHours(0,0,0,0);
+            const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+            const isSameDay = (d1, d2) =>
+              d1.getFullYear() === d2.getFullYear() &&
+              d1.getMonth() === d2.getMonth() &&
+              d1.getDate() === d2.getDate();
+          
             switch (category) {
-                case 'today':
-                    tasksToShow = allTasks.filter(t => t.dueDate && isSameDay(new Date(t.dueDate.seconds * 1000), today));
-                    break;
-                case 'tomorrow':
-                    tasksToShow = allTasks.filter(t => t.dueDate && isSameDay(new Date(t.dueDate.seconds * 1000), tomorrow));
-                    break;
-                case 'this week':
-                    title = 'This Week';
-                    const startOfWeek = new Date(today);
-                    const dayOfWeek = today.getDay();
-                    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-                    startOfWeek.setDate(diff);
-                    const endOfWeek = new Date(startOfWeek);
-                    endOfWeek.setDate(startOfWeek.getDate() + 6);
-                    endOfWeek.setHours(23, 59, 59, 999);
-                    tasksToShow = allTasks.filter(t => {
-                        if (!t.dueDate) return false;
-                        const taskDate = new Date(t.dueDate.seconds * 1000);
-                        return taskDate >= startOfWeek && taskDate <= endOfWeek;
-                    });
-                    break;
-                case 'planned':
-                    tasksToShow = allTasks.filter(t => t.dueDate && !t.completed);
-                    break;
-                case 'completed':
-                    tasksToShow = allTasks.filter(t => t.completed);
-                    break;
-                 case 'events': // Placeholder
-                    tasksToShow = []; // No event tasks for now
-                    break;
-            }
+              case 'today':
+                tasksToShow = allTasks.filter(t => t.due_date && isSameDay(new Date(t.due_date), today));
+                break;
+              case 'tomorrow':
+                tasksToShow = allTasks.filter(t => t.due_date && isSameDay(new Date(t.due_date), tomorrow));
+                break;
+              case 'this week':
+                title = 'This Week';
+                const startOfWeek = new Date(today);
+                const dayOfWeek = today.getDay();
+                const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+                startOfWeek.setDate(diff);
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+                endOfWeek.setHours(23,59,59,999);
+                tasksToShow = allTasks.filter(t => {
+                  if (!t.due_date) return false;
+                  const taskDate = new Date(t.due_date);
+                  return taskDate >= startOfWeek && taskDate <= endOfWeek;
+                });
+                break;
+              case 'planned':
+                tasksToShow = allTasks.filter(t => t.due_date && !t.completed);
+                break;
+              case 'completed':
+                tasksToShow = allTasks.filter(t => t.completed);
+                break;
+              case 'events':
+                tasksToShow = [];
+                break;
+            }          
 
             // --- 2. Calculate Stats ---
             const uncompletedTasks = tasksToShow.filter(t => !t.completed);
@@ -4796,19 +4832,19 @@ if (achievementsGrid) {
                     ` : ''}
                 </div>
             `;
-        }
+        }          
         
         function renderPlannerTaskItem(task) {
-             const priorityColors = { high: 'border-red-500', medium: 'border-yellow-500', low: 'border-blue-500', none: 'border-transparent' };
-             const isSelected = plannerState.selectedTaskId === task.id;
-             return `
-                <div class="task-item flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 ${priorityColors[task.priority] || 'border-l-transparent'} ${isSelected ? 'bg-blue-900/50' : 'bg-gray-800 hover:bg-gray-700'}" data-task-id="${task.id}">
-                    <input type="checkbox" class="task-checkbox-planner w-5 h-5 bg-gray-700 rounded-full text-blue-500 focus:ring-blue-500 mr-4 flex-shrink-0" ${task.completed ? 'checked' : ''} />
-                    <span class="flex-grow ${task.completed ? 'line-through text-gray-500' : ''}">${task.title}</span>
-                    ${task.dueDate?.seconds ? `<span class="text-xs text-gray-400 ml-4">${new Date(task.dueDate.seconds * 1000).toLocaleDateString()}</span>` : ''}
-                </div>
-             `;
-        }
+            const priorityColors = { high: 'border-red-500', medium: 'border-yellow-500', low: 'border-blue-500', none: 'border-transparent' };
+            const isSelected = plannerState.selectedTaskId === task.id;
+            return `
+              <div class="task-item flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 ${priorityColors[task.priority] || 'border-l-transparent'} ${isSelected ? 'bg-blue-900/50' : 'bg-gray-800 hover:bg-gray-700'}" data-task-id="${task.id}">
+                <input type="checkbox" class="task-checkbox-planner w-5 h-5 bg-gray-700 rounded-full text-blue-500 focus:ring-blue-500 mr-4 flex-shrink-0" ${task.completed ? 'checked' : ''} />
+                <span class="flex-grow ${task.completed ? 'line-through text-gray-500' : ''}">${task.title}</span>
+                ${task.due_date ? `<span class="text-xs text-gray-400 ml-4">${new Date(task.due_date).toLocaleDateString()}</span>` : ''}
+              </div>
+            `;
+          }          
 
         function renderPlannerBoardView(tasks) {
              const mainContent = document.getElementById('planner-main-content');
@@ -4841,291 +4877,268 @@ if (achievementsGrid) {
         function renderPlannerCalendarView(tasks) {
             const mainContent = document.getElementById('planner-main-content');
             const { calendarYear, calendarMonth } = plannerState;
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            
-            // Calculate calendar grid days
+            const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+          
             const firstDayOfMonth = new Date(calendarYear, calendarMonth, 1);
             const lastDayOfMonth = new Date(calendarYear, calendarMonth + 1, 0);
             const lastDayOfPrevMonth = new Date(calendarYear, calendarMonth, 0);
-            
+          
             const daysInMonth = lastDayOfMonth.getDate();
-            const startDayOfWeek = firstDayOfMonth.getDay(); // 0=Sun, 1=Mon...
+            const startDayOfWeek = firstDayOfMonth.getDay();
             const endDayOfWeek = lastDayOfMonth.getDay();
-
+          
             let calendarDays = [];
-            // Days from previous month
             for (let i = startDayOfWeek - 1; i >= 0; i--) {
-                const day = lastDayOfPrevMonth.getDate() - i;
-                const date = new Date(lastDayOfPrevMonth.getFullYear(), lastDayOfPrevMonth.getMonth(), day);
-                calendarDays.push({ day, date, isOtherMonth: true });
+              const day = lastDayOfPrevMonth.getDate() - i;
+              const date = new Date(lastDayOfPrevMonth.getFullYear(), lastDayOfPrevMonth.getMonth(), day);
+              calendarDays.push({ day, date, isOtherMonth: true });
             }
-            // Days of current month
             for (let day = 1; day <= daysInMonth; day++) {
-                const date = new Date(calendarYear, calendarMonth, day);
-                calendarDays.push({ day, date, isOtherMonth: false });
+              const date = new Date(calendarYear, calendarMonth, day);
+              calendarDays.push({ day, date, isOtherMonth: false });
             }
-            // Days from next month
             for (let i = 1; i <= 6 - endDayOfWeek; i++) {
-                const date = new Date(calendarYear, calendarMonth + 1, i);
-                calendarDays.push({ day: i, date, isOtherMonth: true });
+              const date = new Date(calendarYear, calendarMonth + 1, i);
+              calendarDays.push({ day: i, date, isOtherMonth: true });
             }
-
+          
             mainContent.innerHTML = `
-                <div class="calendar-container">
-                    <div class="calendar-header">
-                        <div class="calendar-title">${monthNames[calendarMonth]} ${calendarYear}</div>
-                        <div class="calendar-nav">
-                            <button class="calendar-nav-btn" data-direction="prev"><i class="fas fa-chevron-left"></i></button>
-                            <button class="calendar-nav-btn" data-direction="today">Today</button>
-                            <button class="calendar-nav-btn" data-direction="next"><i class="fas fa-chevron-right"></i></button>
-                        </div>
-                    </div>
-                    <div class="calendar-grid">
-                        ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => `<div class="calendar-day-header">${day}</div>`).join('')}
-                        ${calendarDays.map(({ day, date, isOtherMonth }) => {
-                            const today = new Date();
-                            const isToday = date.toDateString() === today.toDateString();
-                            const tasksForDay = tasks.filter(t => t.dueDate && new Date(t.dueDate.seconds * 1000).toDateString() === date.toDateString());
-
-                            return `
-                                <div class="calendar-day-cell ${isOtherMonth ? 'other-month' : ''}" data-date="${date.toISOString().split('T')[0]}">
-                                    <div class="day-number ${isToday ? 'today' : ''}">${day}</div>
-                                    <div class="calendar-tasks-container">
-                                        ${tasksForDay.map(task => `
-                                            <div class="calendar-task priority-${task.priority} ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
-                                                ${task.title}
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
+              <div class="calendar-container">
+                <div class="calendar-header">
+                  <div class="calendar-title">${monthNames[calendarMonth]} ${calendarYear}</div>
+                  <div class="calendar-nav">
+                    <button class="calendar-nav-btn" data-direction="prev"><i class="fas fa-chevron-left"></i></button>
+                    <button class="calendar-nav-btn" data-direction="today">Today</button>
+                    <button class="calendar-nav-btn" data-direction="next"><i class="fas fa-chevron-right"></i></button>
+                  </div>
                 </div>
+                <div class="calendar-grid">
+                  ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => `<div class="calendar-day-header">${day}</div>`).join('')}
+                  ${calendarDays.map(({ day, date, isOtherMonth }) => {
+                    const today = new Date();
+                    const isToday = date.toDateString() === today.toDateString();
+                    const tasksForDay = tasks.filter(t => t.due_date && new Date(t.due_date).toDateString() === date.toDateString());
+          
+                    return `
+                      <div class="calendar-day-cell ${isOtherMonth ? 'other-month' : ''}" data-date="${date.toISOString().split('T')[0]}">
+                        <div class="day-number ${isToday ? 'today' : ''}">${day}</div>
+                        <div class="calendar-tasks-container">
+                          ${tasksForDay.map(task => `
+                            <div class="calendar-task priority-${task.priority} ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
+                              ${task.title}
+                            </div>
+                          `).join('')}
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
             `;
-        }
+          }          
 
         function renderPlannerTaskDetails() {
             const detailsPanel = document.getElementById('planner-task-details');
             if (!detailsPanel) return;
-
+          
             const selectedTask = plannerState.tasks.find(t => t.id === plannerState.selectedTaskId);
-            
+          
             if (!selectedTask) {
-                detailsPanel.classList.add('hidden');
-                detailsPanel.innerHTML = '';
-                return;
+              detailsPanel.classList.add('hidden');
+              detailsPanel.innerHTML = '';
+              return;
             }
-
+          
             detailsPanel.classList.toggle('open', !!selectedTask);
             detailsPanel.classList.toggle('hidden', !selectedTask);
-            
-            if (!selectedTask) {
-                detailsPanel.innerHTML = '';
-                return;
-            }
-
-            const listName = selectedTask.listId === 'inbox' ? 'Tasks' : (plannerState.lists.find(l => l.id === selectedTask.listId)?.name || 'Tasks');
-            const createdDate = selectedTask.created_at ? new Date(selectedTask.created_at.seconds * 1000).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) : 'Today';
-
+          
+            const taskListId = selectedTask.list_id ?? null;
+          
+            const listName = taskListId
+              ? (plannerState.lists.find(l => l.id === taskListId)?.name || 'Tasks')
+              : 'Tasks';
+          
+            const createdDate = selectedTask.created_at
+              ? new Date(selectedTask.created_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
+              : 'Today';
+          
             const priorityClasses = {
-                high: 'text-red-500',
-                medium: 'text-yellow-500',
-                low: 'text-blue-500',
-                none: 'text-gray-400'
+              high: 'text-red-500',
+              medium: 'text-yellow-500',
+              low: 'text-blue-500',
+              none: 'text-gray-400'
             };
             const priority = selectedTask.priority || 'none';
             const repeatText = selectedTask.repeat ? `Repeats ${selectedTask.repeat.type}` : 'None';
             const repeatTextColor = selectedTask.repeat ? 'text-gray-300' : 'text-gray-500';
-
+          
             detailsPanel.innerHTML = `
-                <div class="p-4 h-full flex flex-col bg-gray-800 text-white">
-                    <!-- Header -->
-                    <div class="flex-shrink-0 flex items-center mb-4">
-                        <input type="checkbox" class="task-checkbox-planner w-6 h-6 bg-gray-700 rounded-full text-blue-500 focus:ring-blue-500 mr-4 flex-shrink-0" ${selectedTask.completed ? 'checked' : ''} />
-                        
-                        <button id="task-detail-start-btn" class="mr-2 text-green-400 hover:text-green-300 transition" title="Start Normal Timer"><i class="fas fa-play"></i></button>
-                        
-                        <input id="task-detail-title" class="text-xl font-semibold bg-transparent w-full border-none focus:ring-0 p-0" value="${selectedTask.title}">
-                        
-                        <div class="relative">
-                            <button id="task-detail-priority-btn" class="${priorityClasses[priority]} hover:opacity-80 transition" title="Set Priority">
-                                <i class="fas fa-flag"></i>
-                            </button>
-                            <div id="task-priority-menu" class="hidden absolute right-0 mt-2 w-32 bg-gray-700 rounded-md shadow-lg z-10">
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="high">High</a>
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="medium">Medium</a>
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="low">Low</a>
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="none">None</a>
-                            </div>
-                        </div>
-
-                        <button id="close-task-details" class="ml-2 p-1 rounded-full hover:bg-gray-700">&times;</button>
+              <div class="p-4 h-full flex flex-col bg-gray-800 text-white">
+                <!-- Header -->
+                <div class="flex-shrink-0 flex items-center mb-4">
+                  <input type="checkbox" class="task-checkbox-planner w-6 h-6 bg-gray-700 rounded-full text-blue-500 focus:ring-blue-500 mr-4 flex-shrink-0" ${selectedTask.completed ? 'checked' : ''} />
+                  <button id="task-detail-start-btn" class="mr-2 text-green-400 hover:text-green-300 transition" title="Start Normal Timer"><i class="fas fa-play"></i></button>
+                  <input id="task-detail-title" class="text-xl font-semibold bg-transparent w-full border-none focus:ring-0 p-0" value="${selectedTask.title}">
+                  <div class="relative">
+                    <button id="task-detail-priority-btn" class="${priorityClasses[priority]} hover:opacity-80 transition" title="Set Priority">
+                      <i class="fas fa-flag"></i>
+                    </button>
+                    <div id="task-priority-menu" class="hidden absolute right-0 mt-2 w-32 bg-gray-700 rounded-md shadow-lg z-10">
+                      <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="high">High</a>
+                      <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="medium">Medium</a>
+                      <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="low">Low</a>
+                      <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="none">None</a>
                     </div>
-                    
-                    <!-- Main Content -->
-                    <div class="flex-grow overflow-y-auto pr-2 text-sm">
-                        <button class="border border-gray-600 rounded-full px-3 py-1 text-gray-400 mb-4 hover:bg-gray-700">+ Tags</button>
-                        
-                        <div class="space-y-3">
-                             <div id="task-detail-pomodoro-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition" title="Start Pomodoro Timer">
-                                <i class="fas fa-stopwatch text-gray-400 w-6 text-center mr-3"></i>
-                                <span>Pomodoro</span>
-                                <div class="ml-auto text-right">
-                                    <span class="text-green-400">0 / 0</span>
-                                    <p class="text-xs text-gray-500">= 25m</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-calendar-day text-gray-400 w-6 text-center mr-3"></i>
-                                <span>Due Date</span>
-                                <input type="date" id="task-detail-due-date" class="ml-auto bg-transparent text-right p-0 border-none focus:ring-0" value="${selectedTask.dueDate ? new Date(selectedTask.dueDate.seconds * 1000).toISOString().split('T')[0] : ''}">
-                            </div>
-                             <div id="task-detail-project-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition">
-                                <i class="fas fa-tasks text-gray-400 w-6 text-center mr-3"></i>
-                                <span>Project</span>
-                                <span class="ml-auto text-gray-300">${listName}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-bell text-gray-400 w-6 text-center mr-3"></i>
-                                <span>Reminder</span>
-                                <span class="ml-auto text-gray-500">None</span>
-                            </div>
-                            <div id="task-detail-repeat-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition">
-                                <i class="fas fa-redo text-gray-400 w-6 text-center mr-3"></i>
-                                <span>Repeat</span>
-                                <span class="ml-auto ${repeatTextColor}">${repeatText}</span>
-                            </div>
-                            <div class="flex items-center text-gray-400">
-                                <i class="fas fa-plus w-6 text-center mr-3"></i>
-                                <input class="bg-transparent w-full border-none p-0 focus:ring-0" placeholder="Add a subtask...">
-                            </div>
-                        </div>
-
-                        <textarea id="task-detail-notes" class="w-full bg-transparent p-0 mt-4 h-24 border-none focus:ring-0" placeholder="Add a note...">${selectedTask.notes || ''}</textarea>
-                    </div>
-
-                    <!-- Footer -->
-                    <div class="flex-shrink-0 pt-2 flex justify-between items-center text-xs text-gray-500">
-                        <button><i class="fas fa-arrow-left"></i></button>
-                        <span>Created on ${createdDate}</span>
-                        <button id="delete-task-btn" class="text-gray-400 hover:text-red-500 text-base"><i class="fas fa-trash-alt"></i></button>
-                    </div>
+                  </div>
+                  <button id="close-task-details" class="ml-2 p-1 rounded-full hover:bg-gray-700">&times;</button>
                 </div>
+          
+                <!-- Main Content -->
+                <div class="flex-grow overflow-y-auto pr-2 text-sm">
+                  <button class="border border-gray-600 rounded-full px-3 py-1 text-gray-400 mb-4 hover:bg-gray-700">+ Tags</button>
+          
+                  <div class="space-y-3">
+                    <div id="task-detail-pomodoro-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition" title="Start Pomodoro Timer">
+                      <i class="fas fa-stopwatch text-gray-400 w-6 text-center mr-3"></i>
+                      <span>Pomodoro</span>
+                      <div class="ml-auto text-right">
+                        <span class="text-green-400">0 / 0</span>
+                        <p class="text-xs text-gray-500">= 25m</p>
+                      </div>
+                    </div>
+          
+                    <div class="flex items-center">
+                      <i class="fas fa-calendar-day text-gray-400 w-6 text-center mr-3"></i>
+                      <span>Due Date</span>
+                      <input
+                        type="date"
+                        id="task-detail-due-date"
+                        class="ml-auto bg-transparent text-right p-0 border-none focus:ring-0"
+                        value="${selectedTask.due_date ? new Date(selectedTask.due_date).toISOString().split('T')[0] : ''}">
+                    </div>
+          
+                    <div id="task-detail-project-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition">
+                      <i class="fas fa-tasks text-gray-400 w-6 text-center mr-3"></i>
+                      <span>Project</span>
+                      <span class="ml-auto text-gray-300">${listName}</span>
+                    </div>
+          
+                    <div class="flex items-center">
+                      <i class="fas fa-bell text-gray-400 w-6 text-center mr-3"></i>
+                      <span>Reminder</span>
+                      <span class="ml-auto text-gray-500">None</span>
+                    </div>
+          
+                    <div id="task-detail-repeat-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition">
+                      <i class="fas fa-redo text-gray-400 w-6 text-center mr-3"></i>
+                      <span>Repeat</span>
+                      <span class="ml-auto ${repeatTextColor}">${repeatText}</span>
+                    </div>
+          
+                    <div class="flex items-center text-gray-400">
+                      <i class="fas fa-plus w-6 text-center mr-3"></i>
+                      <input class="bg-transparent w-full border-none p-0 focus:ring-0" placeholder="Add a subtask...">
+                    </div>
+                  </div>
+          
+                  <textarea id="task-detail-notes" class="w-full bg-transparent p-0 mt-4 h-24 border-none focus:ring-0" placeholder="Add a note...">${selectedTask.notes || ''}</textarea>
+                </div>
+          
+                <!-- Footer -->
+                <div class="flex-shrink-0 pt-2 flex justify-between items-center text-xs text-gray-500">
+                  <button><i class="fas fa-arrow-left"></i></button>
+                  <span>Created on ${createdDate}</span>
+                  <button id="delete-task-btn" class="text-gray-400 hover:text-red-500 text-base"><i class="fas fa-trash-alt"></i></button>
+                </div>
+              </div>
             `;
-        }
-
-        async function addPlannerTask(title, dueDateStr = null) {
+          }
+          
+          /** SUPABASE-ONLY IMPLEMENTATION **/
+          
+          async function addPlannerTask(title, dueDateStr = null) {
             if (!currentUser || !title.trim()) return;
-            const currentList = plannerState.lists.find(l => l.id === plannerState.activeListId) || { members: [currentUser.id] };
-            
-            try {
-                await addDoc(collection(db, `/artifacts/${appId}/public/data/tasks`), {
-                    title: title.trim(),
-                    completed: false,
-                    priority: 'none',
-                    listId: plannerState.activeListId,
-                    created_at: serverTimestamp(),
-                    createdBy: currentUser.id,
-                    members: currentList.members || [currentUser.id],
-                    notes: '',
-                    subtasks: [],
-                    tags: [],
-                    dueDate: dueDateStr ? new Date(dueDateStr + 'T00:00:00') : null,
-                });
-            } catch (error) {
-                console.error("Error adding task:", error);
-                showToast("Failed to add task.", "error");
+          
+            // 'inbox' is a UI concept; DB wants either a UUID or null
+            const listIdForDb = plannerState.activeListId === 'inbox' ? null : plannerState.activeListId;
+          
+            // Build minimal, safe payload (only columns you actually have)
+            const payload = {
+              title: title.trim(),
+              completed: false,
+              priority: 'none',
+              list_id: listIdForDb,
+              created_by: currentUser.id,
+              notes: ''
+              // add members / tags columns ONLY if your table has them
+              // members: [currentUser.id],
+              // tags: [],
+            };
+          
+            if (dueDateStr) {
+              // store as ISO timestamp (date-only at midnight UTC)
+              payload.due_date = new Date(dueDateStr + 'T00:00:00Z').toISOString();
             }
-        }
-        
-        async function updatePlannerTask(taskId, data) {
+          
+            const { data, error } = await supabase
+              .from('tasks')
+              .insert([payload])
+              .select()
+              .single();
+          
+            if (error) {
+              console.error('Error adding task:', error);
+              showToast('Failed to add task.', 'error');
+              return;
+            }
+          
+            // Update your local state (optional)
+            plannerState.tasks.push(data);
+            plannerState.selectedTaskId = data.id;
+            renderPlannerPage();            // refresh list/board/calendar
+          }
+          
+          function camelToSnake(obj) {
+            const map = { listId: 'list_id', createdAt: 'created_at', createdBy: 'created_by', dueDate: 'due_date' };
+            const out = {};
+            for (const [k, v] of Object.entries(obj || {})) out[map[k] || k] = v;
+            return out;
+          }
+          
+          async function updatePlannerTask(taskId, data) {
             if (!currentUser || !taskId) return;
-            const taskRef = doc(db, `/artifacts/${appId}/public/data/tasks`, taskId);
-            try {
-                await updateDoc(taskRef, data);
-            } catch (error) {
-                console.error("Error updating task:", error);
-                showToast("Failed to update task.", "error");
+          
+            const payload = camelToSnake(data);
+          
+            const { error } = await supabase
+              .from('tasks')
+              .update(payload)
+              .eq('id', taskId);
+          
+            if (error) {
+              console.error('Error updating task:', error);
+              showToast('Failed to update task.', 'error');
             }
-        }
-
-        async function deletePlannerTask(taskId) {
+          }
+          
+          async function deletePlannerTask(taskId) {
             if (!currentUser || !taskId) return;
-            const taskRef = doc(db, `/artifacts/${appId}/public/data/tasks`, taskId);
-            try {
-                await deleteDoc(taskRef);
-                plannerState.selectedTaskId = null;
-                renderPlannerTaskDetails(); // Hide the panel
-            } catch (error) {
-                console.error("Error deleting task:", error);
-                showToast("Failed to delete task.", "error");
+          
+            const { error } = await supabase
+              .from('tasks')
+              .delete()
+              .eq('id', taskId);
+          
+            if (error) {
+              console.error('Error deleting task:', error);
+              showToast('Failed to delete task.', 'error');
+              return;
             }
-        }
-        
-        // =================================================================================
-        // ============================= NEW PLANNER LOGIC END =============================
-        // =================================================================================
-        
-        function renderGroupStudiconView() {
-            const container = document.getElementById('group-detail-content');
-            if (!container) return;
-
-            // Use Object.entries to get member ID
-            const membersArray = Object.entries(groupRealtimeData.members).map(([uid, data]) => ({ uid, ...data })).sort((a, b) => {
-                const aIsStudying = !!a.studying;
-                const bIsStudying = !!b.studying;
-                if (aIsStudying !== bIsStudying) {
-                    return aIsStudying ? -1 : 1;
-                }
-                return (a.username || '').localeCompare(b.username || '');
-            });
-            
-            const todayStr = getCurrentDate().toISOString().split('T')[0];
-            
-            const studyingCount = membersArray.filter(m => !!m.studying).length;
-            const totalMembers = membersArray.length;
-
-            container.innerHTML = `
-                <div class="p-4">
-                    <div class="text-center mb-6 bg-gray-800 p-3 rounded-lg">
-                        <p class="text-2xl font-bold text-cyan-400">${studyingCount} / ${totalMembers}</p>
-                        <p class="text-sm text-gray-400">Members Currently Studying</p>
-                    </div>
-                    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                        ${membersArray.map(member => {
-                            const isStudying = !!member.studying;
-                            const studiconUrl = member.studicon_url || 'https://api.dicebear.com/8.x/miniavs/svg?seed=Angel';
-
-                            // --- NEW: Calculate total time today for display ---
-                            let totalTodaySeconds = 0;
-                            if (member.total_time_today && member.total_time_today.date === todayStr) {
-                                totalTodaySeconds = member.total_time_today.seconds || 0;
-                            }
-                            const currentSessionElapsed = (isStudying && member.studying.type === 'study' && member.studying.startTime) 
-                                ? (Date.now() - member.studying.startTime.toDate()) / 1000 
-                                : 0;
-                            const effectiveTotalToday = totalTodaySeconds + currentSessionElapsed;
-                            // --- END NEW ---
-
-                            return `
-                                <div class="text-center cursor-pointer studicon-member-card" data-user-id="${member.id}">
-                                    <div class="relative w-20 h-20 mx-auto">
-                                        <div class="member-avatar ${isStudying ? 'studying' : ''} w-full h-full">
-                                            <img src="${studiconUrl}" class="w-full h-full object-cover rounded-full pointer-events-none">
-                                            ${isStudying ? '<div class="member-status-icon"></div>' : ''}
-                                        </div>
-                                    </div>
-                                    <p class="mt-2 text-sm font-semibold truncate text-white pointer-events-none">${member.username || 'Anonymous'}</p>
-                                    <p class="text-lg font-bold text-cyan-400 pointer-events-none">${formatTime(effectiveTotalToday)}</p>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
+          
+            plannerState.selectedTaskId = null;
+            plannerState.tasks = plannerState.tasks.filter(t => t.id !== taskId);
+            renderPlannerTaskDetails();
+          }          
 
         async function renderLeaderboard(period = 'weekly', containerId = 'ranking-list') {
             const container = document.getElementById(containerId);
@@ -5265,8 +5278,15 @@ if (achievementsGrid) {
 
             const appData = focusSessions.map(session => {
                 const endTime = session.endedAt;
-                if (!endTime) return null;
+                if (!endTime || typeof session.durationSeconds !== 'number' || isNaN(session.durationSeconds)) {
+                    console.warn('Skipping session with invalid endTime or duration:', session);
+                    return null;
+                }
                 const startTime = new Date(endTime.getTime() - session.durationSeconds * 1000);
+                if (isNaN(startTime.getTime())) {
+                    console.warn('Skipping session due to invalid calculated startTime:', session);
+                    return null;
+                }
                 return {
                     id: session.id,
                     subject: session.subject,
@@ -7337,13 +7357,21 @@ if (achievementsGrid) {
             }
             const color = colorEl.dataset.color;
 
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            const subjectsRef = collection(userRef, 'subjects');
-            const q = query(subjectsRef, orderBy('order', 'desc'), limit(1));
-            const lastSubjectSnap = await getDocs(q);
-            const lastOrder = lastSubjectSnap.empty ? -1 : lastSubjectSnap.docs[0].data().order;
+            const { data: lastSubject } = await supabase
+                .from('subjects')
+                .select('order')
+                .eq('profile_id', currentUser.id)
+                .order('order', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            const lastOrder = lastSubject?.order ?? -1;
 
-            await addDoc(subjectsRef, { name: subjectName, color: color, order: lastOrder + 1 });
+            await supabase.from('subjects').insert({
+                profile_id: currentUser.id,
+                name: subjectName,
+                color,
+                order: lastOrder + 1
+            });
             
             // The onSnapshot listener now handles the UI update automatically.
             // The redundant manual refresh code that was here has been removed.
@@ -8254,14 +8282,21 @@ if (achievementsGrid) {
                 }
                 const color = colorEl.dataset.color;
 
-                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-                const subjectsRef = collection(userRef, 'subjects');
-                // Get the highest current order value to append the new subject at the end
-                const q = query(subjectsRef, orderBy('order', 'desc'), limit(1));
-                const lastSubjectSnap = await getDocs(q);
-                const lastOrder = lastSubjectSnap.empty ? -1 : lastSubjectSnap.docs[0].data().order;
+                const { data: lastSubject } = await supabase
+                    .from('subjects')
+                    .select('order')
+                    .eq('profile_id', currentUser.id)
+                    .order('order', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                const lastOrder = lastSubject?.order ?? -1;
 
-                await addDoc(subjectsRef, { name: subjectName, color: color, order: lastOrder + 1 });
+                await supabase.from('subjects').insert({
+                    profile_id: currentUser.id,
+                    name: subjectName,
+                    color,
+                    order: lastOrder + 1
+                });
                 modal.classList.remove('active');
                 showToast(`Subject "${subjectName}" added!`, 'success');
             });
@@ -8511,3 +8546,7 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
+
+
+
