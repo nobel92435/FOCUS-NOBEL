@@ -2102,10 +2102,13 @@
              console.error("Invalid collection segments after stripping:", segments);
              return { table: undefined, parent: null };
         }
-        const table = segments[segments.length - 1];
+        let table = segments[segments.length - 1];
         let parent = segments.length > 1 ? { table: segments[0], id: segments[1] } : null;
         if (parent && parent.table === 'users') {
             parent.table = 'profiles';
+        }
+        if (table === 'users') {
+            table = 'profiles';
         }
         return { table, parent };
     }
@@ -2156,7 +2159,7 @@
                 obj[key] = fromPgArray(value);
             } else if (typeof value === 'string' || value instanceof Date) {
                 const lower = key.toLowerCase();
-                if (lower.endsWith('_at') || lower.endsWith('at') || lower.endsWith('_date') || lower.endsWith('date')) {
+                if (lower.includes('time') || lower.includes('date') || lower.endsWith('at')) {
                     const d = new Date(value);
                     if (!isNaN(d)) {
                         obj[key] = { toDate: () => d };
@@ -4225,18 +4228,30 @@ let pauseStartTime = 0;
                 const data = userDoc.data();
                 const todayStr = getCurrentDate().toISOString().split('T')[0];
                 
-                if (data.total_time_today && data.total_time_today.date === todayStr) {
-                    totalTimeTodayInSeconds = data.total_time_today.seconds || 0;
-                } else {
-                    totalTimeTodayInSeconds = 0;
-                    // The update to Firestore for a new day's totalTimeToday will be handled by saveSession's transaction.
+                // Reset totals for the new day or if data is missing, then check for today's data.
+                totalTimeTodayInSeconds = 0;
+                totalBreakTimeTodayInSeconds = 0;
+                
+                // Check for today's study time, handling potentially converted date objects.
+                if (data.total_time_today) {
+                    const dateObj = data.total_time_today.date;
+                    const dateStrFromData = (dateObj && typeof dateObj.toDate === 'function')
+                        ? dateObj.toDate().toISOString().split('T')[0]
+                        : dateObj;
+                    if (dateStrFromData === todayStr) {
+                        totalTimeTodayInSeconds = data.total_time_today.seconds || 0;
+                    }
                 }
-
-                if (data.total_break_time_today && data.total_break_time_today.date === todayStr) {
-                    totalBreakTimeTodayInSeconds = data.total_break_time_today.seconds || 0;
-                } else {
-                    totalBreakTimeTodayInSeconds = 0;
-                    // The update to Firestore for a new day's totalBreakTimeToday will be handled by saveSession's transaction.
+                
+                // Check for today's break time, handling potentially converted date objects.
+                if (data.total_break_time_today) {
+                    const dateObj = data.total_break_time_today.date;
+                    const dateStrFromData = (dateObj && typeof dateObj.toDate === 'function')
+                        ? dateObj.toDate().toISOString().split('T')[0]
+                        : dateObj;
+                    if (dateStrFromData === todayStr) {
+                        totalBreakTimeTodayInSeconds = data.total_break_time_today.seconds || 0;
+                    }
                 }
 
             } else {
@@ -6261,6 +6276,96 @@ if (achievementsGrid) {
             renderGroupSubPage(activeSubPage);
           }
           
+        function renderGroupMembers() {
+            const container = document.getElementById('group-detail-content');
+            if (!container) return;
+
+            // Clear any existing intervals to prevent memory leaks
+            memberTimerIntervals.forEach(clearInterval);
+            memberTimerIntervals = [];
+
+            const membersArray = Object.values(groupRealtimeData.members || {});
+
+            membersArray.sort((a, b) => {
+                const aIsStudying = a.studying && a.studying.type === 'study';
+                const bIsStudying = b.studying && b.studying.type === 'study';
+                if (aIsStudying && !bIsStudying) return -1;
+                if (!aIsStudying && bIsStudying) return 1;
+                return (a.username || '').localeCompare(b.username || '');
+            });
+            
+            if (membersArray.length === 0) {
+                 container.innerHTML = `<div class="empty-group"><i class="fas fa-users"></i><h3>Group is Empty</h3><p>Invite some friends to study with you!</p></div>`;
+                 return;
+            }
+
+            container.innerHTML = `
+                <div class="p-4 space-y-3">
+                    ${membersArray.map(member => {
+                        if (!member) return '';
+                        const isStudying = member.studying && member.studying.type === 'study';
+                        const avatarHTML = member.photo_url
+                            ? `<img src="${member.photo_url}" class="w-full h-full object-cover">`
+                            : `<span>${(member.username || 'U').charAt(0).toUpperCase()}</span>`;
+
+                        const lastSession = (groupRealtimeData.sessions[member.id] || [])[0];
+                        const lastActiveDate = lastSession ? lastSession.endedAt : null;
+                        
+                        return `
+                            <div class="member-list-card member-profile-link" data-user-id="${member.id}">
+                                <div class="member-avatar ${isStudying ? 'studying' : ''} overflow-hidden">
+                                    ${avatarHTML}
+                                    ${isStudying ? '<div class="member-status-icon"></div>' : ''}
+                                </div>
+                                <div class="flex-grow min-w-0">
+                                    <div class="member-name">${member.username || 'Anonymous'}</div>
+                                    <div class="member-time" id="member-time-${member.id}">
+                                        ${isStudying 
+                                            ? `Studying: ${member.studying.subject}` 
+                                            : (lastActiveDate ? `Idle since ${lastActiveDate.toLocaleTimeString()}` : 'Idle')
+                                        }
+                                    </div>
+                                </div>
+                                ${!isStudying && member.id !== currentUser.id ? `
+                                    <button class="wake-up-btn ml-2 px-3 py-1.5 bg-sky-500 text-white rounded-full text-xs font-semibold hover:bg-sky-600 transition flex items-center gap-1.5" data-target-user-id="${member.id}" data-target-user-name="${member.username || 'Anonymous'}">
+                                        <i class="fas fa-bell"></i> Wake Up
+                                    </button>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+
+            // Now, set up intervals to update the time displays
+            membersArray.forEach(member => {
+                const timeEl = document.getElementById(`member-time-${member.id}`);
+                if (!timeEl) return;
+                
+                const interval = setInterval(() => {
+                    const latestMemberData = groupRealtimeData.members[member.id];
+                    if (!latestMemberData) { clearInterval(interval); return; }
+
+                    const isStudying = latestMemberData.studying && latestMemberData.studying.type === 'study';
+
+                    if (isStudying) {
+                        const startTime = new Date(latestMemberData.studying.startTime);
+                        const durationSec = Math.floor((Date.now() - startTime.getTime()) / 1000);
+                        timeEl.textContent = `Studying: ${latestMemberData.studying.subject} for ${formatTime(durationSec)}`;
+                        timeEl.classList.add('text-green-400');
+                        timeEl.classList.remove('text-gray-400');
+                    } else {
+                         const lastSession = (groupRealtimeData.sessions[member.id] || [])[0];
+                         const lastActiveDate = lastSession ? lastSession.endedAt : null;
+                         timeEl.textContent = lastActiveDate ? `Idle for ${timeSince(lastActiveDate)}` : 'Idle';
+                         timeEl.classList.remove('text-green-400');
+                         timeEl.classList.add('text-gray-400');
+                    }
+                }, 1000);
+                memberTimerIntervals.push(interval);
+            });
+        }
+
         function renderGroupStudiconView() {
             const container = document.getElementById('group-detail-content');
             if (!container) return;
@@ -6289,71 +6394,6 @@ if (achievementsGrid) {
             `;
         }
 
-          function setupGroupMemberListeners(memberIds) {
-            // clear previous
-            groupDetailUnsubscribers.forEach(unsub => unsub());
-            groupDetailUnsubscribers = [];
-            memberTimerIntervals.forEach(clearInterval);
-            memberTimerIntervals = [];
-            groupRealtimeData = { members: {}, sessions: {} };
-          
-            memberIds.forEach(async (memberId) => {
-              // initial user
-              const { data: u } = await supabase.from('profiles').select('*').eq('id', memberId).single();
-              if (u) {
-                groupRealtimeData.members[memberId] = u;
-                if ((document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home') === 'home') {
-                  renderGroupSubPage('home');
-                }
-              }
-          
-              // initial sessions
-              const { data: sRows } = await supabase
-                .from('sessions')
-                .select('id,subject,durationSec,endedAt,type')
-                .eq('profile_id', memberId)
-                .order('endedAt', { ascending: false });
-              groupRealtimeData.sessions[memberId] = (sRows || []).map(s => ({ ...s, endedAt: s.endedAt ? new Date(s.endedAt) : null, type: s.type || 'study' }));
-              const sp = document.querySelector('#group-detail-nav .active')?.dataset.subpage;
-              if (sp === 'rankings') renderGroupLeaderboard();
-              if (sp === 'attendance') renderGroupAttendance();
-          
-              // realtime user
-              const uChan = supabase
-                .channel(`profiles:${memberId}`)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${memberId}` }, (payload) => {
-                  const updatedProfile = payload.new || payload.old;
-                  if (updatedProfile) {
-                      groupRealtimeData.members[memberId] = { ...groupRealtimeData.members[memberId], ...updatedProfile };
-                  }
-                  
-                  const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage;
-                  if (activeSubPage === 'home') {
-                    renderGroupSubPage('home');
-                  }
-                })
-                .subscribe();
-              groupDetailUnsubscribers.push(() => supabase.removeChannel(uChan));
-          
-              // realtime sessions
-              const sChan = supabase
-                .channel(`sessions:${memberId}`)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `profile_id=eq.${memberId}` }, async () => {
-                  const { data: latest } = await supabase
-                    .from('sessions')
-                    .select('id,subject,durationSec,endedAt,type')
-                    .eq('profile_id', memberId)
-                    .order('endedAt', { ascending: false });
-                  groupRealtimeData.sessions[memberId] = (latest || []).map(s => ({ ...s, endedAt: s.endedAt ? new Date(s.endedAt) : null, type: s.type || 'study' }));
-                  const sub = document.querySelector('#group-detail-nav .active')?.dataset.subpage;
-                  if (sub === 'rankings') renderGroupLeaderboard();
-                  if (sub === 'attendance') renderGroupAttendance();
-                })
-                .subscribe();
-              groupDetailUnsubscribers.push(() => supabase.removeChannel(sChan));
-            });
-          }          
-
         function renderGroupSubPage(subpage) {
             const container = document.getElementById('group-detail-content');
             if (!container) return;
@@ -6379,220 +6419,207 @@ if (achievementsGrid) {
                 activeNavItem.classList.add('active');
             }
             
-            if (subpage === 'home') {
-                const isStudiconView = document.getElementById('studicon-view-btn')?.classList.contains('active');
-                 if (isStudiconView) {
-                    renderGroupStudiconView();
-                } else {
-                    container.innerHTML = '<div id="group-member-list" class="p-4 flex flex-col gap-3"></div>';
-                    renderGroupMembers();
-                }
-            } else if (subpage === 'invite') {
-                const inviteLink = `${window.location.origin}${window.location.pathname}?groupId=${currentGroupId}`;
-                container.innerHTML = `<div class="p-8 text-center"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(inviteLink)}" class="mx-auto mb-4 rounded-lg"><p class="text-blue-400 break-all">${inviteLink}</p><div class="flex gap-4 mt-4"><button id="copy-link-btn" class="w-full py-2 bg-gray-700 rounded-lg">Copy Link</button><button class="w-full py-2 bg-orange-500 rounded-lg">Share Link</button></div><p class="text-gray-500 mt-4 text-sm">Share this link to invite a friend or organization to study with you.</p></div>`;
-                document.getElementById('copy-link-btn').addEventListener('click', () => {
-                    document.execCommand('copy');
-                    showToast('Link copied to clipboard!', 'success');
-                });
-            } else if (subpage === 'chat') {
-                container.innerHTML = `
-                    <div class="p-4 flex flex-col h-full">
-                        <div id="chat-messages" class="flex-grow overflow-y-auto mb-4"></div>
-                        <div class="relative">
-                            <form id="chat-form" class="flex items-center gap-2 bg-gray-800 rounded-full p-2">
-                                <button type="button" id="chat-attach-btn" class="text-gray-400 hover:text-white p-2 rounded-full w-10 h-10 flex-shrink-0">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                                <input id="chat-input" class="flex-grow bg-transparent text-white focus:outline-none" placeholder="Message...">
-                                <button type="submit" class="bg-blue-600 w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0">
+            // Render content based on subpage
+            switch (subpage) {
+                case 'home':
+                    const isStudiconView = document.getElementById('studicon-view-btn')?.classList.contains('active');
+                    if (isStudiconView) {
+                        renderGroupStudiconView();
+                    } else {
+                        renderGroupMembers();
+                    }
+                    break;
+                case 'attendance':
+                    container.innerHTML = `
+                        <div class="attendance-container">
+                            <div class="attendance-header">
+                                <button id="prev-month-btn" class="attendance-nav-btn"><i class="fas fa-chevron-left"></i></button>
+                                <h2 id="current-month-display" class="attendance-title">Loading...</h2>
+                                <button id="next-month-btn" class="attendance-nav-btn"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <div class="grid grid-cols-7 gap-2 text-center text-xs text-gray-400 mb-2">
+                                <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                            </div>
+                            <div id="calendar-grid" class="grid grid-cols-7 gap-2"></div>
+                            <div class="attendance-stats mt-4">
+                                <h3 class="font-semibold text-lg mb-2">Monthly Stats</h3>
+                                <div class="stats-grid">
+                                    <div class="stat-box"><div id="total-hours" class="stat-value">--</div><div class="stat-label">Total Hours</div></div>
+                                    <div class="stat-box"><div id="days-studied" class="stat-value">--</div><div class="stat-label">Days Studied</div></div>
+                                    <div class="stat-box"><div id="attendance-rate" class="stat-value">--%</div><div class="stat-label">Attendance</div></div>
+                                </div>
+                            </div>
+                            <div class="attendance-member-list mt-4">
+                                <h3 class="font-semibold text-lg mb-2">Member Details</h3>
+                                <div id="attendance-member-grid" class="space-y-2"></div>
+                            </div>
+                        </div>
+                    `;
+                    renderGroupAttendance();
+                    break;
+                case 'rankings':
+                    container.innerHTML = `
+                        <div class="px-4 pt-4">
+                            <div class="flex space-x-1" id="group-ranking-period-tabs">
+                                <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm active" data-period="weekly">Last 7 Days</button>
+                                <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm" data-period="daily">Daily</button>
+                                <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm" data-period="monthly">Last 30 Days</button>
+                            </div>
+                        </div>
+                        <div id="group-ranking-list" class="ranking-list"></div>
+                    `;
+                    // Add event listener for the newly created tabs
+                    document.getElementById('group-ranking-period-tabs').addEventListener('click', e => {
+                        if (e.target.matches('.ranking-tab-btn')) {
+                            const period = e.target.dataset.period;
+                            const isGlobal = document.getElementById('global-ranking-scope-btn')?.classList.contains('active');
+                            if (isGlobal) {
+                                renderLeaderboard(period, 'group-ranking-list');
+                            } else {
+                                renderGroupLeaderboard(period);
+                            }
+                        }
+                    });
+                    renderGroupLeaderboard('weekly');
+                    break;
+                case 'invite':
+                    container.innerHTML = `
+                        <div class="p-6 text-center">
+                            <i class="fas fa-share-alt text-5xl text-blue-400 mb-4"></i>
+                            <h2 class="text-2xl font-bold mb-2">Invite Friends</h2>
+                            <p class="text-gray-400 mb-6">Share this group ID with your friends to let them join.</p>
+                            <div class="bg-gray-800 p-4 rounded-lg flex items-center justify-between">
+                                <span id="group-invite-id" class="text-lg font-mono text-gray-300">${currentGroupId}</span>
+                                <button id="copy-group-id-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">Copy ID</button>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('copy-group-id-btn').addEventListener('click', () => {
+                        navigator.clipboard.writeText(currentGroupId).then(() => {
+                            showToast('Group ID copied to clipboard!', 'success');
+                        }).catch(err => {
+                            showToast('Failed to copy ID.', 'error');
+                        });
+                    });
+                    break;
+                case 'chat':
+                    container.innerHTML = `
+                        <div class="flex flex-col h-full" style="height: calc(100vh - 73px - 57px);">
+                            <div id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-4 no-scrollbar">
+                                <!-- Messages will be rendered here -->
+                            </div>
+                            <form id="chat-form" class="p-4 border-t border-gray-700 flex items-center gap-2">
+                                <div class="relative flex-grow">
+                                    <input id="chat-input" type="text" class="w-full bg-gray-700 rounded-full py-3 px-5 text-white" placeholder="Type a message..." autocomplete="off">
+                                </div>
+                                <button type="submit" class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white flex-shrink-0 hover:bg-blue-700 transition">
                                     <i class="fas fa-paper-plane"></i>
                                 </button>
                             </form>
-                            <div id="chat-attachment-menu" class="hidden absolute bottom-full left-0 mb-2 w-48 bg-gray-700 rounded-lg shadow-lg p-2">
-                                <button data-chat-action="file" class="w-full text-left p-2 hover:bg-gray-600 rounded flex items-center gap-3"><i class="fas fa-file-alt w-4"></i> File</button>
-                                <button data-chat-action="album" class="w-full text-left p-2 hover:bg-gray-600 rounded flex items-center gap-3"><i class="fas fa-images w-4"></i> Album</button>
-                                <button data-chat-action="camera" class="w-full text-left p-2 hover:bg-gray-600 rounded flex items-center gap-3"><i class="fas fa-camera w-4"></i> Camera</button>
-                            </div>
                         </div>
-                    </div>`;
-                setupGroupChat(currentGroupId);
-            } else if (subpage === 'rankings') {
-                 container.innerHTML = `<div class="px-4 pt-4 border-b border-gray-800">
-                    <div class="flex space-x-1" id="group-ranking-period-tabs">
-                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm" data-period="daily">Daily</button>
-                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm active" data-period="weekly">Last 7 Days</button>
-                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm" data-period="monthly">Last 30 Days</button>
-                    </div>
-                </div>
-                <div id="group-ranking-list" class="ranking-list"></div>`;
-                
-                // Set the switch to default to 'Group'
-                document.getElementById('global-ranking-scope-btn').classList.remove('active');
-                document.getElementById('group-ranking-scope-btn').classList.add('active');
-
-                renderGroupLeaderboard(); // Initial render
-                
-                document.getElementById('group-ranking-period-tabs').addEventListener('click', (e) => {
-                    if (e.target.classList.contains('ranking-tab-btn')) {
-                        const period = e.target.dataset.period;
-                        // Check which scope is active and re-render
-                        if (document.getElementById('group-ranking-scope-btn').classList.contains('active')) {
-                            renderGroupLeaderboard(period);
-                        } else {
-                            renderLeaderboard(period, 'group-ranking-list');
-                        }
-                    }
-                });
-            } else if (subpage === 'attendance') {
-                 container.innerHTML = `<div id="attendance-container" class="attendance-container">
-                    <div class="attendance-header">
-                        <button id="prev-month-btn" class="attendance-nav-btn"><i class="fas fa-chevron-left"></i></button>
-                        <h2 id="current-month-display" class="attendance-title">Loading...</h2>
-                        <button id="next-month-btn" class="attendance-nav-btn"><i class="fas fa-chevron-right"></i></button>
-                    </div>
-                    <div class="attendance-calendar grid grid-cols-7 gap-1">
-                        <div class="calendar-header">Mon</div>
-                        <div class="calendar-header">Tue</div>
-                        <div class="calendar-header">Wed</div>
-                        <div class="calendar-header">Thu</div>
-                        <div class="calendar-header">Fri</div>
-                        <div class="calendar-header">Sat</div>
-                        <div class="calendar-header">Sun</div>
-                        <div id="calendar-grid" class="col-span-7 grid grid-cols-7 gap-1"></div>
-                    </div>
-                    <div class="attendance-stats">
-                        <h3 class="text-lg font-semibold">Attendance Stats</h3>
-                        <div class="stats-grid">
-                            <div class="stat-box">
-                                <div id="total-hours" class="stat-value">0h 0m</div>
-                                <div the="stat-label">Days Studied</div>
-                            </div>
-                            <div class="stat-box">
-                                <div id="days-studied" class="stat-value">0</div>
-                                <div the="stat-label">Days Studied</div>
-                            </div>
-                            <div class="stat-box">
-                                <div id="attendance-rate" class="stat-value">0%</div>
-                                <div class="stat-label">Attendance Rate</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="attendance-member-list">
-                        <h3 class="text-lg font-semibold mb-4">Member Attendance</h3>
-                        <div id="attendance-member-grid"></div>
-                    </div>
-                </div>`;
-                renderGroupAttendance();
-            } else {
-                 container.innerHTML = `<div class="p-8 text-center text-gray-400">${subpage.charAt(0).toUpperCase() + subpage.slice(1)} page is coming soon!</div>`;
+                    `;
+                    setupGroupChat(currentGroupId);
+                    break;
             }
         }
-        
-        function renderGroupMembers() {
-            const memberList = document.getElementById('group-member-list');
-            if (!memberList) return;
 
+          function setupGroupMemberListeners(memberIds) {
+            // clear previous
+            groupDetailUnsubscribers.forEach(unsub => unsub());
+            groupDetailUnsubscribers = [];
             memberTimerIntervals.forEach(clearInterval);
             memberTimerIntervals = [];
-            
-            const todayStr = getCurrentDate().toISOString().split('T')[0];
-
-            // Convert members object to an array for sorting
-            const membersArray = Object.keys(groupRealtimeData.members).map(memberId => {
-                const memberData = groupRealtimeData.members[memberId];
-                let totalTodaySeconds = 0;
-                // Only count study time for the member list display
-                if (memberData.total_time_today && memberData.total_time_today.date === todayStr) {
-                    totalTodaySeconds = memberData.total_time_today.seconds;
-                }
-                const isStudying = memberData.studying;
-                // If currently studying, add current session elapsed time to total today
-                const currentSessionElapsed = (isStudying && memberData.studying.type === 'study' && memberData.studying.startTime) ? (Date.now() - memberData.studying.startTime.toDate()) / 1000 : 0;
-                const effectiveTotalToday = totalTodaySeconds + currentSessionElapsed;
-
-                return {
-                    id: memberId,
-                    data: memberData,
-                    isStudying: isStudying,
-                    effectiveTotalToday: effectiveTotalToday
-                };
-            });
-
-            // Sort members:
-            // 1. Currently studying (true comes before false)
-            // 2. Then by effectiveTotalToday (descending)
-            membersArray.sort((a, b) => {
-                if (a.isStudying && !b.isStudying) return -1; // a is studying, b is not: a comes first
-                if (!a.isStudying && b.isStudying) return 1;  // a is not studying, b is: b comes first
-                // If both are studying or both are not, sort by effectiveTotalToday
-                return b.effectiveTotalToday - a.effectiveTotalToday;
-            });
-
-
-            memberList.innerHTML = membersArray.map(member => {
-                const memberData = member.data;
-                const memberId = member.id;
-                const isStudying = member.isStudying;
-                const totalTodaySeconds = member.effectiveTotalToday; // Use the calculated effective total
-
-                const avatarHTML = memberData.photo_url
-                    ? `<img src="${memberData.photo_url}" class="w-full h-full object-cover">`
-                    : `<span>${(memberData.username || 'U').charAt(0).toUpperCase()}</span>`;
-                
-                const wakeUpButtonHTML = memberId !== currentUser.id
-                    ? `<button 
-                          class="wake-up-btn text-xs py-1 px-3 rounded-full transition ${isStudying ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-cyan-500 hover:bg-cyan-600 text-white'}" 
-                          data-target-user-id="${memberId}" 
-                          data-target-user-name="${memberData.username || 'Anonymous'}"
-                          ${isStudying ? 'disabled' : ''}>
-                          <i class="fas fa-bell"></i> Wake Up
-                       </button>`
-                    : '';
-
-                return `
-                     <div class="member-list-card" data-user-id="${memberId}">
-                        <div class="flex items-center flex-grow cursor-pointer member-profile-link">
-                            <div class="member-avatar ${isStudying ? 'studying' : ''} overflow-hidden pointer-events-none">
-                                ${avatarHTML}
-                                ${isStudying ? '<div class="member-status-icon"></div>' : ''}
-                            </div>
-                            <div class="flex-grow pointer-events-none">
-                                <div class="font-bold text-white">${memberData.username || 'Anonymous'}</div>
-                                <div class="text-sm ${isStudying ? 'text-green-400' : 'text-gray-400'}" id="member-subject-${memberId}">
-                                    ${isStudying ? `Studying: ${memberData.studying.subject}` : 'Idle'}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-right flex-shrink-0 ml-4">
-                            <div class="text-xl font-semibold text-white" id="member-time-${memberId}" data-base-time="${member.data.total_time_today && member.data.total_time_today.date === todayStr ? member.data.total_time_today.seconds : 0}" data-start-time="${isStudying && memberData.studying.startTime ? memberData.studying.startTime.toDate().getTime() : 0}">
-                                ${formatTime(totalTodaySeconds)}
-                            </div>
-                            <div class="text-xs text-gray-500 mb-2">Total Today</div>
-                            ${wakeUpButtonHTML}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            // Set up intervals for actively studying members
-            membersArray.forEach(member => {
-                const memberData = member.data;
-                const memberId = member.id;
-                const timeEl = document.getElementById(`member-time-${memberId}`);
-                if (memberData && memberData.studying && memberData.studying.type === 'study' && timeEl) { // Only update for study sessions
-                    const baseTime = parseInt(timeEl.dataset.baseTime, 10);
-                    const startTime = parseInt(timeEl.dataset.startTime, 10);
-                    if (startTime > 0) {
-                       const interval = setInterval(() => {
-                            const ongoingSeconds = (Date.now() - startTime) / 1000;
-                            timeEl.textContent = formatTime(baseTime + ongoingSeconds);
-                       }, 1000);
-                       memberTimerIntervals.push(interval);
+            groupRealtimeData = { members: {}, sessions: {} };
+          
+            memberIds.forEach(async (memberId) => {
+              // initial user
+              const { data: u } = await supabase.from('profiles').select('*').eq('id', memberId).single();
+              if (u) {
+                groupRealtimeData.members[memberId] = u;
+                const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
+                if (activeSubPage === 'home') {
+                    const isStudiconView = document.getElementById('studicon-view-btn')?.classList.contains('active');
+                    if (isStudiconView) {
+                        renderGroupStudiconView();
+                    } else {
+                        renderGroupMembers();
                     }
                 }
+              }
+          
+              // initial sessions
+              const { data: sRows } = await supabase
+                .from('sessions')
+                .select('id,subject,durationSec,endedAt,type')
+                .eq('profile_id', memberId)
+                .order('endedAt', { ascending: false });
+              groupRealtimeData.sessions[memberId] = (sRows || []).map(s => ({ ...s, endedAt: s.endedAt ? new Date(s.endedAt) : null, type: s.type || 'study' }));
+              const sp = document.querySelector('#group-detail-nav .active')?.dataset.subpage;
+              if (sp === 'rankings') renderGroupLeaderboard();
+              if (sp === 'attendance') renderGroupAttendance();
+          
+              // realtime user
+              const uChan = supabase
+                .channel(`profiles:${memberId}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${memberId}` }, (payload) => {
+                  groupRealtimeData.members[memberId] = payload.new || payload.old;
+                  const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
+                    if (activeSubPage === 'home') {
+                        const isStudiconView = document.getElementById('studicon-view-btn')?.classList.contains('active');
+                        if (isStudiconView) {
+                            renderGroupStudiconView();
+                        } else {
+                            renderGroupMembers();
+                        }
+                    }
+                })
+                .subscribe();
+              groupDetailUnsubscribers.push(() => supabase.removeChannel(uChan));
+          
+              // realtime sessions
+              const sChan = supabase
+                .channel(`sessions:${memberId}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `profile_id=eq.${memberId}` }, (payload) => {
+                    const { eventType, old: oldRecord, new: newRecord } = payload;
+                    const record = newRecord || oldRecord;
+                    const recordMemberId = record?.profile_id;
+                    if (!recordMemberId || !groupRealtimeData.sessions[recordMemberId]) return;
+                    
+                    const sessions = groupRealtimeData.sessions[recordMemberId];
+                    const recordId = record.id;
+                    const existingIndex = sessions.findIndex(s => s.id === recordId);
+                    
+                    const processRecord = (rec) => ({ ...rec, endedAt: rec.endedAt ? new Date(rec.endedAt) : null, type: rec.type || 'study' });
+
+                    if (eventType === 'INSERT') {
+                        if (existingIndex === -1) sessions.unshift(processRecord(newRecord));
+                    } else if (eventType === 'UPDATE') {
+                        if (existingIndex > -1) sessions[existingIndex] = processRecord(newRecord);
+                    } else if (eventType === 'DELETE') {
+                        if (existingIndex > -1) sessions.splice(existingIndex, 1);
+                    }
+                    
+                    sessions.sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0));
+
+                    const currentSubpage = document.querySelector('#group-detail-nav .active')?.dataset.subpage;
+                    if (currentSubpage === 'rankings') {
+                        const isGlobal = document.getElementById('global-ranking-scope-btn')?.classList.contains('active');
+                        const period = document.querySelector('#group-ranking-period-tabs .ranking-tab-btn.active')?.dataset.period || 'weekly';
+                        if (isGlobal) {
+                            renderLeaderboard(period, 'group-ranking-list');
+                        } else {
+                            renderGroupLeaderboard(period);
+                        }
+                    }
+                    if (currentSubpage === 'attendance') {
+                        renderGroupAttendance();
+                    }
+                })
+                .subscribe();
+              groupDetailUnsubscribers.push(() => supabase.removeChannel(sChan));
             });
-        }
-        
+          }          
+
         function renderGroupLeaderboard(period) {
             const container = document.getElementById('group-ranking-list');
             if (!container) return;
@@ -8652,5 +8679,11 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
+
+
+
+
+
 
 
