@@ -2156,7 +2156,7 @@
                 obj[key] = fromPgArray(value);
             } else if (typeof value === 'string' || value instanceof Date) {
                 const lower = key.toLowerCase();
-                if (lower.includes('time') || lower.includes('date')) {
+                if (lower.endsWith('_at') || lower.endsWith('at') || lower.endsWith('_date') || lower.endsWith('date')) {
                     const d = new Date(value);
                     if (!isNaN(d)) {
                         obj[key] = { toDate: () => d };
@@ -6299,11 +6299,11 @@ if (achievementsGrid) {
           
             memberIds.forEach(async (memberId) => {
               // initial user
-              const { data: u } = await supabase.from('users').select('*').eq('id', memberId).single();
+              const { data: u } = await supabase.from('profiles').select('*').eq('id', memberId).single();
               if (u) {
                 groupRealtimeData.members[memberId] = u;
                 if ((document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home') === 'home') {
-                  renderGroupMembers();
+                  renderGroupSubPage('home');
                 }
               }
           
@@ -6320,11 +6320,16 @@ if (achievementsGrid) {
           
               // realtime user
               const uChan = supabase
-                .channel(`users:${memberId}`)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'users', filter: `id=eq.${memberId}` }, (payload) => {
-                  groupRealtimeData.members[memberId] = payload.new || payload.old;
-                  if ((document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home') === 'home') {
-                    renderGroupMembers();
+                .channel(`profiles:${memberId}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${memberId}` }, (payload) => {
+                  const updatedProfile = payload.new || payload.old;
+                  if (updatedProfile) {
+                      groupRealtimeData.members[memberId] = { ...groupRealtimeData.members[memberId], ...updatedProfile };
+                  }
+                  
+                  const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage;
+                  if (activeSubPage === 'home') {
+                    renderGroupSubPage('home');
                   }
                 })
                 .subscribe();
@@ -7543,9 +7548,18 @@ if (achievementsGrid) {
                 const newGroupRef = await addDoc(collection(db, `artifacts/${appId}/public/data/groups`), {
                     name, password: password || null, category, time_goal, capacity, description,
                     leaderId: currentUser.id, leaderName: currentUserData.username,
-                    members: [currentUser.id], created_at: serverTimestamp(),
+                    // The 'members' array is not the correct way to add members with Supabase.
+                    // Membership is handled by the separate group_members table.
+                    created_at: serverTimestamp(),
                     avgTime: '0h 0m', attendance: 0
                 });
+
+                // FIX: Insert the leader into the group_members table to officially join them to the group.
+                const { error: joinError } = await supabase.from('group_members').insert({
+                    group_id: newGroupRef.id,
+                    profile_id: currentUser.id
+                });
+                if (joinError) throw joinError;
         
                 const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
                 await updateDoc(userRef, { joined_groups: arrayUnion(newGroupRef.id) });
@@ -8638,10 +8652,5 @@ async function updateUsername(newName) {
 
 </body>
 </html>
-
-
-
-
-
 
 
