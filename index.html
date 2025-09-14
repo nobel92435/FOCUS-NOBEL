@@ -1991,12 +1991,26 @@
     <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form"><input type="password" id="group-password-prompt-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required><div class="flex gap-2 mt-4"><button type="button" class="close-modal w-full py-2 bg-gray-600 rounded-lg">Cancel</button><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Submit</button></div></form></div></div>
     <div id="confirmation-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 id="confirmation-modal-title" class="modal-title">Are you sure?</h2><button class="close-modal">&times;</button></div><p id="confirmation-modal-message">This action cannot be undone.</p><div id="confirmation-modal-buttons"><button id="cancel-btn">Cancel</button><button id="confirm-btn">Confirm</button></div></div></div>
     
-    <div id="edit-profile-modal" class="modal">
+    <div id="study-goal-modal" class="modal">
         <div class="modal-content"><div class="modal-header"><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form"><div class="mb-4"><label for="study-goal-input" class="block text-gray-300 mb-2">Daily Study Goal (hours)</label><input type="number" id="study-goal-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required min="1" max="24"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Set Goal</button></form></div></div>
 
     <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-4"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-gray-300">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-gray-300">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-gray-300">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-gray-300">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="2" required></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-gray-300">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-gray-300">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-gray-300">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-gray-300">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Automation</h3><div class="space-y-3"> <div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Settings</button></form></div></div>
 
     <!-- START: Added Missing Modals -->
+    <div id="edit-profile-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Edit Profile</div><button class="close-modal">&times;</button>
+            </div>
+            <form id="edit-profile-form">
+                <div class="mb-4">
+                    <label for="edit-username-input" class="block text-gray-300 mb-2">Username</label>
+                    <input type="text" id="edit-username-input" class="w-full bg-gray-700 rounded-lg p-3 text-white" required minlength="3">
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Profile</button>
+            </form>
+        </div>
+    </div>
     <div id="group-settings-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Group Settings</div><button class="close-modal">&times;</button></div><div class="space-y-2"><div class="group-settings-item" data-action="edit-info"><i class="fas fa-edit"></i><span>Edit Group Info</span></div><div class="group-settings-item" data-action="group-rules"><i class="fas fa-gavel"></i><span>Group Rules</span></div><div class="group-settings-item" data-action="wake-up-group"><i class="fas fa-bullhorn"></i><span>Wake Up Group</span></div><div class="group-settings-item" data-action="kick-member"><i class="fas fa-user-minus"></i><span>Kick Member</span></div><div class="group-settings-item" data-action="promote-member"><i class="fas fa-crown"></i><span>Promote Member</span></div><div class="group-settings-item" data-action="member-logs"><i class="fas fa-history"></i><span>Member Logs</span></div><div class="group-settings-item text-red-400" data-action="leave-group"><i class="fas fa-sign-out-alt"></i><span>Leave Group</span></div></div></div></div>
     <div id="studicon-store-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Choose Your Studicon</div><button class="close-modal">&times;</button></div><div><div id="studicon-category-tabs" class="flex space-x-1 border-b border-gray-700 mb-4"></div><div id="studicon-picker" class="avatar-picker max-h-60 overflow-y-auto"></div><button id="save-studicon-btn" class="w-full mt-4 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save</button></div></div></div>
     <div id="edit-group-info-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Group Information</div><button class="close-modal">&times;</button></div><form id="edit-group-info-form" class="space-y-4"><input type="hidden" id="edit-group-id-input"><div><label class="block text-sm font-medium text-gray-300">Group Name</label><input id="edit-group-name" type="text" class="w-full bg-gray-700 rounded-lg p-2 mt-1" required></div><div><label class="block text-sm font-medium text-gray-300">Description</label><textarea id="edit-group-description" class="w-full bg-gray-700 rounded-lg p-2 mt-1 h-24" required></textarea></div><div><label class="block text-sm font-medium text-gray-300">Category</label><select id="edit-group-category" class="w-full bg-gray-700 rounded-lg p-2 mt-1"><option>General study</option><option>Language study</option><option>Secondary School</option><option>University</option></select></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-300">Time Goal (h)</label><input id="edit-group-goal" type="number" min="1" max="10" class="w-full bg-gray-700 rounded-lg p-2 mt-1"></div><div><label class="block text-sm font-medium text-gray-300">Capacity</label><input id="edit-group-capacity" type="number" min="2" max="100" class="w-full bg-gray-700 rounded-lg p-2 mt-1"></div></div><div><label class="block text-sm font-medium text-gray-300">Password (optional)</label><input id="edit-group-password" type="text" class="w-full bg-gray-700 rounded-lg p-2 mt-1" placeholder="Leave blank for public"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
@@ -2916,13 +2930,19 @@ let pauseStartTime = 0;
             if (!currentUser) return;
             const { data, error } = await supabase
                 .from('profiles')
-                .select('username, photo_url, email')
+                .select('*') // Select all fields to get streak, achievements, etc.
                 .eq('id', currentUser.id)
                 .maybeSingle();
-            if (error) { console.error(error); return; }
-            // TODO: update your DOM
-            // avatarImg.src = data.photo_url || '/assets/default-avatar.png';
-            // usernameEl.textContent = data.username || data.email || 'User';
+            
+            if (error) { 
+                console.error('Failed to load profile:', error);
+                return; 
+            }
+            
+            if (data) {
+                // This function will now update all parts of the profile UI
+                updateProfileUI(data); 
+            }
         }
 
 
@@ -5139,6 +5159,11 @@ if (achievementsGrid) {
           async function updatePlannerTask(taskId, data) {
             if (!currentUser || !taskId) return;
           
+            // FIX: When moving a task to the inbox, the list_id should be null, not the string "inbox".
+            if (data.hasOwnProperty('listId') && data.listId === 'inbox') {
+              data.listId = null;
+            }
+
             const payload = camelToSnake(data);
           
             const { error } = await supabase
@@ -7720,8 +7745,10 @@ if (achievementsGrid) {
         
         const studyGoalModal = document.getElementById('study-goal-modal');
         ael('settings-study-goal', 'click', () => {
-            document.getElementById('study-goal-input').value = currentUserData.study_goal_hours || '';
-            studyGoalModal.classList.add('active');
+            if (studyGoalModal) {
+                document.getElementById('study-goal-input').value = currentUserData.study_goal_hours || '';
+                studyGoalModal.classList.add('active');
+            }
         });
 
         const pomodoroSettingsModal = document.getElementById('pomodoro-settings-modal');
@@ -7758,18 +7785,36 @@ if (achievementsGrid) {
         async function openEditGroupInfoModal() {
             if (!currentGroupId) return;
             const modal = document.getElementById('edit-group-info-modal');
+            if (!modal) {
+                console.error("Fatal: The entire 'edit-group-info-modal' is missing from the DOM.");
+                return;
+            }
+
             const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', currentGroupId);
             const groupSnap = await getDoc(groupRef);
 
             if (groupSnap.exists()) {
                 const groupData = groupSnap.data();
-                document.getElementById('edit-group-id-input').value = currentGroupId;
-                document.getElementById('edit-group-name').value = groupData.name;
-                document.getElementById('edit-group-description').value = groupData.description;
-                document.getElementById('edit-group-category').value = groupData.category;
-                document.getElementById('edit-group-goal').value = groupData.time_goal;
-                document.getElementById('edit-group-capacity').value = groupData.capacity;
-                document.getElementById('edit-group-password').value = groupData.password || '';
+                
+                // Helper to safely set the value of an element
+                const setValue = (id, value) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.value = value;
+                    } else {
+                        // This log will help find the exact missing element id
+                        console.error(`Element with ID '${id}' not found inside openEditGroupInfoModal.`);
+                    }
+                };
+
+                setValue('edit-group-id-input', currentGroupId);
+                setValue('edit-group-name', groupData.name);
+                setValue('edit-group-description', groupData.description);
+                setValue('edit-group-category', groupData.category);
+                setValue('edit-group-goal', groupData.time_goal);
+                setValue('edit-group-capacity', groupData.capacity);
+                setValue('edit-group-password', groupData.password || '');
+
                 modal.classList.add('active');
             } else {
                 showToast('Could not load group data.', 'error');
@@ -8740,3 +8785,5 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
+
