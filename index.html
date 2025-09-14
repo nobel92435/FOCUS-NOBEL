@@ -4150,7 +4150,7 @@ let pauseStartTime = 0;
                 await supabase.from('sessions').insert({
                     profile_id: currentUser.id,
                     subject: subject,
-                    durationSec: cappedDuration,
+                    durationSeconds: cappedDuration,
                     endedAt: new Date().toISOString(),
                     type: sessionType
                 });
@@ -4462,7 +4462,7 @@ if (achievementsGrid) {
                 return {
                     id: s.id,
                     subject: s.subject,
-                    durationSeconds: s.durationSec,
+                    durationSeconds: s.durationSeconds,
                     endedAt: endedAtDate,
                     type: s.type || 'study'
                 };
@@ -5262,563 +5262,624 @@ if (achievementsGrid) {
             }).join('') || `<div class="empty-group"><i class="fas fa-trophy"></i><h3>Leaderboard is Empty</h3><p>Start studying to see your rank!</p></div>`;
         }
 
-        function renderStatsPage(focusSessions) {
-            const insightsContainer = document.getElementById('insights-container');
-            if (!insightsContainer) return;
-            
-            insightsContainer.innerHTML = `
-                <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
-                    <div>
-                        <h1 class="text-4xl font-bold text-white">Study Insights</h1>
-                        <p class="text-slate-400 mt-1">Welcome back, let's analyze your progress.</p>
-                    </div>
-                    <!-- Added wrapper div for horizontal scrolling on small screens -->
-                    <div class="w-full sm:w-auto overflow-x-auto no-scrollbar">
-                        <nav id="dashboard-nav-bar" class="flex space-x-2 mt-4 sm:mt-0 bg-slate-800 p-2 rounded-xl flex-nowrap" style="white-space: nowrap;">
-                            <button class="nav-btn active" data-view="day">Day</button>
-                            <button class="nav-btn" data-view="trend">Trend</button>
-                            <button class="nav-btn" data-view="month">Month</button>
-                            <button class="nav-btn" data-view="period">Period</button>
-                        </nav>
-                    </div>
-                </header>
-                <main>
-                    <div id="day-view" class="view active grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Content for Day view will be injected by renderDayView -->
-                    </div>
-                    <div id="trend-view" class="view grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Content for Trend view will be injected by renderTrendView -->
-                    </div>
-                    <div id="month-view" class="view grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <!-- Content for Month view will be injected by renderMonthView -->
-                    </div>
-                    <div id="period-view" class="view grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <!-- Content for Period view will be injected by renderPeriodView -->
-                    </div>
-                </main>
-            `;
-            
-            initializeDashboard(focusSessions, insightsContainer);
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }
-
-        function initializeDashboard(focusSessions, insightsContainer) {
-            const today = getCurrentDate(); 
-
-            const appData = focusSessions.map(session => {
-                const endTime = session.endedAt;
-                if (!endTime || typeof session.durationSeconds !== 'number' || isNaN(session.durationSeconds)) {
-                    console.warn('Skipping session with invalid endTime or duration:', session);
-                    return null;
-                }
-                const startTime = new Date(endTime.getTime() - session.durationSeconds * 1000);
-                if (isNaN(startTime.getTime())) {
-                    console.warn('Skipping session due to invalid calculated startTime:', session);
-                    return null;
-                }
-                return {
-                    id: session.id,
-                    subject: session.subject,
-                    startTime: startTime,
-                    endTime: endTime,
-                    duration: session.durationSeconds / 60, // in minutes
-                    durationSeconds: session.durationSeconds,
-                    type: session.type || 'study' // Default to 'study' if type is missing
-                };
-            }).filter(Boolean);
-
-            appData.sort((a, b) => a.startTime - b.startTime);
-
-            let charts = {};
-            
-            const formatTimeDashboard = (minutes) => {
-                if (isNaN(minutes) || minutes < 0) return '00:00:00';
-                const hours = Math.floor(minutes / 60);
-                const mins = Math.floor(minutes % 60);
-                const secs = Math.floor((minutes * 60) % 60);
-                return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-            };
-            
-            const CHART_COLORS = { cyan: 'rgba(34, 211, 238, 0.6)', sky: 'rgba(56, 189, 248, 0.6)', indigo: 'rgba(129, 140, 248, 0.6)', pink: 'rgba(244, 114, 182, 0.6)', orange: 'rgba(251, 146, 60, 0.6)', };
-            const CHART_BORDERS = { cyan: 'rgba(34, 211, 238, 1)', sky: 'rgba(56, 189, 248, 1)', indigo: 'rgba(129, 140, 248, 1)', pink: 'rgba(244, 114, 182, 1)', orange: 'rgba(251, 146, 60, 1)', };
-
-            const destroyChart = (chartId) => {
-                if (charts[chartId]) {
-                    charts[chartId].destroy();
-                    delete charts[chartId];
-                }
-            };
-
-            function generateAIInsight(sessions, elementId = 'ai-insight-text') {
-                const insightTextEl = document.getElementById(elementId);
-                if (!insightTextEl) return;
-
-                if (sessions.length < 3) {
-                    insightTextEl.textContent = "Start logging more sessions to unlock personalized insights!";
-                    return;
-                }
-
-                const insightFunctions = [
-                    () => {
-                        const subjectTotals = sessions.filter(s => s.type === 'study').reduce((acc, s) => {
-                            acc[s.subject] = (acc[s.subject] || 0) + s.duration;
-                            return acc;
-                        }, {});
-                        const topSubject = Object.entries(subjectTotals).sort((a, b) => b[1] - a[1])[0];
-                        if (topSubject && topSubject[1] > 60) {
-                            return `You're putting a lot of effort into '${topSubject[0]}'. Keep up the great work!`;
-                        }
-                        return null;
-                    },
-                    () => {
-                        const subjectTotals = sessions.filter(s => s.type === 'study').reduce((acc, s) => {
-                            acc[s.subject] = (acc[s.subject] || 0) + s.duration;
-                            return acc;
-                        }, {});
-                        const sortedSubjects = Object.entries(subjectTotals).sort((a, b) => a[1] - b[1]);
-                        if (sortedSubjects.length > 1) {
-                            const leastStudied = sortedSubjects[0];
-                            const mostStudied = sortedSubjects[sortedSubjects.length - 1];
-                            if (mostStudied[1] > leastStudied[1] * 3) {
-                                 return `Don't forget to give some attention to '${leastStudied[0]}'. A quick review could be beneficial.`;
-                            }
-                        }
-                        return null;
-                    },
-                    () => {
-                        const hourlyTotals = Array(24).fill(0);
-                        sessions.filter(s => s.type === 'study').forEach(s => {
-                            const startHour = s.startTime.getHours();
-                            hourlyTotals[startHour] += s.duration;
-                        });
-                        const peakHour = hourlyTotals.indexOf(Math.max(...hourlyTotals));
-                        let timeOfDay = '';
-                        if (peakHour >= 5 && peakHour < 12) timeOfDay = 'in the morning';
-                        else if (peakHour >= 12 && peakHour < 17) timeOfDay = 'in the afternoon';
-                        else if (peakHour >= 17 && peakHour < 21) timeOfDay = 'in the evening';
-                        else timeOfDay = 'late at night';
-                        return `You seem to be most productive ${timeOfDay}. Plan your key tasks accordingly!`;
-                    },
-                     () => {
-                        const avgDuration = sessions.filter(s => s.type === 'study').reduce((sum, s) => sum + s.duration, 0) / sessions.filter(s => s.type === 'study').length;
-                        if (avgDuration > 90) {
-                            return "You're tackling long study sessions! Remember that short breaks can boost long-term focus.";
-                        }
-                        if (avgDuration < 25) {
-                            return "Your sessions are short and sharp. For deeper topics, try a longer, uninterrupted block of time.";
-                        }
-                        return null;
-                    },
-                    () => {
-                        const last7Days = new Set();
-                        sessions.filter(s => s.type === 'study').forEach(s => {
-                            const diffDays = (new Date() - s.startTime) / (1000 * 60 * 60 * 24);
-                            if (diffDays <= 7) {
-                                last7Days.add(s.startTime.getDay());
-                            }
-                        });
-                        if (last7Days.size >= 5) {
-                            return "Amazing consistency this week! You've studied on " + last7Days.size + " different days.";
-                        }
-                        if (last7Days.size > 0 && last7Days.size < 3) {
-                             return "Building a consistent habit is key. Try to schedule short sessions every day.";
-                        }
-                        return null;
-                    }
-                ];
-
-                let insight = null;
-                let attempts = 0;
-                while (insight === null && attempts < 5) {
-                    const randomIndex = Math.floor(Math.random() * insightFunctions.length);
-                    insight = insightFunctions[randomIndex]();
-                    attempts++;
-                }
-
-                if (insight === null) {
-                    // Fallback insight if no specific pattern is found
-                    const subjectTotals = sessions.filter(s => s.type === 'study').reduce((acc, s) => {
-                        acc[s.subject] = (acc[s.subject] || 0) + s.duration;
-                        return acc;
-                    }, {});
-                    const topSubject = Object.entries(subjectTotals).sort((a, b) => b[1] - a[1])[0];
-                    if (topSubject) {
-                        insight = `You've been focusing well on '${topSubject[0]}'. Consistency is building!`;
-                    } else {
-                        insight = "Keep up the great work! More sessions will unlock deeper insights.";
-                    }
-                }
-
-                if (insight === null) {
-                    // Fallback insight if no specific pattern is found
-                    const studySessions = sessions.filter(s => s.type === 'study');
-                    if (studySessions.length > 0) {
-                        const subjectTotals = studySessions.reduce((acc, s) => {
-                            acc[s.subject] = (acc[s.subject] || 0) + s.duration;
-                            return acc;
-                        }, {});
-                        const topSubject = Object.entries(subjectTotals).sort((a, b) => b[1] - a[1])[0];
-                        if (topSubject) {
-                            insight = `You've been focusing well on '${topSubject[0]}'. Consistency is building!`;
-                        } else {
-                            insight = "Keep up the great work! More sessions will unlock deeper insights.";
-                        }
-                    } else {
-                        insight = "Log some study sessions to see your personalized AI insights here!";
-                    }
-                }
-                insightTextEl.textContent = insight;
-            }
-
-            function renderPeriodView() {
-                const container = document.getElementById('period-view');
-                container.innerHTML = `
-                    <div class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Total Time</h3><p id="period-total-time" class="text-4xl font-bold text-cyan-400 mt-2">--:--:--</p></div>
-                        <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Daily Average</h3><p id="period-daily-avg" class="text-4xl font-bold text-cyan-400 mt-2">--:--:--</p></div>
-                        <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Focus Score</h3><p id="period-focus-score" class="text-4xl font-bold text-cyan-400 mt-2">--</p></div>
-                        <div class="card bg-gradient-to-br from-sky-500 to-indigo-600 p-6"><h3 class="text-white text-lg font-medium flex items-center"><i data-lucide="brain-circuit" class="mr-2"></i>AI Insight</h3><p id="ai-insight-text" class="text-white mt-2 text-sm">Analyzing your study patterns...</p></div>
-                    </div>
-                    <div class="card lg:col-span-1"><h3 class="font-semibold text-xl mb-4">Subject Ratio</h3><div class="chart-container" style="height: 250px;"><canvas id="subject-ratio-chart"></canvas></div></div>
-                    <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Time Per Day (Last 28 Days)</h3><div class="chart-container"><canvas id="time-per-day-chart"></canvas></div></div>
-                    <div class="card lg:col-span-3"><h3 class="font-semibold text-xl mb-4">Cumulative Study Time</h3><div class="chart-container"><canvas id="cumulative-time-chart"></canvas></div></div>
-                `;
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
-                }
-
-                const last28DaysData = appData.filter(d => {
-                    const diffDays = (today - d.startTime) / (1000 * 60 * 60 * 24);
-                    return diffDays <= 28 && d.type === 'study'; // Only consider study time
-                });
-
-                const totalMinutes = last28DaysData.reduce((sum, s) => sum + s.duration, 0);
-                const dailyAverage = totalMinutes / 28;
-                const focusScore = last28DaysData.length > 0 ? Math.round((totalMinutes / last28DaysData.length) / 60 * 100) : 0; // Avoid division by zero
-
-                document.getElementById('period-total-time').textContent = formatTimeDashboard(totalMinutes);
-                document.getElementById('period-daily-avg').textContent = formatTimeDashboard(dailyAverage);
-                document.getElementById('period-focus-score').textContent = isNaN(focusScore) ? '0' : focusScore;
-
-                const subjectData = last28DaysData.reduce((acc, session) => {
-                    acc[session.subject] = (acc[session.subject] || 0) + session.duration;
-                    return acc;
-                }, {});
-                destroyChart('subject-ratio-chart');
-                charts['subject-ratio-chart'] = new Chart(document.getElementById('subject-ratio-chart'), {
-                    type: 'doughnut', plugins: [ChartDataLabels],
-                    data: { labels: Object.keys(subjectData), datasets: [{ data: Object.values(subjectData), backgroundColor: Object.values(CHART_COLORS), borderColor: '#1e293b', borderWidth: 4, }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#cbd5e1' } }, tooltip: { callbacks: { label: function(context) { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = ((context.parsed / total) * 100).toFixed(1) + '%'; return `${context.label}: ${percentage}`; } } }, datalabels: { formatter: (value, ctx) => { const sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value * 100 / sum).toFixed(1) + "%"; return percentage; }, color: '#ffffff', font: { weight: 'bold' } } } }
-                });
-
-                const timePerDay = Array(28).fill(0);
-                appData.filter(d => d.type === 'study').forEach(s => { // Only consider study time
-                    const dayIndex = 27 - Math.floor((today - s.startTime) / (1000 * 60 * 60 * 24));
-                    if (dayIndex >= 0 && dayIndex < 28) { timePerDay[dayIndex] += s.duration; }
-                });
-                const labels28Days = Array.from({length: 28}, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (27 - i)); return d; });
-                destroyChart('time-per-day-chart');
-                charts['time-per-day-chart'] = new Chart(document.getElementById('time-per-day-chart'), {
-                    type: 'bar',
-                    data: { labels: labels28Days.map(d => `${d.getMonth()+1}/${d.getDate()}`), datasets: [{ label: 'Minutes Studied', data: timePerDay, backgroundColor: CHART_COLORS.sky, borderColor: CHART_BORDERS.sky, borderWidth: 1, borderRadius: 5, }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }, x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', maxRotation: 90, minRotation: 45 } } }, plugins: { legend: { display: false } } }
-                });
-                
-                let cumulativeTotal = 0;
-                const cumulativeData = timePerDay.map(d => cumulativeTotal += d);
-                destroyChart('cumulative-time-chart');
-                charts['cumulative-time-chart'] = new Chart(document.getElementById('cumulative-time-chart'), {
-                    type: 'line',
-                    data: { labels: labels28Days.map(d => `${d.getMonth()+1}/${d.getDate()}`), datasets: [{ label: 'Cumulative Minutes', data: cumulativeData, fill: true, backgroundColor: CHART_COLORS.cyan, borderColor: CHART_BORDERS.cyan, tension: 0.4, pointRadius: 0, }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }, x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { display: false } } }
-                });
-                generateAIInsight(last28DaysData);
-            }
-
-            function renderMonthView() {
-                const container = document.getElementById('month-view');
-                container.innerHTML = `
-                    <div class="card lg:col-span-1"><h3 class="font-semibold text-xl mb-4">Study vs. Break</h3><div class="chart-container"><canvas id="study-break-chart"></canvas></div></div>
-                    <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Study Time by Subject (This Month)</h3><div class="chart-container"><canvas id="study-time-by-subject-chart"></canvas></div></div>
-                    <div class="card lg:col-span-3"><h3 class="font-semibold text-xl mb-4">Start/End Time Distribution</h3><div class="chart-container"><canvas id="start-end-distribution-chart"></canvas></div></div>
-                `;
-
-                const thisMonthData = appData.filter(d => d.startTime.getMonth() === today.getMonth() && d.startTime.getFullYear() === today.getFullYear());
-                
-                const totalStudy = thisMonthData.filter(s => s.type === 'study').reduce((sum, s) => sum + s.duration, 0);
-                const totalBreaks = thisMonthData.filter(s => s.type === 'break').reduce((sum, s) => sum + s.duration, 0);
-
-                destroyChart('study-break-chart');
-                charts['study-break-chart'] = new Chart(document.getElementById('study-break-chart'), {
-                    type: 'doughnut', plugins: [ChartDataLabels],
-                    data: { labels: ['Study', 'Break'], datasets: [{ data: [totalStudy, totalBreaks], backgroundColor: [CHART_COLORS.indigo, '#475569'], borderColor: '#1e293b', borderWidth: 4, }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { color: '#cbd5e1' } }, tooltip: { callbacks: { label: function(context) { const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (total > 0) ? ((context.parsed / total) * 100).toFixed(1) + '%' : '0%'; return `${context.label}: ${percentage}`; } } }, datalabels: { formatter: (value, ctx) => { const sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (sum > 0) ? (value * 100 / sum).toFixed(1) + "%" : "0%"; return percentage; }, color: '#ffffff', font: { weight: 'bold' } } } }
-                });
-
-                const subjectDataMonth = thisMonthData.filter(s => s.type === 'study').reduce((acc, session) => { acc[session.subject] = (acc[session.subject] || 0) + session.duration; return acc; }, {});
-                destroyChart('study-time-by-subject-chart');
-                charts['study-time-by-subject-chart'] = new Chart(document.getElementById('study-time-by-subject-chart'), {
-                    type: 'bar',
-                    data: { labels: Object.keys(subjectDataMonth), datasets: [{ label: 'Minutes Studied', data: Object.values(subjectDataMonth), backgroundColor: Object.values(CHART_COLORS), }] },
-                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }, y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { display: false } } }
-                });
-
-                const distributionData = thisMonthData.filter(s => s.type === 'study').map(s => ({ x: s.startTime, y: s.startTime.getHours() + s.startTime.getMinutes() / 60, yEnd: s.endTime.getHours() + s.endTime.getMinutes() / 60, }));
-                destroyChart('start-end-distribution-chart');
-                charts['start-end-distribution-chart'] = new Chart(document.getElementById('start-end-distribution-chart'), {
-                    type: 'scatter',
-                    data: { datasets: [{ label: 'Start Time', data: distributionData.map(d => ({x: d.x, y: d.y})), backgroundColor: CHART_COLORS.sky, }, { label: 'End Time', data: distributionData.map(d => ({x: d.x, y: d.yEnd})), backgroundColor: CHART_COLORS.pink, }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'time', time: { unit: 'day' }, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }, y: { beginAtZero: true, max: 24, grid: { color: '#334155' }, ticks: { color: '#94a3b8', stepSize: 2, callback: (v) => `${v}:00` } } }, plugins: { legend: { labels: { color: '#cbd5e1' } } } }
-                });
-            }
-
-            function renderTrendView() {
-                const container = document.getElementById('trend-view');
-                container.innerHTML = `
-                    <div class="card lg:col-span-1"><h3 class="font-semibold text-xl mb-4">Study Time Regularity</h3><div class="chart-container"><canvas id="regularity-chart"></canvas></div></div>
-                    <div class="card lg:col-span-1"><h3 class="font-semibold text-xl mb-4">Performance Forecast</h3><div class="chart-container"><canvas id="forecast-chart"></canvas></div></div>
-                    <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Recent Session Log</h3><div id="session-log-container-trend" class="max-h-80 overflow-y-auto pr-2"></div></div>
-                `;
-
-                const regularityData = appData.filter(s => s.type === 'study').slice(-50).map(s => ({ x: s.startTime, y: s.startTime.getHours() + s.startTime.getMinutes() / 60, r: s.duration / 10 }));
-                destroyChart('regularity-chart');
-                charts['regularity-chart'] = new Chart(document.getElementById('regularity-chart'), {
-                    type: 'bubble',
-                    data: { datasets: [{ label: 'Study Session', data: regularityData, backgroundColor: CHART_COLORS.indigo, }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'time', time: { unit: 'day' }, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }, y: { min: 6, max: 24, grid: { color: '#334155' }, ticks: { color: '#94a3b8', stepSize: 3, callback: (v) => `${v}:00` } } }, plugins: { legend: { display: false } } }
-                });
-                
-                const last14Days = Array(14).fill(0);
-                appData.filter(d => (today - d.startTime) / (1000 * 60 * 60 * 24) <= 14 && d.type === 'study').forEach(s => {
-                    const dayIndex = 13 - Math.floor((today - s.startTime) / (1000 * 60 * 60 * 24));
-                    if (dayIndex >= 0) last14Days[dayIndex] += s.duration;
-                });
-                const avgLast14 = last14Days.reduce((a, b) => a + b, 0) / 14;
-                const forecastData = Array.from({length: 7}, (_, i) => avgLast14 * (i + 1) + last14Days.reduce((a, b) => a + b, 0));
-                const forecastLabels = Array.from({length: 7}, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i + 1); return `${d.getMonth()+1}/${d.getDate()}`; });
-                
-                destroyChart('forecast-chart');
-                charts['forecast-chart'] = new Chart(document.getElementById('forecast-chart'), {
-                    type: 'line',
-                    data: { labels: forecastLabels, datasets: [{ label: 'Projected Study Minutes', data: forecastData, borderColor: CHART_BORDERS.orange, backgroundColor: CHART_COLORS.orange, borderDash: [5, 5], tension: 0.2, }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }, x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { display: false } } }
-                });
-                
-                renderSessionLog(appData.filter(s => s.type === 'study').slice().reverse().slice(0, 20), 'session-log-container-trend');
-            }
-            
-            function renderDayView() {
-                const container = document.getElementById('day-view');
-                container.innerHTML = `
-                    <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                         <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Total Time Today</h3><p id="day-total-time" class="text-4xl font-bold text-cyan-400 mt-2">--:--:--</p></div>
-                         <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Sessions Today</h3><p id="day-session-count" class="text-4xl font-bold text-cyan-400 mt-2">--</p></div>
-                         <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Avg. Session</h3><p id="day-avg-session" class="text-4xl font-bold text-cyan-400 mt-2">--m</p></div>
-                         <div class="card bg-gradient-to-br from-sky-500 to-indigo-600 p-6"><h3 class="text-white text-lg font-medium flex items-center"><i data-lucide="brain-circuit" class="mr-2"></i>AI Insight</h3><p id="day-ai-insight-text" class="text-white mt-2 text-sm">Analyzing today's patterns...</p></div>
-                    </div>
-                    <div class="card lg:col-span-1"><h3 class="font-semibold text-xl mb-4">Today's Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="day-subject-ratio-chart"></canvas></div></div>
-                    <div class="card lg:col-span-1"><h3 class="font-semibold text-xl mb-4">Time Per Hour Today</h3><div class="chart-container"><canvas id="day-time-per-hour-chart"></canvas></div></div>
-                    <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Today's Session Log</h3><div id="session-log-container-day" class="max-h-80 overflow-y-auto pr-2"></div></div>
-                `;
-
-                const todayStr = today.toISOString().split('T')[0];
-                const todayData = appData.filter(d => d.startTime.toISOString().split('T')[0] === todayStr && d.type === 'study'); // Only consider study time
-
-                const totalMinutesToday = todayData.reduce((sum, s) => sum + s.duration, 0);
-                const sessionCountToday = todayData.length;
-                const avgSessionMinutes = sessionCountToday > 0 ? totalMinutesToday / sessionCountToday : 0;
-
-                document.getElementById('day-total-time').textContent = formatTimeDashboard(totalMinutesToday);
-                document.getElementById('day-session-count').textContent = sessionCountToday;
-                document.getElementById('day-avg-session').textContent = `${avgSessionMinutes.toFixed(0)}m`;
-                
-                generateAIInsight(todayData, 'day-ai-insight-text');
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
-                }
-
-                const subjectDataToday = todayData.reduce((acc, session) => {
-                    acc[session.subject] = (acc[session.subject] || 0) + session.duration;
-                    return acc;
-                }, {});
-                destroyChart('day-subject-ratio-chart');
-                charts['day-subject-ratio-chart'] = new Chart(document.getElementById('day-subject-ratio-chart'), {
-                    type: 'pie', plugins: [ChartDataLabels],
-                    data: { labels: Object.keys(subjectDataToday), datasets: [{ data: Object.values(subjectDataToday), backgroundColor: Object.values(CHART_COLORS), borderColor: '#1e293b', borderWidth: 4, }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#cbd5e1' } }, datalabels: { formatter: (value, ctx) => { const sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); const percentage = (value * 100 / sum).toFixed(0) + "%"; return percentage; }, color: '#ffffff', font: { weight: 'bold' } } } }
-                });
-
-                const timePerHour = Array(24).fill(0);
-                todayData.forEach(s => {
-                    const hour = s.startTime.getHours();
-                    timePerHour[hour] += s.duration;
-                });
-                const hourLabels = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
-                destroyChart('day-time-per-hour-chart');
-                charts['day-time-per-hour-chart'] = new Chart(document.getElementById('day-time-per-hour-chart'), {
-                    type: 'bar',
-                    data: { labels: hourLabels, datasets: [{ label: 'Minutes Studied', data: timePerHour, backgroundColor: CHART_COLORS.sky, borderRadius: 5, }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }, x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', maxRotation: 90, minRotation: 45 } } }, plugins: { legend: { display: false } } }
-                });
-
-                renderSessionLog(todayData.slice().reverse(), 'session-log-container-day');
-            }
-
-            function renderSessionLog(sessions, containerId) {
-                const logContainer = document.getElementById(containerId);
-                if (!logContainer) return;
-
-                logContainer.innerHTML = '';
-                sessions.forEach(s => {
-                    const item = document.createElement('div');
-                    item.className = 'session-log-item p-3 mb-2 bg-slate-700/50 rounded-lg flex justify-between items-center';
-                    item.innerHTML = `
-                        <div>
-                            <p class="font-semibold text-white">${s.subject} <span class="text-sm text-gray-500">(${s.type})</span></p>
-                            <p class="text-sm text-slate-400">${s.startTime.toLocaleString()}</p>
-                        </div>
-                        <div class="flex items-center">
-                            <div class="text-lg font-bold text-sky-400 mr-4">${s.duration.toFixed(0)} min</div>
-                            <button class="log-options-btn p-2 rounded-full hover:bg-slate-600" data-session-id="${s.id}" data-duration-seconds="${s.durationSeconds}" data-ended-at="${s.endTime.toISOString()}">
-                                <i data-lucide="more-vertical" class="w-5 h-5 pointer-events-none"></i>
-                            </button>
-                            <div class="log-options-menu">
-                                <button class="log-edit-btn">Edit</button>
-                                <button class="log-delete-btn">Delete</button>
-                            </div>
-                        </div>
-                    `;
-                    logContainer.appendChild(item);
-                });
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
-                }
-            }
-
-            const navBar = insightsContainer.querySelector('#dashboard-nav-bar');
-            const views = insightsContainer.querySelectorAll('.view');
-            const navButtons = navBar.querySelectorAll('.nav-btn');
-
-            navBar.addEventListener('click', (e) => {
-                if (e.target.tagName === 'BUTTON') {
-                    const viewName = e.target.dataset.view;
-                    navButtons.forEach(btn => btn.classList.remove('active'));
-                    e.target.classList.add('active');
-                    views.forEach(view => {
-                        view.classList.remove('active');
-                        if (view.id === `${viewName}-view`) { view.classList.add('active'); }
-                    });
-                    switch (viewName) {
-                        case 'day': renderDayView(); break;
-                        case 'trend': renderTrendView(); break;
-                        case 'month': renderMonthView(); break;
-                        case 'period': renderPeriodView(); break;
-                    }
-                }
-            });
-
-            document.getElementById('insights-container').addEventListener('click', e => {
-                const optionsBtn = e.target.closest('.log-options-btn');
-                if (optionsBtn) {
-                    const menu = optionsBtn.nextElementSibling;
-                    document.querySelectorAll('.log-options-menu').forEach(m => {
-                        if (m !== menu) m.classList.remove('active');
-                    });
-                    menu.classList.toggle('active');
-                    return;
-                }
-
-                const deleteBtn = e.target.closest('.log-delete-btn');
-                if(deleteBtn) {
-                    const sessionItem = deleteBtn.closest('.session-log-item').querySelector('.log-options-btn');
-                    const sessionId = sessionItem.dataset.sessionId;
-                    const duration = parseInt(sessionItem.dataset.durationSeconds, 10);
-                    const endedAt = new Date(sessionItem.dataset.endedAt);
-                    
-                    showConfirmationModal('Delete Session?', 'Are you sure you want to permanently delete this study session?', () => {
-                        deleteSession(sessionId, duration, endedAt);
-                    });
-                }
-
-                 const editBtn = e.target.closest('.log-edit-btn');
-                    if(editBtn) {
-                        const sessionItem = editBtn.closest('.session-log-item').querySelector('.log-options-btn');
-                        const sessionId = sessionItem.dataset.sessionId;
-                        const durationSeconds = parseInt(sessionItem.dataset.durationSeconds, 10);
-                        const endedAt = sessionItem.dataset.endedAt;
-
-                        const modal = document.getElementById('edit-session-modal');
-                        document.getElementById('edit-session-id').value = sessionId;
-                        document.getElementById('edit-session-duration').value = Math.round(durationSeconds / 60);
-                        document.getElementById('edit-session-old-duration').value = durationSeconds;
-                        document.getElementById('edit-session-ended-at').value = endedAt;
-                        modal.classList.add('active');
-                    }
-            });
-
-            // Initial render
-            const initialActiveView = insightsContainer.querySelector('.nav-btn.active').dataset.view;
-            if (initialActiveView === 'day') {
-                renderDayView();
-            } else {
-                renderTrendView();
-            }
+        // ---- Public API ----
+        // Call renderStatsPage() when you open the Stats page.
+        // Call disposeStatsPage() when you leave the page to clean subscriptions/intervals.
+        
+        let __stats = { subSessions: null, subUser: null, liveInterval: null, cachedSessions: [], liveStudying: null, charts: {} };
+        
+        function disposeStatsPage() {
+          if (__stats.subSessions) { supabase.removeChannel(__stats.subSessions); __stats.subSessions = null; }
+          if (__stats.subUser) { supabase.removeChannel(__stats.subUser); __stats.subUser = null; }
+          if (__stats.liveInterval) { clearInterval(__stats.liveInterval); __stats.liveInterval = null; }
+          __destroyAllCharts();
         }
         
-        async function deleteSession(sessionId, durationSeconds, endedAt) {
-            if (!currentUser || !sessionId) return;
-            
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.id);
-            const sessionRef = doc(userRef, 'sessions', sessionId);
-
-            try {
-                // Determine if the session being deleted is a study or break session
-                const sessionDoc = await getDoc(sessionRef);
-                const sessionType = sessionDoc.exists() ? sessionDoc.data().type || 'study' : 'study'; // Default to 'study' if type is missing
-
-                await deleteDoc(sessionRef);
-
-                if (sessionType === 'study') {
-                    await updateDoc(userRef, { total_study_seconds: increment(-durationSeconds) });
-                    await updateDoc(publicUserRef, { total_study_seconds: increment(-durationSeconds) });
-                } else { // 'break'
-                    await updateDoc(userRef, { total_break_seconds: increment(-durationSeconds) });
-                    await updateDoc(publicUserRef, { total_break_seconds: increment(-durationSeconds) });
-                }
-
-                const sessionDateStr = endedAt.toISOString().split('T')[0];
-                const todayStr = getCurrentDate().toISOString().split('T')[0];
-                if (sessionDateStr === todayStr) {
-                    if (sessionType === 'study') {
-                        totalTimeTodayInSeconds -= durationSeconds;
-                        if (totalTimeTodayInSeconds < 0) totalTimeTodayInSeconds = 0;
-                        await updateDoc(userRef, {
-                            total_time_today: {
-                                date: todayStr,
-                                seconds: totalTimeTodayInSeconds
-                            }
-                        });
-                    } else { // 'break'
-                        totalBreakTimeTodayInSeconds -= durationSeconds;
-                        if (totalBreakTimeTodayInSeconds < 0) totalBreakTimeTodayInSeconds = 0;
-                        await updateDoc(userRef, {
-                            total_break_time_today: {
-                                date: todayStr,
-                                seconds: totalBreakTimeTodayInSeconds
-                            }
-                        });
-                    }
-                }
-                
-                showToast("Session deleted successfully", "success");
-            } catch (error) {
-                console.error("Error deleting session:", error);
-                showToast("Failed to delete session.", "error");
-            }
+        function renderStatsPage(/* focusSessions (ignored now) */) {
+          const insightsContainer = document.getElementById('insights-container');
+          if (!insightsContainer) return;
+        
+          insightsContainer.innerHTML = `
+            <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+              <div>
+                <h1 class="text-4xl font-bold text-white">Study Insights</h1>
+                <p class="text-slate-400 mt-1">Welcome back, let's analyze your progress.</p>
+              </div>
+              <div class="w-full sm:w-auto overflow-x-auto no-scrollbar">
+                <nav id="dashboard-nav-bar" class="flex space-x-2 mt-4 sm:mt-0 bg-slate-800 p-2 rounded-xl flex-nowrap" style="white-space: nowrap;">
+                  <button class="nav-btn active" data-view="day">Day</button>
+                  <button class="nav-btn" data-view="trend">Trend</button>
+                  <button class="nav-btn" data-view="month">Month</button>
+                  <button class="nav-btn" data-view="period">Period</button>
+                </nav>
+              </div>
+            </header>
+            <main>
+              <div id="day-view" class="view active grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
+              <div id="trend-view" class="view grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
+              <div id="month-view" class="view grid grid-cols-1 lg:grid-cols-3 gap-6"></div>
+              <div id="period-view" class="view grid grid-cols-1 lg:grid-cols-3 gap-6"></div>
+            </main>
+          `;
+        
+          // wire nav
+          const navBar = insightsContainer.querySelector('#dashboard-nav-bar');
+          const views = insightsContainer.querySelectorAll('.view');
+          navBar.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'BUTTON') return;
+            const viewName = e.target.dataset.view;
+            navBar.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            views.forEach(v => v.classList.toggle('active', v.id === `${viewName}-view`));
+            __renderActiveView(); // render current tab from current data
+          });
+        
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        
+          // start realtime + initial load
+          __startStatsRealtime();
         }
+        
+        /* ---------------- internals ---------------- */
+        
+        const CHART_COLORS = {
+          cyan:   'rgba(34, 211, 238, 0.6)',
+          sky:    'rgba(56, 189, 248, 0.6)',
+          indigo: 'rgba(129, 140, 248, 0.6)',
+          pink:   'rgba(244, 114, 182, 0.6)',
+          orange: 'rgba(251, 146, 60, 0.6)',
+        };
+        const CHART_BORDERS = {
+          cyan:   'rgba(34, 211, 238, 1)',
+          sky:    'rgba(56, 189, 248, 1)',
+          indigo: 'rgba(129, 140, 248, 1)',
+          pink:   'rgba(244, 114, 182, 1)',
+          orange: 'rgba(251, 146, 60, 1)',
+        };
+        const COLOR_LIST = Object.values(CHART_COLORS);
+        const withDataLabels = (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [];
+        
+        function __palette(n){ const out=[]; for(let i=0;i<n;i++) out.push(COLOR_LIST[i%COLOR_LIST.length]); return out; }
+        function __toDateSafe(v){ if(!v) return null; const d=(v instanceof Date)?v:new Date(v); return isNaN(d.getTime())?null:d; }
+        function __today(){ return new Date(); }
+        function __fmtHMS(minutes){
+          if (!isFinite(minutes) || minutes < 0) return '00:00:00';
+          const h = Math.floor(minutes/60), m=Math.floor(minutes%60), s=Math.floor((minutes*60)%60);
+          return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }
+        function __destroyChart(id){ if (__stats.charts[id]) { __stats.charts[id].destroy(); delete __stats.charts[id]; } }
+        function __destroyAllCharts(){ Object.keys(__stats.charts).forEach(__destroyChart); }
+        
+        function __normalizeSessions(rows){
+          return (rows||[])
+            .map(s=>{
+              const durSec = Number(s.durationSeconds ?? s.duration_seconds ?? 0);
+              const end = __toDateSafe(s.endedAt ?? s.ended_at);
+              if (!end || !isFinite(durSec) || durSec <= 0) return null;
+              const start = new Date(end.getTime() - durSec*1000);
+              return {
+                id: s.id,
+                subject: s.subject || 'General',
+                startTime: start,
+                endTime: end,
+                duration: durSec/60,
+                durationSeconds: durSec,
+                type: s.type || 'study',
+              };
+            })
+            .filter(Boolean)
+            .sort((a,b)=>a.startTime-b.startTime);
+        }
+        
+        // merge a live virtual session into normalized list
+        function __mergeLiveVirtual(norm){
+          const live = __stats.liveStudying; // {type, startTime, subject?}
+          if (!live) return norm;
+        
+          const start = __toDateSafe(live.startTime);
+          if (!start) return norm;
+        
+          const now = __today();
+          const durMin = (now - start) / 60000;
+          if (durMin <= 0) return norm;
+        
+          const virtual = {
+            id: '__live__',
+            subject: live.subject || 'Focus',
+            startTime: start,
+            endTime: now,
+            duration: durMin,
+            durationSeconds: Math.floor(durMin*60),
+            type: live.type || 'study',
+          };
+        
+          // don’t double-count if a session row is already being written continuously;
+          // but normally ongoing timer has no finished session row, so we just add.
+          return [...norm, virtual].sort((a,b)=>a.startTime-b.startTime);
+        }
+        
+        /* ---------- realtime wiring ---------- */
+        
+        async function __startStatsRealtime() {
+          if (!currentUser) return;
+        
+          // initial fetch
+          await __reloadSessions();
+          await __loadLiveStudying();
+          __renderActiveView();
+          __setupLiveTicker();
+        
+          // subscribe to my sessions changes
+          if (__stats.subSessions) supabase.removeChannel(__stats.subSessions);
+          __stats.subSessions = supabase
+            .channel(`sessions:me:${currentUser.id}`)
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'sessions', filter: `profile_id=eq.${currentUser.id}` },
+                async () => {
+                  await __reloadSessions();
+                  __renderActiveView();
+                })
+            .subscribe();
+        
+          // subscribe to my user row to track studying start/stop and subject/type flips (normal vs pomodoro)
+          if (__stats.subUser) supabase.removeChannel(__stats.subUser);
+          __stats.subUser = supabase
+            .channel(`users:me:${currentUser.id}`)
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'users', filter: `id=eq.${currentUser.id}` },
+                (payload) => {
+                  const row = payload.new || payload.old || {};
+                  __stats.liveStudying = row.studying || null;
+                  __setupLiveTicker();     // restart/stop ticking depending on state
+                  __renderActiveView();    // re-render quickly (subject/type may change)
+                })
+            .subscribe();
+        }
+        
+        async function __reloadSessions() {
+          const { data, error } = await supabase
+            .from('sessions')
+            .select('id, profile_id, subject, durationSeconds, endedAt, type')
+            .eq('profile_id', currentUser.id)
+            .order('endedAt', { ascending: true });
+          if (error) { console.error('stats: load sessions failed', error); return; }
+          __stats.cachedSessions = data || [];
+        }
+        
+        async function __loadLiveStudying() {
+          const { data, error } = await supabase
+            .from('users')
+            .select('studying')
+            .eq('id', currentUser.id)
+            .single();
+          if (error) { console.warn('stats: load user studying failed', error); }
+          __stats.liveStudying = data?.studying || null;
+        }
+        
+        function __setupLiveTicker() {
+          // if currently studying/break, tick every 1s; else stop
+          if (__stats.liveInterval) { clearInterval(__stats.liveInterval); __stats.liveInterval = null; }
+          if (!__stats.liveStudying || !__stats.liveStudying.startTime) return;
+          __stats.liveInterval = setInterval(() => {
+            // update only the active tab; charts update too
+            __renderActiveView(true /*tick*/);
+          }, 1000);
+        }
+        
+        /* ---------- render routing ---------- */
+        
+        function __renderActiveView(isTick=false) {
+          const container = document.getElementById('insights-container');
+          if (!container) return;
+        
+          // normalize + merge virtual live
+          const base = __normalizeSessions(__stats.cachedSessions);
+          const appData = __mergeLiveVirtual(base);
+          const today = __today();
+        
+          // simple inner helpers reused across views
+          const genInsight = __makeInsightGenerator(today);
+          const destroyChart = __destroyChart;
+        
+          // Which tab?
+          const activeBtn = container.querySelector('#dashboard-nav-bar .nav-btn.active');
+          const view = activeBtn ? activeBtn.dataset.view : 'day';
+        
+          if (view === 'day') return __renderDay(appData, today, genInsight, destroyChart);
+          if (view === 'trend') return __renderTrend(appData, today, destroyChart);
+          if (view === 'month') return __renderMonth(appData, today, destroyChart);
+          return __renderPeriod(appData, today, genInsight, destroyChart);
+        }
+        
+        /* ---------- insight generator ---------- */
+        function __makeInsightGenerator(today){
+          return function generateAIInsight(sessions, elementId='ai-insight-text'){
+            const el = document.getElementById(elementId); if (!el) return;
+            const study = sessions.filter(s=>s.type==='study');
+            if (study.length < 3) { el.textContent = 'Start logging more sessions to unlock personalized insights!'; return; }
+            const cands = [
+              ()=>{ const tot=study.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration,a),{}); const top=Object.entries(tot).sort((x,y)=>y[1]-x[1])[0]; return (top&&top[1]>60)?`You're putting a lot of effort into '${top[0]}'. Keep it up!`:null; },
+              ()=>{ const tot=study.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration,a),{}); const arr=Object.entries(tot).sort((x,y)=>x[1]-y[1]); return (arr.length>1&&arr.at(-1)[1]>arr[0][1]*3)?`Don't forget '${arr[0][0]}'. A quick review could help.`:null; },
+              ()=>{ const hourly=Array(24).fill(0); study.forEach(s=>hourly[s.startTime.getHours()]+=s.duration); const peak=hourly.indexOf(Math.max(...hourly)); const tod=peak>=5&&peak<12?'in the morning':peak<17?'in the afternoon':peak<21?'in the evening':'late at night'; return `You seem most productive ${tod}. Plan key tasks accordingly!`; },
+              ()=>{ const avg=study.reduce((sum,s)=>sum+s.duration,0)/study.length; if (avg>90) return 'Long sessions! Remember short breaks to maintain focus.'; if (avg<25) return 'Sessions are short and sharp. Try a longer block for deep work.'; return null; },
+              ()=>{ const days=new Set(); study.forEach(s=>{ if ((today - s.startTime)/86400000 <= 7) days.add(s.startTime.getDay()); }); if (days.size>=5) return `Great consistency! You studied on ${days.size} days this week.`; if (days.size>0&&days.size<3) return 'Build the habit — aim for short daily sessions.'; return null; }
+            ];
+            let msg=null, tries=0; while(!msg && tries<cands.length){ msg=cands[Math.floor(Math.random()*cands.length)](); tries++; }
+            if (!msg) {
+              const tot=study.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration,a),{}); const top=Object.entries(tot).sort((x,y)=>y[1]-x[1])[0];
+              msg = top ? `You've been focusing well on '${top[0]}'. Consistency is building!` : 'Keep going — more sessions unlock deeper insights.';
+            }
+            el.textContent = msg;
+          };
+        }
+        
+        /* ---------- Views (reuse your original visuals; just fed by appData) ---------- */
+        
+        function __renderPeriod(appData, today, generateAIInsight, destroyChart) {
+          const el = document.getElementById('period-view'); if (!el) return;
+          el.innerHTML = `
+            <div class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Total Time</h3><p id="period-total-time" class="text-4xl font-bold text-cyan-400 mt-2">--:--:--</p></div>
+              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Daily Average</h3><p id="period-daily-avg" class="text-4xl font-bold text-cyan-400 mt-2">--:--:--</p></div>
+              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Focus Score</h3><p id="period-focus-score" class="text-4xl font-bold text-cyan-400 mt-2">--</p></div>
+              <div class="card bg-gradient-to-br from-sky-500 to-indigo-600 p-6"><h3 class="text-white text-lg font-medium flex items-center"><i data-lucide="brain-circuit" class="mr-2"></i>AI Insight</h3><p id="ai-insight-text" class="text-white mt-2 text-sm">Analyzing your study patterns...</p></div>
+            </div>
+            <div class="card lg:col-span-1"><h3 class="font-semibold text-xl mb-4">Subject Ratio</h3><div class="chart-container" style="height: 250px;"><canvas id="subject-ratio-chart"></canvas></div></div>
+            <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Time Per Day (Last 28 Days)</h3><div class="chart-container"><canvas id="time-per-day-chart"></canvas></div></div>
+            <div class="card lg:col-span-3"><h3 class="font-semibold text-xl mb-4">Cumulative Study Time</h3><div class="chart-container"><canvas id="cumulative-time-chart"></canvas></div></div>
+          `;
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        
+          const last28 = appData.filter(d => (today - d.startTime)/86400000 <= 28 && d.type==='study');
+          const totalMin = last28.reduce((s,x)=>s+x.duration,0);
+          const dailyAvg = totalMin/28;
+          const focusScore = last28.length ? Math.round((totalMin/last28.length)/60*100) : 0;
+        
+          document.getElementById('period-total-time').textContent = __fmtHMS(totalMin);
+          document.getElementById('period-daily-avg').textContent = __fmtHMS(dailyAvg);
+          document.getElementById('period-focus-score').textContent = String(isNaN(focusScore)?0:focusScore);
+        
+          const subjAgg = last28.reduce((a,s)=> (a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
+          destroyChart('subject-ratio-chart');
+          __stats.charts['subject-ratio-chart'] = new Chart(document.getElementById('subject-ratio-chart'), {
+            type:'doughnut', plugins: withDataLabels,
+            data:{ labels:Object.keys(subjAgg), datasets:[{ data:Object.values(subjAgg), backgroundColor: __palette(Object.keys(subjAgg).length), borderColor:'#1e293b', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{
+              legend:{ position:'right', labels:{ color:'#cbd5e1' } },
+              tooltip:{ callbacks:{ label(ctx){ const t=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; const pct=((ctx.parsed/t)*100).toFixed(1)+'%'; return `${ctx.label}: ${pct}`; } } },
+              datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return ((v*100/s).toFixed(1))+'%'; }, color:'#fff', font:{weight:'bold'} } : undefined
+            } }
+          });
+        
+          const perDay = Array(28).fill(0);
+          appData.filter(d=>d.type==='study').forEach(s=>{
+            const idx = 27 - Math.floor((today - s.startTime)/86400000);
+            if (idx>=0 && idx<28) perDay[idx] += s.duration;
+          });
+          const labels28 = Array.from({length:28},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(27-i)); return `${d.getMonth()+1}/${d.getDate()}`; });
+        
+          destroyChart('time-per-day-chart');
+          __stats.charts['time-per-day-chart'] = new Chart(document.getElementById('time-per-day-chart'), {
+            type:'bar',
+            data:{ labels: labels28, datasets:[{ label:'Minutes Studied', data: perDay, backgroundColor: CHART_COLORS.sky, borderColor: CHART_BORDERS.sky, borderWidth:1, borderRadius:5 }] },
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8', maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
+          });
+        
+          let cum = 0; const cumulative = perDay.map(v => (cum += v));
+          destroyChart('cumulative-time-chart');
+          __stats.charts['cumulative-time-chart'] = new Chart(document.getElementById('cumulative-time-chart'), {
+            type:'line',
+            data:{ labels: labels28, datasets:[{ label:'Cumulative Minutes', data:cumulative, fill:true, backgroundColor: CHART_COLORS.cyan, borderColor: CHART_BORDERS.cyan, tension:0.4, pointRadius:0 }] },
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
+          });
+        
+          generateAIInsight(last28);
+        }
+        
+        function __renderMonth(appData, today, destroyChart) {
+          const el = document.getElementById('month-view'); if (!el) return;
+          el.innerHTML = `
+            <div class="card lg:col-span-1"><h3 class="font-semibold text-xl mb-4">Study vs. Break</h3><div class="chart-container"><canvas id="study-break-chart"></canvas></div></div>
+            <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Study Time by Subject (This Month)</h3><div class="chart-container"><canvas id="study-time-by-subject-chart"></canvas></div></div>
+            <div class="card lg:col-span-3"><h3 class="font-semibold text-xl mb-4">Start/End Time Distribution</h3><div class="chart-container"><canvas id="start-end-distribution-chart"></canvas></div></div>
+          `;
+        
+          const thisMonth = appData.filter(d => d.startTime.getMonth()===today.getMonth() && d.startTime.getFullYear()===today.getFullYear());
+          const studyMin = thisMonth.filter(s=>s.type==='study').reduce((sum,s)=>sum+s.duration,0);
+          const breakMin = thisMonth.filter(s=>s.type==='break').reduce((sum,s)=>sum+s.duration,0);
+        
+          destroyChart('study-break-chart');
+          __stats.charts['study-break-chart'] = new Chart(document.getElementById('study-break-chart'), {
+            type:'doughnut', plugins: withDataLabels,
+            data:{ labels:['Study','Break'], datasets:[{ data:[studyMin,breakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#1e293b', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{
+              legend:{ position:'top', labels:{ color:'#cbd5e1' }},
+              tooltip:{ callbacks:{ label(ctx){ const t=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; const pct=((ctx.parsed/t)*100).toFixed(1)+'%'; return `${ctx.label}: ${pct}`; } } },
+              datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return ((v*100/s).toFixed(1))+'%'; }, color:'#fff', font:{weight:'bold'} } : undefined
+            } }
+          });
+        
+          const bySubject = thisMonth.filter(s=>s.type==='study').reduce((a,s)=> (a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
+          destroyChart('study-time-by-subject-chart');
+          __stats.charts['study-time-by-subject-chart'] = new Chart(document.getElementById('study-time-by-subject-chart'), {
+            type:'bar',
+            data:{ labels:Object.keys(bySubject), datasets:[{ label:'Minutes Studied', data:Object.values(bySubject), backgroundColor: __palette(Object.keys(bySubject).length) }] },
+            options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
+          });
+        
+          const dist = thisMonth.filter(s=>s.type==='study').map(s => ({
+            x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, yEnd: s.endTime.getHours()+s.endTime.getMinutes()/60
+          }));
+          destroyChart('start-end-distribution-chart');
+          __stats.charts['start-end-distribution-chart'] = new Chart(document.getElementById('start-end-distribution-chart'), {
+            type:'scatter',
+            data:{ datasets:[
+              { label:'Start Time', data: dist.map(d=>({x:d.x,y:d.y})), backgroundColor: CHART_COLORS.sky },
+              { label:'End Time',   data: dist.map(d=>({x:d.x,y:d.yEnd})), backgroundColor: CHART_COLORS.pink }
+            ]},
+            options:{ responsive:true, maintainAspectRatio:false, scales:{
+              x:{ type:'time', time:{ unit:'day' }, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} },
+              y:{ beginAtZero:true, max:24, grid:{color:'#334155'}, ticks:{color:'#94a3b8', stepSize:2, callback:(v)=>`${v}:00` } }
+            }, plugins:{ legend:{ labels:{ color:'#cbd5e1' } } } }
+          });
+        }
+        
+        function __renderTrend(appData, today, destroyChart) {
+          const el = document.getElementById('trend-view'); if (!el) return;
+          el.innerHTML = `
+            <div class="card lg:col-span-1"><h3 class="font-semibold text-xl mb-4">Study Time Regularity</h3><div class="chart-container"><canvas id="regularity-chart"></canvas></div></div>
+            <div class="card lg:col-span-1"><h3 class="font-semibold text-xl mb-4">Performance Forecast</h3><div class="chart-container"><canvas id="forecast-chart"></canvas></div></div>
+            <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Recent Session Log</h3><div id="session-log-container-trend" class="max-h-80 overflow-y-auto pr-2"></div></div>
+          `;
+        
+          const reg = appData.filter(s=>s.type==='study').slice(-50).map(s => ({
+            x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, r: Math.max(3, s.duration/10)
+          }));
+          destroyChart('regularity-chart');
+          __stats.charts['regularity-chart'] = new Chart(document.getElementById('regularity-chart'), {
+            type:'bubble',
+            data:{ datasets:[{ label:'Study Session', data: reg, backgroundColor: CHART_COLORS.indigo }] },
+            options:{ responsive:true, maintainAspectRatio:false, scales:{
+              x:{ type:'time', time:{ unit:'day' }, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} },
+              y:{ min:6, max:24, grid:{color:'#334155'}, ticks:{color:'#94a3b8', stepSize:3, callback:(v)=>`${v}:00` } }
+            }, plugins:{ legend:{ display:false } } }
+          });
+        
+          const last14 = Array(14).fill(0);
+          appData.filter(d => (today - d.startTime)/86400000 <= 14 && d.type==='study')
+            .forEach(s => { const idx = 13 - Math.floor((today - s.startTime)/86400000); if (idx>=0) last14[idx] += s.duration; });
+          const avg = last14.reduce((a,b)=>a+b,0)/14;
+          const base = last14.reduce((a,b)=>a+b,0);
+          const forecastData = Array.from({length:7},(_,i)=> base + avg*(i+1));
+          const forecastLabels = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()+i+1); return `${d.getMonth()+1}/${d.getDate()}`; });
+        
+          destroyChart('forecast-chart');
+          __stats.charts['forecast-chart'] = new Chart(document.getElementById('forecast-chart'), {
+            type:'line',
+            data:{ labels: forecastLabels, datasets:[{ label:'Projected Study Minutes', data: forecastData, borderColor: CHART_BORDERS.orange, backgroundColor: CHART_COLORS.orange, borderDash:[5,5], tension:0.2 }] },
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
+          });
+        
+          __renderSessionLog(appData.filter(s=>s.type==='study').slice().reverse().slice(0,20), 'session-log-container-trend');
+        }
+        
+        function __renderDay(appData, today, generateAIInsight, destroyChart) {
+          const el = document.getElementById('day-view'); if (!el) return;
+          el.innerHTML = `
+            <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Total Time Today</h3><p id="day-total-time" class="text-4xl font-bold text-cyan-400 mt-2">--:--:--</p></div>
+              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Sessions Today</h3><p id="day-session-count" class="text-4xl font-bold text-cyan-400 mt-2">--</p></div>
+              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Avg. Session</h3><p id="day-avg-session" class="text-4xl font-bold text-cyan-400 mt-2">--m</p></div>
+              <div class="card bg-gradient-to-br from-sky-500 to-indigo-600 p-6"><h3 class="text-white text-lg font-medium flex items-center"><i data-lucide="brain-circuit" class="mr-2"></i>AI Insight</h3><p id="day-ai-insight-text" class="text-white mt-2 text-sm">Analyzing today's patterns...</p></div>
+            </div>
+            <div class="card lg:col-span-1"><h3 class="font-semibold text-xl mb-4">Today's Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="day-subject-ratio-chart"></canvas></div></div>
+            <div class="card lg:col-span-1"><h3 class="font-semibold text-xl mb-4">Time Per Hour Today</h3><div class="chart-container"><canvas id="day-time-per-hour-chart"></canvas></div></div>
+            <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Today's Session Log</h3><div id="session-log-container-day" class="max-h-80 overflow-y-auto pr-2"></div></div>
+          `;
+        
+          const todayStr = today.toISOString().split('T')[0];
+          const todayData = appData.filter(d => d.type==='study' && d.startTime.toISOString().split('T')[0]===todayStr);
+        
+          const totalMin = todayData.reduce((s,x)=>s+x.duration,0);
+          const count = todayData.length;
+          const avg = count ? totalMin / count : 0;
+        
+          document.getElementById('day-total-time').textContent = __fmtHMS(totalMin);
+          document.getElementById('day-session-count').textContent = count;
+          document.getElementById('day-avg-session').textContent = `${avg.toFixed(0)}m`;
+        
+          generateAIInsight(todayData, 'day-ai-insight-text');
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        
+          const subjToday = todayData.reduce((a,s)=> (a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
+          destroyChart('day-subject-ratio-chart');
+          __stats.charts['day-subject-ratio-chart'] = new Chart(document.getElementById('day-subject-ratio-chart'), {
+            type:'pie', plugins: withDataLabels,
+            data:{ labels:Object.keys(subjToday), datasets:[{ data:Object.values(subjToday), backgroundColor: __palette(Object.keys(subjToday).length), borderColor:'#1e293b', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{
+              legend:{ position:'right', labels:{ color:'#cbd5e1' } },
+              datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return ((v*100/s).toFixed(0))+'%'; }, color:'#fff', font:{weight:'bold'} } : undefined
+            } }
+          });
+        
+          const perHour = Array(24).fill(0);
+          todayData.forEach(s => { perHour[s.startTime.getHours()] += s.duration; });
+          destroyChart('day-time-per-hour-chart');
+          __stats.charts['day-time-per-hour-chart'] = new Chart(document.getElementById('day-time-per-hour-chart'), {
+            type:'bar',
+            data:{ labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets:[{ label:'Minutes Studied', data:perHour, backgroundColor: CHART_COLORS.sky, borderRadius:5 }] },
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8', maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
+          });
+        
+          __renderSessionLog(todayData.slice().reverse(), 'session-log-container-day');
+        }
+        
+        function __renderSessionLog(list, containerId) {
+          const wrap = document.getElementById(containerId); if (!wrap) return;
+          wrap.innerHTML = '';
+          list.forEach(s => {
+            const item = document.createElement('div');
+            item.className = 'session-log-item p-3 mb-2 bg-slate-700/50 rounded-lg flex justify-between items-center';
+            item.innerHTML = `
+              <div>
+                <p class="font-semibold text-white">${s.subject} <span class="text-sm text-gray-500">(${s.type})</span></p>
+                <p class="text-sm text-slate-400">${s.startTime.toLocaleString()}</p>
+              </div>
+              <div class="flex items-center">
+                <div class="text-lg font-bold text-sky-400 mr-4">${s.duration.toFixed(0)} min</div>
+                <button class="log-options-btn p-2 rounded-full hover:bg-slate-600"
+                        data-session-id="${s.id}"
+                        data-duration-seconds="${s.durationSeconds}"
+                        data-ended-at="${s.endTime.toISOString()}">
+                  <i data-lucide="more-vertical" class="w-5 h-5 pointer-events-none"></i>
+                </button>
+                <div class="log-options-menu">
+                  <button class="log-edit-btn">Edit</button>
+                  <button class="log-delete-btn">Delete</button>
+                </div>
+              </div>`;
+            wrap.appendChild(item);
+          });
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        
+          // delegate actions (delete/edit) — uses your existing deleteSession handler
+          wrap.addEventListener('click', e => {
+            const optionsBtn = e.target.closest('.log-options-btn');
+            if (optionsBtn) {
+              const menu = optionsBtn.nextElementSibling;
+              wrap.querySelectorAll('.log-options-menu').forEach(m => { if (m !== menu) m.classList.remove('active'); });
+              menu.classList.toggle('active'); return;
+            }
+            const del = e.target.closest('.log-delete-btn');
+            if (del) {
+              const btn = del.closest('.session-log-item').querySelector('.log-options-btn');
+              const id = btn.dataset.sessionId;
+              const duration = parseInt(btn.dataset.durationSeconds, 10);
+              const endedAt = new Date(btn.dataset.endedAt);
+              showConfirmationModal('Delete Session?', 'Are you sure you want to permanently delete this study session?', () => {
+                deleteSession(id, duration, endedAt);
+              });
+            }
+            const edit = e.target.closest('.log-edit-btn');
+            if (edit) {
+              const btn = edit.closest('.session-log-item').querySelector('.log-options-btn');
+              const id = btn.dataset.sessionId;
+              const duration = parseInt(btn.dataset.durationSeconds, 10);
+              const endedAtISO = btn.dataset.endedAt;
+              const modal = document.getElementById('edit-session-modal');
+              document.getElementById('edit-session-id').value = id;
+              document.getElementById('edit-session-duration').value = Math.round(duration/60);
+              document.getElementById('edit-session-old-duration').value = duration;
+              document.getElementById('edit-session-ended-at').value = endedAtISO;
+              modal.classList.add('active');
+            }
+          }, { once: true }); // avoid stacking handlers
+        }
+                 
+        
+          // REPLACE your existing deleteSession with this Supabase version
+          async function deleteSession(sessionId, durationSecondsArg, endedAtArg) {
+            if (!currentUser || !sessionId) return;
+          
+            // 1) Load the session so we trust type/duration/time
+            const { data: session, error: sErr } = await supabase
+              .from('sessions')
+              .select('id, profile_id, type, durationSeconds, endedAt')
+              .eq('id', sessionId)
+              .eq('profile_id', currentUser.id)
+              .single();
+          
+            if (sErr || !session) {
+              console.error('fetch session failed', sErr);
+              showToast('Could not find that session.', 'error');
+              return;
+            }
+          
+            const durSec = Number(session.durationSec ?? durationSecondsArg ?? 0) || 0;
+            const endedAt = session.endedAt
+              ? new Date(session.endedAt)
+              : (endedAtArg ? new Date(endedAtArg) : null);
+            const type = session.type || 'study';
+          
+            // 2) Delete the session row
+            const { error: dErr } = await supabase
+              .from('sessions')
+              .delete()
+              .eq('id', sessionId)
+              .eq('profile_id', currentUser.id);
+          
+            if (dErr) {
+              console.error('delete failed', dErr);
+              showToast('Failed to delete session.', 'error');
+              return;
+            }
+          
+            // 3) Read current user aggregates
+            const { data: userRow, error: uErr } = await supabase
+              .from('users')
+              .select('total_study_seconds, total_break_seconds, total_time_today, total_break_time_today')
+              .eq('id', currentUser.id)
+              .single();
+          
+            if (uErr) {
+              console.warn('deleted session, but failed to load user aggregates', uErr);
+              showToast('Session deleted, but failed to update totals.', 'warning');
+              // We still continue; UI will recalc from sessions anyway.
+            }
+          
+            // 4) Compute updates safely
+            const updates = {};
+            if (userRow) {
+              if (type === 'study') {
+                updates.total_study_seconds = Math.max(0, Number(userRow.total_study_seconds || 0) - durSec);
+              } else {
+                updates.total_break_seconds = Math.max(0, Number(userRow.total_break_seconds || 0) - durSec);
+              }
+          
+              const todayStr = new Date().toISOString().split('T')[0];
+              const endedStr = endedAt ? endedAt.toISOString().split('T')[0] : null;
+          
+              if (endedStr === todayStr) {
+                if (type === 'study') {
+                  const ttt = userRow.total_time_today || {};
+                  const seconds = Math.max(0, Number(ttt.seconds || 0) - durSec);
+                  updates.total_time_today = { date: todayStr, seconds };
+                } else {
+                  const tbt = userRow.total_break_time_today || {};
+                  const seconds = Math.max(0, Number(tbt.seconds || 0) - durSec);
+                  updates.total_break_time_today = { date: todayStr, seconds };
+                }
+              }
+            }
+          
+            // 5) Apply aggregate updates (if we managed to load userRow)
+            if (Object.keys(updates).length) {
+              const { error: upErr } = await supabase
+                .from('users')
+                .update(updates)
+                .eq('id', currentUser.id);
+              if (upErr) {
+                console.warn('totals update failed', upErr);
+                showToast('Session deleted, but failed to update totals.', 'warning');
+              }
+            }
+          
+            showToast('Session deleted successfully', 'success');
+          
+            // 6) Refresh the Stats view data so charts/logs update
+            try {
+              const { data: freshSessions } = await supabase
+                .from('sessions')
+                .select('id, subject, durationSeconds, endedAt, type')
+                .eq('profile_id', currentUser.id)
+                .order('endedAt', { ascending: true });
+              if (Array.isArray(freshSessions)) {
+                renderStatsPage(freshSessions);
+              }
+            } catch (e) {
+              console.warn('stats refresh failed', e);
+            }
+          }          
 
         async function renderJoinedGroups() {
             if (!currentUser) return;
@@ -6350,8 +6411,8 @@ if (achievementsGrid) {
 
                     if (isStudying) {
                         const startTime = new Date(latestMemberData.studying.startTime);
-                        const durationSec = Math.floor((Date.now() - startTime.getTime()) / 1000);
-                        timeEl.textContent = `Studying: ${latestMemberData.studying.subject} for ${formatTime(durationSec)}`;
+                        const durationSeconds = Math.floor((Date.now() - startTime.getTime()) / 1000);
+                        timeEl.textContent = `Studying: ${latestMemberData.studying.subject} for ${formatTime(durationSeconds)}`;
                         timeEl.classList.add('text-green-400');
                         timeEl.classList.remove('text-gray-400');
                     } else {
@@ -8679,11 +8740,3 @@ async function updateUsername(newName) {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
