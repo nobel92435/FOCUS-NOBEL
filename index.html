@@ -2033,359 +2033,92 @@
     const auth = supabase.auth;
     const storage = supabase.storage;
 
-    // Firestore compatibility layer implemented with Supabase
-    const db = {};
+    const nowIso = () => new Date().toISOString();
 
-    function flattenSegments(segs) {
-        return segs.flatMap(s => {
-            if (!s) return [];
-            if (typeof s === 'string') return s.split('/').filter(Boolean);
-            if (s.path) return s.path;
-            return [s];
-        });
-    }
-
-    function doc(...args) {
-        if (args.length && typeof args[0] === 'object' && !args[0].path) {
-            args = args.slice(1);
-        }
-        if (args.length === 1 && args[0]?.path) {
-            const path = [...args[0].path];
-            const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
-                ? crypto.randomUUID()
-                : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-                    (c ^ Math.random() * 16 >> c / 4).toString(16));
-            path.push(id);
-            return { path };
-        }
-        const segments = flattenSegments(args);
-        return { path: segments };
-    }
-
-    function collection(...args) {
-        if (args.length && typeof args[0] === 'object' && !args[0].path) {
-            args = args.slice(1);
-        }
-        const segments = flattenSegments(args);
-        return { path: segments };
-    }
-
-    function stripArtifacts(segments) {
-        if (segments[0] === 'artifacts') return segments.slice(2);
-        return segments;
-    }
-
-    function stripPublic(segments) {
-        if (segments[0] === 'public' && segments[1] === 'data') {
-            return segments.slice(2);
-        }
-        return segments;
-    }
-
-    function parseDocPath(ref) {
-        if (!ref || !ref.path || ref.path.length < 2) {
-            console.error("Invalid doc reference passed to parseDocPath:", ref);
-            return { table: undefined, id: undefined, parent: null };
-        }
-        let segments = stripArtifacts(ref.path);
-        segments = stripPublic(segments);
-        if (segments.length < 2) {
-             console.error("Invalid doc segments after stripping:", segments);
-            return { table: undefined, id: undefined, parent: null };
-        }
-        let table = segments[segments.length - 2];
-        if (table === 'users') {
-            table = 'profiles'; // Remap 'users' to 'profiles'
-        }
-        const id = segments[segments.length - 1];
-        let parent = segments.length > 2 ? { table: segments[0], id: segments[1] } : null;
-        if (parent && parent.table === 'users') {
-            parent.table = 'profiles';
-        }
-        return { table, id, parent };
-    }
-
-    function parseCollectionPath(ref) {
-        if (!ref || !ref.path || ref.path.length < 1) {
-            console.error("Invalid collection reference passed to parseCollectionPath:", ref);
-            return { table: undefined, parent: null };
-        }
-        let segments = stripArtifacts(ref.path);
-        segments = stripPublic(segments);
-        if (segments.length < 1) {
-             console.error("Invalid collection segments after stripping:", segments);
-             return { table: undefined, parent: null };
-        }
-        let table = segments[segments.length - 1];
-        let parent = segments.length > 1 ? { table: segments[0], id: segments[1] } : null;
-        if (parent && parent.table === 'users') {
-            parent.table = 'profiles';
-        }
-        if (table === 'users') {
-            table = 'profiles';
-        }
-        return { table, parent };
-    }
-
-    function buildForeignKey(parent) {
-        if (!parent) return {};
-        return { [`${parent.table.slice(0, -1)}_id`]: parent.id };
-    }
-
-    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    function isValidUUID(str) {
-        return typeof str === 'string' && UUID_REGEX.test(str);
-    }
-
-    // NEW HELPER FUNCTION TO PARSE POSTGRES ARRAY STRINGS
-    function fromPgArray(pgString) {
-        if (!pgString) return [];
-        if (Array.isArray(pgString)) return pgString;
-        if (typeof pgString !== 'string') return [];
-        if (pgString === '{}' || pgString === '[]') return [];
-        // Handle JSON-style arrays (e.g. "[\"id1\",\"id2\"]")
-        if (pgString.trim().startsWith('[')) {
-            try {
-                return JSON.parse(pgString).map(v => String(v)).filter(isValidUUID);
-            } catch {
-                return [];
-            }
-        }
-        // Handle Postgres array string format ("{id1,id2}")
-        return pgString
-            .slice(1, -1)
-            .split(',')
-            .map(v => v.replace(/^"|"$/g, ''))
-            .filter(isValidUUID);
-    }
-
-    function convertTimestamps(obj) {
-        if (!obj || typeof obj !== 'object') return obj;
-        for (const [key, value] of Object.entries(obj)) {
-            if (value && typeof value === 'object' && !('toDate' in value)) {
-                convertTimestamps(value);
-            } else if (
-                typeof value === 'string' &&
-                ((value.startsWith('{') && value.endsWith('}')) ||
-                 (value.startsWith('[') && value.endsWith(']')))
-            ) {
-                // Parse Postgres or JSON array strings into JavaScript arrays
-                obj[key] = fromPgArray(value);
-            } else if (typeof value === 'string' || value instanceof Date) {
-                const lower = key.toLowerCase();
-                if (lower.includes('time') || lower.includes('date') || lower.endsWith('at')) {
-                    const d = new Date(value);
-                    if (!isNaN(d)) {
-                        obj[key] = { toDate: () => d };
-                    }
-                }
-            }
-        }
-        return obj;
-    }
-
-    async function getDoc(ref) {
-        const { table, id } = parseDocPath(ref);
-        if (!isValidUUID(id)) {
-            console.warn('getDoc called with invalid uuid', id);
-            return { exists: () => false, data: () => null };
-        }
-        const { data, error } = await supabase.from(table).select('*').eq('id', id).single();
+    async function fetchProfile(userId, columns = '*') {
+        if (!userId) return null;
+        const { data, error } = await supabase
+            .from('profiles')
+            .select(columns)
+            .eq('id', userId)
+            .maybeSingle();
         if (error) throw error;
-        return { exists: () => !!data, data: () => convertTimestamps(data) };
+        return data || null;
     }
 
-    async function setDoc(ref, data) {
-        const { table, id, parent } = parseDocPath(ref);
-        const payload = { id, ...buildForeignKey(parent), ...data };
-        const { error } = await supabase.from(table).upsert(payload);
+    async function updateProfile(userId, values) {
+        if (!userId) throw new Error('updateProfile requires a user id');
+        const { error } = await supabase
+            .from('profiles')
+            .update(values)
+            .eq('id', userId);
         if (error) throw error;
     }
 
-    async function updateDoc(ref, data) {
-        const { table, id } = parseDocPath(ref);
-        if (!isValidUUID(id)) {
-            console.warn('updateDoc called with invalid uuid', id);
-            return;
-        }
-        const { data: existingData } = await supabase.from(table).select('*').eq('id', id).single();
-        const existing = convertTimestamps(existingData);
-        const payload = {};
-        for (const [k, v] of Object.entries(data)) {
-            if (v && v.__op === 'increment') {
-                payload[k] = (existing?.[k] || 0) + v.value;
-            } else if (v && v.__op === 'arrayUnion') {
-                const existingArr = Array.isArray(existing?.[k]) ? existing[k] : fromPgArray(existing?.[k]);
-                const arr = new Set([...(existingArr || []), v.value]);
-                payload[k] = `{${Array.from(arr).join(',')}}`;
-            } else if (v && v.__op === 'arrayRemove') {
-                const existingArr = Array.isArray(existing?.[k]) ? existing[k] : fromPgArray(existing?.[k]);
-                const filteredArr = (existingArr || []).filter(item => item !== v.value);
-                payload[k] = `{${filteredArr.join(',')}}`;
-            } else {
-                payload[k] = v;
-            }
-        }
-        const { error } = await supabase.from(table).update(payload).eq('id', id);
+    async function fetchUserPrivate(userId, columns = '*') {
+        if (!userId) return null;
+        const { data, error } = await supabase
+            .from('users')
+            .select(columns)
+            .eq('id', userId)
+            .maybeSingle();
+        if (error) throw error;
+        return data || null;
+    }
+
+    async function updateUserPrivate(userId, values) {
+        if (!userId) throw new Error('updateUserPrivate requires a user id');
+        const { error } = await supabase
+            .from('users')
+            .update(values)
+            .eq('id', userId);
         if (error) throw error;
     }
 
-    async function addDoc(collRef, data) {
-        const { table, parent } = parseCollectionPath(collRef);
-        const payload = { ...buildForeignKey(parent), ...data };
-        // Fix for UUID error: Manually format arrays into Postgres literal strings,
-        // as the Supabase client seems to be incorrectly stringifying them as JSON.
-        for (const key in payload) {
-            if (Array.isArray(payload[key])) {
-                payload[key] = `{${payload[key].join(',')}}`;
-            }
-        }
-        const { data: inserted, error } = await supabase.from(table).insert(payload).select().single();
+    async function fetchLatestSession(userId) {
+        if (!userId) return null;
+        const { data, error } = await supabase
+            .from('sessions')
+            .select('*')
+            .eq('profile_id', userId)
+            .order('endedAt', { ascending: false })
+            .limit(1);
         if (error) throw error;
-        return { id: inserted.id };
+        return data && data.length > 0 ? data[0] : null;
     }
 
-    function query(collectionRef, ...mods) {
-        return { collectionRef, mods };
-    }
-
-    function orderBy(field, dir = 'asc') {
-        return { type: 'orderBy', field, dir };
-    }
-
-    function where(field, op, value) {
-        return { type: 'where', field, op, value };
-    }
-
-    function limit(count) {
-        return { type: 'limit', count };
-    }
-
-    async function getDocs(q) {
-        const collectionRef = q && q.collectionRef ? q.collectionRef : q;
-        const mods = q && Array.isArray(q.mods) ? q.mods : [];
-        const { table, parent } = parseCollectionPath(collectionRef);
-
-        const operatorMap = {
-            '==': 'eq',
-            '<': 'lt',
-            '<=': 'lte',
-            '>': 'gt',
-            '>=': 'gte',
-            '!=': 'neq',
-            'array-contains': 'cs',
-            'in': 'in',
-            'array-contains-any': 'cs',
-        };
-
-        let req = supabase.from(table).select('*');
-        if (parent) req = req.eq(`${parent.table.slice(0, -1)}_id`, parent.id);
-
-        for (const mod of mods) {
-            if (mod.type === 'orderBy') {
-                req = req.order(mod.field, { ascending: mod.dir !== 'desc' });
-            } else if (mod.type === 'where') {
-                const supabaseOp = operatorMap[mod.op] || mod.op;
-                let value = mod.value;
-                if (value instanceof Date) {
-                    value = value.toISOString();
-                }
-
-                if (supabaseOp === 'in' && Array.isArray(value)) {
-                    value = `(${value.map(v => typeof v === 'string' ? `"${v}"` : v).join(',')})`;
-                }
-
-                if ((supabaseOp === 'cs' || supabaseOp === 'cd') && !Array.isArray(value)) {
-                    value = `{${value}}`;
-                }
-
-                req = req.filter(mod.field, supabaseOp, value);
-            } else if (mod.type === 'limit') {
-                req = req.limit(mod.count);
-            }
+    async function fetchSessionsSince(userId, startIso) {
+        if (!userId) return [];
+        let query = supabase
+            .from('sessions')
+            .select('durationSeconds, type, endedAt')
+            .eq('profile_id', userId);
+        if (startIso) {
+            query = query.gte('endedAt', startIso);
         }
-        
-        const { data, error } = await req;
-
+        const { data, error } = await query;
         if (error) throw error;
-        return { docs: data.map(d => ({ id: d.id, data: () => convertTimestamps(d) })), empty: data.length === 0 };
+        return data || [];
     }
 
-    function runTransaction(_db, fn) {
-        return fn({ get: getDoc, update: updateDoc, set: setDoc });
+    async function fetchGroup(groupId) {
+        if (!groupId) return null;
+        const { data, error } = await supabase
+            .from('groups')
+            .select('*')
+            .eq('id', groupId)
+            .maybeSingle();
+        if (error) throw error;
+        return data || null;
     }
 
-    function serverTimestamp() {
-        return new Date().toISOString();
-    }
-
-    function increment(value) {
-        return { __op: 'increment', value };
-    }
-
-    function arrayUnion(value) {
-        return { __op: 'arrayUnion', value };
-    }
-
-    function arrayRemove(value) {
-        return { __op: 'arrayRemove', value };
-    }
-
-    function onSnapshot(refOrQuery, callback) {
-        // This is a real-time implementation using Supabase channels.
-        // It refetches the entire query on any change to the underlying table.
-        const isQuery = !!refOrQuery.collectionRef;
-        const ref = isQuery ? refOrQuery.collectionRef : refOrQuery;
-        
-        let table;
-        if (isQuery) {
-            ({ table } = parseCollectionPath(ref));
-        } else {
-            ({ table } = parseDocPath(ref));
-        }
-        
-        // Create a unique channel name to avoid conflicts
-        const channel = supabase.channel(`table-changes-${table}-${Math.random()}`);
-
-        const fetchData = async () => {
-            try {
-                const snapshot = await (isQuery ? getDocs(refOrQuery) : getDoc(refOrQuery));
-                if (isQuery) {
-                    callback({
-                        docs: snapshot.docs,
-                        empty: snapshot.empty,
-                        forEach: fn => snapshot.docs.forEach(doc => fn(doc))
-                    });
-                } else {
-                    callback(snapshot);
-                }
-            } catch (error) {
-                console.error(`Real-time fetch error for table '${table}':`, error);
-            }
-        };
-
-        channel
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: table },
-                (payload) => {
-                    // Refetch data on any change
-                    fetchData();
-                }
-            )
-            .subscribe((status, err) => {
-                 if (status === 'SUBSCRIBED') {
-                    // Fetch the initial data once the connection is established
-                    fetchData();
-                } else if (err) {
-                    console.error(`Failed to subscribe to real-time changes for table '${table}':`, err);
-                }
-            });
-
-        // Return an unsubscribe function for cleanup
-        return () => {
-            supabase.removeChannel(channel);
-        };
+    async function updateGroup(groupId, values) {
+        if (!groupId) throw new Error('updateGroup requires a group id');
+        const { error } = await supabase
+            .from('groups')
+            .update(values)
+            .eq('id', groupId);
+        if (error) throw error;
     }
 
     let currentUser = null;
@@ -3748,72 +3481,58 @@ let pauseStartTime = 0;
 
         async function showUserProfileModal(userId) {
             if (!userId) return;
-            
+
             const modal = document.getElementById('user-profile-modal');
             const loadingEl = document.getElementById('user-profile-loading');
             const detailsEl = document.getElementById('user-profile-details');
-            
+
             modal.classList.add('active');
             loadingEl.classList.remove('hidden');
             detailsEl.classList.add('hidden');
 
             try {
-                // Fetch public and private data in parallel
-                const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', userId);
-                const privateUserRef = doc(db, 'artifacts', appId, 'users', userId);
-                
-                const [publicUserSnap, privateUserSnap] = await Promise.all([
-                    getDoc(publicUserRef),
-                    getDoc(privateUserRef)
+                const [profileData, privateData, lastSession] = await Promise.all([
+                    fetchProfile(userId),
+                    fetchUserPrivate(userId),
+                    fetchLatestSession(userId)
                 ]);
 
-                if (!publicUserSnap.exists() || !privateUserSnap.exists()) {
-                    throw new Error("User data not found.");
+                if (!profileData) {
+                    throw new Error('User data not found.');
                 }
 
-                const publicData = publicUserSnap.data();
-                const privateData = privateUserSnap.data();
+                const todayStr = getCurrentDate().toISOString().split('T')[0];
+                const totalTodaySource = profileData.total_time_today || privateData?.total_time_today || null;
+                const totalTodaySeconds = (totalTodaySource && totalTodaySource.date === todayStr)
+                    ? (totalTodaySource.seconds || 0)
+                    : 0;
 
-                // Fetch last session for last active time
-                const sessionsRef = collection(privateUserRef, 'sessions');
-                const q = query(sessionsRef, orderBy('endedAt', 'desc'), limit(1));
-                const lastSessionSnapshot = await getDocs(q);
-                
-                let lastActiveText = "No sessions yet";
-                if (!lastSessionSnapshot.empty) {
-                    const lastSessionData = lastSessionSnapshot.docs[0].data();
-                    const endedAt = lastSessionData.endedAt?.toDate();
-                    if (endedAt) {
-                         lastActiveText = timeSince(endedAt) + ' ago';
+                let lastActiveText = 'No sessions yet';
+                if (lastSession?.endedAt) {
+                    const endedAt = new Date(lastSession.endedAt);
+                    if (!isNaN(endedAt)) {
+                        lastActiveText = `${timeSince(endedAt)} ago`;
                     }
                 }
-                
-                // Calculate total time today
-                const todayStr = getCurrentDate().toISOString().split('T')[0];
-                let totalTodaySeconds = 0;
-                if (privateData.total_time_today && privateData.total_time_today.date === todayStr) {
-                    totalTodaySeconds = privateData.total_time_today.seconds || 0;
-                }
 
-                // Update UI
                 const avatarEl = document.getElementById('user-profile-avatar');
-                if (publicData.photo_url) {
-                    avatarEl.innerHTML = `<img src="${publicData.photo_url}" alt="${publicData.username}" class="w-full h-full object-cover">`;
+                if (profileData.photo_url) {
+                    avatarEl.innerHTML = `<img src="${profileData.photo_url}" alt="${profileData.username}" class="w-full h-full object-cover">`;
                 } else {
-                    const initial = publicData.username ? publicData.username.charAt(0).toUpperCase() : 'U';
+                    const initial = profileData.username ? profileData.username.charAt(0).toUpperCase() : 'U';
                     avatarEl.innerHTML = `<span>${initial}</span>`;
                 }
-                
-                document.getElementById('user-profile-name').textContent = publicData.username || 'Anonymous';
+
+                document.getElementById('user-profile-name').textContent = profileData.username || 'Anonymous';
                 document.getElementById('user-profile-total-today').textContent = formatTime(totalTodaySeconds);
-                document.getElementById('user-profile-total-overall').textContent = formatTime(publicData.total_study_seconds || 0, false);
+                document.getElementById('user-profile-total-overall').textContent = formatTime(profileData.total_study_seconds || 0, false);
                 document.getElementById('user-profile-last-active').textContent = lastActiveText;
 
                 loadingEl.classList.add('hidden');
                 detailsEl.classList.remove('hidden');
 
             } catch (error) {
-                console.error("Error fetching user profile:", error);
+                console.error('Error fetching user profile:', error);
                 modal.classList.remove('active');
                 showToast('Could not load user profile.', 'error');
             }
@@ -3909,21 +3628,12 @@ let pauseStartTime = 0;
 
             // --- New: Check and save idle time before starting a new study session ---
             if (currentUser) {
-                const sessionsRef = collection(db, 'artifacts', appId, 'users', currentUser.id, 'sessions');
-                const q = query(sessionsRef, orderBy('endedAt', 'desc'), limit(1));
-                const lastSessionSnapshot = await getDocs(q);
-
-                if (!lastSessionSnapshot.empty) {
-                    const lastSessionData = lastSessionSnapshot.docs[0].data();
-                    // Ensure lastSessionData.endedAt is a valid Timestamp before calling toDate()
-                    const lastSessionEndedAt = lastSessionData.endedAt && typeof lastSessionData.endedAt.toDate === 'function' 
-                                                ? lastSessionData.endedAt.toDate() 
-                                                : null;
+                const lastSession = await fetchLatestSession(currentUser.id);
+                if (lastSession?.endedAt && lastSession.type === 'study') {
+                    const endedAt = new Date(lastSession.endedAt);
                     const now = Date.now();
-
-                    // Only track idle break if the last session was a study session and ended before now
-                    if (lastSessionData.type === 'study' && lastSessionEndedAt && lastSessionEndedAt < now) {
-                        const idleDurationSeconds = Math.floor((now - lastSessionEndedAt) / 1000);
+                    if (!isNaN(endedAt) && endedAt.getTime() < now) {
+                        const idleDurationSeconds = Math.floor((now - endedAt.getTime()) / 1000);
                         if (idleDurationSeconds > 0) {
                             await saveSession('Idle Break', idleDurationSeconds, 'break');
                         }
@@ -3968,8 +3678,9 @@ let pauseStartTime = 0;
             document.getElementById('pause-btn').classList.remove('hidden');
             document.getElementById('manual-start-btn').classList.add('hidden');
 
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            await updateDoc(userRef, { studying: { subject: activeSubject, startTime: serverTimestamp(), type: 'study' } });
+            if (currentUser) {
+                await updateUserPrivate(currentUser.id, { studying: { subject: activeSubject, startTime: nowIso(), type: 'study' } });
+            }
         }
         
         async function stopTimer() {
@@ -4020,9 +3731,10 @@ let pauseStartTime = 0;
             // --- END OF ADDED LINES ---
             document.getElementById('manual-start-btn').classList.add('hidden');
 
-            // Update user status in Firestore to show they are no longer studying
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            await updateDoc(userRef, { studying: null });
+            // Update user status in Supabase to show they are no longer studying
+            if (currentUser) {
+                await updateUserPrivate(currentUser.id, { studying: null });
+            }
         }
         
         function pauseTimer() {
@@ -4100,10 +3812,12 @@ let pauseStartTime = 0;
 
             await triggerServerNotification(transitionMessage);
 
-            // Update cycle in Firestore only after a break is completed (meaning a work session is starting)
+            // Update cycle in Supabase only after a break is completed (meaning a work session is starting)
             if (state === 'work') {
                 const newCycleCount = (currentUserData.pomodoroCycle || 0) + 1;
-                updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.id), { pomodoroCycle: newCycleCount });
+                if (currentUser) {
+                    await updateUserPrivate(currentUser.id, { pomodoroCycle: newCycleCount });
+                }
             }
         }
 
@@ -4126,7 +3840,7 @@ let pauseStartTime = 0;
             }
 
             // --- START: ADDED GUEST LOGIC ---
-            // For anonymous users, just update local state without saving to Firestore
+            // For anonymous users, just update local state without saving to Supabase
             if (currentUser.isAnonymous) {
                 if (sessionType === 'study') {
                     totalTimeTodayInSeconds += durationSeconds;
@@ -4206,41 +3920,35 @@ let pauseStartTime = 0;
     if (!currentUser) return;
 
     try {
-        const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists()) return;
+        const profile = await fetchProfile(currentUser.id);
+        if (!profile) return;
 
-        const userData = userDoc.data();
-        const unlocked = userData.unlocked_achievements || [];
-        let newlyUnlocked = [];
+        const unlocked = Array.isArray(profile.unlocked_achievements) ? profile.unlocked_achievements : [];
+        const totalStudySeconds = profile.total_study_seconds || 0;
+        const currentStreak = profile.current_streak || 0;
+        const updated = new Set(unlocked);
 
-        // Rule 1: Study for a total of 1 hour
-        if (!unlocked.includes('novice_scholar') && userData.total_study_seconds >= 3600) {
-            newlyUnlocked.push('novice_scholar');
+        if (!updated.has('novice_scholar') && totalStudySeconds >= 3600) {
+            updated.add('novice_scholar');
         }
-        // Rule 2: Study for a total of 10 hours
-        if (!unlocked.includes('dedicated_learner') && userData.total_study_seconds >= 36000) {
-            newlyUnlocked.push('dedicated_learner');
+        if (!updated.has('dedicated_learner') && totalStudySeconds >= 36000) {
+            updated.add('dedicated_learner');
         }
-        // Rule 3: Complete a single session over 2 hours
-        if (!unlocked.includes('marathoner') && completedSessionDuration >= 7200) {
-            newlyUnlocked.push('marathoner');
+        if (!updated.has('marathoner') && completedSessionDuration >= 7200) {
+            updated.add('marathoner');
         }
-        // Rule 4: Maintain a 7-day study streak
-        if (!unlocked.includes('consistent_coder') && userData.current_streak >= 7) {
-            newlyUnlocked.push('consistent_coder');
+        if (!updated.has('consistent_coder') && currentStreak >= 7) {
+            updated.add('consistent_coder');
         }
 
+        const newlyUnlocked = Array.from(updated).filter(a => !unlocked.includes(a));
         if (newlyUnlocked.length > 0) {
-            await updateDoc(userDocRef, { 
-                unlocked_achievements: arrayUnion(...newlyUnlocked) 
-            });
-            
+            await updateProfile(currentUser.id, { unlocked_achievements: Array.from(updated) });
             const achievement = ACHIEVEMENTS[newlyUnlocked[0]];
             showToast(`Achievement Unlocked: ${achievement.name}!`, 'success');
         }
     } catch (error) {
-        console.error("Error checking achievements:", error);
+        console.error('Error checking achievements:', error);
     }
 }
 
@@ -4255,103 +3963,27 @@ let pauseStartTime = 0;
                 return;
             }
             // --- END: ADDED GUEST LOGIC ---
-            
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            const userDoc = await getDoc(userRef);
 
-            if (userDoc.exists()) {
-                const data = userDoc.data();
-                const todayStr = getCurrentDate().toISOString().split('T')[0];
-                
-                // Reset totals for the new day or if data is missing, then check for today's data.
-                totalTimeTodayInSeconds = 0;
-                totalBreakTimeTodayInSeconds = 0;
-                
-                // Check for today's study time, handling potentially converted date objects.
-                if (data.total_time_today) {
-                    const dateObj = data.total_time_today.date;
-                    const dateStrFromData = (dateObj && typeof dateObj.toDate === 'function')
-                        ? dateObj.toDate().toISOString().split('T')[0]
-                        : dateObj;
-                    if (dateStrFromData === todayStr) {
-                        totalTimeTodayInSeconds = data.total_time_today.seconds || 0;
-                    }
-                }
-                
-                // Check for today's break time, handling potentially converted date objects.
-                if (data.total_break_time_today) {
-                    const dateObj = data.total_break_time_today.date;
-                    const dateStrFromData = (dateObj && typeof dateObj.toDate === 'function')
-                        ? dateObj.toDate().toISOString().split('T')[0]
-                        : dateObj;
-                    if (dateStrFromData === todayStr) {
-                        totalBreakTimeTodayInSeconds = data.total_break_time_today.seconds || 0;
-                    }
+            const profile = await fetchProfile(currentUser.id);
+            const todayStr = getCurrentDate().toISOString().split('T')[0];
+
+            totalTimeTodayInSeconds = 0;
+            totalBreakTimeTodayInSeconds = 0;
+
+            if (profile) {
+                const studyToday = profile.total_time_today;
+                if (studyToday && studyToday.date === todayStr) {
+                    totalTimeTodayInSeconds = studyToday.seconds || 0;
                 }
 
-            } else {
-                totalTimeTodayInSeconds = 0;
-                totalBreakTimeTodayInSeconds = 0;
+                const breakToday = profile.total_break_time_today;
+                if (breakToday && breakToday.date === todayStr) {
+                    totalBreakTimeTodayInSeconds = breakToday.seconds || 0;
+                }
             }
             if(totalTimeDisplay && totalBreakTimeDisplay) { // Should refer to the HTML element
                 updateTotalTimeDisplay();
             }
-        }
-
-        async function getOrCreateUserDocument(user) {
-            const userDocRef = doc(db, 'artifacts', appId, 'users', user.id);
-            let userDoc = await getDoc(userDocRef);
-
-            if (!userDoc.exists()) {
-                const initialData = {
-                    email: user.email,
-                    username: user.displayName,
-                    photo_url: PRESET_AVATARS[0], // Default avatar
-                    studicon_url: 'https://api.dicebear.com/8.x/miniavs/svg?seed=Angel', // Default studicon
-                    joined_groups: [],
-                    created_at: serverTimestamp(),
-                    total_study_seconds: 0,
-                    total_break_seconds: 0, // New field
-                    current_streak: 0,
-                    last_study_day: '',
-                    unlocked_achievements: [],
-                    studying: null,
-                    study_goal_hours: 4,
-                    pomodoro_settings: {
-                        work: 25,
-                        short_break: 5,
-                        long_break: 15,
-                        long_break_interval: 4,
-                        autoStartBreak: true,
-                        autoStartFocus: true
-                    },
-                    pomodoro_sounds: {
-                        start: "tone_simple_beep",
-                        focus: "tone_chime_chord",
-                        break: "tone_metal_bell",
-                        volume: 1.0
-                    },
-                    total_time_today: { 
-                        date: getCurrentDate().toISOString().split('T')[0],
-                        seconds: 0
-                    },
-                    total_break_time_today: { // New field
-                        date: getCurrentDate().toISOString().split('T')[0],
-                        seconds: 0
-                    }
-                };
-                await setDoc(userDocRef, initialData);
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.id), {
-                    username: user.displayName,
-                    email: user.email,
-                    total_study_seconds: 0,
-                    total_break_seconds: 0, // Initialize for public too
-                    photo_url: PRESET_AVATARS[0], // Public profile needs it too
-                    studicon_url: 'https://api.dicebear.com/8.x/miniavs/svg?seed=Angel',
-                });
-                userDoc = await getDoc(userDocRef);
-            }
-            return userDoc;
         }
 
         function updateProfileUI(userData) {
@@ -5232,47 +4864,44 @@ if (achievementsGrid) {
 
             container.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
 
-            const usersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-            const usersSnapshot = await getDocs(query(usersCollectionRef));
+            const { data: profiles, error: profilesError } = await supabase
+                .from('profiles')
+                .select('id, username, photo_url');
+            if (profilesError) {
+                console.error('Failed to load leaderboard users', profilesError);
+                container.innerHTML = '<div class="empty-group"><i class="fas fa-exclamation-triangle"></i><h3>Unable to load leaderboard</h3></div>';
+                return;
+            }
 
-            const userPromises = usersSnapshot.docs.map(async (userDoc) => {
-                const userData = userDoc.data();
-                const userRef = doc(db, 'artifacts', appId, 'users', userDoc.id);
-                const sessionsRef = collection(userRef, 'sessions');
+            const now = getCurrentDate();
+            let startDate;
+            switch (period) {
+                case 'daily':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    break;
+                case 'monthly':
+                    startDate = new Date(now);
+                    startDate.setDate(now.getDate() - 30);
+                    break;
+                case 'weekly':
+                default:
+                    startDate = new Date(now);
+                    startDate.setDate(now.getDate() - 7);
+                    break;
+            }
+            startDate.setHours(0, 0, 0, 0);
+            const startIso = startDate.toISOString();
 
-                const now = getCurrentDate();
-                let startDate;
-                switch (period) {
-                    case 'daily':
-                        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                        break;
-                    case 'monthly': // Last 30 days
-                        startDate = new Date(now);
-                        startDate.setDate(now.getDate() - 30);
-                        break;
-                    case 'weekly': // Last 7 days
-                    default:
-                        startDate = new Date(now);
-                        startDate.setDate(now.getDate() - 7);
-                        break;
-                }
-                startDate.setHours(0,0,0,0);
+            const userPromises = (profiles || []).map(async profile => {
+                const sessions = await fetchSessionsSince(profile.id, startIso);
+                const totalSeconds = sessions
+                    .filter(session => session.type === 'study')
+                    .reduce((sum, session) => sum + (session.durationSeconds || 0), 0);
 
-                const q = query(sessionsRef, where("endedAt", ">=", startDate));
-                const sessionsSnapshot = await getDocs(q);
-                
-                let totalSeconds = 0;
-                sessionsSnapshot.docs.forEach(sessionDoc => {
-                    // Only count study sessions for ranking
-                    if (sessionDoc.data().type === 'study') {
-                        totalSeconds += sessionDoc.data().durationSeconds;
-                    }
-                });
-                
                 return {
-                    id: userDoc.id,
-                    username: userData.username || 'Anonymous',
-                    photo_url: userData.photo_url,
+                    id: profile.id,
+                    username: profile.username || 'Anonymous',
+                    photo_url: profile.photo_url,
                     total_study_seconds: totalSeconds
                 };
             });
@@ -7305,7 +6934,7 @@ if (achievementsGrid) {
                     const isCompleted = !categoryCheckbox.classList.contains('completed');
                     updatePlannerTask(taskId, {
                         completed: isCompleted,
-                        completedAt: isCompleted ? serverTimestamp() : null
+                        completedAt: isCompleted ? nowIso() : null
                     });
                     return;
                 }
@@ -7489,7 +7118,7 @@ if (achievementsGrid) {
                         const isCompleted = target.checked;
                         updatePlannerTask(taskId, {
                             completed: isCompleted,
-                            completedAt: isCompleted ? serverTimestamp() : null
+                            completedAt: isCompleted ? nowIso() : null
                         });
                     }
                 }
@@ -7514,7 +7143,7 @@ if (achievementsGrid) {
                     const isCompleted = target.checked;
                     updatePlannerTask(taskId, {
                         completed: isCompleted,
-                        completedAt: isCompleted ? serverTimestamp() : null // Add/remove completion timestamp
+                        completedAt: isCompleted ? nowIso() : null // Add/remove completion timestamp
                     });
                 }
             });
@@ -7602,7 +7231,7 @@ if (achievementsGrid) {
                 order: lastOrder + 1
             });
             
-            // The onSnapshot listener now handles the UI update automatically.
+            // Realtime Supabase listeners now handle the UI update automatically.
             // The redundant manual refresh code that was here has been removed.
 
             subjectNameInput.value = '';
@@ -7677,25 +7306,44 @@ if (achievementsGrid) {
             doneBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
         
             try {
-                const newGroupRef = await addDoc(collection(db, `artifacts/${appId}/public/data/groups`), {
-                    name, password: password || null, category, time_goal, capacity, description,
-                    leaderId: currentUser.id, leaderName: currentUserData.username,
-                    // The 'members' array is not the correct way to add members with Supabase.
-                    // Membership is handled by the separate group_members table.
-                    created_at: serverTimestamp(),
-                    avgTime: '0h 0m', attendance: 0
-                });
+                const { data: newGroup, error: createError } = await supabase
+                    .from('groups')
+                    .insert({
+                        name,
+                        password: password || null,
+                        category,
+                        time_goal,
+                        capacity,
+                        description,
+                        leaderId: currentUser.id,
+                        leaderName: currentUserData.username,
+                        created_at: nowIso(),
+                        avgTime: '0h 0m',
+                        attendance: 0,
+                        members: [currentUser.id]
+                    })
+                    .select()
+                    .single();
+                if (createError) throw createError;
 
-                // FIX: Insert the leader into the group_members table to officially join them to the group.
                 const { error: joinError } = await supabase.from('group_members').insert({
-                    group_id: newGroupRef.id,
+                    group_id: newGroup.id,
                     profile_id: currentUser.id
                 });
                 if (joinError) throw joinError;
-        
-                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-                await updateDoc(userRef, { joined_groups: arrayUnion(newGroupRef.id) });
-        
+
+                const { data: profileData, error: profileErr } = await supabase
+                    .from('profiles')
+                    .select('joined_groups')
+                    .eq('id', currentUser.id)
+                    .single();
+                if (profileErr) throw profileErr;
+                const joinedGroups = Array.isArray(profileData.joined_groups) ? profileData.joined_groups.slice() : [];
+                if (!joinedGroups.includes(newGroup.id)) {
+                    joinedGroups.push(newGroup.id);
+                }
+                await updateProfile(currentUser.id, { joined_groups: joinedGroups });
+
                 showToast('Group created successfully!', 'success');
                 renderGroupRankings();
                 showPage('page-find-groups');
@@ -7809,11 +7457,9 @@ if (achievementsGrid) {
                 return;
             }
 
-            const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', currentGroupId);
-            const groupSnap = await getDoc(groupRef);
+            const groupData = await fetchGroup(currentGroupId);
 
-            if (groupSnap.exists()) {
-                const groupData = groupSnap.data();
+            if (groupData) {
                 
                 // Helper to safely set the value of an element
                 const setValue = (id, value) => {
@@ -7885,10 +7531,9 @@ if (achievementsGrid) {
         ael('page-group-detail', 'click', async e => {
             const settingsBtn = e.target.closest('#group-settings-btn, #group-settings-btn-mobile');
             if (settingsBtn) {
-                const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', currentGroupId);
-                const groupSnap = await getDoc(groupRef);
-                if (groupSnap.exists()) {
-                    openGroupSettingsModal(groupSnap.data());
+                const groupData = await fetchGroup(currentGroupId);
+                if (groupData) {
+                    openGroupSettingsModal(groupData);
                 }
                 return;
             }
@@ -8019,15 +7664,13 @@ if (achievementsGrid) {
             const saveBtn = document.getElementById('save-group-rules-btn');
 
             try {
-                const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', currentGroupId);
-                const groupSnap = await getDoc(groupRef);
+                const groupData = await fetchGroup(currentGroupId);
 
-                if (!groupSnap.exists()) {
+                if (!groupData) {
                     showToast('Could not load group rules.', 'error');
                     return;
                 }
 
-                const groupData = groupSnap.data();
                 const rules = groupData.rules || 'No rules have been set for this group yet.';
                 const isLeader = currentUser.id === groupData.leaderId;
 
@@ -8055,7 +7698,7 @@ if (achievementsGrid) {
                     saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
                     
                     try {
-                        await updateDoc(groupRef, { rules: newRules });
+                        await updateGroup(currentGroupId, { rules: newRules });
                         showToast('Group rules updated!', 'success');
                         modal.classList.remove('active');
                     } catch (error) {
@@ -8097,11 +7740,12 @@ if (achievementsGrid) {
                 return;
             }
             
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            await updateDoc(userRef, { 
-                pomodoro_settings: newSettings,
-                pomodoro_sounds: newSounds
-            });
+            if (currentUser) {
+                await updateUserPrivate(currentUser.id, {
+                    pomodoro_settings: newSettings,
+                    pomodoro_sounds: newSounds
+                });
+            }
 
             pomodoroSettings = newSettings;
             pomodoroSounds = newSounds;
@@ -8198,8 +7842,7 @@ if (achievementsGrid) {
             };
 
             try {
-                const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', groupId);
-                await updateDoc(groupRef, updatedData);
+                await updateGroup(groupId, updatedData);
                 showToast('Group info updated successfully!', 'success');
                 document.getElementById('edit-group-info-modal').classList.remove('active');
             } catch (error) {
@@ -8245,49 +7888,50 @@ if (achievementsGrid) {
             const newDurationSeconds = newDurationMinutes * 60;
             const durationDifference = newDurationSeconds - oldDurationSeconds;
 
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.id);
-            const sessionRef = doc(userRef, 'sessions', sessionId);
-
             try {
                 // Determine if the session being edited is a study or break session
-                const sessionDoc = await getDoc(sessionRef);
-                const sessionType = sessionDoc.exists() ? sessionDoc.data().type || 'study' : 'study'; // Default to 'study' if type is missing
+                const { data: sessionRow, error: sessionErr } = await supabase
+                    .from('sessions')
+                    .select('type, profile_id')
+                    .eq('id', sessionId)
+                    .single();
+                if (sessionErr) throw sessionErr;
 
-                await updateDoc(sessionRef, { durationSeconds: newDurationSeconds });
-                
-                if (sessionType === 'study') {
-                    await updateDoc(userRef, { total_study_seconds: increment(durationDifference) });
-                    await updateDoc(publicUserRef, { total_study_seconds: increment(durationDifference) });
-                } else { // 'break'
-                    await updateDoc(userRef, { total_break_seconds: increment(durationDifference) });
-                    await updateDoc(publicUserRef, { total_break_seconds: increment(durationDifference) });
-                }
+                const sessionType = sessionRow?.type || 'study';
+
+                const { error: updateSessionErr } = await supabase
+                    .from('sessions')
+                    .update({ durationSeconds: newDurationSeconds })
+                    .eq('id', sessionId);
+                if (updateSessionErr) throw updateSessionErr;
+
+                const profile = await fetchProfile(currentUser.id);
+                const profileUpdates = {};
 
                 const sessionDateStr = endedAt.toISOString().split('T')[0];
                 const todayStr = getCurrentDate().toISOString().split('T')[0];
                 if (sessionDateStr === todayStr) {
                     if (sessionType === 'study') {
-                        totalTimeTodayInSeconds += durationDifference;
-                        if (totalTimeTodayInSeconds < 0) totalTimeTodayInSeconds = 0;
-                        await updateDoc(userRef, {
-                            total_time_today: {
-                                date: todayStr,
-                                seconds: totalTimeTodayInSeconds
-                            }
-                        });
+                        const currentToday = profile?.total_time_today?.seconds || 0;
+                        totalTimeTodayInSeconds = Math.max(0, currentToday + durationDifference);
+                        profileUpdates.total_time_today = { date: todayStr, seconds: totalTimeTodayInSeconds };
                     } else { // 'break'
-                        totalBreakTimeTodayInSeconds += durationDifference;
-                        if (totalBreakTimeTodayInSeconds < 0) totalBreakTimeTodayInSeconds = 0;
-                        await updateDoc(userRef, {
-                            total_break_time_today: {
-                                date: todayStr,
-                                seconds: totalBreakTimeTodayInSeconds
-                            }
-                        });
+                        const currentBreak = profile?.total_break_time_today?.seconds || 0;
+                        totalBreakTimeTodayInSeconds = Math.max(0, currentBreak + durationDifference);
+                        profileUpdates.total_break_time_today = { date: todayStr, seconds: totalBreakTimeTodayInSeconds };
                     }
                 }
-                
+
+                if (sessionType === 'study') {
+                    const totalStudy = Math.max(0, (profile?.total_study_seconds || 0) + durationDifference);
+                    profileUpdates.total_study_seconds = totalStudy;
+                } else {
+                    const totalBreak = Math.max(0, (profile?.total_break_seconds || 0) + durationDifference);
+                    profileUpdates.total_break_seconds = totalBreak;
+                }
+
+                await updateProfile(currentUser.id, profileUpdates);
+
                 modal.classList.remove('active');
                 showToast("Session updated successfully!", "success");
             } catch (error) {
