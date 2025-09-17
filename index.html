@@ -2395,9 +2395,17 @@
         const { data: { user } } = await auth.getUser();
         currentUser = user ?? null;
     }
-    auth.onAuthStateChange((_evt, session) => {
+    auth.onAuthStateChange((event, session) => {
         currentUser = session?.user ?? null;
-        routeAfterAuth();
+        // This is a more robust way to handle auth state changes.
+        // We only want to re-route the user on sign-in or sign-out events.
+        // For user updates (like changing a profile picture), we just want to refresh
+        // the profile data without navigating them away from their current page.
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+            routeAfterAuth();
+        } else if (event === 'USER_UPDATED' && currentUser) {
+            loadMyProfile();
+        }
     });
 
     // ensure profile row exists (call after sign up / first login)
@@ -2896,13 +2904,15 @@ let pauseStartTime = 0;
                 let publicUrl = '';
                 if (!BUCKET_IS_PRIVATE) {
                     const { data } = storage.from(PROFILE_BUCKET).getPublicUrl(filePath);
-                    publicUrl = data?.publicUrl ?? '';
+                    // FIX: Store the clean base URL without any cache-busting parameters.
+                    publicUrl = data?.publicUrl || '';
                 } else {
                     const { data, error: sErr } = await storage
                         .from(PROFILE_BUCKET)
                         .createSignedUrl(filePath, 60 * 60 * 24); // 24h
                     if (sErr) throw sErr;
-                    publicUrl = data?.signedUrl ?? '';
+                    // FIX: Store the clean base URL without any cache-busting parameters.
+                    publicUrl = data?.signedUrl || '';
                 }
                 if (!publicUrl) throw new Error('Could not get file URL');
 
@@ -2913,8 +2923,13 @@ let pauseStartTime = 0;
                     .eq('id', currentUser.id);
                 if (upProfileErr) throw upProfileErr;
 
-                // (optional) also mirror in auth metadata if your UI reads it:
-                // await auth.updateUser({ data: { photo_url: publicUrl } });
+                // FIX: Also update the user's metadata in Supabase Auth.
+                // This keeps the auth session in sync with the profile table, preventing
+                // stale data from being shown on re-login.
+                const { error: updateUserError } = await auth.updateUser({
+                    data: { photo_url: publicUrl }
+                });
+                if (updateUserError) throw updateUserError;
 
                 // refresh UI
                 await loadMyProfile();
@@ -4369,13 +4384,17 @@ let pauseStartTime = 0;
             
             const profileAvatar = document.getElementById('profile-page-avatar');
             
+            // FIX: Make avatar updates more robust by checking if elements exist.
+            // This prevents a crash if the UI updates while the user is navigating.
             [headerAvatar, profileAvatar].forEach(el => {
-                if (photoURL) {
-                    el.innerHTML = `<img src="${photoURL}" alt="${username}" class="w-full h-full object-cover">`;
-                } else {
-                    const initial = username ? username.charAt(0).toUpperCase() : 'U';
-                    el.textContent = initial;
-                    el.innerHTML = `<span>${initial}</span>`; // Ensure it's not trying to render an img tag
+                if (el) { // Only update if the element is found in the DOM
+                    if (photoURL) {
+                        const imageUrlWithCacheBuster = `${photoURL.split('?')[0]}?t=${new Date().getTime()}`;
+                        el.innerHTML = `<img src="${imageUrlWithCacheBuster}" alt="${username}" class="w-full h-full object-cover">`;
+                    } else {
+                        const initial = username ? username.charAt(0).toUpperCase() : 'U';
+                        el.innerHTML = `<span>${initial}</span>`;
+                    }
                 }
             });
             
@@ -8456,6 +8475,14 @@ if (achievementsGrid) {
                 lucide.createIcons();
             }
 
+            // FIX: Add the missing event listener for profile picture uploads.
+            ael('profile-picture-upload', 'change', e => {
+                const file = e.target.files?.[0];
+                if (file) {
+                    uploadProfilePicture(file);
+                }
+            });
+
             const pomodoroSettingsForm = document.getElementById('pomodoro-settings-form');
             if (pomodoroSettingsForm) {
                 pomodoroSettingsForm.addEventListener('change', (e) => {
@@ -8785,5 +8812,3 @@ async function updateUsername(newName) {
 
 </body>
 </html>
-
-
