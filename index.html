@@ -2468,6 +2468,14 @@ let pauseStartTime = 0;
             sessions: {}
         };
         
+        // --- NEW: State for Group Rankings Infinite Scroll ---
+        let groupRankingsState = {
+            isLoading: false,
+            currentPage: 1,
+            hasMore: true,
+            limit: 10,
+        };
+
         // Break Timer State (for idle time)
         let breakTimerInterval = null;
         let breakStartTime = 0;
@@ -4872,15 +4880,109 @@ if (achievementsGrid) {
             renderPlannerTaskDetails();
           }          
 
-        async function renderLeaderboard(period = 'weekly', containerId = 'ranking-list') {
+        // --- Leaderboard Infinite Scroll State & Functions ---
+        const rankingPageContainer = document.getElementById('page-ranking');
+        let leaderboardState = {
+            isLoading: false,
+            currentPage: 1,
+            hasMore: true,
+            period: 'weekly',
+            limit: 25
+        };
+
+        function handleLeaderboardScroll() {
+            if (rankingPageContainer.scrollTop + rankingPageContainer.clientHeight >= rankingPageContainer.scrollHeight - 200) {
+                loadMoreLeaderboardUsers();
+            }
+        }
+
+        async function loadMoreLeaderboardUsers(isInitialLoad = false) {
+            if (leaderboardState.isLoading || !leaderboardState.hasMore) return;
+
+            leaderboardState.isLoading = true;
+            const container = document.getElementById('ranking-list');
+            
+            const loadingIndicatorId = 'leaderboard-loading-indicator';
+            if (!isInitialLoad && container) {
+                const indicator = document.createElement('div');
+                indicator.id = loadingIndicatorId;
+                indicator.innerHTML = '<div class="text-center text-gray-500 py-4"><i class="fas fa-spinner fa-spin"></i></div>';
+                container.appendChild(indicator);
+            }
+
+            try {
+                const { data: userScores, error } = await supabase.functions.invoke('get-leaderboard', {
+                    body: { 
+                        period: leaderboardState.period, 
+                        page: leaderboardState.currentPage, 
+                        limit: leaderboardState.limit 
+                    }
+                });
+
+                if (error) throw error;
+                
+                if (!userScores || userScores.length < leaderboardState.limit) {
+                    leaderboardState.hasMore = false;
+                    rankingPageContainer.removeEventListener('scroll', handleLeaderboardScroll);
+                }
+
+                const periodText = leaderboardState.period === 'daily' ? 'today' : leaderboardState.period === 'weekly' ? 'in the last 7 days' : 'in the last 30 days';
+
+                const newUsersHtml = userScores.map((user, index) => {
+                    const rank = ((leaderboardState.currentPage - 1) * leaderboardState.limit) + index + 1;
+                    let rankClass = '';
+                    if (rank === 1) rankClass = 'rank-1';
+                    if (rank === 2) rankClass = 'rank-2';
+                    if (rank === 3) rankClass = 'rank-3';
+
+                    const avatarHTML = user.photo_url 
+                        ? `<img src="${user.photo_url}" class="w-full h-full object-cover">`
+                        : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
+
+                    return `
+                        <div class="ranking-item ${currentUser.id === user.id ? 'bg-blue-900/30' : ''}" data-user-id="${user.id}">
+                            <div class="rank ${rankClass}">${rank}</div>
+                            <div class="user-avatar bg-gray-600 overflow-hidden">${avatarHTML}</div>
+                            <div class="user-info">
+                                <div class="user-name">${user.username}</div>
+                                <div class="user-time">${formatTime(user.total_study_seconds, false)} ${periodText}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                if (container) {
+                    if (isInitialLoad) {
+                        container.innerHTML = newUsersHtml || `<div class="empty-group"><i class="fas fa-trophy"></i><h3>Leaderboard is Empty</h3><p>Start studying to see your rank!</p></div>`;
+                    } else {
+                        container.insertAdjacentHTML('beforeend', newUsersHtml);
+                    }
+                }
+                
+                leaderboardState.currentPage++;
+
+            } catch (error) {
+                console.error('Failed to load more leaderboard users', error);
+                if (isInitialLoad && container) {
+                    container.innerHTML = '<div class="empty-group"><i class="fas fa-exclamation-triangle"></i><h3>Unable to load leaderboard</h3></div>';
+                }
+            } finally {
+                const loadingIndicator = document.getElementById(loadingIndicatorId);
+                if (loadingIndicator) loadingIndicator.remove();
+                leaderboardState.isLoading = false;
+            }
+        }
+
+        async function renderLeaderboard(period = 'weekly', containerId = 'ranking-list', scrollContainer = rankingPageContainer, tabsSelector = '#ranking-period-tabs .ranking-tab-btn') {
             const container = document.getElementById(containerId);
-            if (!container) return;
+            if (!container || !scrollContainer) return;
+
+            leaderboardState.period = period;
+            leaderboardState.currentPage = 1;
+            leaderboardState.hasMore = true;
+            leaderboardState.isLoading = false;
             
-            const periodTabsSelector = containerId === 'ranking-list' 
-                ? '#ranking-period-tabs .ranking-tab-btn' 
-                : '#group-ranking-period-tabs .ranking-tab-btn';
-            
-            const periodTabs = document.querySelectorAll(periodTabsSelector);
+            const periodTabs = document.querySelectorAll(tabsSelector);
             if (periodTabs.length > 0) {
                 periodTabs.forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.period === period);
@@ -4888,76 +4990,14 @@ if (achievementsGrid) {
             }
 
             container.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            
+            scrollContainer.removeEventListener('scroll', handleLeaderboardScroll);
+            
+            await loadMoreLeaderboardUsers(true);
 
-            const { data: profiles, error: profilesError } = await supabase
-                .from('profiles')
-                .select('id, username, photo_url');
-            if (profilesError) {
-                console.error('Failed to load leaderboard users', profilesError);
-                container.innerHTML = '<div class="empty-group"><i class="fas fa-exclamation-triangle"></i><h3>Unable to load leaderboard</h3></div>';
-                return;
+            if (leaderboardState.hasMore) {
+                scrollContainer.addEventListener('scroll', handleLeaderboardScroll);
             }
-
-            const now = getCurrentDate();
-            let startDate;
-            switch (period) {
-                case 'daily':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    break;
-                case 'monthly':
-                    startDate = new Date(now);
-                    startDate.setDate(now.getDate() - 30);
-                    break;
-                case 'weekly':
-                default:
-                    startDate = new Date(now);
-                    startDate.setDate(now.getDate() - 7);
-                    break;
-            }
-            startDate.setHours(0, 0, 0, 0);
-            const startIso = startDate.toISOString();
-
-            const userPromises = (profiles || []).map(async profile => {
-                const sessions = await fetchSessionsSince(profile.id, startIso);
-                const totalSeconds = sessions
-                    .filter(session => session.type === 'study')
-                    .reduce((sum, session) => sum + (session.durationSeconds || 0), 0);
-
-                return {
-                    id: profile.id,
-                    username: profile.username || 'Anonymous',
-                    photo_url: profile.photo_url,
-                    total_study_seconds: totalSeconds
-                };
-            });
-
-            const userScores = await Promise.all(userPromises);
-            userScores.sort((a, b) => b.total_study_seconds - a.total_study_seconds);
-
-            const periodText = period === 'daily' ? 'today' : period === 'weekly' ? 'in the last 7 days' : 'in the last 30 days';
-
-            container.innerHTML = userScores.map((user, index) => {
-                const rank = index + 1;
-                let rankClass = '';
-                if (rank === 1) rankClass = 'rank-1';
-                if (rank === 2) rankClass = 'rank-2';
-                if (rank === 3) rankClass = 'rank-3';
-
-                const avatarHTML = user.photo_url 
-                    ? `<img src="${user.photo_url}" class="w-full h-full object-cover">`
-                    : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
-
-                return `
-                    <div class="ranking-item ${currentUser.id === user.id ? 'bg-blue-900/30' : ''}" data-user-id="${user.id}">
-                        <div class="rank ${rankClass}">${rank}</div>
-                        <div class="user-avatar bg-gray-600 overflow-hidden">${avatarHTML}</div>
-                        <div class="user-info">
-                            <div class="user-name">${user.username}</div>
-                            <div class="user-time">${formatTime(user.total_study_seconds, false)} ${periodText}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('') || `<div class="empty-group"><i class="fas fa-trophy"></i><h3>Leaderboard is Empty</h3><p>Start studying to see your rank!</p></div>`;
         }
 
         // ---- Public API ----
@@ -5667,57 +5707,114 @@ if (achievementsGrid) {
             return Math.floor(seconds) + "s";
         }
 
-        async function renderGroupRankings() {
-            if (!currentUser) return;
-            const container = document.getElementById('all-groups-list');
+        // --- NEW: Infinite Scroll handler for Group Rankings page ---
+        function handleGroupRankingsScroll() {
+            const container = document.getElementById('page-find-groups');
             if (!container) return;
-            container.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
-        
+            // Trigger load more when user is 200px from the bottom
+            if (container.scrollTop + container.clientHeight >= container.scrollHeight - 200) {
+                loadMoreGroupRankings();
+            }
+        }
+
+        // --- NEW: Helper to attach listeners to newly loaded group cards ---
+        function attachJoinGroupListeners() {
+            document.querySelectorAll('#all-groups-list .join-btn').forEach(btn => {
+                if (btn.dataset.listenerAttached) return; // Prevent attaching multiple listeners
+                btn.dataset.listenerAttached = 'true';
+                btn.addEventListener('click', async function() {
+                    const groupId = this.dataset.id;
+                    const isPrivate = this.dataset.private === 'true';
+                    if ((currentUserData?.joined_groups || []).includes(groupId)) {
+                        showToast("You've already joined this group.", 'info');
+                        return;
+                    }
+                    if (this.disabled) {
+                        showToast("This group is currently full.", "info");
+                        return;
+                    }
+
+                    if (isPrivate) {
+                        const modal = document.getElementById('password-prompt-modal');
+                        modal.classList.add('active');
+                        document.getElementById('password-prompt-form').onsubmit = async (e) => {
+                            e.preventDefault();
+                            const password = document.getElementById('group-password-prompt-input').value;
+                            const { data: g } = await supabase.from('groups').select('password').eq('id', groupId).single();
+                            if (!g || password !== g.password) {
+                                showToast('Incorrect password', 'error');
+                                return;
+                            }
+                            modal.classList.remove('active');
+                            await joinGroup(groupId);
+                            renderGroupRankings(); // This will re-render with the updated state
+                        };
+                    } else {
+                        await joinGroup(groupId);
+                        renderGroupRankings();
+                    }
+                });
+            });
+
+            document.querySelectorAll('#all-groups-list .group-card.ranking').forEach(card => {
+                if (card.dataset.listenerAttached) return;
+                card.dataset.listenerAttached = 'true';
+                card.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('join-btn')) return;
+                    const groupId = card.dataset.groupId;
+                    if ((currentUserData?.joined_groups || []).includes(groupId)) {
+                        renderGroupDetail(groupId);
+                        showPage('page-group-detail');
+                    } else {
+                        showToast('Join the group to see details.', 'info');
+                    }
+                });
+            });
+        }
+
+        // --- NEW: Function to load a "page" of groups for infinite scroll ---
+        async function loadMoreGroupRankings(isInitialLoad = false) {
+            if (groupRankingsState.isLoading || !groupRankingsState.hasMore) return;
+
+            groupRankingsState.isLoading = true;
+            const container = document.getElementById('all-groups-list');
+            
+            const loadingIndicatorId = 'group-rankings-loading-indicator';
+            if (!isInitialLoad && container) {
+                const indicator = document.createElement('div');
+                indicator.id = loadingIndicatorId;
+                indicator.innerHTML = '<div class="text-center text-gray-500 py-4"><i class="fas fa-spinner fa-spin"></i></div>';
+                container.appendChild(indicator);
+            }
+
             const sortMethod = document.querySelector('#group-ranking-sort-tabs .active')?.dataset.sort || 'studytime';
             const filters = {
                 univ: document.querySelector('[data-filter="univ"]')?.checked,
                 available: document.querySelector('[data-filter="available"]')?.checked,
                 public: document.querySelector('[data-filter="public"]')?.checked,
             };
-        
+
             try {
-                // Call the Edge Function to get all enriched group data
+                // Assumes the 'get-enriched-groups' Edge Function now supports pagination, sorting, and filtering
                 const { data: enriched, error: fnError } = await supabase.functions.invoke('get-enriched-groups', {
-                    body: {} // No groupIds means fetch all
-                });
-        
-                if (fnError) throw fnError;
-        
-                // Client-side filtering
-                let filtered = enriched.filter(g => {
-                    if (filters.univ && g.category !== 'University') return false;
-                    if (filters.available && g.membersCount >= g.capacity) return false;
-                    if (filters.public && g.password) return false;
-                    return true;
-                });
-        
-                // Client-side sorting
-                filtered.sort((a, b) => {
-                    switch (sortMethod) {
-                        case 'attendance': return (b.attendance - a.attendance) || (b.membersCount - a.membersCount);
-                        case 'new': {
-                            const da = a.created_at ? new Date(a.created_at) : new Date(0);
-                            const db = b.created_at ? new Date(b.created_at) : new Date(0);
-                            return db - da;
-                        }
-                        case 'studytime':
-                        default:
-                            return (b.avgTime - a.avgTime) || (b.membersCount - a.membersCount);
+                    body: { 
+                        page: groupRankingsState.currentPage,
+                        limit: groupRankingsState.limit,
+                        sort: sortMethod,
+                        filters: filters
                     }
                 });
-        
-                if (filtered.length === 0) {
-                    container.innerHTML = `<div class="empty-group"><i class="fas fa-search-minus"></i><h3>No Groups Found</h3><p>Try adjusting your filters or create a new group!</p></div>`;
-                    return;
+                
+                if (fnError) throw fnError;
+
+                if (!enriched || enriched.length < groupRankingsState.limit) {
+                    groupRankingsState.hasMore = false;
+                    const findGroupsPageContainer = document.getElementById('page-find-groups');
+                    if(findGroupsPageContainer) findGroupsPageContainer.removeEventListener('scroll', handleGroupRankingsScroll);
                 }
-        
-                container.innerHTML = '<div class="flex flex-col gap-4">' + filtered.map((g, idx) => {
-                    const rank = idx + 1;
+
+                const newGroupsHtml = enriched.map((g, idx) => {
+                    const rank = ((groupRankingsState.currentPage - 1) * groupRankingsState.limit) + idx + 1;
                     const isFull = g.membersCount >= g.capacity;
                     const isJoined = (currentUserData?.joined_groups || []).includes(g.id);
                     const createdDate = g.created_at ? new Date(g.created_at) : new Date();
@@ -5751,60 +5848,51 @@ if (achievementsGrid) {
                             </button>
                           </div>
                         </div>`;
-                }).join('') + '</div>';
-        
-                // Attach event listeners after rendering
-                document.querySelectorAll('.join-btn').forEach(btn => {
-                    btn.addEventListener('click', async function() {
-                        const groupId = this.dataset.id;
-                        const isPrivate = this.dataset.private === 'true';
-                        if ((currentUserData?.joined_groups || []).includes(groupId)) {
-                            showToast("You've already joined this group.", 'info');
-                            return;
-                        }
-                        if (this.disabled) {
-                            showToast("This group is currently full.", "info");
-                            return;
-                        }
-        
-                        if (isPrivate) {
-                            const modal = document.getElementById('password-prompt-modal');
-                            modal.classList.add('active');
-                            document.getElementById('password-prompt-form').onsubmit = async (e) => {
-                                e.preventDefault();
-                                const password = document.getElementById('group-password-prompt-input').value;
-                                const { data: g } = await supabase.from('groups').select('password').eq('id', groupId).single();
-                                if (!g || password !== g.password) {
-                                    showToast('Incorrect password', 'error');
-                                    return;
-                                }
-                                modal.classList.remove('active');
-                                await joinGroup(groupId);
-                                renderGroupRankings();
-                            };
-                        } else {
-                            await joinGroup(groupId);
-                            renderGroupRankings();
-                        }
-                    });
-                });
-        
-                document.querySelectorAll('.group-card.ranking').forEach(card => {
-                    card.addEventListener('click', (e) => {
-                        if (e.target.classList.contains('join-btn')) return;
-                        const groupId = card.dataset.groupId;
-                        if ((currentUserData?.joined_groups || []).includes(groupId)) {
-                            renderGroupDetail(groupId);
-                            showPage('page-group-detail');
-                        } else {
-                            showToast('Join the group to see details.', 'info');
-                        }
-                    });
-                });
-        
+                }).join('');
+
+                if (container) {
+                     if (isInitialLoad) {
+                        container.innerHTML = `<div class="flex flex-col gap-4">${newGroupsHtml}</div>` || `<div class="empty-group"><i class="fas fa-search-minus"></i><h3>No Groups Found</h3><p>Try adjusting your filters or create a new group!</p></div>`;
+                    } else {
+                        container.querySelector('.flex')?.insertAdjacentHTML('beforeend', newGroupsHtml);
+                    }
+                }
+                
+                groupRankingsState.currentPage++;
+                attachJoinGroupListeners(); // Attach listeners for the new items
+
             } catch (error) {
-                console.error('Error in renderGroupRankings:', error);
-                container.innerHTML = `<div class="empty-group"><i class="fas fa-exclamation-triangle"></i><h3>Unable to load rankings</h3><p>There might be an issue with the server. Please try again later.</p></div>`;
+                console.error('Failed to load more groups:', error);
+                if (isInitialLoad && container) {
+                    container.innerHTML = `<div class="empty-group"><i class="fas fa-exclamation-triangle"></i><h3>Unable to load rankings</h3><p>There might be an issue with the server. Please try again later.</p></div>`;
+                }
+            } finally {
+                const loadingIndicator = document.getElementById(loadingIndicatorId);
+                if (loadingIndicator) loadingIndicator.remove();
+                groupRankingsState.isLoading = false;
+            }
+        }
+
+        async function renderGroupRankings() {
+            if (!currentUser) return;
+            const container = document.getElementById('all-groups-list');
+            const findGroupsPageContainer = document.getElementById('page-find-groups');
+            if (!container || !findGroupsPageContainer) return;
+        
+            // Reset state for a fresh load (e.g., when changing filters)
+            groupRankingsState.currentPage = 1;
+            groupRankingsState.hasMore = true;
+            groupRankingsState.isLoading = false;
+        
+            container.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            
+            // Remove any old listener before adding a new one
+            findGroupsPageContainer.removeEventListener('scroll', handleGroupRankingsScroll);
+            
+            await loadMoreGroupRankings(true); // Initial load
+
+            if (groupRankingsState.hasMore) {
+                findGroupsPageContainer.addEventListener('scroll', handleGroupRankingsScroll);
             }
         }
 
@@ -6267,50 +6355,60 @@ if (achievementsGrid) {
                     document.getElementById('group-ranking-period-tabs').addEventListener('click', e => {
                         if (e.target.matches('.ranking-tab-btn')) {
                             const period = e.target.dataset.period;
-                            const isGlobal = document.getElementById('global-ranking-scope-btn')?.classList.contains('active');
-                            if (isGlobal) {
-                                renderLeaderboard(period, 'group-ranking-list');
-                            } else {
-                                renderGroupLeaderboard(period);
-                            }
+                            // This single call now handles both global and group-specific contexts correctly
+                            renderGroupLeaderboard(period);
                         }
                     });
                     renderGroupLeaderboard('weekly');
                     break;
                 case 'invite':
                     container.innerHTML = `
-                        <div class="p-6 text-center">
-                            <i class="fas fa-share-alt text-5xl text-blue-400 mb-4"></i>
-                            <h2 class="text-2xl font-bold mb-2">Invite Friends</h2>
-                            <p class="text-gray-400 mb-6">Share this group ID with your friends to let them join.</p>
-                            <div class="bg-gray-800 p-4 rounded-lg flex items-center justify-between">
-                                <span id="group-invite-id" class="text-lg font-mono text-gray-300">${currentGroupId}</span>
-                                <button id="copy-group-id-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">Copy ID</button>
+                        <div class="p-4 md:p-6 text-center flex flex-col items-center justify-center h-full">
+                            <div>
+                                <i class="fas fa-share-alt text-5xl text-sky-400 mb-6"></i>
+                                <h2 class="text-2xl font-bold mb-4">Invite Members</h2>
+                                <p class="text-gray-400 mb-6 max-w-md mx-auto">Share the group name with friends and tell them to search for it on the 'Group Rankings' page.</p>
+                                <div class="bg-gray-800 p-4 rounded-lg flex items-center justify-between w-full max-w-sm mx-auto">
+                                    <span id="invite-group-name" class="font-mono text-lg text-white truncate">Loading...</span>
+                                    <button id="copy-group-name-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition flex items-center gap-2">
+                                        <i class="fas fa-copy"></i> Copy
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     `;
-                    document.getElementById('copy-group-id-btn').addEventListener('click', () => {
-                        navigator.clipboard.writeText(currentGroupId).then(() => {
-                            showToast('Group ID copied to clipboard!', 'success');
-                        }).catch(err => {
-                            showToast('Failed to copy ID.', 'error');
-                        });
+                    fetchGroup(currentGroupId).then(group => {
+                        if (group) {
+                            document.getElementById('invite-group-name').textContent = group.name;
+                        }
                     });
                     break;
                 case 'chat':
                     container.innerHTML = `
-                        <div class="flex flex-col h-full" style="height: calc(100vh - 73px - 57px);">
+                        <div class="flex flex-col h-full">
                             <div id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-4 no-scrollbar">
-                                <!-- Messages will be rendered here -->
+                                <div class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
                             </div>
-                            <form id="chat-form" class="p-4 border-t border-gray-700 flex items-center gap-2">
-                                <div class="relative flex-grow">
-                                    <input id="chat-input" type="text" class="w-full bg-gray-700 rounded-full py-3 px-5 text-white" placeholder="Type a message..." autocomplete="off">
-                                </div>
-                                <button type="submit" class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white flex-shrink-0 hover:bg-blue-700 transition">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </form>
+                            <div class="p-4 bg-gray-900 border-t border-gray-800">
+                                <form id="chat-form" class="flex items-center gap-2">
+                                     <div id="chat-attach-btn" class="relative">
+                                         <button type="button" class="w-10 h-10 flex-shrink-0 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600">
+                                            <i class="fas fa-paperclip"></i>
+                                         </button>
+                                         <div id="chat-attachment-menu" class="hidden absolute bottom-full left-0 mb-2 w-40 bg-gray-700 rounded-lg shadow-lg overflow-hidden">
+                                             <div class="p-1">
+                                                <button type="button" data-chat-action="album" class="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-600 rounded-md flex items-center gap-2"><i class="fas fa-images"></i> Album</button>
+                                                <button type="button" data-chat-action="camera" class="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-600 rounded-md flex items-center gap-2"><i class="fas fa-camera"></i> Camera</button>
+                                                <button type="button" data-chat-action="file" class="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-600 rounded-md flex items-center gap-2"><i class="fas fa-file"></i> File</button>
+                                             </div>
+                                         </div>
+                                     </div>
+                                    <input type="text" id="chat-input" class="w-full bg-gray-800 rounded-full p-3 px-5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type a message..." autocomplete="off">
+                                    <button type="submit" class="w-12 h-12 flex-shrink-0 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl hover:bg-blue-700 transition transform hover:scale-110">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     `;
                     setupGroupChat(currentGroupId);
@@ -6318,7 +6416,7 @@ if (achievementsGrid) {
             }
         }
 
-          function setupGroupMemberListeners(memberIds) {
+        function setupGroupMemberListeners(memberIds) {
             // clear previous
             groupDetailUnsubscribers.forEach(unsub => unsub());
             groupDetailUnsubscribers = [];
@@ -6415,77 +6513,136 @@ if (achievementsGrid) {
             });
           }          
 
-        function renderGroupLeaderboard(period) {
+        // --- Group Leaderboard Infinite Scroll State & Functions ---
+        const groupDetailPageContainer = document.getElementById('page-group-detail');
+        let groupLeaderboardState = {
+            isLoading: false,
+            currentPage: 1,
+            hasMore: true,
+            period: 'weekly',
+            limit: 25,
+        };
+
+        function handleGroupLeaderboardScroll() {
+            if (groupDetailPageContainer.scrollTop + groupDetailPageContainer.clientHeight >= groupDetailPageContainer.scrollHeight - 200) {
+                loadMoreGroupLeaderboardUsers();
+            }
+        }
+        
+        async function loadMoreGroupLeaderboardUsers(isInitialLoad = false) {
+            if (groupLeaderboardState.isLoading || !groupLeaderboardState.hasMore) return;
+
+            groupLeaderboardState.isLoading = true;
+            const container = document.getElementById('group-ranking-list');
+            const isGlobal = document.getElementById('global-ranking-scope-btn')?.classList.contains('active');
+            
+            const loadingIndicatorId = `group-ranking-list-loading`;
+            if (!isInitialLoad && container) {
+                const indicator = document.createElement('div');
+                indicator.id = loadingIndicatorId;
+                indicator.innerHTML = '<div class="text-center text-gray-500 py-4"><i class="fas fa-spinner fa-spin"></i></div>';
+                container.appendChild(indicator);
+            }
+
+            try {
+                const functionParams = { 
+                    period: groupLeaderboardState.period, 
+                    page: groupLeaderboardState.currentPage, 
+                    limit: groupLeaderboardState.limit 
+                };
+                if (!isGlobal) {
+                    functionParams.groupId = currentGroupId;
+                }
+
+                const { data: userScores, error } = await supabase.functions.invoke('get-leaderboard', {
+                    body: functionParams
+                });
+
+                if (error) throw error;
+                
+                if (!userScores || userScores.length < groupLeaderboardState.limit) {
+                    groupLeaderboardState.hasMore = false;
+                    groupDetailPageContainer.removeEventListener('scroll', handleGroupLeaderboardScroll);
+                }
+
+                const periodText = groupLeaderboardState.period === 'daily' ? 'today' : groupLeaderboardState.period === 'weekly' ? 'in the last 7 days' : 'in the last 30 days';
+
+                const newUsersHtml = userScores.map((user, index) => {
+                    const rank = ((groupLeaderboardState.currentPage - 1) * groupLeaderboardState.limit) + index + 1;
+                    let rankClass = '';
+                    if (rank === 1) rankClass = 'rank-1';
+                    if (rank === 2) rankClass = 'rank-2';
+                    if (rank === 3) rankClass = 'rank-3';
+
+                    const avatarHTML = user.photo_url
+                        ? `<img src="${user.photo_url}" class="w-full h-full object-cover">`
+                        : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
+
+                    return `
+                        <div class="ranking-item ${currentUser.id === user.id ? 'bg-blue-900/30' : ''}" data-user-id="${user.id}">
+                            <div class="rank ${rankClass}">${rank}</div>
+                            <div class="user-avatar bg-gray-600 overflow-hidden">${avatarHTML}</div>
+                            <div class="user-info">
+                                <div class="user-name">${user.username}</div>
+                                <div class="user-time">${formatTime(user.total_study_seconds, false)} ${periodText}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                if (container) {
+                    if (isInitialLoad) {
+                        container.innerHTML = newUsersHtml || `<div class="empty-group"><i class="fas fa-trophy"></i><h3>Leaderboard is Empty</h3><p>Start studying to see your rank!</p></div>`;
+                    } else {
+                        container.insertAdjacentHTML('beforeend', newUsersHtml);
+                    }
+                }
+                
+                groupLeaderboardState.currentPage++;
+
+            } catch (error) {
+                console.error('Failed to load group leaderboard:', error);
+                if (isInitialLoad && container) {
+                    container.innerHTML = `<div class="empty-group"><i class="fas fa-exclamation-triangle"></i><h3>Unable to load rankings</h3></div>`;
+                } else {
+                    showToast('Could not load more users.', 'error');
+                }
+            } finally {
+                const loadingIndicator = document.getElementById(loadingIndicatorId);
+                if (loadingIndicator) loadingIndicator.remove();
+                groupLeaderboardState.isLoading = false;
+            }
+        }
+
+        async function renderGroupLeaderboard(period) {
             const container = document.getElementById('group-ranking-list');
             if (!container) return;
-
-            if (!period) {
-                period = document.querySelector('#group-ranking-period-tabs .ranking-tab-btn.active')?.dataset.period || 'weekly';
-            }
             
+            // Set the period in the state, falling back to the active tab or 'weekly'
+            groupLeaderboardState.period = period || document.querySelector('#group-ranking-period-tabs .ranking-tab-btn.active')?.dataset.period || 'weekly';
+            
+            // Reset pagination state for a new load
+            groupLeaderboardState.currentPage = 1;
+            groupLeaderboardState.hasMore = true;
+            groupLeaderboardState.isLoading = false;
+
+            // Sync the UI tabs with the current state
             document.querySelectorAll('#group-ranking-period-tabs .ranking-tab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.period === period);
+                btn.classList.toggle('active', btn.dataset.period === groupLeaderboardState.period);
             });
+            
+            container.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            
+            // Ensure no old listeners are active
+            groupDetailPageContainer.removeEventListener('scroll', handleGroupLeaderboardScroll);
+            
+            // Load the first page of data
+            await loadMoreGroupLeaderboardUsers(true);
 
-            const userScores = Object.keys(groupRealtimeData.members).map(memberId => {
-                const memberData = groupRealtimeData.members[memberId];
-                const memberSessions = groupRealtimeData.sessions[memberId] || [];
-
-                const now = getCurrentDate();
-                let startDate;
-                switch (period) {
-                    case 'daily': 
-                        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); 
-                        break;
-                    case 'monthly': // Last 30 days
-                        startDate = new Date(now);
-                        startDate.setDate(now.getDate() - 30);
-                        break;
-                    case 'weekly': // Last 7 days
-                    default:
-                        startDate = new Date(now);
-                        startDate.setDate(now.getDate() - 7);
-                        break;
-                }
-                startDate.setHours(0,0,0,0);
-
-                const totalSeconds = memberSessions
-                    .filter(s => s.endedAt && s.endedAt >= startDate && s.type === 'study') // Only count study sessions for ranking
-                    .reduce((sum, s) => sum + s.durationSeconds, 0);
-
-                return {
-                    id: memberId,
-                    username: memberData.username || 'Anonymous',
-                    photo_url: memberData.photo_url,
-                    total_study_seconds: totalSeconds
-                };
-            });
-
-            userScores.sort((a, b) => b.total_study_seconds - a.total_study_seconds);
-            const periodText = period === 'daily' ? 'today' : period === 'weekly' ? 'in the last 7 days' : 'in the last 30 days';
-
-            container.innerHTML = userScores.map((user, index) => {
-                const rank = index + 1;
-                let rankClass = '';
-                if (rank === 1) rankClass = 'rank-1';
-                if (rank === 2) rankClass = 'rank-2';
-                if (rank === 3) rankClass = 'rank-3';
-
-                const avatarHTML = user.photo_url
-                    ? `<img src="${user.photo_url}" class="w-full h-full object-cover">`
-                    : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
-
-                return `
-                    <div class="ranking-item ${currentUser.id === user.id ? 'bg-blue-900/30' : ''}" data-user-id="${user.id}">
-                        <div class="rank ${rankClass}">${rank}</div>
-                        <div class="user-avatar bg-gray-600 overflow-hidden">${avatarHTML}</div>
-                        <div class="user-info">
-                            <div class="user-name">${user.username}</div>
-                            <div class="user-time">${formatTime(user.total_study_seconds, false)} ${periodText}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('') || `<div class="empty-group"><i class="fas fa-trophy"></i><h3>Leaderboard is Empty</h3><p>Start studying to see your rank!</p></div>`;
+            // If there's more data to load, attach the scroll listener
+            if (groupLeaderboardState.hasMore) {
+                groupDetailPageContainer.addEventListener('scroll', handleGroupLeaderboardScroll);
+            }
         }
 
         function renderGroupAttendance() {
@@ -7685,6 +7842,19 @@ if (achievementsGrid) {
                 return;
             }
 
+            const copyBtn = e.target.closest('#copy-group-name-btn');
+            if (copyBtn) {
+                const groupName = document.getElementById('invite-group-name').textContent;
+                const tempInput = document.createElement('input');
+                document.body.appendChild(tempInput);
+                tempInput.value = groupName;
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+                showToast('Group name copied!', 'success');
+                return;
+            }
+
             const rulesBtn = e.target.closest('#group-rules-header-btn');
             if (rulesBtn) {
                 openGroupRulesModal();
@@ -8123,7 +8293,7 @@ if (achievementsGrid) {
                 document.getElementById('group-ranking-scope-btn').classList.remove('active');
                 document.getElementById('global-ranking-scope-btn').classList.add('active');
                 const activePeriod = document.querySelector('#group-ranking-period-tabs .ranking-tab-btn.active')?.dataset.period || 'weekly';
-                renderLeaderboard(activePeriod, 'group-ranking-list');
+                renderGroupLeaderboard(activePeriod);
             }
         });
 
@@ -8603,6 +8773,13 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
+
+
+
+
+
+
 
 
 
