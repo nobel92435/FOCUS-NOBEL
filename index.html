@@ -7467,8 +7467,7 @@ if (achievementsGrid) {
                         leaderName: currentUserData.username,
                         created_at: nowIso(),
                         avgTime: '0h 0m',
-                        attendance: 0,
-                        members: [currentUser.id]
+                        attendance: 0
                     })
                     .select()
                     .single();
@@ -8604,6 +8603,7 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
 
 
 
