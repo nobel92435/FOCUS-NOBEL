@@ -1985,7 +1985,7 @@
     </div>
 
     <div id="toast-container"></div>
-    <div id="add-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Subject</div><button class="close-modal">&times;</button></div><form id="add-subject-form"><div class="mb-4"><label for="add-subject-name" class="block text-gray-300 mb-2">Subject Name</label><input type="text" id="add-subject-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div class="mb-4"><label class="block text-gray-300 mb-2">Color</label><div class="subject-color-picker"><div class="color-dot bg-red-500" data-color="bg-red-500"></div><div class="color-dot bg-blue-500 selected" data-color="bg-blue-500"></div><div class="color-dot bg-green-500" data-color="bg-green-500"></div><div class="color-dot bg-yellow-500" data-color="bg-yellow-500"></div><div class="color-dot bg-purple-500" data-color="bg-purple-500"></div><div class="color-dot bg-pink-500" data-color="bg-pink-500"></div><div class="color-dot bg-indigo-500" data-color="bg-indigo-500"></div><div class="color-dot bg-teal-500" data-color="bg-teal-500"></div><div class="color-dot bg-orange-500" data-color="bg-orange-500"></div><div class="color-dot bg-cyan-500" data-color="bg-cyan-500"></div><div class="color-dot bg-lime-500" data-color="bg-lime-500"></div><div class="color-dot bg-fuchsia-500" data-color="bg-fuchsia-500"></div><div class="color-dot bg-rose-500" data-color="bg-rose-500"></div><div class="color-dot bg-sky-500" data-color="bg-sky-500"></div><div class="color-dot bg-emerald-500" data-color="bg-emerald-500"></div><div class="color-dot bg-amber-500" data-color="bg-amber-500"></div><div class="color-dot bg-violet-500" data-color="bg-violet-500"></div></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Add Subject</button></form></div></div>
+    <div id="add-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div id="add-subject-modal-title" class="modal-title">Add New Subject</div><button class="close-modal">&times;</button></div><form id="add-subject-form"><input type="hidden" id="edit-subject-id"><div class="mb-4"><label for="add-subject-name" class="block text-gray-300 mb-2">Subject Name</label><input type="text" id="add-subject-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div class="mb-4"><label class="block text-gray-300 mb-2">Color</label><div class="subject-color-picker"><div class="color-dot bg-red-500" data-color="bg-red-500"></div><div class="color-dot bg-blue-500 selected" data-color="bg-blue-500"></div><div class="color-dot bg-green-500" data-color="bg-green-500"></div><div class="color-dot bg-yellow-500" data-color="bg-yellow-500"></div><div class="color-dot bg-purple-500" data-color="bg-purple-500"></div><div class="color-dot bg-pink-500" data-color="bg-pink-500"></div><div class="color-dot bg-indigo-500" data-color="bg-indigo-500"></div><div class="color-dot bg-teal-500" data-color="bg-teal-500"></div><div class="color-dot bg-orange-500" data-color="bg-orange-500"></div><div class="color-dot bg-cyan-500" data-color="bg-cyan-500"></div><div class="color-dot bg-lime-500" data-color="bg-lime-500"></div><div class="color-dot bg-fuchsia-500" data-color="bg-fuchsia-500"></div><div class="color-dot bg-rose-500" data-color="bg-rose-500"></div><div class="color-dot bg-sky-500" data-color="bg-sky-500"></div><div class="color-dot bg-emerald-500" data-color="bg-emerald-500"></div><div class="color-dot bg-amber-500" data-color="bg-amber-500"></div><div class="color-dot bg-violet-500" data-color="bg-violet-500"></div></div></div><button type="submit" id="add-subject-submit-btn" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Add Subject</button></form></div></div>
     <div id="start-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Start New Session</div><button id="close-start-session-modal" class="close-modal">&times;</button></div><form id="start-session-form"><div id="subject-selection-list" class="mb-4 max-h-60 overflow-y-auto space-y-2"></div><div class="flex items-center gap-4 mt-4"><button type="button" id="open-add-subject-modal-from-start" class="w-full text-center py-3 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium transition">Add New Subject</button><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Timer</button></div></form></div></div>
     <div id="add-task-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Task</div><button class="close-modal">&times;</button></div><form id="add-task-form"><div class="mb-4"><label for="add-task-name" class="block text-gray-300 mb-2">Task Description</label><input type="text" id="add-task-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div class="mb-4"><label for="add-task-date" class="block text-gray-300 mb-2">Date</label><input type="date" id="add-task-date" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Add Task</button></form></div></div>
     <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form"><input type="password" id="group-password-prompt-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required><div class="flex gap-2 mt-4"><button type="button" class="close-modal w-full py-2 bg-gray-600 rounded-lg">Cancel</button><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Submit</button></div></form></div></div>
@@ -2033,359 +2033,100 @@
     const auth = supabase.auth;
     const storage = supabase.storage;
 
-    // Firestore compatibility layer implemented with Supabase
-    const db = {};
-
-    function flattenSegments(segs) {
-        return segs.flatMap(s => {
-            if (!s) return [];
-            if (typeof s === 'string') return s.split('/').filter(Boolean);
-            if (s.path) return s.path;
-            return [s];
-        });
+    function isValidUUID(uuid) {
+        if (typeof uuid !== 'string' || !uuid) return false;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(uuid);
     }
 
-    function doc(...args) {
-        if (args.length && typeof args[0] === 'object' && !args[0].path) {
-            args = args.slice(1);
-        }
-        if (args.length === 1 && args[0]?.path) {
-            const path = [...args[0].path];
-            const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
-                ? crypto.randomUUID()
-                : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-                    (c ^ Math.random() * 16 >> c / 4).toString(16));
-            path.push(id);
-            return { path };
-        }
-        const segments = flattenSegments(args);
-        return { path: segments };
-    }
+    const nowIso = () => new Date().toISOString();
 
-    function collection(...args) {
-        if (args.length && typeof args[0] === 'object' && !args[0].path) {
-            args = args.slice(1);
-        }
-        const segments = flattenSegments(args);
-        return { path: segments };
-    }
-
-    function stripArtifacts(segments) {
-        if (segments[0] === 'artifacts') return segments.slice(2);
-        return segments;
-    }
-
-    function stripPublic(segments) {
-        if (segments[0] === 'public' && segments[1] === 'data') {
-            return segments.slice(2);
-        }
-        return segments;
-    }
-
-    function parseDocPath(ref) {
-        if (!ref || !ref.path || ref.path.length < 2) {
-            console.error("Invalid doc reference passed to parseDocPath:", ref);
-            return { table: undefined, id: undefined, parent: null };
-        }
-        let segments = stripArtifacts(ref.path);
-        segments = stripPublic(segments);
-        if (segments.length < 2) {
-             console.error("Invalid doc segments after stripping:", segments);
-            return { table: undefined, id: undefined, parent: null };
-        }
-        let table = segments[segments.length - 2];
-        if (table === 'users') {
-            table = 'profiles'; // Remap 'users' to 'profiles'
-        }
-        const id = segments[segments.length - 1];
-        let parent = segments.length > 2 ? { table: segments[0], id: segments[1] } : null;
-        if (parent && parent.table === 'users') {
-            parent.table = 'profiles';
-        }
-        return { table, id, parent };
-    }
-
-    function parseCollectionPath(ref) {
-        if (!ref || !ref.path || ref.path.length < 1) {
-            console.error("Invalid collection reference passed to parseCollectionPath:", ref);
-            return { table: undefined, parent: null };
-        }
-        let segments = stripArtifacts(ref.path);
-        segments = stripPublic(segments);
-        if (segments.length < 1) {
-             console.error("Invalid collection segments after stripping:", segments);
-             return { table: undefined, parent: null };
-        }
-        let table = segments[segments.length - 1];
-        let parent = segments.length > 1 ? { table: segments[0], id: segments[1] } : null;
-        if (parent && parent.table === 'users') {
-            parent.table = 'profiles';
-        }
-        if (table === 'users') {
-            table = 'profiles';
-        }
-        return { table, parent };
-    }
-
-    function buildForeignKey(parent) {
-        if (!parent) return {};
-        return { [`${parent.table.slice(0, -1)}_id`]: parent.id };
-    }
-
-    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    function isValidUUID(str) {
-        return typeof str === 'string' && UUID_REGEX.test(str);
-    }
-
-    // NEW HELPER FUNCTION TO PARSE POSTGRES ARRAY STRINGS
-    function fromPgArray(pgString) {
-        if (!pgString) return [];
-        if (Array.isArray(pgString)) return pgString;
-        if (typeof pgString !== 'string') return [];
-        if (pgString === '{}' || pgString === '[]') return [];
-        // Handle JSON-style arrays (e.g. "[\"id1\",\"id2\"]")
-        if (pgString.trim().startsWith('[')) {
-            try {
-                return JSON.parse(pgString).map(v => String(v)).filter(isValidUUID);
-            } catch {
-                return [];
-            }
-        }
-        // Handle Postgres array string format ("{id1,id2}")
-        return pgString
-            .slice(1, -1)
-            .split(',')
-            .map(v => v.replace(/^"|"$/g, ''))
-            .filter(isValidUUID);
-    }
-
-    function convertTimestamps(obj) {
-        if (!obj || typeof obj !== 'object') return obj;
-        for (const [key, value] of Object.entries(obj)) {
-            if (value && typeof value === 'object' && !('toDate' in value)) {
-                convertTimestamps(value);
-            } else if (
-                typeof value === 'string' &&
-                ((value.startsWith('{') && value.endsWith('}')) ||
-                 (value.startsWith('[') && value.endsWith(']')))
-            ) {
-                // Parse Postgres or JSON array strings into JavaScript arrays
-                obj[key] = fromPgArray(value);
-            } else if (typeof value === 'string' || value instanceof Date) {
-                const lower = key.toLowerCase();
-                if (lower.includes('time') || lower.includes('date') || lower.endsWith('at')) {
-                    const d = new Date(value);
-                    if (!isNaN(d)) {
-                        obj[key] = { toDate: () => d };
-                    }
-                }
-            }
-        }
-        return obj;
-    }
-
-    async function getDoc(ref) {
-        const { table, id } = parseDocPath(ref);
-        if (!isValidUUID(id)) {
-            console.warn('getDoc called with invalid uuid', id);
-            return { exists: () => false, data: () => null };
-        }
-        const { data, error } = await supabase.from(table).select('*').eq('id', id).single();
+    async function fetchProfile(userId, columns = '*') {
+        if (!userId) return null;
+        const { data, error } = await supabase
+            .from('profiles')
+            .select(columns)
+            .eq('id', userId)
+            .maybeSingle();
         if (error) throw error;
-        return { exists: () => !!data, data: () => convertTimestamps(data) };
+        return data || null;
     }
 
-    async function setDoc(ref, data) {
-        const { table, id, parent } = parseDocPath(ref);
-        const payload = { id, ...buildForeignKey(parent), ...data };
-        const { error } = await supabase.from(table).upsert(payload);
+    async function updateProfile(userId, values) {
+        if (!userId) throw new Error('updateProfile requires a user id');
+        const { error } = await supabase
+            .from('profiles')
+            .update(values)
+            .eq('id', userId);
         if (error) throw error;
     }
 
-    async function updateDoc(ref, data) {
-        const { table, id } = parseDocPath(ref);
-        if (!isValidUUID(id)) {
-            console.warn('updateDoc called with invalid uuid', id);
-            return;
-        }
-        const { data: existingData } = await supabase.from(table).select('*').eq('id', id).single();
-        const existing = convertTimestamps(existingData);
-        const payload = {};
-        for (const [k, v] of Object.entries(data)) {
-            if (v && v.__op === 'increment') {
-                payload[k] = (existing?.[k] || 0) + v.value;
-            } else if (v && v.__op === 'arrayUnion') {
-                const existingArr = Array.isArray(existing?.[k]) ? existing[k] : fromPgArray(existing?.[k]);
-                const arr = new Set([...(existingArr || []), v.value]);
-                payload[k] = `{${Array.from(arr).join(',')}}`;
-            } else if (v && v.__op === 'arrayRemove') {
-                const existingArr = Array.isArray(existing?.[k]) ? existing[k] : fromPgArray(existing?.[k]);
-                const filteredArr = (existingArr || []).filter(item => item !== v.value);
-                payload[k] = `{${filteredArr.join(',')}}`;
-            } else {
-                payload[k] = v;
-            }
-        }
-        const { error } = await supabase.from(table).update(payload).eq('id', id);
+    // This function now fetches from the 'profiles' table instead of 'users'.
+    async function fetchUserPrivate(userId, columns = '*') {
+        if (!userId) return null;
+        const { data, error } = await supabase
+            .from('profiles') // Changed from 'users'
+            .select(columns)
+            .eq('id', userId)
+            .maybeSingle();
+        if (error) throw error;
+        return data || null;
+    }
+
+    // This function now updates the 'profiles' table instead of 'users'.
+    async function updateUserPrivate(userId, values) {
+        if (!userId) throw new Error('updateUserPrivate requires a user id');
+        const { error } = await supabase
+            .from('profiles') // Changed from 'users'
+            .update(values)
+            .eq('id', userId);
         if (error) throw error;
     }
 
-    async function addDoc(collRef, data) {
-        const { table, parent } = parseCollectionPath(collRef);
-        const payload = { ...buildForeignKey(parent), ...data };
-        // Fix for UUID error: Manually format arrays into Postgres literal strings,
-        // as the Supabase client seems to be incorrectly stringifying them as JSON.
-        for (const key in payload) {
-            if (Array.isArray(payload[key])) {
-                payload[key] = `{${payload[key].join(',')}}`;
-            }
-        }
-        const { data: inserted, error } = await supabase.from(table).insert(payload).select().single();
+    async function fetchLatestSession(userId) {
+        if (!userId) return null;
+        const { data, error } = await supabase
+            .from('sessions')
+            .select('*')
+            .eq('profile_id', userId)
+            .order('endedAt', { ascending: false })
+            .limit(1);
         if (error) throw error;
-        return { id: inserted.id };
+        return data && data.length > 0 ? data[0] : null;
     }
 
-    function query(collectionRef, ...mods) {
-        return { collectionRef, mods };
-    }
-
-    function orderBy(field, dir = 'asc') {
-        return { type: 'orderBy', field, dir };
-    }
-
-    function where(field, op, value) {
-        return { type: 'where', field, op, value };
-    }
-
-    function limit(count) {
-        return { type: 'limit', count };
-    }
-
-    async function getDocs(q) {
-        const collectionRef = q && q.collectionRef ? q.collectionRef : q;
-        const mods = q && Array.isArray(q.mods) ? q.mods : [];
-        const { table, parent } = parseCollectionPath(collectionRef);
-
-        const operatorMap = {
-            '==': 'eq',
-            '<': 'lt',
-            '<=': 'lte',
-            '>': 'gt',
-            '>=': 'gte',
-            '!=': 'neq',
-            'array-contains': 'cs',
-            'in': 'in',
-            'array-contains-any': 'cs',
-        };
-
-        let req = supabase.from(table).select('*');
-        if (parent) req = req.eq(`${parent.table.slice(0, -1)}_id`, parent.id);
-
-        for (const mod of mods) {
-            if (mod.type === 'orderBy') {
-                req = req.order(mod.field, { ascending: mod.dir !== 'desc' });
-            } else if (mod.type === 'where') {
-                const supabaseOp = operatorMap[mod.op] || mod.op;
-                let value = mod.value;
-                if (value instanceof Date) {
-                    value = value.toISOString();
-                }
-
-                if (supabaseOp === 'in' && Array.isArray(value)) {
-                    value = `(${value.map(v => typeof v === 'string' ? `"${v}"` : v).join(',')})`;
-                }
-
-                if ((supabaseOp === 'cs' || supabaseOp === 'cd') && !Array.isArray(value)) {
-                    value = `{${value}}`;
-                }
-
-                req = req.filter(mod.field, supabaseOp, value);
-            } else if (mod.type === 'limit') {
-                req = req.limit(mod.count);
-            }
+    async function fetchSessionsSince(userId, startIso) {
+        if (!userId) return [];
+        let query = supabase
+            .from('sessions')
+            .select('durationSeconds, type, endedAt')
+            .eq('profile_id', userId);
+        if (startIso) {
+            query = query.gte('endedAt', startIso);
         }
-        
-        const { data, error } = await req;
-
+        const { data, error } = await query;
         if (error) throw error;
-        return { docs: data.map(d => ({ id: d.id, data: () => convertTimestamps(d) })), empty: data.length === 0 };
+        return data || [];
     }
 
-    function runTransaction(_db, fn) {
-        return fn({ get: getDoc, update: updateDoc, set: setDoc });
+    async function fetchGroup(groupId) {
+        if (!groupId) return null;
+        const { data, error } = await supabase
+            .from('groups')
+            .select('*')
+            .eq('id', groupId)
+            .maybeSingle();
+        if (error) throw error;
+        return data || null;
     }
 
-    function serverTimestamp() {
-        return new Date().toISOString();
-    }
-
-    function increment(value) {
-        return { __op: 'increment', value };
-    }
-
-    function arrayUnion(value) {
-        return { __op: 'arrayUnion', value };
-    }
-
-    function arrayRemove(value) {
-        return { __op: 'arrayRemove', value };
-    }
-
-    function onSnapshot(refOrQuery, callback) {
-        // This is a real-time implementation using Supabase channels.
-        // It refetches the entire query on any change to the underlying table.
-        const isQuery = !!refOrQuery.collectionRef;
-        const ref = isQuery ? refOrQuery.collectionRef : refOrQuery;
-        
-        let table;
-        if (isQuery) {
-            ({ table } = parseCollectionPath(ref));
-        } else {
-            ({ table } = parseDocPath(ref));
-        }
-        
-        // Create a unique channel name to avoid conflicts
-        const channel = supabase.channel(`table-changes-${table}-${Math.random()}`);
-
-        const fetchData = async () => {
-            try {
-                const snapshot = await (isQuery ? getDocs(refOrQuery) : getDoc(refOrQuery));
-                if (isQuery) {
-                    callback({
-                        docs: snapshot.docs,
-                        empty: snapshot.empty,
-                        forEach: fn => snapshot.docs.forEach(doc => fn(doc))
-                    });
-                } else {
-                    callback(snapshot);
-                }
-            } catch (error) {
-                console.error(`Real-time fetch error for table '${table}':`, error);
-            }
-        };
-
-        channel
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: table },
-                (payload) => {
-                    // Refetch data on any change
-                    fetchData();
-                }
-            )
-            .subscribe((status, err) => {
-                 if (status === 'SUBSCRIBED') {
-                    // Fetch the initial data once the connection is established
-                    fetchData();
-                } else if (err) {
-                    console.error(`Failed to subscribe to real-time changes for table '${table}':`, err);
-                }
-            });
-
-        // Return an unsubscribe function for cleanup
-        return () => {
-            supabase.removeChannel(channel);
-        };
+    async function updateGroup(groupId, values) {
+        if (!groupId) throw new Error('updateGroup requires a group id');
+        const { error } = await supabase
+            .from('groups')
+            .update(values)
+            .eq('id', groupId);
+        if (error) throw error;
     }
 
     let currentUser = null;
@@ -3746,74 +3487,77 @@ let pauseStartTime = 0;
             closeModalBtns.forEach(btn => btn.onclick = cleanup);
         }
 
+        function resetAndShowAddSubjectModal() {
+            const modal = document.getElementById('add-subject-modal');
+            modal.classList.add('active');
+            
+            document.getElementById('add-subject-form').reset();
+            document.getElementById('edit-subject-id').value = ''; 
+            document.getElementById('add-subject-modal-title').textContent = 'Add New Subject';
+            document.getElementById('add-subject-submit-btn').textContent = 'Add Subject';
+            
+            const colorPicker = modal.querySelector('.subject-color-picker');
+            if (colorPicker) {
+                colorPicker.querySelectorAll('.color-dot').forEach(el => el.classList.remove('selected'));
+                const defaultColor = colorPicker.querySelector('[data-color="bg-blue-500"]');
+                if (defaultColor) defaultColor.classList.add('selected');
+            }
+        }
+
         async function showUserProfileModal(userId) {
             if (!userId) return;
-            
+
             const modal = document.getElementById('user-profile-modal');
             const loadingEl = document.getElementById('user-profile-loading');
             const detailsEl = document.getElementById('user-profile-details');
-            
+
             modal.classList.add('active');
             loadingEl.classList.remove('hidden');
             detailsEl.classList.add('hidden');
 
             try {
-                // Fetch public and private data in parallel
-                const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', userId);
-                const privateUserRef = doc(db, 'artifacts', appId, 'users', userId);
-                
-                const [publicUserSnap, privateUserSnap] = await Promise.all([
-                    getDoc(publicUserRef),
-                    getDoc(privateUserRef)
+                const [profileData, privateData, lastSession] = await Promise.all([
+                    fetchProfile(userId),
+                    fetchUserPrivate(userId),
+                    fetchLatestSession(userId)
                 ]);
 
-                if (!publicUserSnap.exists() || !privateUserSnap.exists()) {
-                    throw new Error("User data not found.");
+                if (!profileData) {
+                    throw new Error('User data not found.');
                 }
 
-                const publicData = publicUserSnap.data();
-                const privateData = privateUserSnap.data();
+                const todayStr = getCurrentDate().toISOString().split('T')[0];
+                const totalTodaySource = profileData.total_time_today || privateData?.total_time_today || null;
+                const totalTodaySeconds = (totalTodaySource && totalTodaySource.date === todayStr)
+                    ? (totalTodaySource.seconds || 0)
+                    : 0;
 
-                // Fetch last session for last active time
-                const sessionsRef = collection(privateUserRef, 'sessions');
-                const q = query(sessionsRef, orderBy('endedAt', 'desc'), limit(1));
-                const lastSessionSnapshot = await getDocs(q);
-                
-                let lastActiveText = "No sessions yet";
-                if (!lastSessionSnapshot.empty) {
-                    const lastSessionData = lastSessionSnapshot.docs[0].data();
-                    const endedAt = lastSessionData.endedAt?.toDate();
-                    if (endedAt) {
-                         lastActiveText = timeSince(endedAt) + ' ago';
+                let lastActiveText = 'No sessions yet';
+                if (lastSession?.endedAt) {
+                    const endedAt = new Date(lastSession.endedAt);
+                    if (!isNaN(endedAt)) {
+                        lastActiveText = `${timeSince(endedAt)} ago`;
                     }
                 }
-                
-                // Calculate total time today
-                const todayStr = getCurrentDate().toISOString().split('T')[0];
-                let totalTodaySeconds = 0;
-                if (privateData.total_time_today && privateData.total_time_today.date === todayStr) {
-                    totalTodaySeconds = privateData.total_time_today.seconds || 0;
-                }
 
-                // Update UI
                 const avatarEl = document.getElementById('user-profile-avatar');
-                if (publicData.photo_url) {
-                    avatarEl.innerHTML = `<img src="${publicData.photo_url}" alt="${publicData.username}" class="w-full h-full object-cover">`;
+                if (profileData.photo_url) {
+                    avatarEl.innerHTML = `<img src="${profileData.photo_url}" alt="${profileData.username}" class="w-full h-full object-cover">`;
                 } else {
-                    const initial = publicData.username ? publicData.username.charAt(0).toUpperCase() : 'U';
+                    const initial = profileData.username ? profileData.username.charAt(0).toUpperCase() : 'U';
                     avatarEl.innerHTML = `<span>${initial}</span>`;
                 }
-                
-                document.getElementById('user-profile-name').textContent = publicData.username || 'Anonymous';
+
+                document.getElementById('user-profile-name').textContent = profileData.username || 'Anonymous';
                 document.getElementById('user-profile-total-today').textContent = formatTime(totalTodaySeconds);
-                document.getElementById('user-profile-total-overall').textContent = formatTime(publicData.total_study_seconds || 0, false);
+                document.getElementById('user-profile-total-overall').textContent = formatTime(profileData.total_study_seconds || 0, false);
                 document.getElementById('user-profile-last-active').textContent = lastActiveText;
 
                 loadingEl.classList.add('hidden');
                 detailsEl.classList.remove('hidden');
 
             } catch (error) {
-                console.error("Error fetching user profile:", error);
+                console.error('Error fetching user profile:', error);
                 modal.classList.remove('active');
                 showToast('Could not load user profile.', 'error');
             }
@@ -3909,21 +3653,12 @@ let pauseStartTime = 0;
 
             // --- New: Check and save idle time before starting a new study session ---
             if (currentUser) {
-                const sessionsRef = collection(db, 'artifacts', appId, 'users', currentUser.id, 'sessions');
-                const q = query(sessionsRef, orderBy('endedAt', 'desc'), limit(1));
-                const lastSessionSnapshot = await getDocs(q);
-
-                if (!lastSessionSnapshot.empty) {
-                    const lastSessionData = lastSessionSnapshot.docs[0].data();
-                    // Ensure lastSessionData.endedAt is a valid Timestamp before calling toDate()
-                    const lastSessionEndedAt = lastSessionData.endedAt && typeof lastSessionData.endedAt.toDate === 'function' 
-                                                ? lastSessionData.endedAt.toDate() 
-                                                : null;
+                const lastSession = await fetchLatestSession(currentUser.id);
+                if (lastSession?.endedAt && lastSession.type === 'study') {
+                    const endedAt = new Date(lastSession.endedAt);
                     const now = Date.now();
-
-                    // Only track idle break if the last session was a study session and ended before now
-                    if (lastSessionData.type === 'study' && lastSessionEndedAt && lastSessionEndedAt < now) {
-                        const idleDurationSeconds = Math.floor((now - lastSessionEndedAt) / 1000);
+                    if (!isNaN(endedAt) && endedAt.getTime() < now) {
+                        const idleDurationSeconds = Math.floor((now - endedAt.getTime()) / 1000);
                         if (idleDurationSeconds > 0) {
                             await saveSession('Idle Break', idleDurationSeconds, 'break');
                         }
@@ -3968,8 +3703,9 @@ let pauseStartTime = 0;
             document.getElementById('pause-btn').classList.remove('hidden');
             document.getElementById('manual-start-btn').classList.add('hidden');
 
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            await updateDoc(userRef, { studying: { subject: activeSubject, startTime: serverTimestamp(), type: 'study' } });
+            if (currentUser) {
+                await updateUserPrivate(currentUser.id, { studying: { subject: activeSubject, startTime: nowIso(), type: 'study' } });
+            }
         }
         
         async function stopTimer() {
@@ -4020,9 +3756,10 @@ let pauseStartTime = 0;
             // --- END OF ADDED LINES ---
             document.getElementById('manual-start-btn').classList.add('hidden');
 
-            // Update user status in Firestore to show they are no longer studying
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            await updateDoc(userRef, { studying: null });
+            // Update user status in Supabase to show they are no longer studying
+            if (currentUser) {
+                await updateUserPrivate(currentUser.id, { studying: null });
+            }
         }
         
         function pauseTimer() {
@@ -4100,10 +3837,12 @@ let pauseStartTime = 0;
 
             await triggerServerNotification(transitionMessage);
 
-            // Update cycle in Firestore only after a break is completed (meaning a work session is starting)
+            // Update cycle in Supabase only after a break is completed (meaning a work session is starting)
             if (state === 'work') {
                 const newCycleCount = (currentUserData.pomodoroCycle || 0) + 1;
-                updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.id), { pomodoroCycle: newCycleCount });
+                if (currentUser) {
+                    await updateUserPrivate(currentUser.id, { pomodoroCycle: newCycleCount });
+                }
             }
         }
 
@@ -4126,7 +3865,7 @@ let pauseStartTime = 0;
             }
 
             // --- START: ADDED GUEST LOGIC ---
-            // For anonymous users, just update local state without saving to Firestore
+            // For anonymous users, just update local state without saving to Supabase
             if (currentUser.isAnonymous) {
                 if (sessionType === 'study') {
                     totalTimeTodayInSeconds += durationSeconds;
@@ -4206,41 +3945,35 @@ let pauseStartTime = 0;
     if (!currentUser) return;
 
     try {
-        const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists()) return;
+        const profile = await fetchProfile(currentUser.id);
+        if (!profile) return;
 
-        const userData = userDoc.data();
-        const unlocked = userData.unlocked_achievements || [];
-        let newlyUnlocked = [];
+        const unlocked = Array.isArray(profile.unlocked_achievements) ? profile.unlocked_achievements : [];
+        const totalStudySeconds = profile.total_study_seconds || 0;
+        const currentStreak = profile.current_streak || 0;
+        const updated = new Set(unlocked);
 
-        // Rule 1: Study for a total of 1 hour
-        if (!unlocked.includes('novice_scholar') && userData.total_study_seconds >= 3600) {
-            newlyUnlocked.push('novice_scholar');
+        if (!updated.has('novice_scholar') && totalStudySeconds >= 3600) {
+            updated.add('novice_scholar');
         }
-        // Rule 2: Study for a total of 10 hours
-        if (!unlocked.includes('dedicated_learner') && userData.total_study_seconds >= 36000) {
-            newlyUnlocked.push('dedicated_learner');
+        if (!updated.has('dedicated_learner') && totalStudySeconds >= 36000) {
+            updated.add('dedicated_learner');
         }
-        // Rule 3: Complete a single session over 2 hours
-        if (!unlocked.includes('marathoner') && completedSessionDuration >= 7200) {
-            newlyUnlocked.push('marathoner');
+        if (!updated.has('marathoner') && completedSessionDuration >= 7200) {
+            updated.add('marathoner');
         }
-        // Rule 4: Maintain a 7-day study streak
-        if (!unlocked.includes('consistent_coder') && userData.current_streak >= 7) {
-            newlyUnlocked.push('consistent_coder');
+        if (!updated.has('consistent_coder') && currentStreak >= 7) {
+            updated.add('consistent_coder');
         }
 
+        const newlyUnlocked = Array.from(updated).filter(a => !unlocked.includes(a));
         if (newlyUnlocked.length > 0) {
-            await updateDoc(userDocRef, { 
-                unlocked_achievements: arrayUnion(...newlyUnlocked) 
-            });
-            
+            await updateProfile(currentUser.id, { unlocked_achievements: Array.from(updated) });
             const achievement = ACHIEVEMENTS[newlyUnlocked[0]];
             showToast(`Achievement Unlocked: ${achievement.name}!`, 'success');
         }
     } catch (error) {
-        console.error("Error checking achievements:", error);
+        console.error('Error checking achievements:', error);
     }
 }
 
@@ -4255,103 +3988,27 @@ let pauseStartTime = 0;
                 return;
             }
             // --- END: ADDED GUEST LOGIC ---
-            
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            const userDoc = await getDoc(userRef);
 
-            if (userDoc.exists()) {
-                const data = userDoc.data();
-                const todayStr = getCurrentDate().toISOString().split('T')[0];
-                
-                // Reset totals for the new day or if data is missing, then check for today's data.
-                totalTimeTodayInSeconds = 0;
-                totalBreakTimeTodayInSeconds = 0;
-                
-                // Check for today's study time, handling potentially converted date objects.
-                if (data.total_time_today) {
-                    const dateObj = data.total_time_today.date;
-                    const dateStrFromData = (dateObj && typeof dateObj.toDate === 'function')
-                        ? dateObj.toDate().toISOString().split('T')[0]
-                        : dateObj;
-                    if (dateStrFromData === todayStr) {
-                        totalTimeTodayInSeconds = data.total_time_today.seconds || 0;
-                    }
-                }
-                
-                // Check for today's break time, handling potentially converted date objects.
-                if (data.total_break_time_today) {
-                    const dateObj = data.total_break_time_today.date;
-                    const dateStrFromData = (dateObj && typeof dateObj.toDate === 'function')
-                        ? dateObj.toDate().toISOString().split('T')[0]
-                        : dateObj;
-                    if (dateStrFromData === todayStr) {
-                        totalBreakTimeTodayInSeconds = data.total_break_time_today.seconds || 0;
-                    }
+            const profile = await fetchProfile(currentUser.id);
+            const todayStr = getCurrentDate().toISOString().split('T')[0];
+
+            totalTimeTodayInSeconds = 0;
+            totalBreakTimeTodayInSeconds = 0;
+
+            if (profile) {
+                const studyToday = profile.total_time_today;
+                if (studyToday && studyToday.date === todayStr) {
+                    totalTimeTodayInSeconds = studyToday.seconds || 0;
                 }
 
-            } else {
-                totalTimeTodayInSeconds = 0;
-                totalBreakTimeTodayInSeconds = 0;
+                const breakToday = profile.total_break_time_today;
+                if (breakToday && breakToday.date === todayStr) {
+                    totalBreakTimeTodayInSeconds = breakToday.seconds || 0;
+                }
             }
             if(totalTimeDisplay && totalBreakTimeDisplay) { // Should refer to the HTML element
                 updateTotalTimeDisplay();
             }
-        }
-
-        async function getOrCreateUserDocument(user) {
-            const userDocRef = doc(db, 'artifacts', appId, 'users', user.id);
-            let userDoc = await getDoc(userDocRef);
-
-            if (!userDoc.exists()) {
-                const initialData = {
-                    email: user.email,
-                    username: user.displayName,
-                    photo_url: PRESET_AVATARS[0], // Default avatar
-                    studicon_url: 'https://api.dicebear.com/8.x/miniavs/svg?seed=Angel', // Default studicon
-                    joined_groups: [],
-                    created_at: serverTimestamp(),
-                    total_study_seconds: 0,
-                    total_break_seconds: 0, // New field
-                    current_streak: 0,
-                    last_study_day: '',
-                    unlocked_achievements: [],
-                    studying: null,
-                    study_goal_hours: 4,
-                    pomodoro_settings: {
-                        work: 25,
-                        short_break: 5,
-                        long_break: 15,
-                        long_break_interval: 4,
-                        autoStartBreak: true,
-                        autoStartFocus: true
-                    },
-                    pomodoro_sounds: {
-                        start: "tone_simple_beep",
-                        focus: "tone_chime_chord",
-                        break: "tone_metal_bell",
-                        volume: 1.0
-                    },
-                    total_time_today: { 
-                        date: getCurrentDate().toISOString().split('T')[0],
-                        seconds: 0
-                    },
-                    total_break_time_today: { // New field
-                        date: getCurrentDate().toISOString().split('T')[0],
-                        seconds: 0
-                    }
-                };
-                await setDoc(userDocRef, initialData);
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.id), {
-                    username: user.displayName,
-                    email: user.email,
-                    total_study_seconds: 0,
-                    total_break_seconds: 0, // Initialize for public too
-                    photo_url: PRESET_AVATARS[0], // Public profile needs it too
-                    studicon_url: 'https://api.dicebear.com/8.x/miniavs/svg?seed=Angel',
-                });
-                userDoc = await getDoc(userDocRef);
-            }
-            return userDoc;
         }
 
         function updateProfileUI(userData) {
@@ -5232,47 +4889,44 @@ if (achievementsGrid) {
 
             container.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
 
-            const usersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-            const usersSnapshot = await getDocs(query(usersCollectionRef));
+            const { data: profiles, error: profilesError } = await supabase
+                .from('profiles')
+                .select('id, username, photo_url');
+            if (profilesError) {
+                console.error('Failed to load leaderboard users', profilesError);
+                container.innerHTML = '<div class="empty-group"><i class="fas fa-exclamation-triangle"></i><h3>Unable to load leaderboard</h3></div>';
+                return;
+            }
 
-            const userPromises = usersSnapshot.docs.map(async (userDoc) => {
-                const userData = userDoc.data();
-                const userRef = doc(db, 'artifacts', appId, 'users', userDoc.id);
-                const sessionsRef = collection(userRef, 'sessions');
+            const now = getCurrentDate();
+            let startDate;
+            switch (period) {
+                case 'daily':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    break;
+                case 'monthly':
+                    startDate = new Date(now);
+                    startDate.setDate(now.getDate() - 30);
+                    break;
+                case 'weekly':
+                default:
+                    startDate = new Date(now);
+                    startDate.setDate(now.getDate() - 7);
+                    break;
+            }
+            startDate.setHours(0, 0, 0, 0);
+            const startIso = startDate.toISOString();
 
-                const now = getCurrentDate();
-                let startDate;
-                switch (period) {
-                    case 'daily':
-                        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                        break;
-                    case 'monthly': // Last 30 days
-                        startDate = new Date(now);
-                        startDate.setDate(now.getDate() - 30);
-                        break;
-                    case 'weekly': // Last 7 days
-                    default:
-                        startDate = new Date(now);
-                        startDate.setDate(now.getDate() - 7);
-                        break;
-                }
-                startDate.setHours(0,0,0,0);
+            const userPromises = (profiles || []).map(async profile => {
+                const sessions = await fetchSessionsSince(profile.id, startIso);
+                const totalSeconds = sessions
+                    .filter(session => session.type === 'study')
+                    .reduce((sum, session) => sum + (session.durationSeconds || 0), 0);
 
-                const q = query(sessionsRef, where("endedAt", ">=", startDate));
-                const sessionsSnapshot = await getDocs(q);
-                
-                let totalSeconds = 0;
-                sessionsSnapshot.docs.forEach(sessionDoc => {
-                    // Only count study sessions for ranking
-                    if (sessionDoc.data().type === 'study') {
-                        totalSeconds += sessionDoc.data().durationSeconds;
-                    }
-                });
-                
                 return {
-                    id: userDoc.id,
-                    username: userData.username || 'Anonymous',
-                    photo_url: userData.photo_url,
+                    id: profile.id,
+                    username: profile.username || 'Anonymous',
+                    photo_url: profile.photo_url,
                     total_study_seconds: totalSeconds
                 };
             });
@@ -5465,12 +5119,12 @@ if (achievementsGrid) {
                 })
             .subscribe();
         
-          // subscribe to my user row to track studying start/stop and subject/type flips (normal vs pomodoro)
+          // subscribe to my profile row to track studying start/stop and subject/type flips (normal vs pomodoro)
           if (__stats.subUser) supabase.removeChannel(__stats.subUser);
           __stats.subUser = supabase
-            .channel(`users:me:${currentUser.id}`)
+            .channel(`profiles:me:${currentUser.id}`) // Channel name updated for clarity
             .on('postgres_changes',
-                { event: '*', schema: 'public', table: 'users', filter: `id=eq.${currentUser.id}` },
+                { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${currentUser.id}` }, // Changed from 'users'
                 (payload) => {
                   const row = payload.new || payload.old || {};
                   __stats.liveStudying = row.studying || null;
@@ -5492,7 +5146,7 @@ if (achievementsGrid) {
         
         async function __loadLiveStudying() {
           const { data, error } = await supabase
-            .from('users')
+            .from('profiles') // Changed from 'users'
             .select('studying')
             .eq('id', currentUser.id)
             .single();
@@ -5860,7 +5514,7 @@ if (achievementsGrid) {
           
             // 3) Read current user aggregates
             const { data: userRow, error: uErr } = await supabase
-              .from('users')
+              .from('profiles') // Changed from 'users'
               .select('total_study_seconds, total_break_seconds, total_time_today, total_break_time_today')
               .eq('id', currentUser.id)
               .single();
@@ -5899,7 +5553,7 @@ if (achievementsGrid) {
             // 5) Apply aggregate updates (if we managed to load userRow)
             if (Object.keys(updates).length) {
               const { error: upErr } = await supabase
-                .from('users')
+                .from('profiles') // Changed from 'users'
                 .update(updates)
                 .eq('id', currentUser.id);
               if (upErr) {
@@ -5929,107 +5583,73 @@ if (achievementsGrid) {
             if (!currentUser) return;
             const container = document.getElementById('my-groups-list');
             if (!container) return;
-          
+        
             container.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
-          
-            // Find my group IDs
-            const { data: memRows, error: mErr } = await supabase
-              .from('group_members')
-              .select('group_id')
-              .eq('profile_id', currentUser.id);
-          
-            if (mErr) { console.error(mErr); container.innerHTML = `<div class="text-center text-red-400 py-6">Failed to load your groups.</div>`; return; }
-          
-            const joinedGroupIds = (memRows || []).map(r => r.group_id);
-            currentUserData.joined_groups = joinedGroupIds; // keep UI compatible
-          
-            if (joinedGroupIds.length === 0) {
-              container.innerHTML = `<div class="empty-group"><i class="fas fa-users-slash"></i><h3>No Groups Joined Yet</h3><p>You haven't joined any study groups. Join a group or create your own to get started!</p><button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition mt-4" id="explore-groups-btn">Explore Groups</button></div>`;
-              return;
-            }
-          
-            // Load groups
-            const { data: groups, error: gErr } = await supabase
-              .from('groups')
-              .select('*')
-              .in('id', joinedGroupIds);
-          
-            if (gErr) { console.error(gErr); container.innerHTML = `<div class="text-center text-red-400 py-6">Failed to load your groups.</div>`; return; }
-          
-            const todayStr = new Date().toISOString().split('T')[0];
-            const sinceISO = new Date(Date.now() - 24*3600*1000).toISOString();
-          
-            // Preload member counts and ids per group
-            const membersByGroup = {};
-            for (const g of groups) {
-              const { data: rows } = await supabase
-                .from('group_members')
-                .select('profile_id', { count: 'exact' })
-                .eq('group_id', g.id);
-              membersByGroup[g.id] = (rows || []).map(r => r.profile_id);
-            }
-          
-            const enriched = await Promise.all(groups.map(async (g) => {
-              const memberIds = membersByGroup[g.id] || [];
-              let totalSecondsToday = 0, studiedToday = 0;
-          
-              if (memberIds.length) {
-                const { data: users } = await supabase
-                  .from('users')
-                  .select('id,total_time_today')
-                  .in('id', memberIds);
-                (users || []).forEach(u => {
-                  const ttt = u?.total_time_today;
-                  if (ttt?.date === todayStr) {
-                    const s = Number(ttt?.seconds || 0);
-                    totalSecondsToday += s;
-                    if (s > 0) studiedToday++;
-                  }
+        
+            try {
+                // Find my group IDs
+                const { data: memRows, error: mErr } = await supabase
+                    .from('group_members')
+                    .select('group_id')
+                    .eq('profile_id', currentUser.id);
+        
+                if (mErr) throw mErr;
+        
+                const joinedGroupIds = (memRows || []).map(r => r.group_id);
+                currentUserData.joined_groups = joinedGroupIds;
+        
+                if (joinedGroupIds.length === 0) {
+                    container.innerHTML = `<div class="empty-group"><i class="fas fa-users-slash"></i><h3>No Groups Joined Yet</h3><p>You haven't joined any study groups. Join a group or create your own to get started!</p><button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition mt-4" id="explore-groups-btn">Explore Groups</button></div>`;
+                    return;
+                }
+        
+                // Call the Edge Function to get enriched data for only the groups I've joined
+                const { data: enriched, error: fnError } = await supabase.functions.invoke('get-enriched-groups', {
+                    body: { groupIds: joinedGroupIds }
                 });
-              }
-          
-              const { count: newMsgs } = await supabase
-                .from('group_messages')
-                .select('id', { count: 'exact', head: true })
-                .eq('group_id', g.id)
-                .gte('created_at', sinceISO);
-          
-              const attendance = memberIds.length ? Math.round((studiedToday / memberIds.length) * 100) : 0;
-              const avgTime = memberIds.length ? totalSecondsToday / memberIds.length : 0;
-          
-              return { ...g, membersCount: memberIds.length, attendance, avgTime, newMessages: newMsgs || 0 };
-            }));
-          
-            container.innerHTML = '<div class="space-y-4">' + enriched.map(group => {
-              const started = group.created_at ? new Date(group.created_at) : new Date();
-              const category = pick(group.category, 'General');
-              const leader = pick(group.leaderName, group.leader_name, '—');
-              const timeGoal = pick(group.timeGoal, group.time_goal, 0);
-          
-              return `
-                <div class="group-card bg-gray-800 rounded-2xl overflow-hidden shadow-lg cursor-pointer" data-group-id="${group.id}">
-                  <div class="p-5">
-                    <div class="flex justify-between items-start">
-                      <div>
-                        <div class="text-xs uppercase text-blue-400 font-semibold">${category}</div>
-                        <h3 class="text-xl font-bold text-white truncate">${group.name}</h3>
-                        <div class="text-sm text-gray-400 mt-1">Goal: ${timeGoal} hours/day</div>
-                      </div>
-                      <div class="text-xs text-gray-500 text-right flex-shrink-0 ml-2">Leader: ${leader}</div>
-                    </div>
-                    <div class="mt-4 grid grid-cols-3 gap-4 text-center">
-                      <div><div class="text-2xl font-bold text-green-400">${group.attendance}%</div><div class="text-xs text-gray-400">Attendance</div></div>
-                      <div><div class="text-2xl font-bold text-cyan-400">${formatTime(group.avgTime, false)}</div><div class="text-xs text-gray-400">Avg. Time</div></div>
-                      <div><div class="text-2xl font-bold text-white">${group.membersCount}/${group.capacity}</div><div class="text-xs text-gray-400">Members</div></div>
-                    </div>
-                  </div>
-                  <div class="bg-gray-700/50 px-5 py-3 flex justify-between items-center text-sm">
-                    <span class="text-gray-400">Started: ${started.toLocaleDateString()}</span>
-                    ${group.newMessages > 0 ? `<span class="flex items-center gap-2 text-blue-400 animate-pulse"><i class="fas fa-comment-dots"></i> ${group.newMessages} new</span>` : `<span class="text-gray-500">No new messages</span>`}
-                  </div>
-                </div>`;
-            }).join('') + '</div>';
-          }          
+        
+                if (fnError) throw fnError;
+        
+                if (!enriched || enriched.length === 0) {
+                    container.innerHTML = `<div class="empty-group"><i class="fas fa-users-slash"></i><h3>No Groups Joined Yet</h3><p>You haven't joined any study groups. Join a group or create your own to get started!</p><button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition mt-4" id="explore-groups-btn">Explore Groups</button></div>`;
+                    return;
+                }
+        
+                container.innerHTML = '<div class="space-y-4">' + enriched.map(group => {
+                    const started = group.created_at ? new Date(group.created_at) : new Date();
+                    const category = pick(group.category, 'General');
+                    const leader = pick(group.leaderName, group.leader_name, '—');
+                    const timeGoal = pick(group.timeGoal, group.time_goal, 0);
+        
+                    return `
+                        <div class="group-card bg-gray-800 rounded-2xl overflow-hidden shadow-lg cursor-pointer" data-group-id="${group.id}">
+                          <div class="p-5">
+                            <div class="flex justify-between items-start">
+                              <div>
+                                <div class="text-xs uppercase text-blue-400 font-semibold">${category}</div>
+                                <h3 class="text-xl font-bold text-white truncate">${group.name}</h3>
+                                <div class="text-sm text-gray-400 mt-1">Goal: ${timeGoal} hours/day</div>
+                              </div>
+                              <div class="text-xs text-gray-500 text-right flex-shrink-0 ml-2">Leader: ${leader}</div>
+                            </div>
+                            <div class="mt-4 grid grid-cols-3 gap-4 text-center">
+                              <div><div class="text-2xl font-bold text-green-400">${group.attendance}%</div><div class="text-xs text-gray-400">Attendance</div></div>
+                              <div><div class="text-2xl font-bold text-cyan-400">${formatTime(group.avgTime, false)}</div><div class="text-xs text-gray-400">Avg. Time</div></div>
+                              <div><div class="text-2xl font-bold text-white">${group.membersCount}/${group.capacity}</div><div class="text-xs text-gray-400">Members</div></div>
+                            </div>
+                          </div>
+                          <div class="bg-gray-700/50 px-5 py-3 flex justify-between items-center text-sm">
+                            <span class="text-gray-400">Started: ${started.toLocaleDateString()}</span>
+                            ${group.newMessages > 0 ? `<span class="flex items-center gap-2 text-blue-400 animate-pulse"><i class="fas fa-comment-dots"></i> ${group.newMessages} new</span>` : `<span class="text-gray-500">No new messages</span>`}
+                          </div>
+                        </div>`;
+                }).join('') + '</div>';
+        
+            } catch (error) {
+                console.error('Error in renderJoinedGroups:', error);
+                container.innerHTML = `<div class="text-center text-red-400 py-6">Failed to load your groups. Please try again.</div>`;
+            }
+        }
 
         function timeSince(date) {
             if (!date) return 'N/A';
@@ -6052,150 +5672,141 @@ if (achievementsGrid) {
             const container = document.getElementById('all-groups-list');
             if (!container) return;
             container.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
-          
+        
             const sortMethod = document.querySelector('#group-ranking-sort-tabs .active')?.dataset.sort || 'studytime';
             const filters = {
-              univ: document.querySelector('[data-filter="univ"]')?.checked,
-              available: document.querySelector('[data-filter="available"]')?.checked,
-              public: document.querySelector('[data-filter="public"]')?.checked,
+                univ: document.querySelector('[data-filter="univ"]')?.checked,
+                available: document.querySelector('[data-filter="available"]')?.checked,
+                public: document.querySelector('[data-filter="public"]')?.checked,
             };
-          
-            const { data: groups, error: gErr } = await supabase.from('groups').select('*');
-            if (gErr) { console.error(gErr); container.innerHTML = `<div class="text-center text-red-400 py-6">Failed to load groups.</div>`; return; }
-          
-            // Build member ids by group
-            const membersByGroup = {};
-            for (const g of groups) {
-              const { data: rows } = await supabase
-                .from('group_members')
-                .select('profile_id')
-                .eq('group_id', g.id);
-              membersByGroup[g.id] = (rows || []).map(r => r.profile_id);
+        
+            try {
+                // Call the Edge Function to get all enriched group data
+                const { data: enriched, error: fnError } = await supabase.functions.invoke('get-enriched-groups', {
+                    body: {} // No groupIds means fetch all
+                });
+        
+                if (fnError) throw fnError;
+        
+                // Client-side filtering
+                let filtered = enriched.filter(g => {
+                    if (filters.univ && g.category !== 'University') return false;
+                    if (filters.available && g.membersCount >= g.capacity) return false;
+                    if (filters.public && g.password) return false;
+                    return true;
+                });
+        
+                // Client-side sorting
+                filtered.sort((a, b) => {
+                    switch (sortMethod) {
+                        case 'attendance': return (b.attendance - a.attendance) || (b.membersCount - a.membersCount);
+                        case 'new': {
+                            const da = a.created_at ? new Date(a.created_at) : new Date(0);
+                            const db = b.created_at ? new Date(b.created_at) : new Date(0);
+                            return db - da;
+                        }
+                        case 'studytime':
+                        default:
+                            return (b.avgTime - a.avgTime) || (b.membersCount - a.membersCount);
+                    }
+                });
+        
+                if (filtered.length === 0) {
+                    container.innerHTML = `<div class="empty-group"><i class="fas fa-search-minus"></i><h3>No Groups Found</h3><p>Try adjusting your filters or create a new group!</p></div>`;
+                    return;
+                }
+        
+                container.innerHTML = '<div class="flex flex-col gap-4">' + filtered.map((g, idx) => {
+                    const rank = idx + 1;
+                    const isFull = g.membersCount >= g.capacity;
+                    const isJoined = (currentUserData?.joined_groups || []).includes(g.id);
+                    const createdDate = g.created_at ? new Date(g.created_at) : new Date();
+                    const category = pick(g.category, 'General');
+                    const leaderName = pick(g.leaderName, g.leader_name, '—');
+                    const timeGoal = pick(g.timeGoal, g.time_goal, 0);
+        
+                    return `
+                        <div class="group-card ranking bg-gray-800 rounded-xl overflow-hidden shadow-lg" data-group-id="${g.id}">
+                          <div class="p-4">
+                            <div class="flex justify-between items-center text-xs text-gray-400 mb-2">
+                              <span class="font-bold text-base ${rank===1?'text-yellow-400':rank===2?'text-gray-300':rank===3?'text-yellow-600':'text-blue-400'}">
+                                Ranked #${rank} <span class="text-white">${category.substring(0,2).toUpperCase()}</span>
+                              </span>
+                              <span class="flex items-center gap-2">
+                                <span>${timeSince(createdDate)} ago</span>
+                              </span>
+                            </div>
+                            <h3 class="text-lg font-bold truncate mb-2 text-white">${g.name}</h3>
+                            <div class="grid grid-cols-3 gap-x-2 gap-y-1 text-xs mb-3">
+                              <span class="text-gray-400">Goal <b class="text-white">${timeGoal}h</b></span>
+                              <span class="text-gray-400 col-span-2">Members <b class="text-white">${g.membersCount}/${g.capacity} people</b></span>
+                              <span class="text-gray-400 col-span-3">Leader <b class="text-white">${leaderName}</b></span>
+                              <span class="text-gray-400">Attendance <b class="text-white">${g.attendance}%</b></span>
+                              <span class="text-gray-400 col-span-2">Time <b class="text-white">${formatTime(g.avgTime, false)}</b></span>
+                              <span class="text-gray-400 col-span-3">Started <b class="text-white">${createdDate.toLocaleDateString()}</b></span>
+                            </div>
+                            <p class="text-gray-400 text-sm mb-3 h-8 overflow-hidden">${g.description || ''}</p>
+                            <button class="join-btn w-full mt-2 ${isJoined ? 'bg-blue-600' : 'bg-green-500 hover:bg-green-600'}" data-id="${g.id}" data-private="${!!g.password}" ${isFull && !isJoined ? 'disabled' : ''}>
+                              ${isJoined ? 'Joined' : (isFull ? 'Group Full' : 'Join Group')}
+                            </button>
+                          </div>
+                        </div>`;
+                }).join('') + '</div>';
+        
+                // Attach event listeners after rendering
+                document.querySelectorAll('.join-btn').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const groupId = this.dataset.id;
+                        const isPrivate = this.dataset.private === 'true';
+                        if ((currentUserData?.joined_groups || []).includes(groupId)) {
+                            showToast("You've already joined this group.", 'info');
+                            return;
+                        }
+                        if (this.disabled) {
+                            showToast("This group is currently full.", "info");
+                            return;
+                        }
+        
+                        if (isPrivate) {
+                            const modal = document.getElementById('password-prompt-modal');
+                            modal.classList.add('active');
+                            document.getElementById('password-prompt-form').onsubmit = async (e) => {
+                                e.preventDefault();
+                                const password = document.getElementById('group-password-prompt-input').value;
+                                const { data: g } = await supabase.from('groups').select('password').eq('id', groupId).single();
+                                if (!g || password !== g.password) {
+                                    showToast('Incorrect password', 'error');
+                                    return;
+                                }
+                                modal.classList.remove('active');
+                                await joinGroup(groupId);
+                                renderGroupRankings();
+                            };
+                        } else {
+                            await joinGroup(groupId);
+                            renderGroupRankings();
+                        }
+                    });
+                });
+        
+                document.querySelectorAll('.group-card.ranking').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('join-btn')) return;
+                        const groupId = card.dataset.groupId;
+                        if ((currentUserData?.joined_groups || []).includes(groupId)) {
+                            renderGroupDetail(groupId);
+                            showPage('page-group-detail');
+                        } else {
+                            showToast('Join the group to see details.', 'info');
+                        }
+                    });
+                });
+        
+            } catch (error) {
+                console.error('Error in renderGroupRankings:', error);
+                container.innerHTML = `<div class="empty-group"><i class="fas fa-exclamation-triangle"></i><h3>Unable to load rankings</h3><p>There might be an issue with the server. Please try again later.</p></div>`;
             }
-          
-            const enriched = await Promise.all(groups.map(async (g) => {
-              const memberIds = membersByGroup[g.id] || [];
-              let totalStudyTime = 0;
-              if (memberIds.length) {
-                const { data: users } = await supabase
-                  .from('users')
-                  .select('id,total_study_seconds')
-                  .in('id', memberIds);
-                totalStudyTime = (users || []).reduce((s, u) => s + Number(u.total_study_seconds || 0), 0);
-              }
-              const mockAttendance = Math.floor(Math.random() * 31) + 70; // keep your placeholder
-              return { ...g, memberIds, totalStudyTime, attendance: mockAttendance };
-            }));
-          
-            // Filters
-            let filtered = enriched.filter(g => {
-              if (filters.univ && g.category !== 'University') return false;
-              if (filters.available && g.memberIds.length >= g.capacity) return false;
-              if (filters.public && g.password) return false;
-              return true;
-            });
-          
-            // Sorts
-            filtered.sort((a, b) => {
-              switch (sortMethod) {
-                case 'attendance': return (b.attendance - a.attendance) || (b.memberIds.length - a.memberIds.length);
-                case 'new': {
-                  const da = a.created_at ? new Date(a.created_at) : new Date(0);
-                  const db = b.created_at ? new Date(b.created_at) : new Date(0);
-                  return db - da;
-                }
-                case 'studytime':
-                default: {
-                  const avgA = a.totalStudyTime / (a.memberIds.length || 1);
-                  const avgB = b.totalStudyTime / (b.memberIds.length || 1);
-                  return (avgB - avgA) || (b.memberIds.length - a.memberIds.length);
-                }
-              }
-            });
-          
-            if (filtered.length === 0) {
-              container.innerHTML = `<div class="empty-group"><i class="fas fa-search-minus"></i><h3>No Groups Found</h3><p>Try adjusting your filters or create a new group!</p></div>`;
-              return;
-            }
-          
-            container.innerHTML = '<div class="flex flex-col gap-4">' + filtered.map((g, idx) => {
-              const rank = idx + 1;
-              const memberCount = g.memberIds.length;
-              const avgPerMember = g.totalStudyTime / (memberCount || 1);
-              const isFull = memberCount >= g.capacity;
-              const isJoined = (currentUserData?.joined_groups || []).includes(g.id);
-              const createdDate = g.created_at ? new Date(g.created_at) : new Date();
-              const category = pick(g.category, 'General');
-              const leaderName = pick(g.leaderName, g.leader_name, '—');
-              const timeGoal = pick(g.timeGoal, g.time_goal, 0);
-          
-              return `
-                <div class="group-card ranking bg-gray-800 rounded-xl overflow-hidden shadow-lg" data-group-id="${g.id}">
-                  <div class="p-4">
-                    <div class="flex justify-between items-center text-xs text-gray-400 mb-2">
-                      <span class="font-bold text-base ${rank===1?'text-yellow-400':rank===2?'text-gray-300':rank===3?'text-yellow-600':'text-blue-400'}">
-                        Ranked #${rank} <span class="text-white">${category.substring(0,2).toUpperCase()}</span>
-                      </span>
-                      <span class="flex items-center gap-2">
-                        ${Math.random() > 0.8 ? '<span class="bg-purple-500 text-white px-2 py-0.5 rounded-full text-xs font-bold">Promoted</span>' : ''}
-                        <span>${timeSince(createdDate)} ago</span>
-                      </span>
-                    </div>
-                    <h3 class="text-lg font-bold truncate mb-2 text-white">${g.name}</h3>
-                    <div class="grid grid-cols-3 gap-x-2 gap-y-1 text-xs mb-3">
-                      <span class="text-gray-400">Goal <b class="text-white">${timeGoal}h</b></span>
-                      <span class="text-gray-400 col-span-2">Members <b class="text-white">${memberCount}/${g.capacity} people</b></span>
-                      <span class="text-gray-400 col-span-3">Leader <b class="text-white">${leaderName}</b></span>
-                      <span class="text-gray-400">Attendance <b class="text-white">${g.attendance}%</b></span>
-                      <span class="text-gray-400 col-span-2">Time <b class="text-white">${formatTime(avgPerMember, false)}</b></span>
-                      <span class="text-gray-400 col-span-3">Started <b class="text-white">${createdDate.toLocaleDateString()}</b></span>
-                    </div>
-                    <p class="text-gray-400 text-sm mb-3 h-8 overflow-hidden">${g.description || ''}</p>
-                    <button class="join-btn w-full mt-2 ${isJoined ? 'bg-blue-600' : 'bg-green-500 hover:bg-green-600'}" data-id="${g.id}" data-private="${!!g.password}" ${isFull && !isJoined ? 'disabled' : ''}>
-                      ${isJoined ? 'Joined' : (isFull ? 'Group Full' : 'Join Group')}
-                    </button>
-                  </div>
-                </div>`;
-            }).join('') + '</div>';
-          
-            // Buttons
-            document.querySelectorAll('.join-btn').forEach(btn => {
-              btn.addEventListener('click', async function() {
-                const groupId = this.dataset.id;
-                const isPrivate = this.dataset.private === 'true';
-                if ((currentUserData?.joined_groups || []).includes(groupId)) { showToast("You've already joined this group.", 'info'); return; }
-                if (this.disabled) { showToast("This group is currently full.", "info"); return; }
-          
-                if (isPrivate) {
-                  const modal = document.getElementById('password-prompt-modal');
-                  modal.classList.add('active');
-                  document.getElementById('password-prompt-form').onsubmit = async (e) => {
-                    e.preventDefault();
-                    const password = document.getElementById('group-password-prompt-input').value;
-                    const { data: g } = await supabase.from('groups').select('password').eq('id', groupId).single();
-                    if (!g || password !== g.password) { showToast('Incorrect password', 'error'); return; }
-                    modal.classList.remove('active');
-                    await joinGroup(groupId);
-                    renderGroupRankings();
-                  };
-                } else {
-                  await joinGroup(groupId);
-                  renderGroupRankings();
-                }
-              });
-            });
-          
-            document.querySelectorAll('.group-card.ranking').forEach(card => {
-              card.addEventListener('click', (e) => {
-                if (e.target.classList.contains('join-btn')) return;
-                const groupId = card.dataset.groupId;
-                if ((currentUserData?.joined_groups || []).includes(groupId)) {
-                  renderGroupDetail(groupId);
-                  showPage('page-group-detail');
-                } else showToast('Join the group to see details.', 'info');
-              });
-            });
-          }          
+        }
 
           async function joinGroup(groupId) {
             if (!currentUser) return;
@@ -6416,6 +6027,12 @@ if (achievementsGrid) {
                         const lastSession = (groupRealtimeData.sessions[member.id] || [])[0];
                         const lastActiveDate = lastSession ? lastSession.endedAt : null;
                         
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        let totalTodaySeconds = 0;
+                        if (member.total_time_today && member.total_time_today.date === todayStr) {
+                            totalTodaySeconds = member.total_time_today.seconds || 0;
+                        }
+                        
                         return `
                             <div class="member-list-card member-profile-link" data-user-id="${member.id}">
                                 <div class="member-avatar ${isStudying ? 'studying' : ''} overflow-hidden">
@@ -6431,11 +6048,19 @@ if (achievementsGrid) {
                                         }
                                     </div>
                                 </div>
-                                ${!isStudying && member.id !== currentUser.id ? `
-                                    <button class="wake-up-btn ml-2 px-3 py-1.5 bg-sky-500 text-white rounded-full text-xs font-semibold hover:bg-sky-600 transition flex items-center gap-1.5" data-target-user-id="${member.id}" data-target-user-name="${member.username || 'Anonymous'}">
-                                        <i class="fas fa-bell"></i> Wake Up
-                                    </button>
-                                ` : ''}
+                                <div class="ml-auto flex items-center gap-4">
+                                    <div class="text-right">
+                                        <div class="font-semibold text-lg" id="member-total-today-${member.id}">
+                                            ${formatTime(totalTodaySeconds)}
+                                        </div>
+                                        <div class="text-xs text-gray-400">Total Today</div>
+                                    </div>
+                                    ${!isStudying && member.id !== currentUser.id ? `
+                                        <button class="wake-up-btn px-3 py-1.5 bg-sky-500 text-white rounded-full text-xs font-semibold hover:bg-sky-600 transition flex items-center gap-1.5" data-target-user-id="${member.id}" data-target-user-name="${member.username || 'Anonymous'}">
+                                            <i class="fas fa-bell"></i> Wake Up
+                                        </button>
+                                    ` : ''}
+                                </div>
                             </div>
                         `;
                     }).join('')}
@@ -6445,7 +6070,8 @@ if (achievementsGrid) {
             // Now, set up intervals to update the time displays
             membersArray.forEach(member => {
                 const timeEl = document.getElementById(`member-time-${member.id}`);
-                if (!timeEl) return;
+                const totalTodayEl = document.getElementById(`member-total-today-${member.id}`);
+                if (!timeEl || !totalTodayEl) return;
                 
                 const interval = setInterval(() => {
                     const latestMemberData = groupRealtimeData.members[member.id];
@@ -6453,6 +6079,15 @@ if (achievementsGrid) {
 
                     const isStudying = latestMemberData.studying && latestMemberData.studying.type === 'study';
 
+                    // Update Total Today display on every tick
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    let totalTodaySeconds = 0;
+                    if (latestMemberData.total_time_today && latestMemberData.total_time_today.date === todayStr) {
+                        totalTodaySeconds = latestMemberData.total_time_today.seconds || 0;
+                    }
+                    totalTodayEl.textContent = formatTime(totalTodaySeconds);
+
+                    // Update status/running timer under the name
                     if (isStudying) {
                         const startTime = new Date(latestMemberData.studying.startTime);
                         const durationSeconds = Math.floor((Date.now() - startTime.getTime()) / 1000);
@@ -6475,28 +6110,83 @@ if (achievementsGrid) {
             const container = document.getElementById('group-detail-content');
             if (!container) return;
 
+            // Clear previous intervals to prevent memory leaks and duplicate timers
+            memberTimerIntervals.forEach(clearInterval);
+            memberTimerIntervals = [];
+
             const membersArray = Object.values(groupRealtimeData.members || {});
+            const totalMembers = membersArray.length;
+            const studyingCount = membersArray.filter(m => m && m.studying && m.studying.type === 'study').length;
 
             container.innerHTML = `
-                <div class="p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                    ${membersArray.map(member => {
-                        if (!member) return ''; // Add a guard for null/undefined members
-                        const isStudying = member.studying && member.studying.type === 'study';
-                        const studiconUrl = member.studicon_url || 'https://api.dicebear.com/8.x/miniavs/svg?seed=default';
-                        const subject = isStudying ? member.studying.subject : 'Idle';
-                        return `
-                            <div class="studicon-member-card text-center cursor-pointer" data-user-id="${member.id}">
-                                <div class="relative w-24 h-24 mx-auto">
-                                    <img src="${studiconUrl}" class="w-full h-full rounded-full bg-gray-700 p-1 ${isStudying ? 'ring-4 ring-green-500' : 'ring-4 ring-gray-600'}" alt="${member.username || 'User'}">
-                                    ${isStudying ? `<div class="absolute bottom-0 right-0 w-6 h-6 bg-green-500 border-2 border-gray-900 rounded-full"></div>` : ''}
+                <div class="p-4">
+                    <div class="text-center mb-6">
+                        <h2 id="studicon-studying-count" class="text-3xl font-bold text-sky-400">${studyingCount} / ${totalMembers}</h2>
+                        <p class="text-gray-400 mt-1">Members Currently Studying</p>
+                    </div>
+                    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-x-4 gap-y-6">
+                        ${membersArray.map(member => {
+                            if (!member) return '';
+                            const isStudying = member.studying && member.studying.type === 'study';
+                            const studiconUrl = member.studicon_url || `https://api.dicebear.com/8.x/miniavs/svg?seed=${encodeURIComponent(member.username || 'user')}`;
+                            const subject = isStudying ? member.studying.subject : 'Idle';
+                            
+                            const todayStr = new Date().toISOString().split('T')[0];
+                            let totalTodaySeconds = 0;
+                            if (member.total_time_today && member.total_time_today.date === todayStr) {
+                                totalTodaySeconds = member.total_time_today.seconds || 0;
+                            }
+
+                            return `
+                                <div class="studicon-member-card text-center cursor-pointer member-profile-link" data-user-id="${member.id}">
+                                    <div class="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto">
+                                        <img src="${studiconUrl}" class="w-full h-full rounded-full bg-gray-700 p-1 ${isStudying ? 'ring-4 ring-green-500' : 'ring-4 ring-gray-600'}" alt="${member.username || 'User'}">
+                                        ${isStudying ? `<div class="absolute bottom-0 right-0 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 border-2 border-gray-900 rounded-full"></div>` : ''}
+                                    </div>
+                                    <p class="mt-2 font-semibold text-white truncate">${member.username || 'Anonymous'}</p>
+                                    <p class="text-xs truncate" id="studicon-subject-${member.id}">${subject}</p>
+                                    <p class="text-sm font-bold text-sky-400" id="studicon-total-today-${member.id}">${formatTime(totalTodaySeconds)}</p>
                                 </div>
-                                <p class="mt-2 font-semibold text-white truncate">${member.username || 'Anonymous'}</p>
-                                <p class="text-xs ${isStudying ? 'text-green-400' : 'text-gray-400'} truncate">${subject}</p>
-                            </div>
-                        `;
-                    }).join('')}
+                            `;
+                        }).join('')}
+                    </div>
                 </div>
             `;
+            
+            // Set up a single interval to update all dynamic elements
+            const interval = setInterval(() => {
+                const currentMembers = Object.values(groupRealtimeData.members || {});
+                const currentStudyingCount = currentMembers.filter(m => m && m.studying && m.studying.type === 'study').length;
+
+                const countEl = document.getElementById('studicon-studying-count');
+                if (countEl) {
+                    countEl.textContent = `${currentStudyingCount} / ${currentMembers.length}`;
+                }
+
+                currentMembers.forEach(member => {
+                    if (!member) return;
+
+                    const totalTodayEl = document.getElementById(`studicon-total-today-${member.id}`);
+                    const subjectEl = document.getElementById(`studicon-subject-${member.id}`);
+                    if (!totalTodayEl || !subjectEl) return;
+                    
+                    const isStudying = member.studying && member.studying.type === 'study';
+
+                    // Update Total Today
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    let totalTodaySeconds = (member.total_time_today && member.total_time_today.date === todayStr) 
+                        ? (member.total_time_today.seconds || 0) 
+                        : 0;
+                    totalTodayEl.textContent = formatTime(totalTodaySeconds);
+
+                    // Update Subject/Status
+                    subjectEl.textContent = isStudying ? member.studying.subject : 'Idle';
+                    subjectEl.classList.toggle('text-green-400', isStudying);
+                    subjectEl.classList.toggle('text-gray-400', !isStudying);
+                });
+
+            }, 1000);
+            memberTimerIntervals.push(interval);
         }
 
         function renderGroupSubPage(subpage) {
@@ -6655,7 +6345,7 @@ if (achievementsGrid) {
               // initial sessions
               const { data: sRows } = await supabase
                 .from('sessions')
-                .select('id,subject,durationSec,endedAt,type')
+                .select('id,subject,durationSeconds,endedAt,type')
                 .eq('profile_id', memberId)
                 .order('endedAt', { ascending: false });
               groupRealtimeData.sessions[memberId] = (sRows || []).map(s => ({ ...s, endedAt: s.endedAt ? new Date(s.endedAt) : null, type: s.type || 'study' }));
@@ -7234,8 +6924,79 @@ if (achievementsGrid) {
             }
         });
 
-        ael('subject-selection-list', 'click', (e) => {
+        // This listener replaces the original 'subject-selection-list' click listener
+        // to handle more actions like edit and delete using event delegation.
+        ael('start-session-modal', 'click', async (e) => {
             const subjectItem = e.target.closest('.subject-item');
+            
+            // Handle clicking the options button (...)
+            if (e.target.closest('.subject-options-btn')) {
+                const menu = e.target.closest('.subject-options-btn').nextElementSibling;
+                // Close other menus before opening the new one
+                document.querySelectorAll('.subject-options-menu').forEach(m => {
+                    if (m !== menu) m.classList.remove('active');
+                });
+                menu.classList.toggle('active');
+                return;
+            }
+
+            // Handle clicking the delete button
+            if (e.target.closest('.delete-subject-btn')) {
+                const subjectId = subjectItem.dataset.subjectId;
+                const subjectName = subjectItem.dataset.subjectName;
+                showConfirmationModal(
+                    `Delete "${subjectName}"?`,
+                    'This subject will be removed. This action cannot be undone.',
+                    async () => {
+                        const { error } = await supabase
+                            .from('subjects')
+                            .delete()
+                            .eq('id', subjectId);
+                        
+                        if (error) {
+                            console.error('Failed to delete subject', error);
+                            showToast('Failed to delete subject.', 'error');
+                        } else {
+                            showToast('Subject deleted.', 'success');
+                            loadSubjects(); // Manually refresh the list
+                        }
+                    }
+                );
+                return;
+            }
+            
+            // Handle clicking the edit button
+            if (e.target.closest('.edit-subject-btn')) {
+                const subjectId = subjectItem.dataset.subjectId;
+                const { data: subject, error } = await supabase
+                    .from('subjects')
+                    .select('id, name, color')
+                    .eq('id', subjectId)
+                    .single();
+
+                if (error || !subject) {
+                    showToast('Could not load subject data to edit.', 'error');
+                    return;
+                }
+                
+                // Configure and show the "Add/Edit" modal for editing
+                const modal = document.getElementById('add-subject-modal');
+                document.getElementById('add-subject-modal-title').textContent = 'Edit Subject';
+                document.getElementById('add-subject-submit-btn').textContent = 'Save Changes';
+                document.getElementById('edit-subject-id').value = subject.id;
+                document.getElementById('add-subject-name').value = subject.name;
+                
+                // Set the correct color
+                modal.querySelectorAll('.color-dot').forEach(el => {
+                    el.classList.toggle('selected', el.dataset.color === subject.color);
+                });
+                
+                document.getElementById('start-session-modal').classList.remove('active');
+                modal.classList.add('active');
+                return;
+            }
+
+            // Handle selecting a subject (original functionality)
             if (subjectItem && !e.target.closest('button')) {
                 document.querySelectorAll('#subject-selection-list .subject-item.selected').forEach(el => el.classList.remove('selected'));
                 subjectItem.classList.add('selected');
@@ -7305,7 +7066,7 @@ if (achievementsGrid) {
                     const isCompleted = !categoryCheckbox.classList.contains('completed');
                     updatePlannerTask(taskId, {
                         completed: isCompleted,
-                        completedAt: isCompleted ? serverTimestamp() : null
+                        completedAt: isCompleted ? nowIso() : null
                     });
                     return;
                 }
@@ -7489,7 +7250,7 @@ if (achievementsGrid) {
                         const isCompleted = target.checked;
                         updatePlannerTask(taskId, {
                             completed: isCompleted,
-                            completedAt: isCompleted ? serverTimestamp() : null
+                            completedAt: isCompleted ? nowIso() : null
                         });
                     }
                 }
@@ -7514,7 +7275,7 @@ if (achievementsGrid) {
                     const isCompleted = target.checked;
                     updatePlannerTask(taskId, {
                         completed: isCompleted,
-                        completedAt: isCompleted ? serverTimestamp() : null // Add/remove completion timestamp
+                        completedAt: isCompleted ? nowIso() : null // Add/remove completion timestamp
                     });
                 }
             });
@@ -7561,58 +7322,74 @@ if (achievementsGrid) {
         // Add Subject Modal
         ael('add-subject-btn', 'click', () => {
             isAddingSubjectFromStartSession = false; // Reset flag
-            document.getElementById('add-subject-form').reset();
-            document.getElementById('add-subject-modal').classList.add('active');
+            resetAndShowAddSubjectModal();
         });
 
         ael('open-add-subject-modal-from-start', 'click', () => {
             isAddingSubjectFromStartSession = true; // Set flag
             document.getElementById('start-session-modal').classList.remove('active');
-            document.getElementById('add-subject-form').reset();
-            document.getElementById('add-subject-modal').classList.add('active');
+            resetAndShowAddSubjectModal();
         });
 
         ael('add-subject-form', 'submit', async (e) => {
             e.preventDefault();
             if (!currentUser) return;
-            const modal = document.getElementById('add-subject-modal');
             const subjectNameInput = document.getElementById('add-subject-name');
             const subjectName = subjectNameInput.value.trim();
             const colorEl = document.querySelector('#add-subject-modal .color-dot.selected');
-            
+            const editId = document.getElementById('edit-subject-id').value;
+
             if (!subjectName || !colorEl) {
                 showToast('Please provide a name and select a color.', 'error');
                 return;
             }
             const color = colorEl.dataset.color;
 
-            const { data: lastSubject } = await supabase
-                .from('subjects')
-                .select('order')
-                .eq('profile_id', currentUser.id)
-                .order('order', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-            const lastOrder = lastSubject?.order ?? -1;
+            try {
+                if (editId) {
+                    // Update existing subject
+                    const { error } = await supabase
+                        .from('subjects')
+                        .update({ name: subjectName, color: color })
+                        .eq('id', editId);
+                    if (error) throw error;
+                    showToast('Subject updated!', 'success');
+                } else {
+                    // Add new subject
+                    const { data: lastSubject } = await supabase
+                        .from('subjects')
+                        .select('order')
+                        .eq('profile_id', currentUser.id)
+                        .order('order', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                    const lastOrder = lastSubject?.order ?? -1;
 
-            await supabase.from('subjects').insert({
-                profile_id: currentUser.id,
-                name: subjectName,
-                color,
-                order: lastOrder + 1
-            });
-            
-            // The onSnapshot listener now handles the UI update automatically.
-            // The redundant manual refresh code that was here has been removed.
+                    const { error } = await supabase.from('subjects').insert({
+                        profile_id: currentUser.id,
+                        name: subjectName,
+                        color,
+                        order: lastOrder + 1
+                    });
+                    if (error) throw error;
+                    showToast(`Subject "${subjectName}" added!`, 'success');
+                }
 
-            subjectNameInput.value = '';
-            modal.classList.remove('active');
-            showToast(`Subject "${subjectName}" added!`, 'success');
+                loadSubjects(); // Manually refresh the list for immediate feedback.
 
-            if (isAddingSubjectFromStartSession) {
-                setTimeout(() => {
-                    document.getElementById('start-session-modal').classList.add('active');
-                }, 300); 
+                // Close and reset modal
+                const modal = document.getElementById('add-subject-modal');
+                modal.classList.remove('active');
+                
+                if (isAddingSubjectFromStartSession && !editId) {
+                     setTimeout(() => {
+                        document.getElementById('start-session-modal').classList.add('active');
+                    }, 300);
+                }
+
+            } catch (error) {
+                console.error('Error saving subject:', error);
+                showToast('Could not save subject.', 'error');
             }
         });
         
@@ -7677,25 +7454,44 @@ if (achievementsGrid) {
             doneBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
         
             try {
-                const newGroupRef = await addDoc(collection(db, `artifacts/${appId}/public/data/groups`), {
-                    name, password: password || null, category, time_goal, capacity, description,
-                    leaderId: currentUser.id, leaderName: currentUserData.username,
-                    // The 'members' array is not the correct way to add members with Supabase.
-                    // Membership is handled by the separate group_members table.
-                    created_at: serverTimestamp(),
-                    avgTime: '0h 0m', attendance: 0
-                });
+                const { data: newGroup, error: createError } = await supabase
+                    .from('groups')
+                    .insert({
+                        name,
+                        password: password || null,
+                        category,
+                        time_goal,
+                        capacity,
+                        description,
+                        leaderId: currentUser.id,
+                        leaderName: currentUserData.username,
+                        created_at: nowIso(),
+                        avgTime: '0h 0m',
+                        attendance: 0,
+                        members: [currentUser.id]
+                    })
+                    .select()
+                    .single();
+                if (createError) throw createError;
 
-                // FIX: Insert the leader into the group_members table to officially join them to the group.
                 const { error: joinError } = await supabase.from('group_members').insert({
-                    group_id: newGroupRef.id,
+                    group_id: newGroup.id,
                     profile_id: currentUser.id
                 });
                 if (joinError) throw joinError;
-        
-                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-                await updateDoc(userRef, { joined_groups: arrayUnion(newGroupRef.id) });
-        
+
+                const { data: profileData, error: profileErr } = await supabase
+                    .from('profiles')
+                    .select('joined_groups')
+                    .eq('id', currentUser.id)
+                    .single();
+                if (profileErr) throw profileErr;
+                const joinedGroups = Array.isArray(profileData.joined_groups) ? profileData.joined_groups.slice() : [];
+                if (!joinedGroups.includes(newGroup.id)) {
+                    joinedGroups.push(newGroup.id);
+                }
+                await updateProfile(currentUser.id, { joined_groups: joinedGroups });
+
                 showToast('Group created successfully!', 'success');
                 renderGroupRankings();
                 showPage('page-find-groups');
@@ -7809,11 +7605,9 @@ if (achievementsGrid) {
                 return;
             }
 
-            const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', currentGroupId);
-            const groupSnap = await getDoc(groupRef);
+            const groupData = await fetchGroup(currentGroupId);
 
-            if (groupSnap.exists()) {
-                const groupData = groupSnap.data();
+            if (groupData) {
                 
                 // Helper to safely set the value of an element
                 const setValue = (id, value) => {
@@ -7885,10 +7679,9 @@ if (achievementsGrid) {
         ael('page-group-detail', 'click', async e => {
             const settingsBtn = e.target.closest('#group-settings-btn, #group-settings-btn-mobile');
             if (settingsBtn) {
-                const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', currentGroupId);
-                const groupSnap = await getDoc(groupRef);
-                if (groupSnap.exists()) {
-                    openGroupSettingsModal(groupSnap.data());
+                const groupData = await fetchGroup(currentGroupId);
+                if (groupData) {
+                    openGroupSettingsModal(groupData);
                 }
                 return;
             }
@@ -8019,15 +7812,13 @@ if (achievementsGrid) {
             const saveBtn = document.getElementById('save-group-rules-btn');
 
             try {
-                const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', currentGroupId);
-                const groupSnap = await getDoc(groupRef);
+                const groupData = await fetchGroup(currentGroupId);
 
-                if (!groupSnap.exists()) {
+                if (!groupData) {
                     showToast('Could not load group rules.', 'error');
                     return;
                 }
 
-                const groupData = groupSnap.data();
                 const rules = groupData.rules || 'No rules have been set for this group yet.';
                 const isLeader = currentUser.id === groupData.leaderId;
 
@@ -8055,7 +7846,7 @@ if (achievementsGrid) {
                     saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
                     
                     try {
-                        await updateDoc(groupRef, { rules: newRules });
+                        await updateGroup(currentGroupId, { rules: newRules });
                         showToast('Group rules updated!', 'success');
                         modal.classList.remove('active');
                     } catch (error) {
@@ -8097,11 +7888,12 @@ if (achievementsGrid) {
                 return;
             }
             
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            await updateDoc(userRef, { 
-                pomodoro_settings: newSettings,
-                pomodoro_sounds: newSounds
-            });
+            if (currentUser) {
+                await updateUserPrivate(currentUser.id, {
+                    pomodoro_settings: newSettings,
+                    pomodoro_sounds: newSounds
+                });
+            }
 
             pomodoroSettings = newSettings;
             pomodoroSounds = newSounds;
@@ -8198,8 +7990,7 @@ if (achievementsGrid) {
             };
 
             try {
-                const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', groupId);
-                await updateDoc(groupRef, updatedData);
+                await updateGroup(groupId, updatedData);
                 showToast('Group info updated successfully!', 'success');
                 document.getElementById('edit-group-info-modal').classList.remove('active');
             } catch (error) {
@@ -8245,49 +8036,50 @@ if (achievementsGrid) {
             const newDurationSeconds = newDurationMinutes * 60;
             const durationDifference = newDurationSeconds - oldDurationSeconds;
 
-            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.id);
-            const publicUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.id);
-            const sessionRef = doc(userRef, 'sessions', sessionId);
-
             try {
                 // Determine if the session being edited is a study or break session
-                const sessionDoc = await getDoc(sessionRef);
-                const sessionType = sessionDoc.exists() ? sessionDoc.data().type || 'study' : 'study'; // Default to 'study' if type is missing
+                const { data: sessionRow, error: sessionErr } = await supabase
+                    .from('sessions')
+                    .select('type, profile_id')
+                    .eq('id', sessionId)
+                    .single();
+                if (sessionErr) throw sessionErr;
 
-                await updateDoc(sessionRef, { durationSeconds: newDurationSeconds });
-                
-                if (sessionType === 'study') {
-                    await updateDoc(userRef, { total_study_seconds: increment(durationDifference) });
-                    await updateDoc(publicUserRef, { total_study_seconds: increment(durationDifference) });
-                } else { // 'break'
-                    await updateDoc(userRef, { total_break_seconds: increment(durationDifference) });
-                    await updateDoc(publicUserRef, { total_break_seconds: increment(durationDifference) });
-                }
+                const sessionType = sessionRow?.type || 'study';
+
+                const { error: updateSessionErr } = await supabase
+                    .from('sessions')
+                    .update({ durationSeconds: newDurationSeconds })
+                    .eq('id', sessionId);
+                if (updateSessionErr) throw updateSessionErr;
+
+                const profile = await fetchProfile(currentUser.id);
+                const profileUpdates = {};
 
                 const sessionDateStr = endedAt.toISOString().split('T')[0];
                 const todayStr = getCurrentDate().toISOString().split('T')[0];
                 if (sessionDateStr === todayStr) {
                     if (sessionType === 'study') {
-                        totalTimeTodayInSeconds += durationDifference;
-                        if (totalTimeTodayInSeconds < 0) totalTimeTodayInSeconds = 0;
-                        await updateDoc(userRef, {
-                            total_time_today: {
-                                date: todayStr,
-                                seconds: totalTimeTodayInSeconds
-                            }
-                        });
+                        const currentToday = profile?.total_time_today?.seconds || 0;
+                        totalTimeTodayInSeconds = Math.max(0, currentToday + durationDifference);
+                        profileUpdates.total_time_today = { date: todayStr, seconds: totalTimeTodayInSeconds };
                     } else { // 'break'
-                        totalBreakTimeTodayInSeconds += durationDifference;
-                        if (totalBreakTimeTodayInSeconds < 0) totalBreakTimeTodayInSeconds = 0;
-                        await updateDoc(userRef, {
-                            total_break_time_today: {
-                                date: todayStr,
-                                seconds: totalBreakTimeTodayInSeconds
-                            }
-                        });
+                        const currentBreak = profile?.total_break_time_today?.seconds || 0;
+                        totalBreakTimeTodayInSeconds = Math.max(0, currentBreak + durationDifference);
+                        profileUpdates.total_break_time_today = { date: todayStr, seconds: totalBreakTimeTodayInSeconds };
                     }
                 }
-                
+
+                if (sessionType === 'study') {
+                    const totalStudy = Math.max(0, (profile?.total_study_seconds || 0) + durationDifference);
+                    profileUpdates.total_study_seconds = totalStudy;
+                } else {
+                    const totalBreak = Math.max(0, (profile?.total_break_seconds || 0) + durationDifference);
+                    profileUpdates.total_break_seconds = totalBreak;
+                }
+
+                await updateProfile(currentUser.id, profileUpdates);
+
                 modal.classList.remove('active');
                 showToast("Session updated successfully!", "success");
             } catch (error) {
@@ -8812,3 +8604,11 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
+
+
+
+
+
+
+
