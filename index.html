@@ -83,6 +83,192 @@
             overflow-y: auto;
         }
 
+        /* Pomodoro Quick Setup Modal */
+        #pomodoro-setup-modal .modal-content {
+            max-width: 420px;
+            width: 90%;
+            padding: 32px 28px 28px;
+            border-radius: 28px;
+            border: none;
+            background: radial-gradient(circle at top, rgba(248, 113, 113, 0.12), transparent 55%),
+                        linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 12, 20, 0.92) 100%);
+            box-shadow: 0 35px 60px rgba(8, 47, 73, 0.45);
+        }
+        #pomodoro-setup-modal .modal-header {
+            justify-content: center;
+            position: relative;
+            margin-bottom: 18px;
+        }
+        #pomodoro-setup-modal .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+        #pomodoro-setup-modal .modal-header .close-modal {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.75rem;
+            color: #94a3b8;
+        }
+        .pomodoro-setup-summary {
+            font-size: 0.95rem;
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .pomodoro-setup-summary span {
+            color: #f87171;
+            font-weight: 600;
+        }
+        .pomodoro-setup-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+        .pomodoro-picker {
+            position: relative;
+            border-radius: 26px;
+            padding: 26px 10px 22px;
+            text-align: center;
+            background: linear-gradient(180deg, rgba(148, 163, 184, 0.12) 0%, rgba(30, 41, 59, 0.4) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            overflow: hidden;
+        }
+        .pomodoro-picker::before,
+        .pomodoro-picker::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 32px;
+            pointer-events: none;
+        }
+        .pomodoro-picker::before {
+            top: 18px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0) 100%);
+        }
+        .pomodoro-picker::after {
+            bottom: 42px;
+            background: linear-gradient(0deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0) 100%);
+        }
+        .pomodoro-picker-wheel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            pointer-events: none;
+            min-height: 148px;
+            justify-content: center;
+        }
+        .picker-value-muted {
+            font-size: 1.45rem;
+            color: rgba(148, 163, 184, 0.45);
+            transition: color 0.2s ease;
+            min-height: 1.45rem;
+        }
+        .picker-value-current {
+            font-size: 2.6rem;
+            font-weight: 700;
+            color: #f87171;
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
+        .picker-value-hidden {
+            opacity: 0;
+        }
+        .pomodoro-picker-label {
+            margin-top: 18px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #cbd5f5;
+        }
+        .picker-overlay {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 48%;
+            cursor: pointer;
+        }
+        .picker-overlay.top { top: 0; }
+        .picker-overlay.bottom { bottom: 0; }
+        .pomodoro-setup-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 18px;
+            margin-top: 30px;
+        }
+        #pomodoro-setup-cancel {
+            flex: 1;
+            padding: 12px 0;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: transparent;
+            color: #94a3b8;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        #pomodoro-setup-cancel:hover {
+            color: #e2e8f0;
+            border-color: rgba(248, 113, 113, 0.45);
+        }
+        #pomodoro-setup-done {
+            flex: 1;
+            padding: 12px 0;
+            border-radius: 18px;
+            border: none;
+            background: linear-gradient(135deg, #fb7185 0%, #ef4444 100%);
+            color: white;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            box-shadow: 0 12px 30px rgba(239, 68, 68, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        #pomodoro-setup-done:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 34px rgba(239, 68, 68, 0.35);
+        }
+        .pomodoro-summary-button {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.55rem 0.85rem;
+            border-radius: 18px;
+            background: rgba(148, 163, 184, 0.16);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .pomodoro-summary-button:hover {
+            background: rgba(148, 163, 184, 0.24);
+            border-color: rgba(14, 165, 233, 0.35);
+            transform: translateY(-1px);
+        }
+        .pomodoro-summary-button .numbers {
+            text-align: right;
+            line-height: 1.2;
+        }
+        .pomodoro-summary-button .numbers .estimate {
+            font-size: 0.95rem;
+            color: #f87171;
+            font-weight: 600;
+        }
+        .pomodoro-summary-button .numbers .duration {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        .pomodoro-summary-button .numbers .progress {
+            font-size: 0.7rem;
+            color: #6ee7b7;
+        }
+        .pomodoro-summary-button i {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+
         /* Toggle Switch Styles */
         .toggle-switch {
             position: relative;
@@ -2028,6 +2214,41 @@
         <div class="modal-content"><div class="modal-header"><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form"><div class="mb-4"><label for="study-goal-input" class="block text-gray-300 mb-2">Daily Study Goal (hours)</label><input type="number" id="study-goal-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required min="1" max="24"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Set Goal</button></form></div></div>
 
     <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-4"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-gray-300">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-gray-300">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-gray-300">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-gray-300">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="2" required></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-gray-300">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-gray-300">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-gray-300">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-gray-300">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Automation</h3><div class="space-y-3"> <div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Settings</button></form></div></div>
+    <div id="pomodoro-setup-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Pomodoro</div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <p id="pomodoro-setup-summary" class="pomodoro-setup-summary">Estimated Pomodoro Time: <span>1 × 25m = 25m</span></p>
+            <div class="pomodoro-setup-grid">
+                <div class="pomodoro-picker" data-type="pomodoros">
+                    <div class="picker-overlay top" data-direction="-1"></div>
+                    <div class="picker-overlay bottom" data-direction="1"></div>
+                    <div class="pomodoro-picker-wheel">
+                        <span class="picker-value-muted" data-role="prev"></span>
+                        <span class="picker-value-current" data-role="current">1</span>
+                        <span class="picker-value-muted" data-role="next"></span>
+                    </div>
+                    <p class="pomodoro-picker-label">Estimated Pomodoros</p>
+                </div>
+                <div class="pomodoro-picker" data-type="length">
+                    <div class="picker-overlay top" data-direction="-1"></div>
+                    <div class="picker-overlay bottom" data-direction="1"></div>
+                    <div class="pomodoro-picker-wheel">
+                        <span class="picker-value-muted" data-role="prev"></span>
+                        <span class="picker-value-current" data-role="current">25m</span>
+                        <span class="picker-value-muted" data-role="next"></span>
+                    </div>
+                    <p class="pomodoro-picker-label">Pomodoro Length</p>
+                </div>
+            </div>
+            <div class="pomodoro-setup-actions">
+                <button type="button" id="pomodoro-setup-cancel">Cancel</button>
+                <button type="button" id="pomodoro-setup-done">Done</button>
+            </div>
+        </div>
+    </div>
 
     <!-- START: Added Missing Modals -->
     <div id="edit-profile-modal" class="modal">
@@ -3807,6 +4028,19 @@ let pauseStartTime = 0;
             return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
+        function formatMinutesFriendly(minutes) {
+            if (!Number.isFinite(minutes) || minutes < 0) return '0m';
+            const hours = Math.floor(minutes / 60);
+            const remaining = Math.round(minutes % 60);
+            if (hours && remaining) {
+                return `${hours}h ${remaining}m`;
+            }
+            if (hours) {
+                return `${hours}h`;
+            }
+            return `${remaining}m`;
+        }
+
         async function startTimer(subject) {
             if (!subject) {
                 showToast("Please select a subject first.", "error");
@@ -4886,7 +5120,11 @@ if (achievementsGrid) {
           
             const estimatedPomos = selectedTask.pomodoros_estimated || 1;
             const completedPomos = selectedTask.pomodoros_completed || 0;
-            const estimatedTime = estimatedPomos * (pomodoroSettings.work || 25);
+            const pomodoroLength = pomodoroSettings.work || 25;
+            const estimatedTime = estimatedPomos * pomodoroLength;
+            const formattedEstimatedTime = formatMinutesFriendly(estimatedTime);
+            const pomodoroEquation = `${estimatedPomos} × ${pomodoroLength}m`;
+            const completedSummary = completedPomos === 1 ? '1 completed' : `${completedPomos} completed`;
 
             // NEW: Prepare tags and subtasks HTML
             // FIX: Ensure 'tags' is always an array to prevent .map() error.
@@ -4943,14 +5181,14 @@ if (achievementsGrid) {
                           <i class="fas fa-stopwatch text-gray-400 w-6 text-center mr-3"></i>
                           <span>Pomodoro</span>
                       </div>
-                      <div class="ml-auto flex items-center gap-2">
-                          <button id="pomodoro-decrease-btn" class="w-7 h-7 rounded-full bg-gray-700 hover:bg-gray-600 flex-shrink-0 flex items-center justify-center">-</button>
-                          <div class="text-right">
-                              <span class="text-green-400 font-semibold">${completedPomos} / ${estimatedPomos}</span>
-                              <p class="text-xs text-gray-500">= ${estimatedTime}m</p>
+                      <button type="button" id="open-pomodoro-setup-btn" class="pomodoro-summary-button">
+                          <div class="numbers">
+                              <div class="estimate">${pomodoroEquation}</div>
+                              <div class="duration">= ${formattedEstimatedTime}</div>
+                              <div class="progress">${completedSummary}</div>
                           </div>
-                          <button id="pomodoro-increase-btn" class="w-7 h-7 rounded-full bg-gray-700 hover:bg-gray-600 flex-shrink-0 flex items-center justify-center">+</button>
-                      </div>
+                          <i class="fas fa-chevron-right"></i>
+                      </button>
                     </div>
           
                     <div class="flex items-center">
@@ -7230,6 +7468,175 @@ if (achievementsGrid) {
             if (el) el.addEventListener(event, callback);
         };
 
+        const pomodoroPickerConfig = {
+            pomodoros: { min: 1, max: 24, step: 1 },
+            length: { min: 5, max: 180, step: 1 }
+        };
+        const pomodoroSetupModal = document.getElementById('pomodoro-setup-modal');
+        const pomodoroSetupSummary = document.getElementById('pomodoro-setup-summary');
+        const pomodoroSetupPickers = {};
+        const clampValue = (value, min, max) => Math.min(max, Math.max(min, value));
+        let pomodoroSetupState = { taskId: null, pomodoros: 1, length: 25 };
+
+        if (pomodoroSetupModal) {
+            pomodoroSetupModal.querySelectorAll('.pomodoro-picker').forEach(picker => {
+                const type = picker.dataset.type;
+                if (type) pomodoroSetupPickers[type] = picker;
+            });
+        }
+
+        function formatPickerValue(type, value) {
+            if (type === 'length') {
+                return `${value}m`;
+            }
+            return `${value}`;
+        }
+
+        function updatePomodoroPicker(type) {
+            const picker = pomodoroSetupPickers[type];
+            if (!picker) return;
+            const config = pomodoroPickerConfig[type];
+            if (!config) return;
+            const currentValue = pomodoroSetupState[type];
+            const prevValue = currentValue - config.step >= config.min ? currentValue - config.step : null;
+            const nextValue = currentValue + config.step <= config.max ? currentValue + config.step : null;
+
+            const prevEl = picker.querySelector('[data-role="prev"]');
+            const currentEl = picker.querySelector('[data-role="current"]');
+            const nextEl = picker.querySelector('[data-role="next"]');
+
+            if (prevEl) {
+                prevEl.textContent = prevValue !== null ? formatPickerValue(type, prevValue) : '';
+                prevEl.classList.toggle('picker-value-hidden', prevValue === null);
+            }
+            if (currentEl) {
+                currentEl.textContent = formatPickerValue(type, currentValue);
+            }
+            if (nextEl) {
+                nextEl.textContent = nextValue !== null ? formatPickerValue(type, nextValue) : '';
+                nextEl.classList.toggle('picker-value-hidden', nextValue === null);
+            }
+        }
+
+        function updatePomodoroSetupSummary() {
+            if (!pomodoroSetupSummary) return;
+            const { pomodoros, length } = pomodoroSetupState;
+            const totalMinutes = pomodoros * length;
+            const friendly = formatMinutesFriendly(totalMinutes);
+            pomodoroSetupSummary.innerHTML = `Estimated Pomodoro Time: <span>${pomodoros} × ${length}m</span> = <span>${friendly}</span>`;
+        }
+
+        function adjustPomodoroPicker(type, direction) {
+            const config = pomodoroPickerConfig[type];
+            if (!config) return;
+            const current = pomodoroSetupState[type];
+            const delta = direction * (config.step || 1);
+            const next = clampValue(current + delta, config.min, config.max);
+            if (next === current) return;
+            pomodoroSetupState = { ...pomodoroSetupState, [type]: next };
+            updatePomodoroPicker(type);
+            updatePomodoroSetupSummary();
+        }
+
+        function openPomodoroSetupModal(taskId = null) {
+            if (!pomodoroSetupModal) return;
+            const countConfig = pomodoroPickerConfig.pomodoros;
+            const lengthConfig = pomodoroPickerConfig.length;
+            const tasks = Array.isArray(plannerState?.tasks) ? plannerState.tasks : [];
+            const task = taskId ? tasks.find(t => t.id === taskId) : null;
+            const nextPomodoros = clampValue(task?.pomodoros_estimated || 1, countConfig.min, countConfig.max);
+            const nextLength = clampValue(pomodoroSettings.work || 25, lengthConfig.min, lengthConfig.max);
+            pomodoroSetupState = { taskId, pomodoros: nextPomodoros, length: nextLength };
+            updatePomodoroPicker('pomodoros');
+            updatePomodoroPicker('length');
+            updatePomodoroSetupSummary();
+            pomodoroSetupModal.classList.add('active');
+            pomodoroSetupModal.classList.remove('fade-in');
+            void pomodoroSetupModal.offsetWidth;
+            pomodoroSetupModal.classList.add('fade-in');
+        }
+
+        function closePomodoroSetupModal() {
+            if (!pomodoroSetupModal) return;
+            pomodoroSetupModal.classList.remove('active');
+            pomodoroSetupModal.classList.remove('fade-in');
+        }
+
+        async function savePomodoroSetupSelections() {
+            const { taskId, pomodoros, length } = pomodoroSetupState;
+            if (taskId) {
+                const tasks = Array.isArray(plannerState?.tasks) ? plannerState.tasks : [];
+                const task = tasks.find(t => t.id === taskId);
+                if (task && task.pomodoros_estimated !== pomodoros) {
+                    task.pomodoros_estimated = pomodoros;
+                    await updatePlannerTask(taskId, { pomodoros_estimated: pomodoros });
+                }
+            }
+
+            if (pomodoroSettings.work !== length) {
+                const newSettings = { ...pomodoroSettings, work: length };
+                pomodoroSettings = newSettings;
+                if (pomodoroWorker) {
+                    pomodoroWorker.postMessage({ command: 'updateSettings', newSettings });
+                }
+                if (currentUser) {
+                    try {
+                        await updateUserPrivate(currentUser.id, { pomodoro_settings: newSettings });
+                    } catch (error) {
+                        console.error('Failed to save pomodoro settings', error);
+                        showToast('Failed to update pomodoro settings.', 'error');
+                    }
+                }
+                currentUserData = { ...currentUserData, pomodoro_settings: newSettings };
+                if (timerMode === 'pomodoro' && pomodoroState === 'idle') {
+                    sessionTimerDisplay.textContent = formatPomodoroTime(length * 60);
+                }
+            }
+
+            renderPlannerTaskDetails();
+            closePomodoroSetupModal();
+        }
+
+        if (pomodoroSetupModal) {
+            const closeBtn = pomodoroSetupModal.querySelector('.close-modal');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closePomodoroSetupModal);
+            }
+            pomodoroSetupModal.addEventListener('click', (event) => {
+                if (event.target === pomodoroSetupModal) {
+                    closePomodoroSetupModal();
+                }
+            });
+            pomodoroSetupModal.querySelectorAll('.picker-overlay').forEach(overlay => {
+                const direction = parseInt(overlay.dataset.direction, 10);
+                overlay.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const type = overlay.closest('.pomodoro-picker')?.dataset.type;
+                    if (!type || Number.isNaN(direction)) return;
+                    adjustPomodoroPicker(type, direction);
+                });
+                overlay.addEventListener('touchstart', (event) => {
+                    event.preventDefault();
+                    const type = overlay.closest('.pomodoro-picker')?.dataset.type;
+                    if (!type || Number.isNaN(direction)) return;
+                    adjustPomodoroPicker(type, direction);
+                }, { passive: false });
+            });
+            pomodoroSetupModal.querySelectorAll('.pomodoro-picker').forEach(picker => {
+                picker.addEventListener('wheel', (event) => {
+                    event.preventDefault();
+                    const type = picker.dataset.type;
+                    if (!type) return;
+                    adjustPomodoroPicker(type, event.deltaY > 0 ? 1 : -1);
+                }, { passive: false });
+            });
+        }
+
+        ael('pomodoro-setup-cancel', 'click', () => closePomodoroSetupModal());
+        ael('pomodoro-setup-done', 'click', async () => {
+            await savePomodoroSetupSelections();
+        });
+
         // --- START: NEW EVENT LISTENERS FOR GUEST MODE ---
         // Anonymous Auth
         ael('anonymous-signin-btn', 'click', async () => {
@@ -7764,22 +8171,8 @@ if (achievementsGrid) {
                         return;
                     }
 
-                    // Pomodoro estimate buttons
-                    if (target.closest('#pomodoro-increase-btn')) {
-                        const task = plannerState.tasks.find(t => t.id === taskId);
-                        if (task) {
-                            const newEstimate = (task.pomodoros_estimated || 1) + 1;
-                            updatePlannerTask(taskId, { pomodoros_estimated: newEstimate });
-                        }
-                        return;
-                    }
-
-                    if (target.closest('#pomodoro-decrease-btn')) {
-                        const task = plannerState.tasks.find(t => t.id === taskId);
-                        if (task) {
-                            const newEstimate = Math.max(1, (task.pomodoros_estimated || 1) - 1);
-                            updatePlannerTask(taskId, { pomodoros_estimated: newEstimate });
-                        }
+                    if (target.closest('#open-pomodoro-setup-btn')) {
+                        openPomodoroSetupModal(taskId);
                         return;
                     }
                     
