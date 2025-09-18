@@ -1231,6 +1231,32 @@
             border: 2px solid #10B981; /* Green border for drag over target */
             box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
         }
+        .selection-section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+        .task-selection-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            background-color: #1f2937;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .task-selection-item:hover {
+            background-color: #273449;
+        }
+        .task-selection-item.selected {
+            border-color: #38bdf8;
+            background: linear-gradient(to right, rgba(14, 165, 233, 0.12), rgba(56, 189, 248, 0.12));
+        }
         .subject-options-btn {
             position: absolute;
             right: 10px;
@@ -2205,7 +2231,7 @@
 
     <div id="toast-container"></div>
     <div id="add-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div id="add-subject-modal-title" class="modal-title">Add New Subject</div><button class="close-modal">&times;</button></div><form id="add-subject-form"><input type="hidden" id="edit-subject-id"><div class="mb-4"><label for="add-subject-name" class="block text-gray-300 mb-2">Subject Name</label><input type="text" id="add-subject-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div class="mb-4"><label class="block text-gray-300 mb-2">Color</label><div class="subject-color-picker"><div class="color-dot bg-red-500" data-color="bg-red-500"></div><div class="color-dot bg-blue-500 selected" data-color="bg-blue-500"></div><div class="color-dot bg-green-500" data-color="bg-green-500"></div><div class="color-dot bg-yellow-500" data-color="bg-yellow-500"></div><div class="color-dot bg-purple-500" data-color="bg-purple-500"></div><div class="color-dot bg-pink-500" data-color="bg-pink-500"></div><div class="color-dot bg-indigo-500" data-color="bg-indigo-500"></div><div class="color-dot bg-teal-500" data-color="bg-teal-500"></div><div class="color-dot bg-orange-500" data-color="bg-orange-500"></div><div class="color-dot bg-cyan-500" data-color="bg-cyan-500"></div><div class="color-dot bg-lime-500" data-color="bg-lime-500"></div><div class="color-dot bg-fuchsia-500" data-color="bg-fuchsia-500"></div><div class="color-dot bg-rose-500" data-color="bg-rose-500"></div><div class="color-dot bg-sky-500" data-color="bg-sky-500"></div><div class="color-dot bg-emerald-500" data-color="bg-emerald-500"></div><div class="color-dot bg-amber-500" data-color="bg-amber-500"></div><div class="color-dot bg-violet-500" data-color="bg-violet-500"></div></div></div><button type="submit" id="add-subject-submit-btn" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Add Subject</button></form></div></div>
-    <div id="start-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Start New Session</div><button id="close-start-session-modal" class="close-modal">&times;</button></div><form id="start-session-form"><div id="subject-selection-list" class="mb-4 max-h-60 overflow-y-auto space-y-2"></div><div class="flex items-center gap-4 mt-4"><button type="button" id="open-add-subject-modal-from-start" class="w-full text-center py-3 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium transition">Add New Subject</button><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Timer</button></div></form></div></div>
+    <div id="start-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Start New Session</div><button id="close-start-session-modal" class="close-modal">&times;</button></div><form id="start-session-form"><div class="mb-6"><div class="selection-section-title">Subjects</div><div id="subject-selection-list" class="max-h-60 overflow-y-auto space-y-2"></div></div><div class="mb-6"><div class="selection-section-title">Tasks</div><div id="task-selection-list" class="max-h-60 overflow-y-auto space-y-2"></div></div><div class="flex items-center gap-4 mt-4"><button type="button" id="open-add-subject-modal-from-start" class="w-full text-center py-3 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium transition">Add New Subject</button><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Timer</button></div></form></div></div>
     <div id="add-task-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Task</div><button class="close-modal">&times;</button></div><form id="add-task-form"><div class="mb-4"><label for="add-task-name" class="block text-gray-300 mb-2">Task Description</label><input type="text" id="add-task-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div class="mb-4"><label for="add-task-date" class="block text-gray-300 mb-2">Date</label><input type="date" id="add-task-date" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Add Task</button></form></div></div>
     <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form"><input type="password" id="group-password-prompt-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required><div class="flex gap-2 mt-4"><button type="button" class="close-modal w-full py-2 bg-gray-600 rounded-lg">Cancel</button><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Submit</button></div></form></div></div>
     <div id="confirmation-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 id="confirmation-modal-title" class="modal-title">Are you sure?</h2><button class="close-modal">&times;</button></div><p id="confirmation-modal-message">This action cannot be undone.</p><div id="confirmation-modal-buttons"><button id="cancel-btn">Cancel</button><button id="confirm-btn">Confirm</button></div></div></div>
@@ -2766,22 +2792,36 @@
             const sessionType = oldState === 'work' ? 'study' : 'break';
             const subject = oldState === 'work' ? activeSubject : oldState.replace('_', ' ');
             await saveSession(subject, sessionDuration, sessionType);
-        
-            // If a work session just ended, increment the pomodoro count for the task
-            if (oldState === 'work' && subject) {
-                // Find the task by its title (which is used as the 'subject' for the timer)
-                const task = plannerState.tasks.find(t => t.title === subject && !t.completed);
+
+            // If a work session just ended, increment the pomodoro count for the active task
+            if (oldState === 'work' && activeTaskId) {
+                const taskIndex = plannerState.tasks.findIndex(t => t.id === activeTaskId);
+                const task = taskIndex >= 0 ? plannerState.tasks[taskIndex] : null;
                 if (task) {
                     const newCompletedCount = (task.pomodoros_completed || 0) + 1;
-                    await updatePlannerTask(task.id, { pomodoros_completed: newCompletedCount });
-                    console.log(`Incremented pomodoro count for task: ${task.title}`);
-                    
-                    // Also check if the task is now complete
-                    const estimatedPomos = task.pomodoros_estimated || 1;
-                    if (newCompletedCount >= estimatedPomos) {
-                         await updatePlannerTask(task.id, { completed: true, completedAt: nowIso() });
-                         showToast(`Task "${task.title}" completed!`, 'success');
+                    if (activeTaskRemainingPomodoros !== null) {
+                        activeTaskRemainingPomodoros = Math.max(activeTaskRemainingPomodoros - 1, 0);
                     }
+
+                    const updates = { pomodoros_completed: newCompletedCount };
+                    const estimatedPomos = Math.max(task.pomodoros_estimated || 0, 0);
+                    if (estimatedPomos > 0 && newCompletedCount >= estimatedPomos) {
+                        updates.completed = true;
+                        updates.completedAt = nowIso();
+                        showToast(`Task "${task.title}" completed!`, 'success');
+                    }
+
+                    await updatePlannerTask(task.id, updates);
+
+                    const updatedTask = {
+                        ...task,
+                        pomodoros_completed: newCompletedCount,
+                        completed: updates.completed ?? task.completed,
+                        completedAt: updates.completed ? updates.completedAt : task.completedAt
+                    };
+                    plannerState.tasks = plannerState.tasks.map(t => t.id === task.id ? updatedTask : t);
+                    renderPlannerPage();
+                    renderTaskSelectionList(plannerState.tasks);
                 }
             }
 
@@ -2841,6 +2881,12 @@ let pauseStartTime = 0;
         let totalTimeTodayInSeconds = 0;
         let totalBreakTimeTodayInSeconds = 0; // New: Track total break time today
         let activeSubject = '';
+        let activeTaskId = null;
+        let activeTaskTargetSeconds = null;
+        let activeTaskRemainingPomodoros = null;
+        let suppressTimerSave = false;
+        let startSessionSelected = { subjectId: null, taskId: null };
+        let subjectSelectionData = [];
         let groupDetailUnsubscribers = [];
         let memberTimerIntervals = [];
         let currentGroupId = null;
@@ -4041,9 +4087,24 @@ let pauseStartTime = 0;
             return `${remaining}m`;
         }
 
-        async function startTimer(subject) {
-            if (!subject) {
-                showToast("Please select a subject first.", "error");
+        function escapeAttribute(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        async function startTimer(subject, options = {}) {
+            const { taskId = null } = options;
+            const tasks = Array.isArray(plannerState?.tasks) ? plannerState.tasks : [];
+            const task = taskId ? tasks.find(t => t.id === taskId) : null;
+            let resolvedSubject = subject;
+            if (!resolvedSubject && task) {
+                resolvedSubject = task.title;
+            }
+            if (!resolvedSubject) {
+                showToast("Please select a subject or task first.", "error");
                 return;
             }
             unlockAudio();
@@ -4077,25 +4138,55 @@ let pauseStartTime = 0;
             }
             // --- End New idle time tracking ---
 
+            activeTaskId = task ? task.id : null;
+            if (task) {
+                const estimated = Math.max(task.pomodoros_estimated || 0, 0);
+                const completed = Math.max(task.pomodoros_completed || 0, 0);
+                const remaining = Math.max(estimated - completed, 0);
+                if (remaining > 0) {
+                    activeTaskRemainingPomodoros = remaining;
+                    activeTaskTargetSeconds = remaining * (pomodoroSettings.work || 25) * 60;
+                } else {
+                    activeTaskRemainingPomodoros = null;
+                    activeTaskTargetSeconds = null;
+                    if (estimated > 0) {
+                        showToast('All planned pomodoros for this task are already completed. Starting without a limit.', 'info');
+                    }
+                }
+            } else {
+                activeTaskRemainingPomodoros = null;
+                activeTaskTargetSeconds = null;
+            }
 
-            activeSubject = subject;
+            activeSubject = resolvedSubject;
             activeSubjectDisplay.textContent = activeSubject;
-            
+
             if(timerInterval) clearInterval(timerInterval);
 
             if (timerMode === 'normal') {
                 sessionStartTime = Date.now();
+                sessionTimerDisplay.textContent = activeTaskTargetSeconds
+                    ? formatTime(activeTaskTargetSeconds)
+                    : formatTime(0);
                 timerInterval = setInterval(() => {
                     const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
-                    sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
+                    if (activeTaskTargetSeconds) {
+                        const remainingSeconds = activeTaskTargetSeconds - elapsedSeconds;
+                        sessionTimerDisplay.textContent = formatTime(Math.max(remainingSeconds, 0));
+                        if (remainingSeconds <= 0) {
+                            stopTimer().catch(err => console.error('Failed to auto-stop timer', err));
+                        }
+                    } else {
+                        sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
+                    }
                 }, 1000);
             } else { // Pomodoro Mode
                 pomodoroState = 'work';
                 playSound(pomodoroSounds.start, pomodoroSounds.volume);
-                
+
                 const workDurationSeconds = pomodoroSettings.work * 60;
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
-                
+
                 // Use the new reliable SW alarm
                 await triggerServerNotification({
         title: 'Focus complete!',
@@ -4114,7 +4205,12 @@ let pauseStartTime = 0;
             document.getElementById('manual-start-btn').classList.add('hidden');
 
             if (currentUser) {
-                await updateUserPrivate(currentUser.id, { studying: { subject: activeSubject, startTime: nowIso(), type: 'study' } });
+                const studyingStatus = { subject: activeSubject, startTime: nowIso(), type: 'study' };
+                if (task) {
+                    studyingStatus.taskId = task.id;
+                    studyingStatus.taskTitle = task.title;
+                }
+                await updateUserPrivate(currentUser.id, { studying: studyingStatus });
             }
         }
         
@@ -4127,43 +4223,55 @@ let pauseStartTime = 0;
             pauseStartTime = 0;
             // --- END OF ADDED BLOCK ---
 
-            // If a Pomodoro session was running, save any partial time and cancel the background alarm
-            if (timerMode === 'pomodoro' && pomodoroState !== 'idle') {
-                const workDuration = pomodoroSettings.work * 60;
-                // Calculate elapsed time based on what's left on the display
-                const displayTime = sessionTimerDisplay.textContent;
-                const timeLeftInSeconds = (parseInt(displayTime.split(':')[0], 10) * 60) + parseInt(displayTime.split(':')[1], 10);
-                const elapsedSeconds = workDuration - timeLeftInSeconds;
-                
-                if (pomodoroState === 'work' && elapsedSeconds > 0) {
-                    await saveSession(activeSubject, elapsedSeconds, 'study');
-                }
-            }
-            // If a normal timer was running, stop it and save the session
-            else if (timerMode === 'normal' && timerInterval) {
+            const shouldSkipSave = suppressTimerSave;
+            suppressTimerSave = false;
+
+            if (timerInterval) {
                 clearInterval(timerInterval);
-                const elapsedMillis = Date.now() - sessionStartTime;
-                const sessionDurationSeconds = Math.floor(elapsedMillis / 1000);
-                if (sessionDurationSeconds > 0) {
-                    await saveSession(activeSubject, sessionDurationSeconds, 'study');
+            }
+
+            if (!shouldSkipSave) {
+                if (timerMode === 'pomodoro' && pomodoroState !== 'idle') {
+                    const workDuration = pomodoroSettings.work * 60;
+                    const displayTime = sessionTimerDisplay.textContent;
+                    const parts = displayTime.split(':');
+                    const timeLeftInSeconds = parts.length >= 2
+                        ? (parseInt(parts[0], 10) * 60) + parseInt(parts[1], 10)
+                        : 0;
+                    const elapsedSeconds = workDuration - timeLeftInSeconds;
+
+                    if (pomodoroState === 'work' && elapsedSeconds > 0) {
+                        await saveSession(activeSubject, elapsedSeconds, 'study');
+                    }
+                } else if (timerMode === 'normal') {
+                    const elapsedMillis = Date.now() - sessionStartTime;
+                    const sessionDurationSeconds = Math.floor(elapsedMillis / 1000);
+                    if (sessionDurationSeconds > 0) {
+                        await saveSession(activeSubject, sessionDurationSeconds, 'study');
+                    }
                 }
             }
-            
+
             // Reset all timer-related state variables and UI elements
             timerInterval = null;
             pomodoroState = 'idle';
+            nextPomodoroPhase = null;
+            activeSubject = '';
+            activeTaskId = null;
+            activeTaskTargetSeconds = null;
+            activeTaskRemainingPomodoros = null;
             activeSubjectDisplay.textContent = '';
-            sessionTimerDisplay.textContent = timerMode === 'pomodoro' ? formatPomodoroTime(pomodoroSettings.work * 60) : formatTime(0);
+            sessionTimerDisplay.textContent = timerMode === 'pomodoro'
+                ? formatPomodoroTime(pomodoroSettings.work * 60)
+                : formatTime(0);
             pomodoroStatusDisplay.textContent = timerMode === 'pomodoro' ? 'Ready for Pomodoro' : '';
             pomodoroStatusDisplay.style.color = '#9ca3af';
 
             // Reset button visibility
             document.getElementById('start-studying-btn').classList.remove('hidden');
             document.getElementById('stop-studying-btn').classList.add('hidden');
-            // --- ADD THESE 2 LINES TO HIDE PAUSE/RESUME ---
             document.getElementById('pause-btn').classList.add('hidden');
             document.getElementById('resume-btn').classList.add('hidden');
-            // --- END OF ADDED LINES ---
             document.getElementById('manual-start-btn').classList.add('hidden');
 
             // Update user status in Supabase to show they are no longer studying
@@ -4209,8 +4317,14 @@ let pauseStartTime = 0;
 
         // --- NEW: Helper to start the next Pomodoro phase ---
         async function startNextPomodoroPhase(state) {
+            if (state === 'work' && activeTaskRemainingPomodoros !== null && activeTaskRemainingPomodoros <= 0) {
+                suppressTimerSave = true;
+                await stopTimer();
+                showToast('All planned pomodoros for this task are complete!', 'success');
+                return;
+            }
             pomodoroState = state;
-            
+
             let durationSeconds = 0;
             let statusText = '';
             let transitionMessage = {};
@@ -4250,6 +4364,7 @@ let pauseStartTime = 0;
             // Update cycle in Supabase only after a break is completed (meaning a work session is starting)
             if (state === 'work') {
                 const newCycleCount = (currentUserData.pomodoroCycle || 0) + 1;
+                currentUserData.pomodoroCycle = newCycleCount;
                 if (currentUser) {
                     await updateUserPrivate(currentUser.id, { pomodoroCycle: newCycleCount });
                 }
@@ -4629,6 +4744,7 @@ if (achievementsGrid) {
             } else {
               plannerState.tasks = tasks || [];
               renderPlannerPage();
+              renderTaskSelectionList(plannerState.tasks);
             }
           
             // 4. Realtime subscription for lists
@@ -4667,6 +4783,7 @@ if (achievementsGrid) {
                   if (!error) {
                     plannerState.tasks = data || [];
                     renderPlannerPage();
+                    renderTaskSelectionList(plannerState.tasks);
                   }
                 }
               )
@@ -5332,6 +5449,7 @@ if (achievementsGrid) {
             plannerState.tasks.push(data);
             plannerState.selectedTaskId = data.id;
             renderPlannerPage();            // refresh list/board/calendar
+            renderTaskSelectionList(plannerState.tasks);
           }
 
           async function addPlannerList(name) {
@@ -5401,7 +5519,8 @@ if (achievementsGrid) {
             plannerState.selectedTaskId = null;
             plannerState.tasks = plannerState.tasks.filter(t => t.id !== taskId);
             renderPlannerTaskDetails();
-          }          
+            renderTaskSelectionList(plannerState.tasks);
+          }
 
         async function updatePlannerList(listId, newName) {
             if (!currentUser || !listId || !newName.trim()) return;
@@ -6576,15 +6695,25 @@ if (achievementsGrid) {
         function renderSubjectSelectionList(subjects, newlyAddedSubjectName = null) {
             const container = document.getElementById('subject-selection-list');
             if (!container) return;
-            if (subjects.length === 0) {
+
+            subjectSelectionData = Array.isArray(subjects) ? subjects : [];
+
+            const hasSelectedSubject = subjectSelectionData.some(sub => String(sub.id) === String(startSessionSelected.subjectId));
+            if (!hasSelectedSubject && startSessionSelected.subjectId) {
+                startSessionSelected.subjectId = null;
+            }
+
+            if (subjectSelectionData.length === 0) {
                 container.innerHTML = `<p class="text-gray-400 text-center">No subjects added yet. Add one below!</p>`;
+                updateStartSessionSelectionUI();
                 return;
             }
-            container.innerHTML = subjects.map(subject => `
-                <div class="subject-item p-3 rounded-lg flex items-center gap-3" 
-                     draggable="true" 
-                     data-subject-id="${subject.id}" 
-                     data-subject-name="${subject.name}"
+
+            container.innerHTML = subjectSelectionData.map(subject => `
+                <div class="subject-item p-3 rounded-lg flex items-center gap-3 ${String(subject.id) === String(startSessionSelected.subjectId) ? 'selected' : ''}"
+                     draggable="true"
+                     data-subject-id="${escapeAttribute(subject.id)}"
+                     data-subject-name="${escapeAttribute(subject.name)}"
                      data-order="${subject.order || 0}">
                     <div class="flex-grow flex items-center gap-3">
                         <div class="w-4 h-4 rounded-full ${subject.color}"></div>
@@ -6598,20 +6727,87 @@ if (achievementsGrid) {
                 </div>
             `).join('');
 
-            // Auto-select the newly added subject if provided
             if (newlyAddedSubjectName) {
-                const newSubjectElement = container.querySelector(`[data-subject-name="${newlyAddedSubjectName}"]`);
-                if (newSubjectElement) {
-                    // Remove 'selected' from any previously selected subject
-                    container.querySelectorAll('.subject-item.selected').forEach(el => el.classList.remove('selected'));
-                    // Add 'selected' to the new subject
-                    newSubjectElement.classList.add('selected');
-                    newSubjectElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                const newSubject = subjectSelectionData.find(sub => sub.name === newlyAddedSubjectName);
+                if (newSubject) {
+                    startSessionSelected.subjectId = newSubject.id;
                 }
-            } else {
-                // If no new subject, ensure no subject is selected by default
-                container.querySelectorAll('.subject-item.selected').forEach(el => el.classList.remove('selected'));
             }
+
+            updateStartSessionSelectionUI();
+        }
+
+        function renderTaskSelectionList(tasks) {
+            const container = document.getElementById('task-selection-list');
+            if (!container) return;
+
+            const taskList = Array.isArray(tasks) ? tasks.filter(task => !task.completed) : [];
+
+            if (!taskList.length) {
+                container.innerHTML = `<p class="text-gray-400 text-center">No active tasks. Create a task to link it with your sessions.</p>`;
+                if (startSessionSelected.taskId) {
+                    startSessionSelected.taskId = null;
+                }
+                updateStartSessionSelectionUI();
+                return;
+            }
+
+            const sortedTasks = taskList.slice().sort((a, b) => {
+                const aDate = a.due_date ? new Date(a.due_date) : null;
+                const bDate = b.due_date ? new Date(b.due_date) : null;
+                const aDue = aDate && !isNaN(aDate) ? aDate.getTime() : Infinity;
+                const bDue = bDate && !isNaN(bDate) ? bDate.getTime() : Infinity;
+                if (aDue === bDue) {
+                    return (a.created_at || '').localeCompare(b.created_at || '');
+                }
+                return aDue - bDue;
+            });
+
+            const hasSelectedTask = sortedTasks.some(task => String(task.id) === String(startSessionSelected.taskId));
+            if (!hasSelectedTask && startSessionSelected.taskId) {
+                startSessionSelected.taskId = null;
+            }
+
+            container.innerHTML = sortedTasks.map(task => {
+                const estimated = Math.max(task.pomodoros_estimated || 0, 0);
+                const completed = Math.max(task.pomodoros_completed || 0, 0);
+                const remaining = Math.max(estimated - completed, 0);
+                const dueDate = task.due_date ? new Date(task.due_date) : null;
+                const dueLabel = dueDate && !isNaN(dueDate)
+                    ? dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                    : 'No due date';
+                const progressText = estimated
+                    ? `${completed}/${estimated} pomodoros`
+                    : `${completed} pomodoros done`;
+                const remainingText = estimated ? `${remaining} remaining` : '';
+                const infoPieces = [progressText, remainingText].filter(Boolean);
+                const infoText = infoPieces.join(' • ');
+                const isSelected = String(task.id) === String(startSessionSelected.taskId);
+
+                return `
+                    <div class="task-selection-item ${isSelected ? 'selected' : ''}" data-task-id="${escapeAttribute(task.id)}">
+                        <div class="flex flex-col">
+                            <span class="font-medium text-white">${task.title}</span>
+                            <span class="text-xs text-gray-400">${infoText || 'No pomodoro estimate'}</span>
+                        </div>
+                        <div class="text-xs text-gray-400 text-right whitespace-nowrap">${dueLabel}</div>
+                    </div>
+                `;
+            }).join('');
+
+            updateStartSessionSelectionUI();
+        }
+
+        function updateStartSessionSelectionUI() {
+            const subjectEls = document.querySelectorAll('#subject-selection-list .subject-item');
+            subjectEls.forEach(el => {
+                el.classList.toggle('selected', String(el.dataset.subjectId) === String(startSessionSelected.subjectId));
+            });
+
+            const taskEls = document.querySelectorAll('#task-selection-list .task-selection-item');
+            taskEls.forEach(el => {
+                el.classList.toggle('selected', String(el.dataset.taskId) === String(startSessionSelected.taskId));
+            });
         }
         
         function renderPlanner(tasks) {
@@ -7875,20 +8071,31 @@ if (achievementsGrid) {
         
         ael('start-session-form', 'submit', (e) => {
             e.preventDefault();
-            const selectedSubjectEl = document.querySelector('#subject-selection-list .subject-item.selected');
-            if (selectedSubjectEl) {
-                const subjectName = selectedSubjectEl.dataset.subjectName;
-                startTimer(subjectName);
-                document.getElementById('start-session-modal').classList.remove('active');
-            } else {
-                showToast("Please select a subject to start studying.", "error");
+            const subjectId = startSessionSelected.subjectId;
+            const taskId = startSessionSelected.taskId;
+            const subject = subjectId
+                ? subjectSelectionData.find(sub => String(sub.id) === String(subjectId))?.name || null
+                : null;
+
+            if (!subject && !taskId) {
+                showToast('Please select a subject or task to start studying.', 'error');
+                return;
             }
+
+            const options = {};
+            if (taskId) {
+                options.taskId = taskId;
+            }
+
+            startTimer(subject, options);
+            document.getElementById('start-session-modal').classList.remove('active');
         });
 
         // This listener replaces the original 'subject-selection-list' click listener
         // to handle more actions like edit and delete using event delegation.
         ael('start-session-modal', 'click', async (e) => {
             const subjectItem = e.target.closest('.subject-item');
+            const taskItem = e.target.closest('.task-selection-item');
             
             // Handle clicking the options button (...)
             if (e.target.closest('.subject-options-btn')) {
@@ -7959,8 +8166,24 @@ if (achievementsGrid) {
 
             // Handle selecting a subject (original functionality)
             if (subjectItem && !e.target.closest('button')) {
-                document.querySelectorAll('#subject-selection-list .subject-item.selected').forEach(el => el.classList.remove('selected'));
-                subjectItem.classList.add('selected');
+                const subjectId = subjectItem.dataset.subjectId;
+                if (String(startSessionSelected.subjectId) === String(subjectId)) {
+                    startSessionSelected.subjectId = null;
+                } else {
+                    startSessionSelected.subjectId = subjectId;
+                }
+                updateStartSessionSelectionUI();
+                return;
+            }
+
+            if (taskItem) {
+                const taskId = taskItem.dataset.taskId;
+                if (String(startSessionSelected.taskId) === String(taskId)) {
+                    startSessionSelected.taskId = null;
+                } else {
+                    startSessionSelected.taskId = taskId;
+                }
+                updateStartSessionSelectionUI();
             }
         });
 
@@ -7999,7 +8222,20 @@ if (achievementsGrid) {
             // Main click handler
             plannerPage.addEventListener('click', e => {
                 const target = e.target;
-                
+
+                if (target.closest('.task-play-btn')) {
+                    const taskEl = target.closest('[data-task-id]');
+                    const taskId = taskEl?.dataset.taskId;
+                    if (taskId) {
+                        startSessionSelected.taskId = taskId;
+                        // Keep previously selected subject; just ensure the UI is up to date
+                        renderTaskSelectionList(plannerState.tasks);
+                        updateStartSessionSelectionUI();
+                        document.getElementById('start-session-modal').classList.add('active');
+                    }
+                    return;
+                }
+
                 // --- NEW: Project options menu ---
                 const optionsBtn = e.target.closest('.project-options-btn');
                 if (optionsBtn) {
@@ -8210,7 +8446,7 @@ if (achievementsGrid) {
                             } else {
                                 switchTimerMode('normal');
                             }
-                            startTimer(subjectName);
+                            startTimer(subjectName, { taskId: task.id });
                         }
                         return;
                     }
