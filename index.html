@@ -2154,19 +2154,39 @@
         const { data: { user } } = await auth.getUser();
         if (!user || !isValidUUID(user.id)) return;
 
+        // Check whether we already created a profile record for this user.
+        // The previous implementation used `upsert`, which overwrote the
+        // custom username and avatar every time the user logged in again.
+        const { data: existingProfile, error: existingError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (existingError) {
+            console.error('Failed to check profile existence:', existingError);
+            return;
+        }
+
+        if (existingProfile) {
+            // Profile already exists – keep the user’s customised name/photo.
+            return;
+        }
+
         const local = (user.email || 'user').split('@')[0]
                        .toLowerCase().replace(/[^a-z0-9_]+/g, '_');
         const fallbackUsername = `${local}_${user.id.slice(0,6)}`;
 
-        await supabase.from('profiles').upsert(
-            {
-                id: user.id,
-                email: user.email ?? null,
-                username: fallbackUsername,             // satisfies NOT NULL
-                photo_url: `https://api.dicebear.com/8.x/lorelei/svg?seed=${encodeURIComponent(local)}`
-            },
-            { onConflict: 'id' }
-        );
+        const { error: insertError } = await supabase.from('profiles').insert({
+            id: user.id,
+            email: user.email ?? null,
+            username: fallbackUsername,             // satisfies NOT NULL
+            photo_url: `https://api.dicebear.com/8.x/lorelei/svg?seed=${encodeURIComponent(local)}`
+        });
+
+        if (insertError) {
+            console.error('Failed to create default profile row:', insertError);
+        }
     }
 
     // Decide what to show after auth changes / signup / login
