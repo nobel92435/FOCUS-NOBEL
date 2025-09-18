@@ -1412,6 +1412,39 @@
         #cancel-btn { background-color: #4B5563; color: white; }
         #cancel-btn:hover { background-color: #6B7280; }
 
+        /* NEW: Project options menu styles */
+        .project-options-menu {
+            display: none;
+            position: absolute;
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            z-index: 50;
+            overflow: hidden;
+            width: 150px;
+        }
+        .project-options-menu.active {
+            display: block;
+        }
+        .project-options-menu button {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            text-align: left;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+        .project-options-menu button:hover {
+            background-color: #30363d;
+        }
+        .project-options-menu .delete-btn:hover {
+            background-color: #ef4444;
+        }
+
         /* New Dashboard Styles */
         #insights-container {
             background-color: #0f172a; /* slate-900 */
@@ -2024,6 +2057,40 @@
     <div id="repeat-settings-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Repeat Settings</h2><button class="close-modal">&times;</button></div><form id="repeat-settings-form"><div class="mb-4"><label for="repeat-type-select" class="block text-gray-300 mb-2">Repeat Frequency</label><select id="repeat-type-select" class="w-full bg-gray-700 rounded-lg p-3"><option value="none">None</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Set Repeat</button></form></div></div>
     <!-- END: Added Missing Modals -->
 
+    <!-- START: NEW TAGS MODAL -->
+    <div id="tags-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Tags</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div id="tags-list" class="flex flex-wrap gap-2 mb-4"></div>
+            <form id="add-tag-form" class="flex gap-2">
+                <input id="add-tag-input" type="text" class="w-full bg-gray-700 rounded-lg p-3 text-white" placeholder="Add a new tag...">
+                <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg font-semibold hover:bg-blue-700">Add</button>
+            </form>
+        </div>
+    </div>
+    <!-- END: NEW TAGS MODAL -->
+
+    <!-- START: NEW ADD PROJECT MODAL -->
+    <div id="add-project-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">New Project</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="add-project-form">
+                <div class="mb-4">
+                    <label for="add-project-name" class="block text-gray-300 mb-2">Project Name</label>
+                    <input id="add-project-name" type="text" class="w-full bg-gray-700 rounded-lg p-3 text-white" placeholder="e.g., University Thesis" required>
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Create Project</button>
+            </form>
+        </div>
+    </div>
+    <!-- END: NEW ADD PROJECT MODAL -->
+
         <script type="module">
         // Supabase SDK
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -2032,6 +2099,61 @@
     const supabase = createClient(supabaseUrl, supabaseKey);
     const auth = supabase.auth;
     const storage = supabase.storage;
+
+    /**
+     * Compresses an image file using a canvas.
+     * @param {File} file The image file to compress.
+     * @param {object} options Compression options.
+     * @param {number} [options.maxWidth=800] The maximum width of the output image.
+     * @param {number} [options.quality=0.7] The quality of the output image (0-1).
+     * @returns {Promise<File>} A promise that resolves with the compressed image as a File object.
+     */
+    function compressImage(file, options = {}) {
+        const { maxWidth = 800, quality = 0.7 } = options;
+        const fileName = file.name;
+        const fileType = file.type;
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = event => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxWidth) {
+                        const scaleFactor = maxWidth / width;
+                        width = maxWidth;
+                        height = img.height * scaleFactor;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob(blob => {
+                        if (blob) {
+                            const compressedFile = new File([blob], fileName, {
+                                type: fileType,
+                                lastModified: Date.now()
+                            });
+                            resolve(compressedFile);
+                        } else {
+                            reject(new Error('Canvas to Blob conversion failed'));
+                        }
+                    }, fileType, quality);
+                };
+                img.onerror = error => reject(error);
+            };
+            reader.onerror = error => reject(error);
+        });
+    }
+
 
     function isValidUUID(uuid) {
         if (typeof uuid !== 'string' || !uuid) return false;
@@ -2424,6 +2546,24 @@
             const subject = oldState === 'work' ? activeSubject : oldState.replace('_', ' ');
             await saveSession(subject, sessionDuration, sessionType);
         
+            // If a work session just ended, increment the pomodoro count for the task
+            if (oldState === 'work' && subject) {
+                // Find the task by its title (which is used as the 'subject' for the timer)
+                const task = plannerState.tasks.find(t => t.title === subject && !t.completed);
+                if (task) {
+                    const newCompletedCount = (task.pomodoros_completed || 0) + 1;
+                    await updatePlannerTask(task.id, { pomodoros_completed: newCompletedCount });
+                    console.log(`Incremented pomodoro count for task: ${task.title}`);
+                    
+                    // Also check if the task is now complete
+                    const estimatedPomos = task.pomodoros_estimated || 1;
+                    if (newCompletedCount >= estimatedPomos) {
+                         await updatePlannerTask(task.id, { completed: true, completedAt: nowIso() });
+                         showToast(`Task "${task.title}" completed!`, 'success');
+                    }
+                }
+            }
+
             // Check auto-start settings to decide what to do next
             const shouldAutoStart = (newState === 'work' && pomodoroSettings.autoStartFocus) || 
                                     (newState.includes('break') && pomodoroSettings.autoStartBreak);
@@ -2658,7 +2798,11 @@ let pauseStartTime = 0;
             try {
                 if (!currentUser) { showToast('Please sign in first.', 'info'); return; }
                 if (!file || !file.type?.startsWith('image/')) { showToast('Pick a valid image.', 'error'); return; }
-                if (file.size > 5 * 1024 * 1024) { showToast('Max size 5MB.', 'error'); return; }
+                if (file.size > 10 * 1024 * 1024) { showToast('Max size 10MB.', 'error'); return; }
+
+                showToast('Compressing photo...', 'info');
+                // Compress the image before uploading
+                const compressedFile = await compressImage(file, { maxWidth: 800, quality: 0.8 });
 
                 const ext = file.name.split('.').pop();
                 const filePath = `${currentUser.id}/profile.${ext}`;
@@ -2666,7 +2810,7 @@ let pauseStartTime = 0;
                 // upload with contentType + upsert
                 const { error: upErr } = await storage
                     .from(PROFILE_BUCKET)
-                    .upload(filePath, file, { upsert: true, contentType: file.type });
+                    .upload(filePath, compressedFile, { upsert: true, contentType: compressedFile.type });
                 if (upErr) throw upErr;
 
                 // public or signed URL
@@ -2735,19 +2879,22 @@ let pauseStartTime = 0;
                 showToast('Please select an image file.', 'error');
                 return;
             }
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                showToast('Image is too large (max 5MB).', 'error');
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                showToast('Image is too large (max 10MB).', 'error');
                 return;
             }
-            showToast('Uploading image...', 'info');
+            showToast('Compressing & uploading...', 'info');
 
             try {
+                // Compress the image before uploading to group chat
+                const compressedFile = await compressImage(file, { maxWidth: 1280, quality: 0.8 });
+
                 const fileExt = file.name.split('.').pop();
                 const fileName = `${Date.now()}.${fileExt}`;
                 const filePath = `${groupId}/${fileName}`;
                 const { error: uploadError } = await storage
                     .from('group-images')
-                    .upload(filePath, file);
+                    .upload(filePath, compressedFile);
                 if (uploadError) throw uploadError;
 
                 const { data: publicUrlData } = storage
@@ -3570,7 +3717,8 @@ let pauseStartTime = 0;
 
                 const avatarEl = document.getElementById('user-profile-avatar');
                 if (profileData.photo_url) {
-                    avatarEl.innerHTML = `<img src="${profileData.photo_url}" alt="${profileData.username}" class="w-full h-full object-cover">`;
+                    const cacheBustedUrl = `${profileData.photo_url.split('?')[0]}?t=${new Date().getTime()}`;
+                    avatarEl.innerHTML = `<img src="${cacheBustedUrl}" alt="${profileData.username}" class="w-full h-full object-cover">`;
                 } else {
                     const initial = profileData.username ? profileData.username.charAt(0).toUpperCase() : 'U';
                     avatarEl.innerHTML = `<span>${initial}</span>`;
@@ -4326,10 +4474,11 @@ if (achievementsGrid) {
                 ${plannerState.lists.map(list => {
                   const taskCount = plannerState.tasks.filter(t => t.list_id === list.id && !t.completed).length;
                   return `
-                    <div class="planner-sidebar-item ${plannerState.activeListId === list.id ? 'active' : ''}" data-list-id="${list.id}">
+                    <div class="planner-sidebar-item relative ${plannerState.activeListId === list.id ? 'active' : ''}" data-list-id="${list.id}">
                       <i class="fas fa-folder w-5 mr-3"></i>
                       <span class="flex-grow">${list.name}</span>
                       <span class="text-xs bg-gray-600 px-2 py-0.5 rounded-full">${taskCount}</span>
+                      <button class="project-options-btn p-2 rounded-full hover:bg-gray-700/50 ml-2 -mr-1" data-list-id="${list.id}" data-list-name="${list.name}"><i class="fas fa-ellipsis-h text-xs pointer-events-none"></i></button>
                     </div>
                   `;
                 }).join('')}
@@ -4416,6 +4565,7 @@ if (achievementsGrid) {
               return taskDate >= startOfWeek && taskDate <= endOfWeek;
             });
             const plannedTasks = allTasks.filter(t => t.due_date && !t.completed);
+            const flaggedTasks = allTasks.filter(t => t.flagged && !t.completed);
             const completedTasks = allTasks.filter(t => t.completed);
             const inboxTasks = allTasks.filter(t => t.list_id === null && !t.completed);
           
@@ -4424,6 +4574,7 @@ if (achievementsGrid) {
               { name: 'Tomorrow', icon: 'fa-cloud-sun', color: 'bg-orange-400', count: tomorrowTasks.length },
               { name: 'This Week', icon: 'fa-calendar-week', color: 'bg-purple-500', count: thisWeekTasks.length },
               { name: 'Planned', icon: 'fa-calendar-alt', color: 'bg-blue-500', count: plannedTasks.length },
+              { name: 'Flagged', icon: 'fa-flag', color: 'bg-red-500', count: flaggedTasks.length },
               { name: 'Events', icon: 'fa-calendar-star', color: 'bg-green-500', count: 0 },
               { name: 'Completed', icon: 'fa-check-circle', color: 'bg-gray-500', count: completedTasks.length },
               { name: 'Tasks', icon: 'fa-tasks', color: 'bg-indigo-500', count: inboxTasks.length },
@@ -4450,8 +4601,8 @@ if (achievementsGrid) {
                     <span>Add Project</span>
                   </button>
                   <div class="action-icons">
-                    <i class="fas fa-flag"></i>
-                    <i class="fas fa-folder-open"></i>
+                    <i class="fas fa-flag planner-action-flag cursor-pointer"></i>
+                    <i class="fas fa-folder-open planner-action-folder cursor-pointer"></i>
                   </div>
                 </div>
               </div>
@@ -4496,6 +4647,9 @@ if (achievementsGrid) {
               case 'planned':
                 tasksToShow = allTasks.filter(t => t.due_date && !t.completed);
                 break;
+              case 'flagged':
+                tasksToShow = allTasks.filter(t => t.flagged);
+                break;
               case 'completed':
                 tasksToShow = allTasks.filter(t => t.completed);
                 break;
@@ -4510,16 +4664,19 @@ if (achievementsGrid) {
             const completedTasks = tasksToShow.filter(t => t.completed);
             const completedTasksCount = completedTasks.length;
 
-            const estimatedTimeMinutes = uncompletedTasks.reduce((total, task) => total + (task.estimatedMinutes || 0), 0);
+            const estimatedTimeMinutes = uncompletedTasks.reduce((total, task) => {
+                const estimatedPomos = task.pomodoros_estimated || 0;
+                return total + (estimatedPomos * (pomodoroSettings.work || 25));
+            }, 0);
             const estimatedHours = Math.floor(estimatedTimeMinutes / 60).toString().padStart(2, '0');
             const estimatedMins = (estimatedTimeMinutes % 60).toString().padStart(2, '0');
 
             const elapsedTimeMinutes = uncompletedTasks.reduce((total, task) => {
-                const session = userSessions.find(s => s.subject === task.title && s.type === 'study');
-                return total + (session ? session.durationSeconds / 60 : 0);
+                const completedPomos = task.pomodoros_completed || 0;
+                return total + (completedPomos * (pomodoroSettings.work || 25));
             }, 0);
             const elapsedHours = Math.floor(elapsedTimeMinutes / 60).toString().padStart(2, '0');
-            const elapsedMins = (elapsedTimeMinutes % 60).toString().padStart(2, '0');
+            const elapsedMins = Math.round(elapsedTimeMinutes % 60).toString().padStart(2, '0');
             
             let tasksToRender;
             if (category === 'completed') {
@@ -4727,6 +4884,28 @@ if (achievementsGrid) {
             const repeatText = selectedTask.repeat ? `Repeats ${selectedTask.repeat.type}` : 'None';
             const repeatTextColor = selectedTask.repeat ? 'text-gray-300' : 'text-gray-500';
           
+            const estimatedPomos = selectedTask.pomodoros_estimated || 1;
+            const completedPomos = selectedTask.pomodoros_completed || 0;
+            const estimatedTime = estimatedPomos * (pomodoroSettings.work || 25);
+
+            // NEW: Prepare tags and subtasks HTML
+            // FIX: Ensure 'tags' is always an array to prevent .map() error.
+            // The error occurs if 'selectedTask.tags' is null, undefined, or not an array.
+            const tags = Array.isArray(selectedTask.tags) ? selectedTask.tags : [];
+            const tagsHtml = tags.map(tag => `
+                <span class="bg-gray-600 text-gray-200 text-xs font-medium px-2.5 py-1 rounded-full">${tag}</span>
+            `).join('');
+
+            const subtasks = selectedTask.subtasks || [];
+            const subtasksHtml = subtasks.map(subtask => `
+                <div class="flex items-center p-2 hover:bg-gray-700/50 rounded-md" data-subtask-id="${subtask.id}">
+                    <input type="checkbox" class="subtask-checkbox w-4 h-4 bg-gray-600 border-gray-500 rounded text-blue-500 focus:ring-blue-500 mr-3 flex-shrink-0" ${subtask.completed ? 'checked' : ''}>
+                    <span class="flex-grow text-sm ${subtask.completed ? 'line-through text-gray-500' : ''}">${subtask.title}</span>
+                    <button class="delete-subtask-btn text-gray-500 hover:text-red-400 ml-2 text-xs"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            `).join('');
+
+
             detailsPanel.innerHTML = `
               <div class="p-4 h-full flex flex-col bg-gray-800 text-white">
                 <!-- Header -->
@@ -4745,20 +4924,32 @@ if (achievementsGrid) {
                       <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="none">None</a>
                     </div>
                   </div>
+                  <button id="task-detail-flag-btn" class="${selectedTask.flagged ? 'text-yellow-400' : 'text-gray-500'} hover:opacity-80 transition ml-2" title="Flag Task">
+                      <i class="${selectedTask.flagged ? 'fas' : 'far'} fa-flag"></i>
+                  </button>
                   <button id="close-task-details" class="ml-2 p-1 rounded-full hover:bg-gray-700">&times;</button>
                 </div>
           
                 <!-- Main Content -->
                 <div class="flex-grow overflow-y-auto pr-2 text-sm">
-                  <button class="border border-gray-600 rounded-full px-3 py-1 text-gray-400 mb-4 hover:bg-gray-700">+ Tags</button>
+                  <button id="task-detail-tags-btn" class="border border-gray-600 rounded-full px-3 py-1 text-gray-400 mb-4 hover:bg-gray-700 flex items-center gap-2">
+                     <i class="fas fa-tags text-xs"></i>
+                     <div class="flex items-center gap-1.5">${tagsHtml || '<span>+ Tags</span>'}</div>
+                  </button>
           
                   <div class="space-y-3">
-                    <div id="task-detail-pomodoro-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition" title="Start Pomodoro Timer">
-                      <i class="fas fa-stopwatch text-gray-400 w-6 text-center mr-3"></i>
-                      <span>Pomodoro</span>
-                      <div class="ml-auto text-right">
-                        <span class="text-green-400">0 / 0</span>
-                        <p class="text-xs text-gray-500">= 25m</p>
+                    <div class="flex items-center">
+                      <div id="task-detail-pomodoro-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition flex-grow" title="Start Pomodoro Timer">
+                          <i class="fas fa-stopwatch text-gray-400 w-6 text-center mr-3"></i>
+                          <span>Pomodoro</span>
+                      </div>
+                      <div class="ml-auto flex items-center gap-2">
+                          <button id="pomodoro-decrease-btn" class="w-7 h-7 rounded-full bg-gray-700 hover:bg-gray-600 flex-shrink-0 flex items-center justify-center">-</button>
+                          <div class="text-right">
+                              <span class="text-green-400 font-semibold">${completedPomos} / ${estimatedPomos}</span>
+                              <p class="text-xs text-gray-500">= ${estimatedTime}m</p>
+                          </div>
+                          <button id="pomodoro-increase-btn" class="w-7 h-7 rounded-full bg-gray-700 hover:bg-gray-600 flex-shrink-0 flex items-center justify-center">+</button>
                       </div>
                     </div>
           
@@ -4790,9 +4981,12 @@ if (achievementsGrid) {
                       <span class="ml-auto ${repeatTextColor}">${repeatText}</span>
                     </div>
           
-                    <div class="flex items-center text-gray-400">
-                      <i class="fas fa-plus w-6 text-center mr-3"></i>
-                      <input class="bg-transparent w-full border-none p-0 focus:ring-0" placeholder="Add a subtask...">
+                    <div class="text-gray-400">
+                        <div id="subtasks-container" class="mt-2 space-y-1">${subtasksHtml}</div>
+                         <div class="flex items-center mt-1">
+                            <i class="fas fa-plus w-6 text-center mr-3"></i>
+                            <input id="add-subtask-input" class="bg-transparent w-full border-none p-0 focus:ring-0" placeholder="Add a subtask...">
+                        </div>
                     </div>
                   </div>
           
@@ -4809,7 +5003,55 @@ if (achievementsGrid) {
             `;
           }
           
-          /** SUPABASE-ONLY IMPLEMENTATION **/
+          // NEW: Function to open and manage the tags modal
+        function openTagsModal(taskId) {
+            const modal = document.getElementById('tags-modal');
+            const tagsList = document.getElementById('tags-list');
+            const addTagForm = document.getElementById('add-tag-form');
+            const addTagInput = document.getElementById('add-tag-input');
+
+            const task = plannerState.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const renderTags = () => {
+                const currentTags = Array.isArray(task.tags) ? task.tags : [];
+                tagsList.innerHTML = currentTags.map(tag => `
+                    <span class="flex items-center bg-gray-600 text-gray-200 text-sm font-medium pl-3 pr-2 py-1 rounded-full">
+                        ${tag}
+                        <button class="remove-tag-btn ml-2 text-gray-400 hover:text-white">&times;</button>
+                    </span>
+                `).join('');
+            };
+
+            renderTags();
+            modal.classList.add('active');
+            addTagInput.focus();
+
+            addTagForm.onsubmit = (e) => {
+                e.preventDefault();
+                const newTag = addTagInput.value.trim();
+                if (newTag) {
+                    const currentTags = Array.isArray(task.tags) ? task.tags : [];
+                    if (!currentTags.includes(newTag)) {
+                        const updatedTags = [...currentTags, newTag];
+                        updatePlannerTask(taskId, { tags: updatedTags });
+                        // We don't re-render here, the realtime listener will do it
+                    }
+                    addTagInput.value = '';
+                }
+            };
+
+            tagsList.onclick = (e) => {
+                if (e.target.classList.contains('remove-tag-btn')) {
+                    const tagText = e.target.parentElement.textContent.trim().slice(0, -1).trim();
+                    const currentTags = Array.isArray(task.tags) ? task.tags : [];
+                    const updatedTags = currentTags.filter(t => t !== tagText);
+                    updatePlannerTask(taskId, { tags: updatedTags });
+                }
+            };
+        }
+
+        /** SUPABASE-ONLY IMPLEMENTATION **/
           
           async function addPlannerTask(title, dueDateStr = null) {
             if (!currentUser || !title.trim()) return;
@@ -4822,6 +5064,7 @@ if (achievementsGrid) {
               title: title.trim(),
               completed: false,
               priority: 'none',
+              flagged: false, // Add default for flagging
               list_id: listIdForDb,
               created_by: currentUser.id,
               notes: ''
@@ -4851,6 +5094,28 @@ if (achievementsGrid) {
             plannerState.tasks.push(data);
             plannerState.selectedTaskId = data.id;
             renderPlannerPage();            // refresh list/board/calendar
+          }
+
+          async function addPlannerList(name) {
+            if (!currentUser || !name.trim()) return;
+
+            const { data, error } = await supabase
+                .from('lists')
+                .insert([{
+                    name: name.trim(),
+                    created_by: currentUser.id,
+                }])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Error adding list:', error);
+                showToast('Failed to create project.', 'error');
+                return;
+            }
+            
+            // The realtime listener will handle the main update.
+            showToast(`Project "${name}" created!`, 'success');
           }
           
           function camelToSnake(obj) {
@@ -4899,6 +5164,118 @@ if (achievementsGrid) {
             plannerState.tasks = plannerState.tasks.filter(t => t.id !== taskId);
             renderPlannerTaskDetails();
           }          
+
+        async function updatePlannerList(listId, newName) {
+            if (!currentUser || !listId || !newName.trim()) return;
+
+            const { error } = await supabase
+                .from('lists')
+                .update({ name: newName.trim() })
+                .eq('id', listId);
+
+            if (error) {
+                console.error('Error updating list:', error);
+                showToast('Failed to update project.', 'error');
+                return;
+            }
+            showToast('Project updated!', 'success');
+        }
+
+        async function deletePlannerList(listId) {
+            if (!currentUser || !listId) return;
+
+            // Move tasks to inbox first
+            const { error: moveError } = await supabase
+                .from('tasks')
+                .update({ list_id: null })
+                .eq('list_id', listId);
+            
+            if (moveError) {
+                console.error('Error moving tasks from deleted list:', moveError);
+                showToast('Could not move tasks from project.', 'error');
+                return;
+            }
+
+            // Now delete the list
+            const { error: deleteError } = await supabase
+                .from('lists')
+                .delete()
+                .eq('id', listId);
+
+            if (deleteError) {
+                console.error('Error deleting list:', deleteError);
+                showToast('Failed to delete project.', 'error');
+                return;
+            }
+
+            if (plannerState.activeListId === listId) {
+                plannerState.activeListId = 'inbox';
+            }
+            
+            showToast('Project deleted.', 'success');
+        }
+
+        function openProjectOptionsMenu(listId, listName, buttonElement) {
+            const existingMenu = document.getElementById('project-options-menu');
+            if (existingMenu) existingMenu.remove();
+
+            const menu = document.createElement('div');
+            menu.id = 'project-options-menu';
+            menu.className = 'project-options-menu active';
+            menu.innerHTML = `
+                <button class="edit-project-btn">Edit Project</button>
+                <button class="delete-project-btn delete-btn">Delete Project</button>
+            `;
+            document.body.appendChild(menu);
+
+            const btnRect = buttonElement.getBoundingClientRect();
+            menu.style.left = `${btnRect.left}px`;
+            menu.style.top = `${btnRect.bottom + 5}px`;
+
+            menu.querySelector('.edit-project-btn').onclick = () => {
+                openEditProjectModal(listId, listName);
+                menu.remove();
+            };
+
+            menu.querySelector('.delete-project-btn').onclick = () => {
+                showConfirmationModal(
+                    `Delete "${listName}"?`,
+                    "All tasks in this project will be moved to your Inbox. This cannot be undone.",
+                    () => deletePlannerList(listId)
+                );
+                menu.remove();
+            };
+
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu(event) {
+                    if (!menu.contains(event.target)) {
+                        menu.remove();
+                        document.removeEventListener('click', closeMenu);
+                    }
+                });
+            }, 0);
+        }
+
+        function openEditProjectModal(listId, listName) {
+            const modal = document.getElementById('add-project-modal');
+            if (modal) {
+                const form = modal.querySelector('#add-project-form');
+                let hiddenInput = form.querySelector('#edit-project-id');
+                if (!hiddenInput) {
+                    hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.id = 'edit-project-id';
+                    form.prepend(hiddenInput);
+                }
+                hiddenInput.value = listId;
+
+                modal.querySelector('.modal-title').textContent = 'Edit Project';
+                modal.querySelector('#add-project-name').value = listName;
+                modal.querySelector('button[type="submit"]').textContent = 'Save Changes';
+
+                modal.classList.add('active');
+            }
+        }
 
         // --- Leaderboard Infinite Scroll State & Functions ---
         const rankingPageContainer = document.getElementById('page-ranking');
@@ -4956,7 +5333,7 @@ if (achievementsGrid) {
                     if (rank === 3) rankClass = 'rank-3';
 
                     const avatarHTML = user.photo_url 
-                        ? `<img src="${user.photo_url}" class="w-full h-full object-cover">`
+                        ? `<img src="${user.photo_url.split('?')[0]}?t=${new Date().getTime()}" class="w-full h-full object-cover">`
                         : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                     return `
@@ -6129,7 +6506,7 @@ if (achievementsGrid) {
                         if (!member) return '';
                         const isStudying = member.studying && member.studying.type === 'study';
                         const avatarHTML = member.photo_url
-                            ? `<img src="${member.photo_url}" class="w-full h-full object-cover">`
+                            ? `<img src="${member.photo_url.split('?')[0]}?t=${new Date().getTime()}" class="w-full h-full object-cover">`
                             : `<span>${(member.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                         const lastSession = (groupRealtimeData.sessions[member.id] || [])[0];
@@ -6595,7 +6972,7 @@ if (achievementsGrid) {
                     if (rank === 3) rankClass = 'rank-3';
 
                     const avatarHTML = user.photo_url
-                        ? `<img src="${user.photo_url}" class="w-full h-full object-cover">`
+                        ? `<img src="${user.photo_url.split('?')[0]}?t=${new Date().getTime()}" class="w-full h-full object-cover">`
                         : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                     return `
@@ -6739,7 +7116,7 @@ if (achievementsGrid) {
                     const memberAttendanceRate = Math.round((memberStats.daysStudied.size / daysInMonth) * 100);
                     
                     const avatarHTML = userData.photo_url
-                        ? `<img src="${userData.photo_url}" class="w-full h-full object-cover">`
+                        ? `<img src="${userData.photo_url.split('?')[0]}?t=${new Date().getTime()}" class="w-full h-full object-cover">`
                         : `<span>${(userData.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                     return `
@@ -7216,6 +7593,51 @@ if (achievementsGrid) {
             plannerPage.addEventListener('click', e => {
                 const target = e.target;
                 
+                // --- NEW: Project options menu ---
+                const optionsBtn = e.target.closest('.project-options-btn');
+                if (optionsBtn) {
+                    e.stopPropagation(); // Prevent sidebar item click
+                    const listId = optionsBtn.dataset.listId;
+                    const listName = optionsBtn.dataset.listName;
+                    openProjectOptionsMenu(listId, listName, optionsBtn);
+                    return;
+                }
+
+                // --- NEW: Planner Action Icons ---
+                if (target.closest('.planner-action-flag')) {
+                    plannerState.activeCategory = 'flagged';
+                    renderPlannerMainContent();
+                    return;
+                }
+                if (target.closest('.planner-action-folder')) {
+                    const modal = document.getElementById('add-project-modal');
+                    if (modal) {
+                        modal.classList.add('active');
+                        document.getElementById('add-project-name').focus();
+                    }
+                    return;
+                }
+                
+                // --- NEW: Add List/Project button ---
+                if (target.closest('#add-list-btn')) {
+                    const modal = document.getElementById('add-project-modal');
+                    if (modal) {
+                        modal.classList.add('active');
+                        document.getElementById('add-project-name').focus();
+                    }
+                    return;
+                }
+                
+                // --- FIX: Add Project button in List View ---
+                if (target.closest('.planner-add-project-btn')) {
+                    const modal = document.getElementById('add-project-modal');
+                    if (modal) {
+                        modal.classList.add('active');
+                        document.getElementById('add-project-name').focus();
+                    }
+                    return;
+                }
+                
                 // --- NEW: Category List Item Click ---
                 const categoryItem = target.closest('.planner-list-item');
                 if (categoryItem) {
@@ -7326,6 +7748,40 @@ if (achievementsGrid) {
                 if(detailsPanel) {
                     const taskId = plannerState.selectedTaskId;
                     if (!taskId) return;
+
+                    // NEW: Flag button click
+                    if (target.closest('#task-detail-flag-btn')) {
+                        const task = plannerState.tasks.find(t => t.id === taskId);
+                        if (task) {
+                            updatePlannerTask(taskId, { flagged: !task.flagged });
+                        }
+                        return;
+                    }
+
+                    // NEW: Tags button click
+                    if (target.closest('#task-detail-tags-btn')) {
+                        openTagsModal(taskId);
+                        return;
+                    }
+
+                    // Pomodoro estimate buttons
+                    if (target.closest('#pomodoro-increase-btn')) {
+                        const task = plannerState.tasks.find(t => t.id === taskId);
+                        if (task) {
+                            const newEstimate = (task.pomodoros_estimated || 1) + 1;
+                            updatePlannerTask(taskId, { pomodoros_estimated: newEstimate });
+                        }
+                        return;
+                    }
+
+                    if (target.closest('#pomodoro-decrease-btn')) {
+                        const task = plannerState.tasks.find(t => t.id === taskId);
+                        if (task) {
+                            const newEstimate = Math.max(1, (task.pomodoros_estimated || 1) - 1);
+                            updatePlannerTask(taskId, { pomodoros_estimated: newEstimate });
+                        }
+                        return;
+                    }
                     
                     // Priority menu toggle
                     if (target.closest('#task-detail-priority-btn')) {
@@ -7407,6 +7863,15 @@ if (achievementsGrid) {
                     else if (target.closest('#delete-task-btn')) {
                         showConfirmationModal('Delete Task?', 'This task will be permanently deleted.', () => deletePlannerTask(taskId));
                     }
+                    // NEW: Subtask delete button
+                    else if (target.closest('.delete-subtask-btn')) {
+                        const subtaskId = target.closest('[data-subtask-id]').dataset.subtaskId;
+                        const task = plannerState.tasks.find(t => t.id === taskId);
+                        if (task && subtaskId) {
+                            const updatedSubtasks = (task.subtasks || []).filter(st => st.id !== subtaskId);
+                            updatePlannerTask(taskId, { subtasks: updatedSubtasks });
+                        }
+                    }
                 }
 
                  // Hide priority menu if clicking outside
@@ -7432,6 +7897,20 @@ if (achievementsGrid) {
                     }
                 }
                 
+                // NEW: Subtask checkbox
+                if (target.classList.contains('subtask-checkbox')) {
+                    const taskId = plannerState.selectedTaskId;
+                    const subtaskId = target.closest('[data-subtask-id]').dataset.subtaskId;
+                    const task = plannerState.tasks.find(t => t.id === taskId);
+
+                    if (task && subtaskId) {
+                        const updatedSubtasks = (task.subtasks || []).map(st => 
+                            st.id === subtaskId ? { ...st, completed: target.checked } : st
+                        );
+                        updatePlannerTask(taskId, { subtasks: updatedSubtasks });
+                    }
+                }
+                
                 // Due date change in details panel
                 if (target.matches('#task-detail-due-date')) {
                     const taskId = plannerState.selectedTaskId;
@@ -7442,18 +7921,25 @@ if (achievementsGrid) {
                 }
             });
 
-            // Handler for form inputs that change value
-            plannerPage.addEventListener('change', e => {
+            // Handler for keydown events (for subtask input)
+            plannerPage.addEventListener('keydown', e => {
                 const target = e.target;
-
-                // Task checkbox in list view
-                if (target.classList.contains('task-checkbox-planner')) {
-                    const taskId = target.closest('.task-item').dataset.taskId;
-                    const isCompleted = target.checked;
-                    updatePlannerTask(taskId, {
-                        completed: isCompleted,
-                        completedAt: isCompleted ? nowIso() : null // Add/remove completion timestamp
-                    });
+                if (target.id === 'add-subtask-input' && e.key === 'Enter') {
+                    e.preventDefault();
+                    const title = target.value.trim();
+                    const taskId = plannerState.selectedTaskId;
+                    const task = plannerState.tasks.find(t => t.id === taskId);
+                    
+                    if (title && task) {
+                        const newSubtask = {
+                            id: crypto.randomUUID(),
+                            title: title,
+                            completed: false
+                        };
+                        const updatedSubtasks = [...(task.subtasks || []), newSubtask];
+                        updatePlannerTask(taskId, { subtasks: updatedSubtasks });
+                        target.value = '';
+                    }
                 }
             });
 
@@ -8589,6 +9075,34 @@ if (achievementsGrid) {
                 }
             });
             
+            // NEW: Add Project Form Submission
+            ael('add-project-form', 'submit', async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const modal = form.closest('.modal');
+                const input = form.querySelector('#add-project-name');
+                const name = input.value.trim();
+                const editIdInput = form.querySelector('#edit-project-id');
+                const editId = editIdInput ? editIdInput.value : null;
+
+                if (name) {
+                    if (editId) {
+                        await updatePlannerList(editId, name);
+                    } else {
+                        await addPlannerList(name);
+                    }
+                    form.reset();
+                    if (editIdInput) editIdInput.value = ''; // Clear the edit ID
+                    modal.classList.remove('active');
+                    // Reset modal to "Add" state for next time
+                    setTimeout(() => {
+                        modal.querySelector('.modal-title').textContent = 'New Project';
+                        modal.querySelector('button[type="submit"]').textContent = 'Create Project';
+                        if (editIdInput) editIdInput.remove();
+                    }, 300); // Delay to prevent flicker
+                }
+            });
+
             // Group Settings Modal Actions (Delegated)
             const groupSettingsModal = document.getElementById('group-settings-modal');
             if (groupSettingsModal) {
@@ -8803,3 +9317,12 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+
