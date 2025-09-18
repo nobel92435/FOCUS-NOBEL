@@ -8444,6 +8444,16 @@ if (achievementsGrid) {
                 }
             });
 
+            // FIX: Add the event listener for group chat image uploads.
+            ael('image-upload-input', 'change', e => {
+                const file = e.target.files?.[0];
+                if (file && currentGroupId) {
+                    handleImageUpload(file, currentGroupId);
+                }
+                // Reset input to allow selecting the same file again
+                e.target.value = '';
+            });
+
             const pomodoroSettingsForm = document.getElementById('pomodoro-settings-form');
             if (pomodoroSettingsForm) {
                 pomodoroSettingsForm.addEventListener('change', (e) => {
@@ -8773,6 +8783,7 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
 
 
 
