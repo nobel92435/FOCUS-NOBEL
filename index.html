@@ -677,7 +677,7 @@
             border-left-width: 4px;
         }
 
-        /* Kanban Board */
+        /* Kanban Board (legacy) */
         .kanban-board {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -690,6 +690,138 @@
         }
         .kanban-card {
              background-color: #21262d;
+        }
+
+        /* Folder Board */
+        .folder-board {
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+        .folder-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .folder-section-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .folder-section-header h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+        .folder-section-subtitle {
+            font-size: 0.85rem;
+            color: #9ca3af;
+        }
+        .folder-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        }
+        .folder-card {
+            background-color: #161b22;
+            border: 1px solid #1f2937;
+            border-radius: 1rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .folder-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+        .folder-card-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+        .folder-card-header h3 {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .folder-card-header p {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+        .folder-project-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+        .folder-project-list--standalone {
+            gap: 0.75rem;
+        }
+        .folder-project-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 0.85rem;
+            padding: 0.6rem 0.75rem;
+            cursor: pointer;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+        .folder-project-item:hover {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.08);
+        }
+        .folder-project-meta {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .folder-project-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .folder-project-count {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+        .folder-project-options {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            padding: 0.35rem;
+            border-radius: 9999px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .folder-project-options:hover {
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+        }
+        .folder-card-empty,
+        .folder-board-empty {
+            background: #111827;
+            border: 1px dashed #1f2937;
+            border-radius: 0.85rem;
+            padding: 1rem;
+            font-size: 0.85rem;
+            color: #9ca3af;
+            text-align: center;
+        }
+        .folder-board-empty {
+            border-radius: 1rem;
+        }
+        .folder-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .folder-tags .folder-card-empty {
+            width: 100%;
         }
 
         /* NEW Calendar View Styles */
@@ -947,6 +1079,15 @@
         }
         .planner-add-project-btn:hover {
             color: #fb923c;
+        }
+        .planner-add-project-btn[aria-disabled="true"],
+        .planner-add-project-btn.planner-add-project-btn--disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .planner-add-project-btn[aria-disabled="true"]:hover,
+        .planner-add-project-btn.planner-add-project-btn--disabled:hover {
+            color: inherit;
         }
         .planner-actions .action-icons {
             display: flex;
@@ -1207,6 +1348,20 @@
             flex-grow: 1;
             color: #e2e8f0;
             font-size: 0.95rem;
+        }
+        .sheet-input select {
+            background: transparent;
+            border: none;
+            outline: none;
+            flex-grow: 1;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            appearance: none;
+            cursor: pointer;
+        }
+        .sheet-input select option {
+            background: #0f172a;
+            color: #e2e8f0;
         }
         .sheet-color-grid {
             display: grid;
@@ -2813,6 +2968,10 @@
                 <div class="sheet-input">
                     <i class="fas fa-pen"></i>
                     <input id="add-project-name" type="text" placeholder="Project name" required>
+                </div>
+                <div class="sheet-input">
+                    <i class="fas fa-folder"></i>
+                    <select id="add-project-folder" required></select>
                 </div>
                 <div class="sheet-color-grid" data-color-picker></div>
             </form>
@@ -5266,6 +5425,69 @@ if (achievementsGrid) {
             savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
         }
 
+        function normalizeFolderName(value) {
+            return typeof value === 'string' ? value.trim() : '';
+        }
+
+        function getProjectFolder(listId) {
+            if (!listId) return '';
+            const list = Array.isArray(plannerState.lists) ? plannerState.lists.find(l => l && l.id === listId) : null;
+            if (list) {
+                const fromList = normalizeFolderName(list.folder || list.folder_name || list.folderName || list.folder_label);
+                if (fromList) return fromList;
+            }
+            const stored = plannerState.projectFolderMap?.[listId];
+            return normalizeFolderName(stored);
+        }
+
+        function setProjectFolder(listId, folderName) {
+            if (!listId) return;
+            const normalized = normalizeFolderName(folderName);
+            plannerState.projectFolderMap = plannerState.projectFolderMap || {};
+            if (normalized) {
+                plannerState.projectFolderMap[listId] = normalized;
+            } else {
+                delete plannerState.projectFolderMap[listId];
+            }
+            savePlannerPreference('plannerProjectFolders', plannerState.projectFolderMap);
+            const list = Array.isArray(plannerState.lists) ? plannerState.lists.find(l => l && l.id === listId) : null;
+            if (list) {
+                if (normalized) {
+                    list.folder = normalized;
+                } else {
+                    delete list.folder;
+                }
+            }
+        }
+
+        function applyFolderAssignmentsToLists(lists) {
+            if (!Array.isArray(lists)) return;
+            let mapChanged = false;
+            plannerState.projectFolderMap = plannerState.projectFolderMap || {};
+            for (const list of lists) {
+                if (!list || !list.id) continue;
+                const fromRecord = normalizeFolderName(list.folder || list.folder_name || list.folderName || list.folder_label);
+                const stored = normalizeFolderName(plannerState.projectFolderMap[list.id]);
+                const folderName = fromRecord || stored;
+                if (folderName) {
+                    list.folder = folderName;
+                    if (stored !== folderName) {
+                        plannerState.projectFolderMap[list.id] = folderName;
+                        mapChanged = true;
+                    }
+                } else if (stored) {
+                    delete plannerState.projectFolderMap[list.id];
+                    mapChanged = true;
+                    delete list.folder;
+                } else {
+                    delete list.folder;
+                }
+            }
+            if (mapChanged) {
+                savePlannerPreference('plannerProjectFolders', plannerState.projectFolderMap);
+            }
+        }
+
         function getTaskDateTime(task) {
             if (!task) return null;
             const fields = ['event_start', 'event_start_time', 'eventDate', 'start_time', 'startTime', 'due_date', 'dueDate'];
@@ -5314,6 +5536,7 @@ if (achievementsGrid) {
             calendarMonth: new Date().getMonth(),
             tagLibrary: loadPlannerPreference('plannerTagLibrary', []),
             folderLibrary: loadPlannerPreference('plannerFolderLibrary', []),
+            projectFolderMap: loadPlannerPreference('plannerProjectFolders', {}),
             projectColorMap: loadPlannerPreference('plannerProjectColors', {}),
             eventsViewDate: new Date(),
             completedViewLimit: 5,
@@ -5341,6 +5564,16 @@ if (achievementsGrid) {
         }).filter(Boolean);
         savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
         savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
+        const sanitizedProjectFolders = {};
+        Object.entries(plannerState.projectFolderMap || {}).forEach(([listId, folderName]) => {
+            const normalizedId = listId;
+            const trimmedName = normalizeFolderName(folderName);
+            if (normalizedId && trimmedName) {
+                sanitizedProjectFolders[normalizedId] = trimmedName;
+            }
+        });
+        plannerState.projectFolderMap = sanitizedProjectFolders;
+        savePlannerPreference('plannerProjectFolders', plannerState.projectFolderMap);
         
         async function setupPlannerListeners() {
             if (!currentUser || !isValidUUID(currentUser.id)) return;
@@ -5358,6 +5591,7 @@ if (achievementsGrid) {
               console.error('Failed to load lists:', listsError);
             } else {
               plannerState.lists = lists || [];
+              applyFolderAssignmentsToLists(plannerState.lists);
               renderPlannerPage();
             }
           
@@ -5389,16 +5623,22 @@ if (achievementsGrid) {
                   if (eventType === 'INSERT') {
                     if (!plannerState.lists.some(l => l.id === newRecord.id)) {
                         plannerState.lists.push(newRecord);
+                        applyFolderAssignmentsToLists([newRecord]);
                     }
                   } else if (eventType === 'UPDATE') {
                     const index = plannerState.lists.findIndex(l => l.id === recordId);
                     if (index > -1) {
                         plannerState.lists[index] = newRecord;
+                        applyFolderAssignmentsToLists([plannerState.lists[index]]);
                     }
                   } else if (eventType === 'DELETE') {
                     plannerState.lists = plannerState.lists.filter(l => l.id !== recordId);
                     if (plannerState.activeListId === recordId) {
                         plannerState.activeListId = 'inbox'; // Fallback to inbox if active list is deleted
+                    }
+                    if (plannerState.projectFolderMap && plannerState.projectFolderMap[recordId]) {
+                        delete plannerState.projectFolderMap[recordId];
+                        savePlannerPreference('plannerProjectFolders', plannerState.projectFolderMap);
                     }
                   }
                   renderPlannerPage();
@@ -5538,7 +5778,7 @@ if (achievementsGrid) {
                 }
                 break;
               case 'board':
-                renderPlannerBoardView(tasksForCurrentList);
+                renderPlannerBoardView();
                 break;
               case 'calendar':
                 renderPlannerCalendarView(tasksForCurrentList);
@@ -5548,7 +5788,7 @@ if (achievementsGrid) {
         
           function renderPlannerListView(allTasks) {
             const mainContent = document.getElementById('planner-main-content');
-          
+
             const today = new Date(); today.setHours(0,0,0,0);
             const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
           
@@ -5577,7 +5817,8 @@ if (achievementsGrid) {
             const flaggedTasks = allTasks.filter(t => t.flagged && !t.completed);
             const completedTasks = allTasks.filter(t => t.completed);
             const inboxTasks = allTasks.filter(t => t.list_id === null && !t.completed);
-          
+            const hasFolders = Array.isArray(plannerState.folderLibrary) && plannerState.folderLibrary.length > 0;
+
             const categories = [
               { name: 'Today', icon: 'fa-sun', color: 'bg-yellow-500', count: todayTasks.length },
               { name: 'Tomorrow', icon: 'fa-cloud-sun', color: 'bg-orange-400', count: tomorrowTasks.length },
@@ -5605,7 +5846,7 @@ if (achievementsGrid) {
                   `).join('')}
                 </div>
                 <div class="planner-actions">
-                  <button class="planner-add-project-btn">
+                  <button class="planner-add-project-btn${hasFolders ? '' : ' planner-add-project-btn--disabled'}" ${hasFolders ? '' : 'aria-disabled="true" title="Create a folder to add a project"'}>
                     <i class="fas fa-plus"></i>
                     <span class="label">Add Project</span>
                   </button>
@@ -6005,30 +6246,194 @@ if (achievementsGrid) {
             `;
           }          
 
-        function renderPlannerBoardView(tasks) {
-             const mainContent = document.getElementById('planner-main-content');
-             const columns = {
-                high: { name: 'High Priority', tasks: [], color: 'bg-red-500' },
-                medium: { name: 'Medium Priority', tasks: [], color: 'bg-yellow-500' },
-                low: { name: 'Low Priority', tasks: [], color: 'bg-blue-500' },
-                none: { name: 'No Priority', tasks: [], color: 'bg-gray-400' },
+        function renderPlannerBoardView() {
+            const mainContent = document.getElementById('planner-main-content');
+            if (!mainContent) return;
+
+            const folders = Array.isArray(plannerState.folderLibrary) ? plannerState.folderLibrary : [];
+            const projects = Array.isArray(plannerState.lists) ? plannerState.lists : [];
+            const tags = Array.isArray(plannerState.tagLibrary) ? plannerState.tagLibrary : [];
+            const tasks = Array.isArray(plannerState.tasks) ? plannerState.tasks : [];
+
+            const taskCounts = new Map();
+            projects.forEach(project => {
+                const projectId = project?.id;
+                if (!projectId) return;
+                const count = tasks.reduce((total, task) => {
+                    const taskListId = task.list_id ?? task.listId ?? null;
+                    if (!task.completed && taskListId === projectId) {
+                        return total + 1;
+                    }
+                    return total;
+                }, 0);
+                taskCounts.set(projectId, count);
+            });
+
+            const inboxCount = tasks.reduce((total, task) => {
+                const taskListId = task.list_id ?? task.listId ?? null;
+                if (!task.completed && (taskListId === null || taskListId === 'inbox')) {
+                    return total + 1;
+                }
+                return total;
+            }, 0);
+
+            const folderLookup = new Map();
+            const normalizedFolders = [];
+
+            folders.forEach(folder => {
+                if (!folder) return;
+                const name = typeof folder.name === 'string' ? folder.name.trim() : '';
+                if (!name) return;
+                const key = name.toLowerCase();
+                if (folderLookup.has(key)) return;
+                const entry = {
+                    key,
+                    name,
+                    color: folder.color || PLANNER_COLOR_OPTIONS[1],
+                    projects: [],
+                };
+                folderLookup.set(key, entry);
+                normalizedFolders.push(entry);
+            });
+
+            projects.forEach(project => {
+                if (!project) return;
+                const rawFolder = project.folder || project.folder_name || project.folderName || project.folder_label;
+                const folderName = typeof rawFolder === 'string' ? rawFolder.trim() : '';
+                if (!folderName) return;
+                const key = folderName.toLowerCase();
+                let entry = folderLookup.get(key);
+                if (!entry) {
+                    entry = {
+                        key,
+                        name: folderName,
+                        color: PLANNER_COLOR_OPTIONS[1],
+                        projects: [],
+                    };
+                    folderLookup.set(key, entry);
+                    normalizedFolders.push(entry);
+                }
+                entry.projects.push(project);
+            });
+
+            normalizedFolders.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+            normalizedFolders.forEach(entry => {
+                entry.projects.sort((a, b) => (a?.name || '').localeCompare(b?.name || '', undefined, { sensitivity: 'base' }));
+            });
+
+            const renderProjectRow = (project) => {
+                if (!project) return '';
+                const projectId = project.id;
+                const name = project.name || 'Untitled Project';
+                const count = taskCounts.get(projectId) || 0;
+                const color = getProjectColor(projectId);
+                const countLabel = `${count} ${count === 1 ? 'Task' : 'Tasks'}`;
+                const optionsButton = projectId
+                    ? `<button class="project-options-btn folder-project-options" data-list-id="${projectId}" data-list-name="${name}" title="Project options"><i class="fas fa-ellipsis-h"></i></button>`
+                    : '';
+                return `
+                    <div class="folder-project-item" data-list-id="${projectId}">
+                        <span class="project-color-dot" style="background:${color}"></span>
+                        <div class="folder-project-meta">
+                            <span class="folder-project-name">${name}</span>
+                            <span class="folder-project-count">${countLabel}</span>
+                        </div>
+                        ${optionsButton}
+                    </div>
+                `;
             };
-            tasks.filter(t => !t.completed).forEach(task => (columns[task.priority] || columns.none).tasks.push(task));
+
+            const folderCardsHtml = normalizedFolders.map(folder => {
+                const accent = folder.color || '#38bdf8';
+                const projectItems = folder.projects.length
+                    ? folder.projects.map(renderProjectRow).join('')
+                    : `<div class="folder-card-empty">No projects in this folder yet.</div>`;
+                const projectCountLabel = `${folder.projects.length} ${folder.projects.length === 1 ? 'Project' : 'Projects'}`;
+                return `
+                    <section class="folder-card">
+                        <header class="folder-card-header">
+                            <div class="folder-card-icon" style="color:${accent};border:1px solid ${accent}55;background:${accent}1a;">
+                                <i class="fas fa-folder"></i>
+                            </div>
+                            <div>
+                                <h3>${folder.name}</h3>
+                                <p>${projectCountLabel}</p>
+                            </div>
+                        </header>
+                        <div class="folder-project-list">
+                            ${projectItems}
+                        </div>
+                    </section>
+                `;
+            }).join('');
+
+            const unfiledProjects = projects.filter(project => {
+                const rawFolder = project?.folder || project?.folder_name || project?.folderName || project?.folder_label;
+                return !rawFolder || !String(rawFolder).trim();
+            });
+
+            const unfiledSubtitleCount = unfiledProjects.length + 1; // include inbox
+            const unfiledSubtitle = `${unfiledSubtitleCount} ${unfiledSubtitleCount === 1 ? 'Project' : 'Projects'}`;
+
+            const inboxRow = `
+                <div class="folder-project-item" data-list-id="inbox">
+                    <span class="project-color-dot" style="background:${getProjectColor('inbox')}"></span>
+                    <div class="folder-project-meta">
+                        <span class="folder-project-name">Inbox</span>
+                        <span class="folder-project-count">${inboxCount} ${inboxCount === 1 ? 'Task' : 'Tasks'}</span>
+                    </div>
+                </div>
+            `;
+
+            const unfiledProjectsHtml = unfiledProjects.length
+                ? unfiledProjects.map(renderProjectRow).join('')
+                : `<div class="folder-card-empty">All of your projects are currently organized inside folders.</div>`;
+
+            const tagsHtml = tags.length
+                ? tags
+                    .slice()
+                    .sort((a, b) => (a?.name || '').localeCompare(b?.name || '', undefined, { sensitivity: 'base' }))
+                    .map(tag => {
+                        const tagName = tag?.name || 'Tag';
+                        const color = tag?.color || '#38bdf8';
+                        return `<span class="tag-chip-inline" style="background:${color}1a;border:1px solid ${color}44;color:#e2e8f0;"><span class="tag-dot" style="background:${color}"></span>${tagName}</span>`;
+                    }).join('')
+                : `<div class="folder-card-empty">No tags yet. Create one from the List view.</div>`;
+
+            const folderSubtitle = `${normalizedFolders.length} ${normalizedFolders.length === 1 ? 'Folder' : 'Folders'}`;
+            const tagSubtitle = `${tags.length} ${tags.length === 1 ? 'Tag' : 'Tags'}`;
 
             mainContent.innerHTML = `
-                <div class="kanban-board">
-                    ${Object.entries(columns).map(([key, col]) => `
-                        <div class="kanban-column">
-                            <h3 class="font-semibold p-2 mb-2 ${col.color} text-white rounded-md">${col.name}</h3>
-                            <div class="space-y-2">
-                                ${col.tasks.map(task => `
-                                    <div class="kanban-card p-3 rounded-md shadow-sm cursor-pointer" data-task-id="${task.id}">
-                                        <p>${task.title}</p>
-                                    </div>
-                                `).join('')}
-                            </div>
+                <div class="folder-board">
+                    <section class="folder-section">
+                        <header class="folder-section-header">
+                            <h2>Folders</h2>
+                            <span class="folder-section-subtitle">${folderSubtitle}</span>
+                        </header>
+                        <div class="folder-grid">
+                            ${folderCardsHtml || ''}
                         </div>
-                    `).join('')}
+                        ${folderCardsHtml ? '' : `<div class="folder-board-empty">No folders yet. Use the File action from the List view to create one.</div>`}
+                    </section>
+                    <section class="folder-section">
+                        <header class="folder-section-header">
+                            <h2>Unfiled Projects</h2>
+                            <span class="folder-section-subtitle">${unfiledSubtitle}</span>
+                        </header>
+                        <div class="folder-project-list folder-project-list--standalone">
+                            ${inboxRow}
+                            ${unfiledProjectsHtml}
+                        </div>
+                    </section>
+                    <section class="folder-section">
+                        <header class="folder-section-header">
+                            <h2>Tags</h2>
+                            <span class="folder-section-subtitle">${tagSubtitle}</span>
+                        </header>
+                        <div class="folder-tags">
+                            ${tagsHtml}
+                        </div>
+                    </section>
                 </div>
             `;
         }
@@ -6337,6 +6742,47 @@ if (achievementsGrid) {
             `).join('');
         }
 
+        function populateProjectFolderSelect(selectEl, currentFolder = '') {
+            if (!selectEl) return;
+            const normalizedCurrent = normalizeFolderName(currentFolder);
+            const folders = Array.isArray(plannerState.folderLibrary) ? plannerState.folderLibrary : [];
+            const names = [];
+            const seen = new Set();
+
+            if (normalizedCurrent) {
+                names.push(normalizedCurrent);
+                seen.add(normalizedCurrent.toLowerCase());
+            }
+
+            folders.forEach(folder => {
+                if (!folder || typeof folder.name !== 'string') return;
+                const name = folder.name.trim();
+                if (!name || seen.has(name.toLowerCase())) return;
+                names.push(name);
+                seen.add(name.toLowerCase());
+            });
+
+            if (!names.length) {
+                selectEl.innerHTML = '';
+                return;
+            }
+
+            selectEl.innerHTML = '';
+            names.forEach((name, index) => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                if (normalizedCurrent) {
+                    option.selected = name.toLowerCase() === normalizedCurrent.toLowerCase();
+                } else if (index === 0) {
+                    option.selected = true;
+                }
+                selectEl.appendChild(option);
+            });
+
+            selectEl.required = true;
+        }
+
         function openNewTagModal(defaults = {}) {
             const modal = document.getElementById('new-tag-modal');
             if (!modal) return;
@@ -6376,8 +6822,16 @@ if (achievementsGrid) {
             if (!modal) return;
 
             const { mode = 'create', listId = null, name = '', color = PLANNER_COLOR_OPTIONS[0] } = options;
+            const isEditMode = mode === 'edit' && !!listId;
+            const hasFolders = Array.isArray(plannerState.folderLibrary) && plannerState.folderLibrary.length > 0;
+            if (!isEditMode && !hasFolders) {
+                showToast('Create a folder before adding a project.', 'error');
+                openNewFolderModal();
+                return;
+            }
             const form = modal.querySelector('#add-project-form');
             const input = modal.querySelector('#add-project-name');
+            const folderSelect = modal.querySelector('#add-project-folder');
             const titleEl = modal.querySelector('[data-sheet-title]');
             const doneBtn = form.querySelector('.sheet-done-btn');
             const colorPicker = form.querySelector('[data-color-picker]');
@@ -6385,9 +6839,19 @@ if (achievementsGrid) {
             form.dataset.selectedColor = color;
             renderSheetColors(colorPicker, color);
             input.value = name || '';
+            if (folderSelect) {
+                const currentFolder = isEditMode ? getProjectFolder(listId) : '';
+                populateProjectFolderSelect(folderSelect, currentFolder);
+                if (!folderSelect.options.length) {
+                    showToast('Create a folder before editing this project.', 'error');
+                    modal.classList.remove('active');
+                    openNewFolderModal();
+                    return;
+                }
+            }
 
             let editInput = form.querySelector('#edit-project-id');
-            if (mode === 'edit' && listId) {
+            if (isEditMode) {
                 if (!editInput) {
                     editInput = document.createElement('input');
                     editInput.type = 'hidden';
@@ -6453,12 +6917,12 @@ if (achievementsGrid) {
             renderTaskSelectionList(plannerState.tasks);
           }
 
-          async function addPlannerList(name, color = PLANNER_COLOR_OPTIONS[0]) {
+          async function addPlannerList(name, color = PLANNER_COLOR_OPTIONS[0], folderName = '') {
             if (!currentUser || !name.trim()) return;
 
             const { data, error } = await supabase
                 .from('lists')
-                .insert([{ 
+                .insert([{
                     name: name.trim(),
                     created_by: currentUser.id,
                 }])
@@ -6473,6 +6937,7 @@ if (achievementsGrid) {
 
             if (data?.id) {
                 setProjectColor(data.id, color);
+                setProjectFolder(data.id, folderName);
             }
 
             showToast(`Project "${name}" created!`, 'success');
@@ -9314,7 +9779,18 @@ if (achievementsGrid) {
                     openProjectModal();
                     return;
                 }
-                
+
+                const folderProjectItem = target.closest('.folder-project-item');
+                if (folderProjectItem && !target.closest('.project-options-btn')) {
+                    const listId = folderProjectItem.dataset.listId;
+                    if (listId) {
+                        plannerState.activeListId = listId;
+                        plannerState.currentView = 'list';
+                        renderPlannerPage();
+                    }
+                    return;
+                }
+
                 // --- NEW: Category List Item Click ---
                 const categoryItem = target.closest('.planner-list-item');
                 if (categoryItem) {
@@ -10787,17 +11263,30 @@ if (achievementsGrid) {
                 const editIdInput = form.querySelector('#edit-project-id');
                 const editId = editIdInput ? editIdInput.value : null;
                 const selectedColor = form.dataset.selectedColor || PLANNER_COLOR_OPTIONS[0];
+                const folderSelect = form.querySelector('#add-project-folder');
+                const folderName = folderSelect ? folderSelect.value.trim() : '';
+
+                if (!folderName) {
+                    showToast('Please choose a folder for this project.', 'error');
+                    if (folderSelect) folderSelect.focus();
+                    return;
+                }
 
                 if (name) {
                     if (editId) {
                         await updatePlannerList(editId, name);
                         setProjectColor(editId, selectedColor);
+                        setProjectFolder(editId, folderName);
+                        renderPlannerPage();
                     } else {
-                        await addPlannerList(name, selectedColor);
+                        await addPlannerList(name, selectedColor, folderName);
                     }
                     form.reset();
                     form.dataset.selectedColor = PLANNER_COLOR_OPTIONS[0];
                     renderSheetColors(form.querySelector('[data-color-picker]'), form.dataset.selectedColor);
+                    if (folderSelect) {
+                        populateProjectFolderSelect(folderSelect);
+                    }
                     if (editIdInput) editIdInput.value = '';
                     if (modal) modal.classList.remove('active');
                 }
