@@ -1340,6 +1340,18 @@
             color: #e2e8f0;
             font-size: 0.95rem;
         }
+        .sheet-input select {
+            background: transparent;
+            border: none;
+            outline: none;
+            flex-grow: 1;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            appearance: none;
+        }
+        .sheet-input select option {
+            color: #0f172a;
+        }
         .sheet-color-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
@@ -2978,6 +2990,12 @@
                 <div class="sheet-input">
                     <i class="fas fa-pen"></i>
                     <input id="add-project-name" type="text" placeholder="Project name" required>
+                </div>
+                <div class="sheet-input">
+                    <i class="fas fa-folder-open"></i>
+                    <select id="add-project-folder">
+                        <option value="">No folder</option>
+                    </select>
                 </div>
                 <div class="sheet-color-grid" data-color-picker></div>
             </form>
@@ -5401,6 +5419,83 @@ if (achievementsGrid) {
             savePlannerPreference('plannerProjectColors', plannerState.projectColorMap);
         }
 
+        function setLastSelectedFolder(folderName) {
+            const value = typeof folderName === 'string' ? folderName.trim() : '';
+            plannerState.lastSelectedFolder = value;
+            savePlannerPreference('plannerLastFolder', value);
+        }
+
+        function detectListFolderColumn(lists = []) {
+            for (const list of lists) {
+                if (!list || typeof list !== 'object') continue;
+                if (Object.prototype.hasOwnProperty.call(list, 'folder')) return 'folder';
+                if (Object.prototype.hasOwnProperty.call(list, 'folder_name')) return 'folder_name';
+                if (Object.prototype.hasOwnProperty.call(list, 'folderName')) return 'folderName';
+                if (Object.prototype.hasOwnProperty.call(list, 'folder_label')) return 'folder_label';
+            }
+            return null;
+        }
+
+        function normalizeListRecord(list) {
+            if (!list || typeof list !== 'object') return null;
+            const normalized = { ...list };
+            const folderName = list.folder || list.folder_name || list.folderName || list.folder_label || '';
+            if (folderName) normalized.folder = folderName;
+            return normalized;
+        }
+
+        function formatDateAsISODateString(date) {
+            if (!date) return '';
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function normalizeTaskRecord(task) {
+            if (!task || typeof task !== 'object') return null;
+            const normalized = { ...task };
+            const dueValue = task.due_date || task.dueDate;
+            const parsedDue = parseDateValue(dueValue);
+            if (parsedDue) {
+                normalized.due_date = formatDateAsISODateString(parsedDue);
+            }
+            return normalized;
+        }
+
+        function parseDateValue(dateInput) {
+            if (!dateInput) return null;
+            let workingDate = null;
+
+            if (dateInput instanceof Date) {
+                workingDate = new Date(dateInput.getTime());
+            } else if (typeof dateInput === 'number') {
+                workingDate = new Date(dateInput);
+            } else if (typeof dateInput === 'string') {
+                const trimmed = dateInput.trim();
+                if (!trimmed) return null;
+                if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+                    const [year, month, day] = trimmed.split('-').map(Number);
+                    workingDate = new Date(year, month - 1, day);
+                } else {
+                    const parsed = new Date(trimmed);
+                    if (!Number.isNaN(parsed.getTime())) {
+                        workingDate = parsed;
+                    }
+                }
+            }
+
+            if (!workingDate || Number.isNaN(workingDate.getTime())) {
+                return null;
+            }
+
+            return new Date(
+                workingDate.getFullYear(),
+                workingDate.getMonth(),
+                workingDate.getDate()
+            );
+        }
+
         function addTagToLibrary(name, color) {
             if (!name) return;
             plannerState.tagLibrary = plannerState.tagLibrary || [];
@@ -5429,6 +5524,16 @@ if (achievementsGrid) {
                 plannerState.folderLibrary.push(folderData);
             }
             savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
+            setLastSelectedFolder(trimmedName);
+
+            const projectForm = document.getElementById('add-project-form');
+            if (projectForm) {
+                const folderSelect = projectForm.querySelector('#add-project-folder');
+                if (folderSelect) {
+                    const currentSelection = projectForm.dataset.selectedFolder || plannerState.lastSelectedFolder || '';
+                    renderProjectFolderOptions(folderSelect, currentSelection);
+                }
+            }
         }
 
         function getTaskDateTime(task) {
@@ -5437,7 +5542,12 @@ if (achievementsGrid) {
             for (const field of fields) {
                 const value = task[field];
                 if (!value) continue;
-                const parsed = new Date(value);
+                let parsed;
+                if (field === 'due_date' || field === 'dueDate') {
+                    parsed = parseDateValue(value);
+                } else {
+                    parsed = new Date(value);
+                }
                 if (!isNaN(parsed)) {
                     if (parsed.getHours() === 0 && parsed.getMinutes() === 0) {
                         parsed.setHours(12, 0, 0, 0);
@@ -5460,7 +5570,7 @@ if (achievementsGrid) {
                 }
             }
             if (task.completed && task.due_date) {
-                const fallback = new Date(task.due_date);
+                const fallback = parseDateValue(task.due_date);
                 if (!isNaN(fallback)) return fallback;
             }
             return null;
@@ -5482,6 +5592,8 @@ if (achievementsGrid) {
             projectColorMap: loadPlannerPreference('plannerProjectColors', {}),
             eventsViewDate: new Date(),
             completedViewLimit: 5,
+            lastSelectedFolder: loadPlannerPreference('plannerLastFolder', ''),
+            listFolderColumn: 'folder',
         };
 
         plannerState.tagLibrary = (plannerState.tagLibrary || []).map(tag => {
@@ -5522,7 +5634,12 @@ if (achievementsGrid) {
             if (listsError) {
               console.error('Failed to load lists:', listsError);
             } else {
-              plannerState.lists = lists || [];
+              const normalizedLists = (lists || []).map(normalizeListRecord).filter(Boolean);
+              plannerState.lists = normalizedLists;
+              const detectedColumn = detectListFolderColumn(normalizedLists);
+              if (detectedColumn) {
+                plannerState.listFolderColumn = detectedColumn;
+              }
               renderPlannerPage();
             }
           
@@ -5534,7 +5651,7 @@ if (achievementsGrid) {
             if (tasksError) {
               console.error('Failed to load tasks:', tasksError);
             } else {
-              plannerState.tasks = tasks || [];
+              plannerState.tasks = (tasks || []).map(normalizeTaskRecord).filter(Boolean);
               renderPlannerPage();
               renderTaskSelectionList(plannerState.tasks);
             }
@@ -5553,12 +5670,22 @@ if (achievementsGrid) {
 
                   if (eventType === 'INSERT') {
                     if (!plannerState.lists.some(l => l.id === newRecord.id)) {
-                        plannerState.lists.push(newRecord);
+                        const normalized = normalizeListRecord(newRecord);
+                        if (normalized) {
+                          plannerState.lists.push(normalized);
+                          const detected = detectListFolderColumn([normalized]);
+                          if (detected) plannerState.listFolderColumn = detected;
+                        }
                     }
                   } else if (eventType === 'UPDATE') {
                     const index = plannerState.lists.findIndex(l => l.id === recordId);
                     if (index > -1) {
-                        plannerState.lists[index] = newRecord;
+                        const normalized = normalizeListRecord(newRecord);
+                        if (normalized) {
+                          plannerState.lists[index] = normalized;
+                          const detected = detectListFolderColumn([normalized]);
+                          if (detected) plannerState.listFolderColumn = detected;
+                        }
                     }
                   } else if (eventType === 'DELETE') {
                     plannerState.lists = plannerState.lists.filter(l => l.id !== recordId);
@@ -5586,15 +5713,20 @@ if (achievementsGrid) {
                   if (eventType === 'INSERT') {
                     // Avoid adding duplicates if it's already there from the local insert
                     if (!plannerState.tasks.some(t => t.id === newRecord.id)) {
-                        plannerState.tasks.push(newRecord);
+                        const normalized = normalizeTaskRecord(newRecord);
+                        if (normalized) plannerState.tasks.push(normalized);
                     }
                   } else if (eventType === 'UPDATE') {
                     const index = plannerState.tasks.findIndex(t => t.id === recordId);
                     if (index > -1) {
-                      plannerState.tasks[index] = newRecord;
+                      const normalized = normalizeTaskRecord(newRecord);
+                      if (normalized) {
+                        plannerState.tasks[index] = normalized;
+                      }
                     } else {
                         // If not found, add it. Might happen if listener starts after initial load.
-                        plannerState.tasks.push(newRecord);
+                        const normalized = normalizeTaskRecord(newRecord);
+                        if (normalized) plannerState.tasks.push(normalized);
                     }
                   } else if (eventType === 'DELETE') {
                     plannerState.tasks = plannerState.tasks.filter(t => t.id !== recordId);
@@ -5731,11 +5863,18 @@ if (achievementsGrid) {
               d1.getMonth() === d2.getMonth() &&
               d1.getDate() === d2.getDate();
           
-            const todayTasks = allTasks.filter(t => t.due_date && isSameDay(new Date(t.due_date), today) && !t.completed);
-            const tomorrowTasks = allTasks.filter(t => t.due_date && isSameDay(new Date(t.due_date), tomorrow) && !t.completed);
+            const todayTasks = allTasks.filter(t => {
+              const dueDate = parseDateValue(t.due_date || t.dueDate);
+              return dueDate && isSameDay(dueDate, today) && !t.completed;
+            });
+            const tomorrowTasks = allTasks.filter(t => {
+              const dueDate = parseDateValue(t.due_date || t.dueDate);
+              return dueDate && isSameDay(dueDate, tomorrow) && !t.completed;
+            });
             const thisWeekTasks = allTasks.filter(t => {
               if (!t.due_date || t.completed) return false;
-              const taskDate = new Date(t.due_date);
+              const taskDate = parseDateValue(t.due_date || t.dueDate);
+              if (!taskDate) return false;
               return taskDate >= startOfWeek && taskDate <= endOfWeek;
             });
             const plannedTasks = allTasks.filter(t => t.due_date && !t.completed);
@@ -5819,10 +5958,16 @@ if (achievementsGrid) {
 
             switch (category) {
               case 'today':
-                tasksToShow = allTasks.filter(t => t.due_date && isSameDay(new Date(t.due_date), today));
+                tasksToShow = allTasks.filter(t => {
+                  const dueDate = parseDateValue(t.due_date || t.dueDate);
+                  return dueDate && isSameDay(dueDate, today);
+                });
                 break;
               case 'tomorrow':
-                tasksToShow = allTasks.filter(t => t.due_date && isSameDay(new Date(t.due_date), tomorrow));
+                tasksToShow = allTasks.filter(t => {
+                  const dueDate = parseDateValue(t.due_date || t.dueDate);
+                  return dueDate && isSameDay(dueDate, tomorrow);
+                });
                 break;
               case 'this week':
                 title = 'This Week';
@@ -5835,7 +5980,8 @@ if (achievementsGrid) {
                 endOfWeek.setHours(23,59,59,999);
                 tasksToShow = allTasks.filter(t => {
                   if (!t.due_date) return false;
-                  const taskDate = new Date(t.due_date);
+                  const taskDate = parseDateValue(t.due_date || t.dueDate);
+                  if (!taskDate) return false;
                   return taskDate >= startOfWeek && taskDate <= endOfWeek;
                 });
                 break;
@@ -6170,7 +6316,10 @@ if (achievementsGrid) {
               <div class="task-item flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 ${priorityColors[task.priority] || 'border-l-transparent'} ${isSelected ? 'bg-blue-900/50' : 'bg-gray-800 hover:bg-gray-700'}" data-task-id="${task.id}">
                 <input type="checkbox" class="task-checkbox-planner w-5 h-5 bg-gray-700 rounded-full text-blue-500 focus:ring-blue-500 mr-4 flex-shrink-0" ${task.completed ? 'checked' : ''} />
                 <span class="flex-grow ${task.completed ? 'line-through text-gray-500' : ''}">${task.title}</span>
-                ${task.due_date ? `<span class="text-xs text-gray-400 ml-4">${new Date(task.due_date).toLocaleDateString()}</span>` : ''}
+                ${(() => {
+                    const dueDate = parseDateValue(task.due_date || task.dueDate);
+                    return dueDate ? `<span class="text-xs text-gray-400 ml-4">${dueDate.toLocaleDateString()}</span>` : '';
+                })()}
               </div>
             `;
           }          
@@ -6434,7 +6583,10 @@ if (achievementsGrid) {
                   ${calendarDays.map(({ day, date, isOtherMonth }) => {
                     const today = new Date();
                     const isToday = date.toDateString() === today.toDateString();
-                    const tasksForDay = tasks.filter(t => t.due_date && new Date(t.due_date).toDateString() === date.toDateString());
+                const tasksForDay = tasks.filter(t => {
+                    const dueDate = parseDateValue(t.due_date || t.dueDate);
+                    return dueDate && dueDate.toDateString() === date.toDateString();
+                });
           
                     return `
                       <div class="calendar-day-cell ${isOtherMonth ? 'other-month' : ''}" data-date="${date.toISOString().split('T')[0]}">
@@ -6578,7 +6730,14 @@ if (achievementsGrid) {
                         type="date"
                         id="task-detail-due-date"
                         class="ml-auto bg-transparent text-right p-0 border-none focus:ring-0"
-                        value="${selectedTask.due_date ? new Date(selectedTask.due_date).toISOString().split('T')[0] : ''}">
+                        value="${(() => {
+                          const dueDate = parseDateValue(selectedTask.due_date || selectedTask.dueDate);
+                          if (!dueDate) return '';
+                          const year = dueDate.getFullYear();
+                          const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+                          const day = String(dueDate.getDate()).padStart(2, '0');
+                          return `${year}-${month}-${day}`;
+                        })()}">
                     </div>
           
                     <div id="task-detail-project-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition">
@@ -6695,6 +6854,50 @@ if (achievementsGrid) {
             `).join('');
         }
 
+        function renderProjectFolderOptions(selectElement, selectedFolder = '') {
+            if (!selectElement) return;
+
+            const folders = Array.isArray(plannerState.folderLibrary) ? plannerState.folderLibrary : [];
+            const entries = folders
+                .map(folder => {
+                    if (!folder) return null;
+                    if (typeof folder === 'string') {
+                        const trimmed = folder.trim();
+                        return trimmed ? { name: trimmed } : null;
+                    }
+                    if (typeof folder === 'object') {
+                        const name = typeof folder.name === 'string' ? folder.name.trim() : '';
+                        return name ? { name } : null;
+                    }
+                    return null;
+                })
+                .filter(Boolean)
+                .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+
+            const selected = typeof selectedFolder === 'string' ? selectedFolder.trim() : '';
+
+            const optionsHtml = [`<option value="">No folder</option>`]
+                .concat(entries.map(entry => {
+                    const escapedName = entry.name
+                        .replace(/&/g, '&amp;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+                    const isSelected = selected && entry.name.toLowerCase() === selected.toLowerCase();
+                    return `<option value="${escapedName}" ${isSelected ? 'selected' : ''}>${escapedName}</option>`;
+                }))
+                .join('');
+
+            selectElement.innerHTML = optionsHtml;
+            if (selected) {
+                const match = entries.find(entry => entry.name.toLowerCase() === selected.toLowerCase());
+                selectElement.value = match ? match.name : '';
+            } else {
+                selectElement.value = '';
+            }
+        }
+
         function openNewTagModal(defaults = {}) {
             const modal = document.getElementById('new-tag-modal');
             if (!modal) return;
@@ -6733,15 +6936,22 @@ if (achievementsGrid) {
             const modal = document.getElementById('add-project-modal');
             if (!modal) return;
 
-            const { mode = 'create', listId = null, name = '', color = PLANNER_COLOR_OPTIONS[0] } = options;
+            const { mode = 'create', listId = null, name = '', color = PLANNER_COLOR_OPTIONS[0], folder = null } = options;
             const form = modal.querySelector('#add-project-form');
             const input = modal.querySelector('#add-project-name');
             const titleEl = modal.querySelector('[data-sheet-title]');
             const doneBtn = form.querySelector('.sheet-done-btn');
             const colorPicker = form.querySelector('[data-color-picker]');
+            const folderSelect = form.querySelector('#add-project-folder');
+
+            const selectedFolder = typeof folder === 'string' && folder.trim()
+                ? folder.trim()
+                : (form.dataset.selectedFolder || plannerState.lastSelectedFolder || '');
 
             form.dataset.selectedColor = color;
+            form.dataset.selectedFolder = selectedFolder;
             renderSheetColors(colorPicker, color);
+            renderProjectFolderOptions(folderSelect, selectedFolder);
             input.value = name || '';
 
             let editInput = form.querySelector('#edit-project-id');
@@ -6788,8 +6998,10 @@ if (achievementsGrid) {
             };
           
             if (dueDateStr) {
-              // store as ISO timestamp (date-only at midnight UTC)
-              payload.due_date = new Date(dueDateStr + 'T00:00:00Z').toISOString();
+              const trimmedDueDate = typeof dueDateStr === 'string' ? dueDateStr.trim() : '';
+              if (trimmedDueDate) {
+                payload.due_date = trimmedDueDate;
+              }
             }
           
             const { data, error } = await supabase
@@ -6803,25 +7015,59 @@ if (achievementsGrid) {
               showToast('Failed to add task.', 'error');
               return;
             }
-          
+
+            if (data && data.due_date && typeof data.due_date === 'string' && dueDateStr) {
+              const trimmedDueDate = dueDateStr.trim();
+              if (trimmedDueDate) {
+                data.due_date = trimmedDueDate;
+              }
+            }
+
             // Update your local state (optional)
-            plannerState.tasks.push(data);
-            plannerState.selectedTaskId = data.id;
+            const normalizedTask = normalizeTaskRecord(data) || data;
+            plannerState.tasks.push(normalizedTask);
+            plannerState.selectedTaskId = normalizedTask.id;
             renderPlannerPage();            // refresh list/board/calendar
             renderTaskSelectionList(plannerState.tasks);
           }
 
-          async function addPlannerList(name, color = PLANNER_COLOR_OPTIONS[0]) {
+          async function addPlannerList(name, color = PLANNER_COLOR_OPTIONS[0], folderName = '') {
             if (!currentUser || !name.trim()) return;
 
-            const { data, error } = await supabase
-                .from('lists')
-                .insert([{ 
-                    name: name.trim(),
-                    created_by: currentUser.id,
-                }])
-                .select()
-                .single();
+            const basePayload = {
+                name: name.trim(),
+                created_by: currentUser.id,
+            };
+
+            const trimmedFolder = typeof folderName === 'string' ? folderName.trim() : '';
+            const folderColumns = ['folder', 'folder_name', 'folder_label', 'folderName'];
+            const preferredColumn = plannerState.listFolderColumn || 'folder';
+            const orderedColumns = [preferredColumn, ...folderColumns.filter(col => col !== preferredColumn)];
+
+            let data = null;
+            let error = null;
+
+            if (trimmedFolder) {
+                for (const column of orderedColumns) {
+                    const payload = { ...basePayload, [column]: trimmedFolder };
+                    ({ data, error } = await supabase
+                        .from('lists')
+                        .insert([payload])
+                        .select()
+                        .single());
+
+                    if (!error) {
+                        plannerState.listFolderColumn = column;
+                        break;
+                    }
+                }
+            } else {
+                ({ data, error } = await supabase
+                    .from('lists')
+                    .insert([basePayload])
+                    .select()
+                    .single());
+            }
 
             if (error) {
                 console.error('Error adding list:', error);
@@ -6829,8 +7075,16 @@ if (achievementsGrid) {
                 return;
             }
 
-            if (data?.id) {
-                setProjectColor(data.id, color);
+            const normalized = normalizeListRecord(data) || data;
+            if (normalized?.id) {
+                setProjectColor(normalized.id, color);
+                const existingIndex = plannerState.lists.findIndex(list => list.id === normalized.id);
+                if (existingIndex === -1) {
+                    plannerState.lists.push(normalized);
+                } else {
+                    plannerState.lists[existingIndex] = normalized;
+                }
+                renderPlannerPage();
             }
 
             showToast(`Project "${name}" created!`, 'success');
@@ -6895,19 +7149,80 @@ if (achievementsGrid) {
             renderTaskSelectionList(plannerState.tasks);
           }
 
-        async function updatePlannerList(listId, newName) {
-            if (!currentUser || !listId || !newName.trim()) return;
+        async function updatePlannerList(listId, updates = {}) {
+            if (!currentUser || !listId) return;
 
-            const { error } = await supabase
-                .from('lists')
-                .update({ name: newName.trim() })
-                .eq('id', listId);
+            const name = typeof updates.name === 'string' ? updates.name.trim() : '';
+            if (!name) return;
+
+            const trimmedFolder = typeof updates.folder === 'string' ? updates.folder.trim() : '';
+            const folderColumns = ['folder', 'folder_name', 'folder_label', 'folderName'];
+            const preferredColumn = plannerState.listFolderColumn || 'folder';
+            const orderedColumns = [preferredColumn, ...folderColumns.filter(col => col !== preferredColumn)];
+
+            let data = null;
+            let error = null;
+
+            if (trimmedFolder) {
+                for (const column of orderedColumns) {
+                    const payload = { name, [column]: trimmedFolder };
+                    ({ data, error } = await supabase
+                        .from('lists')
+                        .update(payload)
+                        .eq('id', listId)
+                        .select()
+                        .single());
+                    if (!error) {
+                        plannerState.listFolderColumn = column;
+                        break;
+                    }
+                }
+            } else {
+                const column = orderedColumns[0];
+                const payload = { name, [column]: null };
+                ({ data, error } = await supabase
+                    .from('lists')
+                    .update(payload)
+                    .eq('id', listId)
+                    .select()
+                    .single());
+
+                if (!error) {
+                    plannerState.listFolderColumn = column;
+                } else {
+                    for (const fallbackColumn of orderedColumns.slice(1)) {
+                        const retryPayload = { name, [fallbackColumn]: null };
+                        ({ data, error } = await supabase
+                            .from('lists')
+                            .update(retryPayload)
+                            .eq('id', listId)
+                            .select()
+                            .single());
+                        if (!error) {
+                            plannerState.listFolderColumn = fallbackColumn;
+                            break;
+                        }
+                    }
+                }
+            }
 
             if (error) {
                 console.error('Error updating list:', error);
                 showToast('Failed to update project.', 'error');
                 return;
             }
+
+            const normalized = normalizeListRecord(data) || data;
+            if (normalized) {
+                const index = plannerState.lists.findIndex(list => list.id === normalized.id);
+                if (index > -1) {
+                    plannerState.lists[index] = normalized;
+                } else {
+                    plannerState.lists.push(normalized);
+                }
+                renderPlannerPage();
+            }
+
             showToast('Project updated!', 'success');
         }
 
@@ -7040,7 +7355,9 @@ if (achievementsGrid) {
         }
 
         function openEditProjectModal(listId, listName) {
-            openProjectModal({ mode: 'edit', listId, name: listName, color: getProjectColor(listId) });
+            const list = plannerState.lists.find(item => item.id === listId) || null;
+            const folder = list ? (list.folder || list.folder_name || list.folderName || list.folder_label || '') : '';
+            openProjectModal({ mode: 'edit', listId, name: listName, color: getProjectColor(listId), folder });
         }
 
         // --- Leaderboard Infinite Scroll State & Functions ---
@@ -8162,8 +8479,8 @@ if (achievementsGrid) {
             }
 
             const sortedTasks = taskList.slice().sort((a, b) => {
-                const aDate = a.due_date ? new Date(a.due_date) : null;
-                const bDate = b.due_date ? new Date(b.due_date) : null;
+                const aDate = parseDateValue(a.due_date || a.dueDate);
+                const bDate = parseDateValue(b.due_date || b.dueDate);
                 const aDue = aDate && !isNaN(aDate) ? aDate.getTime() : Infinity;
                 const bDue = bDate && !isNaN(bDate) ? bDate.getTime() : Infinity;
                 if (aDue === bDue) {
@@ -8181,7 +8498,7 @@ if (achievementsGrid) {
                 const estimated = Math.max(task.pomodoros_estimated || 0, 0);
                 const completed = Math.max(task.pomodoros_completed || 0, 0);
                 const remaining = Math.max(estimated - completed, 0);
-                const dueDate = task.due_date ? new Date(task.due_date) : null;
+                const dueDate = parseDateValue(task.due_date || task.dueDate);
                 const dueLabel = dueDate && !isNaN(dueDate)
                     ? dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
                     : 'No due date';
@@ -11184,17 +11501,24 @@ if (achievementsGrid) {
                 const editIdInput = form.querySelector('#edit-project-id');
                 const editId = editIdInput ? editIdInput.value : null;
                 const selectedColor = form.dataset.selectedColor || PLANNER_COLOR_OPTIONS[0];
+                const folderSelect = form.querySelector('#add-project-folder');
+                const folderValue = folderSelect && typeof folderSelect.value === 'string'
+                    ? folderSelect.value.trim()
+                    : '';
 
                 if (name) {
                     if (editId) {
-                        await updatePlannerList(editId, name);
+                        await updatePlannerList(editId, { name, folder: folderValue });
                         setProjectColor(editId, selectedColor);
                     } else {
-                        await addPlannerList(name, selectedColor);
+                        await addPlannerList(name, selectedColor, folderValue);
                     }
+                    setLastSelectedFolder(folderValue);
                     form.reset();
                     form.dataset.selectedColor = PLANNER_COLOR_OPTIONS[0];
+                    form.dataset.selectedFolder = plannerState.lastSelectedFolder || '';
                     renderSheetColors(form.querySelector('[data-color-picker]'), form.dataset.selectedColor);
+                    renderProjectFolderOptions(folderSelect, form.dataset.selectedFolder);
                     if (editIdInput) editIdInput.value = '';
                     if (modal) modal.classList.remove('active');
                 }
@@ -11258,6 +11582,18 @@ if (achievementsGrid) {
                     if (form) {
                         form.dataset.selectedColor = colorChoice.dataset.color;
                     }
+                }
+            });
+
+            document.addEventListener('change', (e) => {
+                if (e.target && e.target.id === 'add-project-folder') {
+                    const select = e.target;
+                    const value = typeof select.value === 'string' ? select.value.trim() : '';
+                    const form = select.closest('form');
+                    if (form) {
+                        form.dataset.selectedFolder = value;
+                    }
+                    setLastSelectedFolder(value);
                 }
             });
 
