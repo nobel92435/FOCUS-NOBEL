@@ -3457,7 +3457,7 @@
 
             // If a work session just ended, increment the pomodoro count for the active task
             if (oldState === 'work' && activeTaskId) {
-                const taskIndex = plannerState.tasks.findIndex(t => t.id === activeTaskId);
+                const taskIndex = plannerState.tasks.findIndex(t => idsMatch(t.id, activeTaskId));
                 const task = taskIndex >= 0 ? plannerState.tasks[taskIndex] : null;
                 if (task) {
                     const newCompletedCount = (task.pomodoros_completed || 0) + 1;
@@ -3481,7 +3481,7 @@
                         completed: updates.completed ?? task.completed,
                         completedAt: updates.completed ? updates.completedAt : task.completedAt
                     };
-                    plannerState.tasks = plannerState.tasks.map(t => t.id === task.id ? updatedTask : t);
+                    plannerState.tasks = plannerState.tasks.map(t => idsMatch(t.id, task.id) ? updatedTask : t);
                     renderPlannerPage();
                     renderTaskSelectionList(plannerState.tasks);
                 }
@@ -4757,10 +4757,18 @@ let pauseStartTime = 0;
                 .replace(/>/g, '&gt;');
         }
 
+        const idsMatch = (a, b) => {
+            if (a === null || a === undefined || b === null || b === undefined) {
+                return a === b;
+            }
+            return String(a) === String(b);
+        };
+
         async function startTimer(subject, options = {}) {
             const { taskId = null } = options;
             const tasks = Array.isArray(plannerState?.tasks) ? plannerState.tasks : [];
-            const task = taskId ? tasks.find(t => t.id === taskId) : null;
+            const resolvedTaskId = taskId !== null ? resolveTaskId(taskId) : null;
+            const task = resolvedTaskId ? tasks.find(t => idsMatch(t.id, resolvedTaskId)) : null;
             let resolvedSubject = subject;
             if (!resolvedSubject && task) {
                 resolvedSubject = task.title;
@@ -5584,6 +5592,13 @@ if (achievementsGrid) {
             completedViewLimit: 5,
         };
 
+        const resolveTaskId = (rawId) => {
+            if (rawId === null || rawId === undefined) return rawId;
+            const tasks = Array.isArray(plannerState.tasks) ? plannerState.tasks : [];
+            const match = tasks.find(task => idsMatch(task.id, rawId));
+            return match ? match.id : rawId;
+        };
+
         plannerState.tagLibrary = (plannerState.tagLibrary || []).map(tag => {
             if (!tag) return null;
             if (typeof tag === 'string') return { name: tag, color: PLANNER_COLOR_OPTIONS[0] };
@@ -5685,7 +5700,7 @@ if (achievementsGrid) {
                 (payload) => {
                   console.log('Task change:', payload);
                   const { eventType, new: newRecord, old: oldRecord } = payload;
-                  const recordId = newRecord?.id || oldRecord?.id;
+                  const recordId = newRecord?.id ?? oldRecord?.id;
                   if (!recordId) return;
 
                   if (newRecord) {
@@ -5694,11 +5709,11 @@ if (achievementsGrid) {
 
                   if (eventType === 'INSERT') {
                     // Avoid adding duplicates if it's already there from the local insert
-                    if (!plannerState.tasks.some(t => t.id === newRecord.id)) {
+                    if (!plannerState.tasks.some(t => idsMatch(t.id, newRecord.id))) {
                         plannerState.tasks.push(newRecord);
                     }
                   } else if (eventType === 'UPDATE') {
-                    const index = plannerState.tasks.findIndex(t => t.id === recordId);
+                    const index = plannerState.tasks.findIndex(t => idsMatch(t.id, recordId));
                     if (index > -1) {
                       plannerState.tasks[index] = newRecord;
                     } else {
@@ -6287,7 +6302,7 @@ if (achievementsGrid) {
         
         function renderPlannerTaskItem(task) {
             const priorityColors = { high: 'border-red-500', medium: 'border-yellow-500', low: 'border-blue-500', none: 'border-transparent' };
-            const isSelected = plannerState.selectedTaskId === task.id;
+            const isSelected = idsMatch(plannerState.selectedTaskId, task.id);
             return `
               <div class="task-item flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 ${priorityColors[task.priority] || 'border-l-transparent'} ${isSelected ? 'bg-blue-900/50' : 'bg-gray-800 hover:bg-gray-700'}" data-task-id="${task.id}">
                 <input type="checkbox" class="task-checkbox-planner w-5 h-5 bg-gray-700 rounded-full text-blue-500 focus:ring-blue-500 mr-4 flex-shrink-0" ${task.completed ? 'checked' : ''} />
@@ -6580,7 +6595,7 @@ if (achievementsGrid) {
             const detailsPanel = document.getElementById('planner-task-details');
             if (!detailsPanel) return;
           
-            const selectedTask = plannerState.tasks.find(t => t.id === plannerState.selectedTaskId);
+            const selectedTask = plannerState.tasks.find(t => idsMatch(t.id, plannerState.selectedTaskId));
           
             if (!selectedTask) {
               detailsPanel.classList.add('hidden');
@@ -6749,7 +6764,8 @@ if (achievementsGrid) {
             const tagsList = document.getElementById('tags-list');
             const createTagBtn = document.getElementById('open-create-tag-modal');
 
-            const task = plannerState.tasks.find(t => t.id === taskId);
+            const resolvedTaskId = resolveTaskId(taskId);
+            const task = plannerState.tasks.find(t => idsMatch(t.id, resolvedTaskId));
             if (!task) return;
 
             const currentTags = Array.isArray(task.tags)
@@ -6775,7 +6791,7 @@ if (achievementsGrid) {
                 `;
             }).join('');
 
-            modal.dataset.taskId = taskId;
+            modal.dataset.taskId = resolvedTaskId;
             delete modal.dataset.reopenTaskId;
             modal.classList.add('active');
 
@@ -6797,13 +6813,24 @@ if (achievementsGrid) {
                     updatedTags = [...current, tagName];
                     chip.classList.add('selected');
                 }
-                updatePlannerTask(taskId, { tags: updatedTags });
+                updatePlannerTask(resolvedTaskId, { tags: updatedTags });
+                const taskIndex = plannerState.tasks.findIndex(t => idsMatch(t.id, resolvedTaskId));
+                if (taskIndex >= 0) {
+                    plannerState.tasks[taskIndex] = {
+                        ...plannerState.tasks[taskIndex],
+                        tags: updatedTags
+                    };
+                }
+                task.tags = updatedTags;
+                if (idsMatch(plannerState.selectedTaskId, resolvedTaskId)) {
+                    renderPlannerTaskDetails();
+                }
                 addTagToLibrary(tagName, color);
             };
 
             if (createTagBtn) {
                 createTagBtn.onclick = () => {
-                    modal.dataset.reopenTaskId = taskId;
+                    modal.dataset.reopenTaskId = resolvedTaskId;
                     modal.classList.remove('active');
                     openNewTagModal();
                 };
@@ -6944,15 +6971,19 @@ if (achievementsGrid) {
               .insert([payload])
               .select()
               .single();
-          
+
             if (error) {
               console.error('Error adding task:', error);
               showToast('Failed to add task.', 'error');
               return;
             }
-          
-            // Update your local state (optional)
-            plannerState.tasks.push(data);
+
+            const existingIndex = plannerState.tasks.findIndex(task => idsMatch(task.id, data.id));
+            if (existingIndex >= 0) {
+                plannerState.tasks[existingIndex] = { ...plannerState.tasks[existingIndex], ...data };
+            } else {
+                plannerState.tasks.push(data);
+            }
             plannerState.selectedTaskId = data.id;
             renderPlannerPage();            // refresh list/board/calendar
             renderTaskSelectionList(plannerState.tasks);
@@ -7077,7 +7108,7 @@ if (achievementsGrid) {
             }
           
             plannerState.selectedTaskId = null;
-            plannerState.tasks = plannerState.tasks.filter(t => t.id !== taskId);
+            plannerState.tasks = plannerState.tasks.filter(t => !idsMatch(t.id, taskId));
             renderPlannerTaskDetails();
             renderTaskSelectionList(plannerState.tasks);
           }
@@ -7176,8 +7207,10 @@ if (achievementsGrid) {
             showToast('Project deleted.', 'success');
         }
 
-        async function handleTaskCompletion(taskId) {
-            const task = plannerState.tasks.find(t => t.id === taskId);
+        async function handleTaskCompletion(taskIdRaw) {
+            const taskId = resolveTaskId(taskIdRaw);
+            if (taskId === null || taskId === undefined) return;
+            const task = plannerState.tasks.find(t => idsMatch(t.id, taskId));
             if (!task) return;
         
             const isCompleting = !task.completed;
@@ -9381,10 +9414,11 @@ if (achievementsGrid) {
             const countConfig = pomodoroPickerConfig.pomodoros;
             const lengthConfig = pomodoroPickerConfig.length;
             const tasks = Array.isArray(plannerState?.tasks) ? plannerState.tasks : [];
-            const task = taskId ? tasks.find(t => t.id === taskId) : null;
+            const resolvedTaskId = taskId ? resolveTaskId(taskId) : null;
+            const task = resolvedTaskId ? tasks.find(t => idsMatch(t.id, resolvedTaskId)) : null;
             const nextPomodoros = clampValue(task?.pomodoros_estimated || 1, countConfig.min, countConfig.max);
             const nextLength = clampValue(pomodoroSettings.work || 25, lengthConfig.min, lengthConfig.max);
-            pomodoroSetupState = { taskId, pomodoros: nextPomodoros, length: nextLength };
+            pomodoroSetupState = { taskId: resolvedTaskId, pomodoros: nextPomodoros, length: nextLength };
             updatePomodoroPicker('pomodoros');
             updatePomodoroPicker('length');
             updatePomodoroSetupSummary();
@@ -9404,7 +9438,7 @@ if (achievementsGrid) {
             const { taskId, pomodoros, length } = pomodoroSetupState;
             if (taskId) {
                 const tasks = Array.isArray(plannerState?.tasks) ? plannerState.tasks : [];
-                const task = tasks.find(t => t.id === taskId);
+                const task = tasks.find(t => idsMatch(t.id, taskId));
                 if (task && task.pomodoros_estimated !== pomodoros) {
                     task.pomodoros_estimated = pomodoros;
                     await updatePlannerTask(taskId, { pomodoros_estimated: pomodoros });
@@ -10001,8 +10035,9 @@ if (achievementsGrid) {
                 const restoreBtn = target.closest('.completed-task-restore');
                 if (restoreBtn) {
                     const taskItem = restoreBtn.closest('.completed-task-item');
-                    const taskId = taskItem?.dataset.taskId;
-                    if (taskId) {
+                    const rawTaskId = taskItem?.dataset.taskId;
+                    const taskId = resolveTaskId(rawTaskId);
+                    if (taskId !== null && taskId !== undefined) {
                         updatePlannerTask(taskId, { completed: false, completedAt: null });
                     }
                     return;
@@ -10013,8 +10048,8 @@ if (achievementsGrid) {
                 const categoryCheckbox = target.closest('.task-checkbox-category');
                 if (categoryCheckbox) {
                     const taskItem = categoryCheckbox.closest('.category-task-item');
-                    const taskId = taskItem.dataset.taskId;
-                    handleTaskCompletion(taskId);
+                    const rawTaskId = taskItem.dataset.taskId;
+                    handleTaskCompletion(resolveTaskId(rawTaskId));
                     return;
                 }
                 // --- END: MODIFIED COMPLETION LOGIC ---
@@ -10084,9 +10119,10 @@ if (achievementsGrid) {
                 // Task item selection (to open details)
                 const taskItem = target.closest('.task-item, .kanban-card, .calendar-task, .category-task-item, .event-block, .completed-task-item');
                 if (taskItem && !target.matches('input[type="checkbox"]') && !target.closest('.task-play-btn')) {
-                    const taskId = taskItem.dataset.taskId;
-                    if (taskId !== plannerState.selectedTaskId) {
-                        plannerState.selectedTaskId = taskId;
+                    const rawTaskId = taskItem.dataset.taskId;
+                    const resolvedTaskId = resolveTaskId(rawTaskId);
+                    if (!idsMatch(resolvedTaskId, plannerState.selectedTaskId)) {
+                        plannerState.selectedTaskId = resolvedTaskId;
                         renderPlannerPage();
                     }
                     return;
@@ -10100,7 +10136,7 @@ if (achievementsGrid) {
 
                     // NEW: Flag button click
                     if (target.closest('#task-detail-flag-btn')) {
-                        const task = plannerState.tasks.find(t => t.id === taskId);
+                        const task = plannerState.tasks.find(t => idsMatch(t.id, taskId));
                         if (task) {
                             updatePlannerTask(taskId, { flagged: !task.flagged });
                         }
@@ -10136,7 +10172,7 @@ if (achievementsGrid) {
 
                     // Start Timer Buttons (Normal or Pomodoro)
                     if (target.closest('#task-detail-start-btn') || target.closest('#task-detail-pomodoro-btn')) {
-                        const task = plannerState.tasks.find(t => t.id === taskId);
+                        const task = plannerState.tasks.find(t => idsMatch(t.id, taskId));
                         if (task) {
                             const subjectName = task.title;
                             showPage('page-timer');
@@ -10158,8 +10194,8 @@ if (achievementsGrid) {
                     if (target.closest('#task-detail-project-btn')) {
                         const modal = document.getElementById('project-select-modal');
                         const listContainer = document.getElementById('project-select-list');
-                        const selectedTask = plannerState.tasks.find(t => t.id === taskId);
-                        
+                        const selectedTask = plannerState.tasks.find(t => idsMatch(t.id, taskId));
+
                         listContainer.innerHTML = `
                             <div class="planner-sidebar-item cursor-pointer ${selectedTask.listId === 'inbox' ? 'active' : ''}" data-list-id="inbox">
                                 <i class="fas fa-inbox w-5 mr-3"></i>
@@ -10180,8 +10216,8 @@ if (achievementsGrid) {
                     if (target.closest('#task-detail-repeat-btn')) {
                         const modal = document.getElementById('repeat-settings-modal');
                         const select = document.getElementById('repeat-type-select');
-                        const selectedTask = plannerState.tasks.find(t => t.id === taskId);
-                        
+                        const selectedTask = plannerState.tasks.find(t => idsMatch(t.id, taskId));
+
                         select.value = selectedTask.repeat?.type || 'none';
                         
                         modal.classList.add('active');
@@ -10198,7 +10234,7 @@ if (achievementsGrid) {
                     // NEW: Subtask delete button
                     else if (target.closest('.delete-subtask-btn')) {
                         const subtaskId = target.closest('[data-subtask-id]').dataset.subtaskId;
-                        const task = plannerState.tasks.find(t => t.id === taskId);
+                        const task = plannerState.tasks.find(t => idsMatch(t.id, taskId));
                         if (task && subtaskId) {
                             const updatedSubtasks = (task.subtasks || []).filter(st => st.id !== subtaskId);
                             updatePlannerTask(taskId, { subtasks: updatedSubtasks });
@@ -10222,22 +10258,23 @@ if (achievementsGrid) {
                 if (target.classList.contains('task-checkbox-planner')) {
                     // Find the task ID from the closest parent with a data-task-id, or fall back to the selected task in the details panel
                     const taskItem = target.closest('[data-task-id]');
-                    const taskId = taskItem ? taskItem.dataset.taskId : plannerState.selectedTaskId;
-                    if (taskId) {
+                    const rawTaskId = taskItem ? taskItem.dataset.taskId : plannerState.selectedTaskId;
+                    const taskId = resolveTaskId(rawTaskId);
+                    if (taskId !== null && taskId !== undefined) {
                         handleTaskCompletion(taskId);
                     }
                 }
                 // --- END: MODIFIED COMPLETION LOGIC ---
-                
+
                 // NEW: Subtask checkbox
                 if (target.classList.contains('subtask-checkbox')) {
-                    const taskId = plannerState.selectedTaskId;
+                    const taskId = resolveTaskId(plannerState.selectedTaskId);
                     const subtaskId = target.closest('[data-subtask-id]').dataset.subtaskId;
-                    const task = plannerState.tasks.find(t => t.id === taskId);
+                    const task = plannerState.tasks.find(t => idsMatch(t.id, taskId));
 
                     if (task && subtaskId) {
-                        const updatedSubtasks = (task.subtasks || []).map(st => 
-                            st.id === subtaskId ? { ...st, completed: target.checked } : st
+                        const updatedSubtasks = (task.subtasks || []).map(st =>
+                            idsMatch(st.id, subtaskId) ? { ...st, completed: target.checked } : st
                         );
                         updatePlannerTask(taskId, { subtasks: updatedSubtasks });
                     }
@@ -10245,8 +10282,8 @@ if (achievementsGrid) {
                 
                 // Due date change in details panel
                 if (target.matches('#task-detail-due-date')) {
-                    const taskId = plannerState.selectedTaskId;
-                    if (taskId) {
+                    const taskId = resolveTaskId(plannerState.selectedTaskId);
+                    if (taskId !== null && taskId !== undefined) {
                         const newDate = target.value ? new Date(target.value + 'T00:00:00') : null;
                         updatePlannerTask(taskId, { dueDate: newDate });
                     }
@@ -10259,9 +10296,9 @@ if (achievementsGrid) {
                 if (target.id === 'add-subtask-input' && e.key === 'Enter') {
                     e.preventDefault();
                     const title = target.value.trim();
-                    const taskId = plannerState.selectedTaskId;
-                    const task = plannerState.tasks.find(t => t.id === taskId);
-                    
+                    const taskId = resolveTaskId(plannerState.selectedTaskId);
+                    const task = plannerState.tasks.find(t => idsMatch(t.id, taskId));
+
                     if (title && task) {
                         const newSubtask = {
                             id: crypto.randomUUID(),
@@ -10279,8 +10316,8 @@ if (achievementsGrid) {
             plannerPage.addEventListener('change', e => {
                 const target = e.target;
                 if(target.closest('#planner-task-details')) {
-                    const taskId = plannerState.selectedTaskId;
-                    if (!taskId) return;
+                    const taskId = resolveTaskId(plannerState.selectedTaskId);
+                    if (taskId === null || taskId === undefined) return;
 
                     if (target.matches('#task-detail-title, #task-detail-notes')) {
                         clearTimeout(detailUpdateDebounceTimer);
@@ -11343,38 +11380,6 @@ if (achievementsGrid) {
             });
 
         // --- END OF UNIFIED PLANNER LISTENERS ---
-
-        ael('quick-add-task-form', 'submit', async (e) => {
-            e.preventDefault();
-                if (!currentUser) return;
-                const modal = document.getElementById('add-subject-modal');
-                const subjectName = document.getElementById('add-subject-name').value.trim();
-                const colorEl = document.querySelector('#add-subject-modal .color-dot.selected');
-                
-                if (!subjectName || !colorEl) {
-                    showToast('Please provide a name and select a color.', 'error');
-                    return;
-                }
-                const color = colorEl.dataset.color;
-
-                const { data: lastSubject } = await supabase
-                    .from('subjects')
-                    .select('order')
-                    .eq('profile_id', currentUser.id)
-                    .order('order', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-                const lastOrder = lastSubject?.order ?? -1;
-
-                await supabase.from('subjects').insert({
-                    profile_id: currentUser.id,
-                    name: subjectName,
-                    color,
-                    order: lastOrder + 1
-                });
-                modal.classList.remove('active');
-                showToast(`Subject "${subjectName}" added!`, 'success');
-            });
 
             // Ranking Page Tabs
             ael('page-ranking', 'click', (e) => {
