@@ -5812,6 +5812,89 @@ if (achievementsGrid) {
         savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
         savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
         
+        function normalizeTaskTags(rawTags) {
+            if (!rawTags) return [];
+
+            if (Array.isArray(rawTags)) {
+                return rawTags
+                    .map(tag => {
+                        if (typeof tag === 'string') {
+                            return tag.trim();
+                        }
+                        if (tag && typeof tag === 'object') {
+                            if (typeof tag.name === 'string') {
+                                return tag.name.trim();
+                            }
+                            if (typeof tag.label === 'string') {
+                                return tag.label.trim();
+                            }
+                        }
+                        return null;
+                    })
+                    .filter(Boolean);
+            }
+
+            if (typeof rawTags === 'string') {
+                const trimmed = rawTags.trim();
+                if (!trimmed) return [];
+
+                // Try parsing JSON encoded arrays first.
+                if ((trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+                    try {
+                        const parsed = JSON.parse(trimmed);
+                        if (Array.isArray(parsed)) {
+                            return parsed
+                                .map(tag => (typeof tag === 'string' ? tag.trim() : null))
+                                .filter(Boolean);
+                        }
+                    } catch (err) {
+                        console.warn('Failed to parse JSON tags payload', err, trimmed);
+                    }
+                }
+
+                // Handle Postgres text[] string representation, e.g. {"tag","other"}
+                if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                    const inner = trimmed.slice(1, -1);
+                    if (!inner) return [];
+                    return inner
+                        .split(',')
+                        .map(part => part.trim())
+                        .map(part => part.replace(/^"|"$/g, '').replace(/\\"/g, '"'))
+                        .filter(Boolean);
+                }
+
+                return [trimmed];
+            }
+
+            return [];
+        }
+
+        function normalizePlannerTask(rawTask) {
+            if (!rawTask) return null;
+
+            const normalized = { ...rawTask };
+
+            if (normalized.id !== undefined && normalized.id !== null) {
+                normalized.id = String(normalized.id);
+            }
+
+            if (normalized.list_id !== undefined && normalized.list_id !== null) {
+                normalized.list_id = String(normalized.list_id);
+                normalized.listId = normalized.list_id;
+            } else if (normalized.list_id === null) {
+                normalized.listId = null;
+            } else if (normalized.listId !== undefined && normalized.listId !== null) {
+                normalized.listId = String(normalized.listId);
+                normalized.list_id = normalized.listId;
+            } else if (normalized.listId === null) {
+                normalized.list_id = null;
+            }
+
+            normalized.tags = normalizeTaskTags(rawTask.tags);
+
+            return normalized;
+        }
+
         async function setupPlannerListeners() {
             if (!currentUser || !isValidUUID(currentUser.id)) return;
           
@@ -5842,7 +5925,9 @@ if (achievementsGrid) {
             if (tasksError) {
               console.error('Failed to load tasks:', tasksError);
             } else {
-              plannerState.tasks = tasks || [];
+              plannerState.tasks = (tasks || [])
+                .map(normalizePlannerTask)
+                .filter(Boolean);
               renderPlannerPage();
               renderTaskSelectionList(plannerState.tasks);
             }
@@ -5892,30 +5977,37 @@ if (achievementsGrid) {
                 (payload) => {
                   console.log('Task change:', payload);
                   const { eventType, new: newRecord, old: oldRecord } = payload;
-                  const recordId = newRecord?.id || oldRecord?.id;
+                  const recordIdRaw = newRecord?.id ?? oldRecord?.id;
+                  const recordId = recordIdRaw !== undefined && recordIdRaw !== null ? String(recordIdRaw) : null;
                   if (!recordId) return;
 
+                  let normalizedRecord = null;
                   if (newRecord) {
                       detectListFolderColumnFromData([newRecord]);
+                      normalizedRecord = normalizePlannerTask(newRecord);
                   }
 
                   if (eventType === 'INSERT') {
-                    // Avoid adding duplicates if it's already there from the local insert
-                    if (!plannerState.tasks.some(t => t.id === newRecord.id)) {
-                        plannerState.tasks.push(newRecord);
+                    if (!normalizedRecord) return;
+                    const existingIndex = plannerState.tasks.findIndex(t => t.id === normalizedRecord.id);
+                    if (existingIndex > -1) {
+                        plannerState.tasks[existingIndex] = normalizedRecord;
+                    } else {
+                        plannerState.tasks.push(normalizedRecord);
                     }
                   } else if (eventType === 'UPDATE') {
-                    const index = plannerState.tasks.findIndex(t => t.id === recordId);
+                    if (!normalizedRecord) return;
+                    const index = plannerState.tasks.findIndex(t => t.id === normalizedRecord.id);
                     if (index > -1) {
-                      plannerState.tasks[index] = newRecord;
+                      plannerState.tasks[index] = normalizedRecord;
                     } else {
                         // If not found, add it. Might happen if listener starts after initial load.
-                        plannerState.tasks.push(newRecord);
+                        plannerState.tasks.push(normalizedRecord);
                     }
                   } else if (eventType === 'DELETE') {
-                    plannerState.tasks = plannerState.tasks.filter(t => t.id !== recordId);
+                    plannerState.tasks = plannerState.tasks.filter(t => String(t.id) !== recordId);
                     // If the deleted task was selected, deselect it
-                    if (plannerState.selectedTaskId === recordId) {
+                    if (String(plannerState.selectedTaskId) === recordId) {
                         plannerState.selectedTaskId = null;
                     }
                   }
@@ -7156,16 +7248,23 @@ if (achievementsGrid) {
               .insert([payload])
               .select()
               .single();
-          
+
             if (error) {
               console.error('Error adding task:', error);
               showToast('Failed to add task.', 'error');
               return;
             }
-          
-            // Update your local state (optional)
-            plannerState.tasks.push(data);
-            plannerState.selectedTaskId = data.id;
+
+            const normalizedTask = normalizePlannerTask(data);
+            if (normalizedTask) {
+              const existingIndex = plannerState.tasks.findIndex(t => t.id === normalizedTask.id);
+              if (existingIndex > -1) {
+                plannerState.tasks[existingIndex] = normalizedTask;
+              } else {
+                plannerState.tasks.push(normalizedTask);
+              }
+              plannerState.selectedTaskId = normalizedTask.id;
+            }
             renderPlannerPage();            // refresh list/board/calendar
             renderTaskSelectionList(plannerState.tasks);
           }
@@ -7289,7 +7388,7 @@ if (achievementsGrid) {
             }
           
             plannerState.selectedTaskId = null;
-            plannerState.tasks = plannerState.tasks.filter(t => t.id !== taskId);
+            plannerState.tasks = plannerState.tasks.filter(t => String(t.id) !== String(taskId));
             renderPlannerTaskDetails();
             renderTaskSelectionList(plannerState.tasks);
           }
