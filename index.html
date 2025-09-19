@@ -1340,6 +1340,15 @@
             color: #e2e8f0;
             font-size: 0.95rem;
         }
+        .sheet-input select {
+            background: transparent;
+            border: none;
+            outline: none;
+            flex-grow: 1;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            appearance: none;
+        }
         .sheet-color-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
@@ -2978,6 +2987,12 @@
                 <div class="sheet-input">
                     <i class="fas fa-pen"></i>
                     <input id="add-project-name" type="text" placeholder="Project name" required>
+                </div>
+                <div class="sheet-input">
+                    <i class="fas fa-folder"></i>
+                    <select id="add-project-folder">
+                        <option value="">No folder</option>
+                    </select>
                 </div>
                 <div class="sheet-color-grid" data-color-picker></div>
             </form>
@@ -5354,6 +5369,7 @@ if (achievementsGrid) {
             '#ec4899', '#fbbf24', '#14b8a6', '#0ea5e9', '#3b82f6', '#fb7185', '#8b5cf6', '#0f766e',
             '#f973a0', '#fca5a5'
         ];
+        const LIST_FOLDER_COLUMNS = ['folder', 'folder_name', 'folderName', 'folder_label'];
 
         function loadPlannerPreference(key, fallback) {
             try {
@@ -5428,7 +5444,89 @@ if (achievementsGrid) {
             } else {
                 plannerState.folderLibrary.push(folderData);
             }
+            plannerState.lastCreatedFolderName = trimmedName;
             savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
+        }
+        function detectListFolderColumnFromData(lists = []) {
+            if (plannerState.listFolderColumn) return plannerState.listFolderColumn;
+            for (const list of lists) {
+                if (!list || typeof list !== 'object') continue;
+                for (const column of LIST_FOLDER_COLUMNS) {
+                    if (Object.prototype.hasOwnProperty.call(list, column)) {
+                        plannerState.listFolderColumn = column;
+                        return column;
+                    }
+                }
+            }
+            return plannerState.listFolderColumn;
+        }
+
+        function extractListFolderName(list) {
+            if (!list || typeof list !== 'object') return '';
+            const column = plannerState.listFolderColumn || detectListFolderColumnFromData([list]);
+            if (!column) return '';
+            const value = list[column];
+            if (value === null || value === undefined) return '';
+            return typeof value === 'string' ? value : String(value);
+        }
+
+        function getAvailableFolderNames() {
+            const names = new Set();
+            (plannerState.folderLibrary || []).forEach(folder => {
+                const name = typeof folder?.name === 'string' ? folder.name.trim() : '';
+                if (name) names.add(name);
+            });
+            (plannerState.lists || []).forEach(list => {
+                const folderName = extractListFolderName(list);
+                const trimmed = typeof folderName === 'string' ? folderName.trim() : '';
+                if (trimmed) names.add(trimmed);
+            });
+            return Array.from(names).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        }
+
+        function getFolderColor(name) {
+            if (!name) return PLANNER_COLOR_OPTIONS[1];
+            const match = (plannerState.folderLibrary || []).find(folder => folder?.name && folder.name.toLowerCase() === name.toLowerCase());
+            return match?.color || PLANNER_COLOR_OPTIONS[1];
+        }
+
+        async function persistListFolder(listId, folderName) {
+            if (!currentUser || !listId) return { data: null };
+            const normalized = folderName ? folderName.trim() : null;
+            const tried = new Set();
+            const columnsToTry = [];
+            if (plannerState.listFolderColumn) columnsToTry.push(plannerState.listFolderColumn);
+            for (const column of LIST_FOLDER_COLUMNS) {
+                if (!columnsToTry.includes(column)) columnsToTry.push(column);
+            }
+
+            for (const column of columnsToTry) {
+                if (!column || tried.has(column)) continue;
+                tried.add(column);
+                try {
+                    const { data, error } = await supabase
+                        .from('lists')
+                        .update({ [column]: normalized })
+                        .eq('id', listId)
+                        .select()
+                        .single();
+                    if (!error) {
+                        plannerState.listFolderColumn = column;
+                        return { data };
+                    }
+                    const message = error?.message || '';
+                    if (/column .* does not exist/i.test(message)) {
+                        continue;
+                    }
+                    console.error('Error updating list folder:', error);
+                    return { error };
+                } catch (err) {
+                    console.error('Error updating list folder:', err);
+                    return { error: err };
+                }
+            }
+
+            return { error: new Error('No folder column available on lists table.') };
         }
 
         function getTaskDateTime(task) {
@@ -5480,6 +5578,8 @@ if (achievementsGrid) {
             tagLibrary: loadPlannerPreference('plannerTagLibrary', []),
             folderLibrary: loadPlannerPreference('plannerFolderLibrary', []),
             projectColorMap: loadPlannerPreference('plannerProjectColors', {}),
+            listFolderColumn: null,
+            lastCreatedFolderName: '',
             eventsViewDate: new Date(),
             completedViewLimit: 5,
         };
@@ -5523,6 +5623,7 @@ if (achievementsGrid) {
               console.error('Failed to load lists:', listsError);
             } else {
               plannerState.lists = lists || [];
+              detectListFolderColumnFromData(plannerState.lists);
               renderPlannerPage();
             }
           
@@ -5550,6 +5651,10 @@ if (achievementsGrid) {
                   const { eventType, new: newRecord, old: oldRecord } = payload;
                   const recordId = newRecord?.id || oldRecord?.id;
                   if (!recordId) return;
+
+                  if (newRecord) {
+                      detectListFolderColumnFromData([newRecord]);
+                  }
 
                   if (eventType === 'INSERT') {
                     if (!plannerState.lists.some(l => l.id === newRecord.id)) {
@@ -5582,6 +5687,10 @@ if (achievementsGrid) {
                   const { eventType, new: newRecord, old: oldRecord } = payload;
                   const recordId = newRecord?.id || oldRecord?.id;
                   if (!recordId) return;
+
+                  if (newRecord) {
+                      detectListFolderColumnFromData([newRecord]);
+                  }
 
                   if (eventType === 'INSERT') {
                     // Avoid adding duplicates if it's already there from the local insert
@@ -5741,8 +5850,13 @@ if (achievementsGrid) {
             const plannedTasks = allTasks.filter(t => t.due_date && !t.completed);
             const flaggedTasks = allTasks.filter(t => t.flagged && !t.completed);
             const completedTasks = allTasks.filter(t => t.completed);
-            const inboxTasks = allTasks.filter(t => t.list_id === null && !t.completed);
-          
+            const tasksCategoryTasks = allTasks.filter(t => {
+              if (t.completed) return false;
+              const inInbox = t.list_id === null;
+              const dueToday = t.due_date && isSameDay(new Date(t.due_date), today);
+              return inInbox || dueToday;
+            });
+
             const categories = [
               { name: 'Today', icon: 'fa-sun', color: 'bg-yellow-500', count: todayTasks.length },
               { name: 'Tomorrow', icon: 'fa-cloud-sun', color: 'bg-orange-400', count: tomorrowTasks.length },
@@ -5751,9 +5865,9 @@ if (achievementsGrid) {
               { name: 'Flagged', icon: 'fa-flag', color: 'bg-red-500', count: flaggedTasks.length },
               { name: 'Events', icon: 'fa-calendar-star', color: 'bg-green-500', count: 0 },
               { name: 'Completed', icon: 'fa-check-circle', color: 'bg-gray-500', count: completedTasks.length },
-              { name: 'Tasks', icon: 'fa-tasks', color: 'bg-indigo-500', count: inboxTasks.length },
+              { name: 'Tasks', icon: 'fa-tasks', color: 'bg-indigo-500', count: tasksCategoryTasks.length },
             ];
-          
+
             mainContent.innerHTML = `
               <div id="planner-list-view-container">
                 <div class="planner-search-bar">
@@ -5844,6 +5958,14 @@ if (achievementsGrid) {
                 break;
               case 'flagged':
                 tasksToShow = allTasks.filter(t => t.flagged);
+                break;
+              case 'tasks':
+                title = 'Tasks';
+                tasksToShow = allTasks.filter(t => {
+                  const dueToday = t.due_date && isSameDay(new Date(t.due_date), today);
+                  const inInbox = t.list_id === null;
+                  return dueToday || inInbox;
+                });
                 break;
               default:
                 tasksToShow = [];
@@ -6733,16 +6855,42 @@ if (achievementsGrid) {
             const modal = document.getElementById('add-project-modal');
             if (!modal) return;
 
-            const { mode = 'create', listId = null, name = '', color = PLANNER_COLOR_OPTIONS[0] } = options;
+            const { mode = 'create', listId = null, name = '', color = PLANNER_COLOR_OPTIONS[0], folderName = null } = options;
             const form = modal.querySelector('#add-project-form');
             const input = modal.querySelector('#add-project-name');
             const titleEl = modal.querySelector('[data-sheet-title]');
             const doneBtn = form.querySelector('.sheet-done-btn');
             const colorPicker = form.querySelector('[data-color-picker]');
+            const folderSelect = form.querySelector('#add-project-folder');
 
             form.dataset.selectedColor = color;
             renderSheetColors(colorPicker, color);
             input.value = name || '';
+
+            const availableFolders = getAvailableFolderNames();
+            let defaultFolder = '';
+            if (typeof folderName === 'string' && folderName.trim()) {
+                defaultFolder = folderName.trim();
+            } else if (mode === 'edit' && listId) {
+                const existingList = (plannerState.lists || []).find(l => l?.id === listId);
+                const existingFolder = extractListFolderName(existingList);
+                if (typeof existingFolder === 'string' && existingFolder.trim()) {
+                    defaultFolder = existingFolder.trim();
+                }
+            } else if (plannerState.lastCreatedFolderName) {
+                defaultFolder = plannerState.lastCreatedFolderName;
+            }
+
+            if (folderSelect) {
+                const folderNames = new Set(availableFolders);
+                if (defaultFolder) folderNames.add(defaultFolder);
+                const sortedFolders = Array.from(folderNames).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+                const optionsHtml = ['<option value="">No folder</option>'].concat(
+                    sortedFolders.map(folder => `<option value="${folder}">${folder}</option>`)
+                );
+                folderSelect.innerHTML = optionsHtml.join('');
+                folderSelect.value = defaultFolder || '';
+            }
 
             let editInput = form.querySelector('#edit-project-id');
             if (mode === 'edit' && listId) {
@@ -6760,7 +6908,6 @@ if (achievementsGrid) {
                 if (titleEl) titleEl.textContent = 'New Project';
                 if (doneBtn) doneBtn.textContent = 'Done';
             }
-
             modal.classList.add('active');
             setTimeout(() => input.focus(), 50);
         }
@@ -6811,31 +6958,71 @@ if (achievementsGrid) {
             renderTaskSelectionList(plannerState.tasks);
           }
 
-          async function addPlannerList(name, color = PLANNER_COLOR_OPTIONS[0]) {
-            if (!currentUser || !name.trim()) return;
+          async function addPlannerList(name, color = PLANNER_COLOR_OPTIONS[0], folderName = '') {
+            if (!currentUser || !name.trim()) return null;
+
+            const trimmedName = name.trim();
+            const trimmedFolder = typeof folderName === 'string' ? folderName.trim() : '';
+            const insertPayload = {
+                name: trimmedName,
+                created_by: currentUser.id,
+            };
+
+            if (plannerState.listFolderColumn) {
+                insertPayload[plannerState.listFolderColumn] = trimmedFolder || null;
+            }
 
             const { data, error } = await supabase
                 .from('lists')
-                .insert([{ 
-                    name: name.trim(),
-                    created_by: currentUser.id,
-                }])
+                .insert([insertPayload])
                 .select()
                 .single();
 
             if (error) {
                 console.error('Error adding list:', error);
                 showToast('Failed to create project.', 'error');
-                return;
+                return null;
             }
 
-            if (data?.id) {
-                setProjectColor(data.id, color);
+            let newList = data;
+            detectListFolderColumnFromData([newList]);
+
+            if (trimmedFolder) {
+                const currentFolder = extractListFolderName(newList);
+                if (!currentFolder || currentFolder.trim() !== trimmedFolder) {
+                    const result = await persistListFolder(newList.id, trimmedFolder);
+                    if (result?.data) {
+                        newList = result.data;
+                    } else if (plannerState.listFolderColumn) {
+                        newList = { ...newList, [plannerState.listFolderColumn]: trimmedFolder };
+                    }
+                }
+            } else if (plannerState.listFolderColumn && newList && typeof newList[plannerState.listFolderColumn] === 'undefined') {
+                newList = { ...newList, [plannerState.listFolderColumn]: null };
             }
 
-            showToast(`Project "${name}" created!`, 'success');
+            if (newList?.id) {
+                setProjectColor(newList.id, color);
+            }
+
+            if (trimmedFolder) {
+                addFolderToLibrary(trimmedFolder, getFolderColor(trimmedFolder));
+            }
+
+            plannerState.lists = Array.isArray(plannerState.lists) ? plannerState.lists : [];
+            const existingIndex = plannerState.lists.findIndex(l => l.id === newList.id);
+            if (existingIndex >= 0) {
+                plannerState.lists[existingIndex] = newList;
+            } else {
+                plannerState.lists.push(newList);
+            }
+            plannerState.activeListId = newList?.id || plannerState.activeListId;
+
+            renderPlannerPage();
+
+            showToast(`Project "${trimmedName}" created!`, 'success');
+            return newList;
           }
-          
           function camelToSnake(obj) {
             const map = {
               listId: 'list_id',
@@ -6895,22 +7082,66 @@ if (achievementsGrid) {
             renderTaskSelectionList(plannerState.tasks);
           }
 
-        async function updatePlannerList(listId, newName) {
+        async function updatePlannerList(listId, newName, folderName = null) {
             if (!currentUser || !listId || !newName.trim()) return;
 
-            const { error } = await supabase
-                .from('lists')
-                .update({ name: newName.trim() })
-                .eq('id', listId);
+            const trimmedName = newName.trim();
+            const trimmedFolder = typeof folderName === 'string' ? folderName.trim() : '';
 
-            if (error) {
-                console.error('Error updating list:', error);
+            let updatedList = null;
+            try {
+                const { data, error } = await supabase
+                    .from('lists')
+                    .update({ name: trimmedName })
+                    .eq('id', listId)
+                    .select()
+                    .single();
+
+                if (error) {
+                    console.error('Error updating list:', error);
+                    showToast('Failed to update project.', 'error');
+                    return;
+                }
+                updatedList = data;
+            } catch (err) {
+                console.error('Error updating list:', err);
                 showToast('Failed to update project.', 'error');
                 return;
             }
-            showToast('Project updated!', 'success');
-        }
 
+            detectListFolderColumnFromData([updatedList]);
+
+            const existingList = (plannerState.lists || []).find(l => l?.id === listId) || null;
+            const currentFolder = extractListFolderName(existingList);
+            const normalizedCurrent = typeof currentFolder === 'string' ? currentFolder.trim() : '';
+
+            if (normalizedCurrent !== trimmedFolder) {
+                const result = await persistListFolder(listId, trimmedFolder);
+                if (result?.data) {
+                    updatedList = result.data;
+                } else if (plannerState.listFolderColumn) {
+                    const base = updatedList || existingList || { id: listId };
+                    updatedList = { ...base, [plannerState.listFolderColumn]: trimmedFolder || null };
+                }
+            }
+
+            if (trimmedFolder) {
+                addFolderToLibrary(trimmedFolder, getFolderColor(trimmedFolder));
+            }
+
+            if (updatedList) {
+                plannerState.lists = Array.isArray(plannerState.lists) ? plannerState.lists : [];
+                const index = plannerState.lists.findIndex(l => l?.id === listId);
+                if (index > -1) {
+                    plannerState.lists[index] = { ...plannerState.lists[index], ...updatedList };
+                } else {
+                    plannerState.lists.push(updatedList);
+                }
+            }
+
+            showToast('Project updated!', 'success');
+            renderPlannerPage();
+        }
         async function deletePlannerList(listId) {
             if (!currentUser || !listId) return;
 
@@ -7040,7 +7271,9 @@ if (achievementsGrid) {
         }
 
         function openEditProjectModal(listId, listName) {
-            openProjectModal({ mode: 'edit', listId, name: listName, color: getProjectColor(listId) });
+            const existingList = (plannerState.lists || []).find(l => l?.id === listId);
+            const folderName = extractListFolderName(existingList);
+            openProjectModal({ mode: 'edit', listId, name: listName, color: getProjectColor(listId), folderName });
         }
 
         // --- Leaderboard Infinite Scroll State & Functions ---
@@ -11184,17 +11417,20 @@ if (achievementsGrid) {
                 const editIdInput = form.querySelector('#edit-project-id');
                 const editId = editIdInput ? editIdInput.value : null;
                 const selectedColor = form.dataset.selectedColor || PLANNER_COLOR_OPTIONS[0];
+                const folderSelect = form.querySelector('#add-project-folder');
+                const folderValue = folderSelect ? folderSelect.value : '';
 
                 if (name) {
                     if (editId) {
-                        await updatePlannerList(editId, name);
+                        await updatePlannerList(editId, name, folderValue);
                         setProjectColor(editId, selectedColor);
                     } else {
-                        await addPlannerList(name, selectedColor);
+                        await addPlannerList(name, selectedColor, folderValue);
                     }
                     form.reset();
                     form.dataset.selectedColor = PLANNER_COLOR_OPTIONS[0];
                     renderSheetColors(form.querySelector('[data-color-picker]'), form.dataset.selectedColor);
+                    if (folderSelect) folderSelect.value = '';
                     if (editIdInput) editIdInput.value = '';
                     if (modal) modal.classList.remove('active');
                 }
@@ -11242,8 +11478,16 @@ if (achievementsGrid) {
 
             ael('folder-add-project-trigger', 'click', () => {
                 const folderModal = document.getElementById('new-folder-modal');
-                if (folderModal) folderModal.classList.remove('active');
-                openProjectModal();
+                let folderName = '';
+                if (folderModal) {
+                    const input = folderModal.querySelector('#new-folder-name');
+                    folderName = input ? input.value.trim() : '';
+                    folderModal.classList.remove('active');
+                }
+                if (folderName) {
+                    plannerState.lastCreatedFolderName = folderName;
+                }
+                openProjectModal({ folderName });
             });
 
             document.addEventListener('click', (e) => {
