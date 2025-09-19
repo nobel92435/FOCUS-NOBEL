@@ -925,31 +925,55 @@
             padding: 1rem 0.5rem 0;
             border-top: 1px solid #30363d;
             display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
             justify-content: space-between;
             align-items: center;
         }
         .planner-add-project-btn {
             background: none;
             border: none;
-            color: #ef4444;
+            color: #f97316;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
             font-size: 1rem;
             cursor: pointer;
+            transition: color 0.2s ease;
         }
         .planner-add-project-btn i {
-            font-size: 1.25rem;
+            font-size: 1.1rem;
+        }
+        .planner-add-project-btn:hover {
+            color: #fb923c;
         }
         .planner-actions .action-icons {
             display: flex;
-            gap: 1.25rem;
-            color: #9ca3af;
-            font-size: 1.1rem;
+            gap: 0.5rem;
+            flex-wrap: wrap;
         }
-        .planner-actions .action-icons i {
+        .planner-action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            color: #e5e7eb;
+            padding: 0.45rem 0.9rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 500;
             cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .planner-action-btn i {
+            font-size: 0.9rem;
+        }
+        .planner-action-btn:hover {
+            color: #38bdf8;
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1);
         }
 
         /* New Planner Category View Styles */
@@ -1095,6 +1119,412 @@
             cursor: pointer;
             color: #9ca3af;
             font-size: 0.875rem;
+        }
+
+        /* Planner Action Helpers */
+        .planner-action-btn .label {
+            font-size: 0.8rem;
+            letter-spacing: 0.01em;
+        }
+        .planner-action-btn.is-active {
+            color: #38bdf8;
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+        }
+        .project-color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 9999px;
+            margin-right: 0.5rem;
+            flex-shrink: 0;
+            border: 1px solid rgba(0, 0, 0, 0.25);
+        }
+
+        /* Tag & Folder Sheet Styles */
+        .sheet-modal .modal-content {
+            background: #0f172a;
+            border-radius: 24px;
+            padding: 24px 20px 28px;
+            border: none;
+            box-shadow: 0 30px 50px rgba(8, 47, 73, 0.35);
+        }
+        .sheet-form {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .sheet-header-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .sheet-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(59, 130, 246, 0.05));
+            color: #38bdf8;
+            font-size: 1.1rem;
+        }
+        .sheet-title-text {
+            font-weight: 600;
+            font-size: 1.15rem;
+        }
+        .sheet-done-btn {
+            background: none;
+            border: none;
+            color: #38bdf8;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+        .sheet-input {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: #111c30;
+            border-radius: 18px;
+            padding: 0.9rem 1rem;
+            border: 1px solid transparent;
+        }
+        .sheet-input i {
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+        .sheet-input input {
+            background: transparent;
+            border: none;
+            outline: none;
+            flex-grow: 1;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+        }
+        .sheet-color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+            gap: 12px;
+        }
+        .sheet-color-choice {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .sheet-color-choice:after {
+            content: '';
+            position: absolute;
+            inset: 3px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .sheet-color-choice.selected {
+            transform: scale(1.05);
+            border-color: rgba(148, 163, 184, 0.4);
+        }
+        .sheet-color-choice.selected:after {
+            opacity: 1;
+        }
+        .sheet-footer-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #38bdf8;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .sheet-footer-link i {
+            font-size: 1rem;
+        }
+
+        /* Tag selection modal */
+        .tags-picker-modal .modal-content {
+            max-width: 420px;
+        }
+        .tag-library {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .tag-chip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #111c30;
+            border-radius: 14px;
+            padding: 0.6rem 0.9rem;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tag-chip:hover {
+            border-color: rgba(56, 189, 248, 0.4);
+        }
+        .tag-chip.selected {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.1);
+        }
+        .tag-chip-color {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            margin-right: 0.75rem;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .tag-chip-label {
+            flex-grow: 1;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .tag-chip-check {
+            color: #38bdf8;
+            font-size: 0.85rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .tag-chip.selected .tag-chip-check {
+            opacity: 1;
+        }
+        .create-tag-btn {
+            background: none;
+            border: 1px dashed rgba(148, 163, 184, 0.4);
+            color: #38bdf8;
+            border-radius: 14px;
+            padding: 0.75rem;
+            width: 100%;
+            font-weight: 600;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.6rem;
+            cursor: pointer;
+        }
+        .tag-chip-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.25rem 0.7rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.4rem;
+            margin-bottom: 0.4rem;
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+        }
+        .tag-chip-inline .tag-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        /* Events View */
+        .planner-events-view {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: #0d1117;
+        }
+        .events-header {
+            border-bottom: 1px solid #30363d;
+            padding: 1rem;
+        }
+        .events-header .events-title {
+            display: flex;
+            flex-direction: column;
+        }
+        .events-month {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .events-week-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #94a3b8;
+        }
+        .events-week-nav button {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+        .events-week-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #1f2937;
+        }
+        .events-weekday {
+            text-align: center;
+            padding: 0.5rem 0.25rem;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .events-weekday span {
+            display: block;
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+        .events-weekday strong {
+            display: block;
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+        .events-weekday.active {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(14, 165, 233, 0.05));
+            color: #e2e8f0;
+        }
+        .events-weekday.today {
+            border: 1px solid rgba(56, 189, 248, 0.4);
+        }
+        .events-timeline {
+            flex-grow: 1;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            overflow-y: auto;
+        }
+        .events-hours {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            padding: 1rem 0.75rem;
+            gap: 40px;
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+        .events-hour {
+            height: 60px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .events-columns {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            padding: 1rem 1rem 2rem;
+        }
+        .events-column {
+            position: relative;
+            border-left: 1px solid rgba(255,255,255,0.05);
+            padding-left: 0.5rem;
+            min-height: 600px;
+        }
+        .event-block {
+            position: absolute;
+            left: 0.5rem;
+            right: 0.5rem;
+            border-radius: 16px;
+            padding: 0.75rem;
+            color: white;
+            box-shadow: 0 12px 25px rgba(15, 118, 110, 0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .event-block small {
+            font-size: 0.75rem;
+            opacity: 0.85;
+        }
+        .event-block strong {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        /* Completed View */
+        .planner-completed-view {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: #0d1117;
+        }
+        .completed-groups {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 0 1rem 1.5rem;
+        }
+        .completed-day-group {
+            margin-top: 1.25rem;
+        }
+        .completed-day-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            color: #cbd5f5;
+            margin-bottom: 0.75rem;
+        }
+        .completed-day-header span {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+        .completed-task-item {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            background: #111c30;
+            border-radius: 16px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 12px 25px rgba(2, 6, 23, 0.4);
+        }
+        .completed-task-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .completed-task-details {
+            flex-grow: 1;
+        }
+        .completed-task-details strong {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        .completed-task-details span {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        .completed-task-time {
+            font-size: 0.8rem;
+            color: #e2e8f0;
+        }
+        .completed-show-more {
+            margin: 1.5rem auto 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.65rem 1.5rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            background: transparent;
+            color: #38bdf8;
+            cursor: pointer;
         }
 
 
@@ -2304,39 +2734,91 @@
     <div id="repeat-settings-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Repeat Settings</h2><button class="close-modal">&times;</button></div><form id="repeat-settings-form"><div class="mb-4"><label for="repeat-type-select" class="block text-gray-300 mb-2">Repeat Frequency</label><select id="repeat-type-select" class="w-full bg-gray-700 rounded-lg p-3"><option value="none">None</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Set Repeat</button></form></div></div>
     <!-- END: Added Missing Modals -->
 
-    <!-- START: NEW TAGS MODAL -->
-    <div id="tags-modal" class="modal">
+    <!-- START: TAG & PROJECT MODALS -->
+    <div id="new-tag-modal" class="modal sheet-modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Edit Tags</h2>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div id="tags-list" class="flex flex-wrap gap-2 mb-4"></div>
-            <form id="add-tag-form" class="flex gap-2">
-                <input id="add-tag-input" type="text" class="w-full bg-gray-700 rounded-lg p-3 text-white" placeholder="Add a new tag...">
-                <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg font-semibold hover:bg-blue-700">Add</button>
-            </form>
-        </div>
-    </div>
-    <!-- END: NEW TAGS MODAL -->
-
-    <!-- START: NEW ADD PROJECT MODAL -->
-    <div id="add-project-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">New Project</h2>
-                <button class="close-modal">&times;</button>
-            </div>
-            <form id="add-project-form">
-                <div class="mb-4">
-                    <label for="add-project-name" class="block text-gray-300 mb-2">Project Name</label>
-                    <input id="add-project-name" type="text" class="w-full bg-gray-700 rounded-lg p-3 text-white" placeholder="e.g., University Thesis" required>
+            <form id="new-tag-form" class="sheet-form">
+                <div class="sheet-header">
+                    <div class="sheet-header-group">
+                        <div class="sheet-icon"><i class="fas fa-tag"></i></div>
+                        <span class="sheet-title-text">New Tag</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="close-modal text-gray-500 text-xl leading-none">&times;</button>
+                        <button type="submit" class="sheet-done-btn">Done</button>
+                    </div>
                 </div>
-                <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Create Project</button>
+                <div class="sheet-input">
+                    <i class="fas fa-tag"></i>
+                    <input id="new-tag-name" type="text" placeholder="Tag name" required>
+                </div>
+                <div class="sheet-color-grid" data-color-picker></div>
             </form>
         </div>
     </div>
-    <!-- END: NEW ADD PROJECT MODAL -->
+
+    <div id="new-folder-modal" class="modal sheet-modal">
+        <div class="modal-content">
+            <form id="new-folder-form" class="sheet-form">
+                <div class="sheet-header">
+                    <div class="sheet-header-group">
+                        <div class="sheet-icon"><i class="fas fa-folder-open"></i></div>
+                        <span class="sheet-title-text">New Folder</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="close-modal text-gray-500 text-xl leading-none">&times;</button>
+                        <button type="submit" class="sheet-done-btn">Done</button>
+                    </div>
+                </div>
+                <div class="sheet-input">
+                    <i class="fas fa-folder"></i>
+                    <input id="new-folder-name" type="text" placeholder="Folder name" required>
+                </div>
+                <div class="sheet-color-grid" data-color-picker></div>
+                <button type="button" class="sheet-footer-link" id="folder-add-project-trigger">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Project</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="tags-modal" class="modal tags-picker-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Select Tags</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div id="tags-list" class="tag-library"></div>
+            <button id="open-create-tag-modal" type="button" class="create-tag-btn">
+                <i class="fas fa-plus"></i>
+                New Tag
+            </button>
+        </div>
+    </div>
+
+    <div id="add-project-modal" class="modal sheet-modal">
+        <div class="modal-content">
+            <form id="add-project-form" class="sheet-form">
+                <div class="sheet-header">
+                    <div class="sheet-header-group">
+                        <div class="sheet-icon"><i class="fas fa-clipboard-list"></i></div>
+                        <span class="sheet-title-text" data-sheet-title>New Project</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="close-modal text-gray-500 text-xl leading-none">&times;</button>
+                        <button type="submit" class="sheet-done-btn">Done</button>
+                    </div>
+                </div>
+                <div class="sheet-input">
+                    <i class="fas fa-pen"></i>
+                    <input id="add-project-name" type="text" placeholder="Project name" required>
+                </div>
+                <div class="sheet-color-grid" data-color-picker></div>
+            </form>
+        </div>
+    </div>
+    <!-- END: TAG & PROJECT MODALS -->
 
         <script type="module">
         // Supabase SDK
@@ -4702,6 +5184,123 @@ if (achievementsGrid) {
         // ============================ NEW PLANNER LOGIC START ============================
         // =================================================================================
 
+        const PLANNER_COLOR_OPTIONS = [
+            '#ef4444', '#f97316', '#facc15', '#22c55e', '#2dd4bf', '#38bdf8', '#6366f1', '#a855f7',
+            '#ec4899', '#fbbf24', '#14b8a6', '#0ea5e9', '#3b82f6', '#fb7185', '#8b5cf6', '#0f766e',
+            '#f973a0', '#fca5a5'
+        ];
+
+        function loadPlannerPreference(key, fallback) {
+            try {
+                if (typeof window === 'undefined' || !window.localStorage) return fallback;
+                const raw = window.localStorage.getItem(key);
+                if (!raw) return fallback;
+                const parsed = JSON.parse(raw);
+                return parsed ?? fallback;
+            } catch (error) {
+                console.warn('Failed to load planner preference', key, error);
+                return fallback;
+            }
+        }
+
+        function savePlannerPreference(key, value) {
+            try {
+                if (typeof window === 'undefined' || !window.localStorage) return;
+                window.localStorage.setItem(key, JSON.stringify(value));
+            } catch (error) {
+                console.warn('Failed to save planner preference', key, error);
+            }
+        }
+
+        function hashString(value = '') {
+            let hash = 0;
+            for (let i = 0; i < value.length; i++) {
+                hash = (hash << 5) - hash + value.charCodeAt(i);
+                hash |= 0;
+            }
+            return hash;
+        }
+
+        function getProjectColor(listId) {
+            if (!listId) return PLANNER_COLOR_OPTIONS[0];
+            const stored = plannerState?.projectColorMap?.[listId];
+            if (stored) return stored;
+            const paletteIndex = Math.abs(hashString(String(listId))) % PLANNER_COLOR_OPTIONS.length;
+            return PLANNER_COLOR_OPTIONS[paletteIndex];
+        }
+
+        function setProjectColor(listId, color) {
+            if (!listId || !color) return;
+            plannerState.projectColorMap = plannerState.projectColorMap || {};
+            plannerState.projectColorMap[listId] = color;
+            savePlannerPreference('plannerProjectColors', plannerState.projectColorMap);
+        }
+
+        function addTagToLibrary(name, color) {
+            if (!name) return;
+            plannerState.tagLibrary = plannerState.tagLibrary || [];
+            const trimmedName = name.trim();
+            if (!trimmedName) return;
+            const existingIndex = plannerState.tagLibrary.findIndex(tag => tag.name.toLowerCase() === trimmedName.toLowerCase());
+            const tagData = { name: trimmedName, color };
+            if (existingIndex >= 0) {
+                plannerState.tagLibrary[existingIndex] = tagData;
+            } else {
+                plannerState.tagLibrary.push(tagData);
+            }
+            savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
+        }
+
+        function addFolderToLibrary(name, color) {
+            if (!name) return;
+            plannerState.folderLibrary = plannerState.folderLibrary || [];
+            const trimmedName = name.trim();
+            if (!trimmedName) return;
+            const existingIndex = plannerState.folderLibrary.findIndex(folder => folder.name.toLowerCase() === trimmedName.toLowerCase());
+            const folderData = { name: trimmedName, color };
+            if (existingIndex >= 0) {
+                plannerState.folderLibrary[existingIndex] = folderData;
+            } else {
+                plannerState.folderLibrary.push(folderData);
+            }
+            savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
+        }
+
+        function getTaskDateTime(task) {
+            if (!task) return null;
+            const fields = ['event_start', 'event_start_time', 'eventDate', 'start_time', 'startTime', 'due_date', 'dueDate'];
+            for (const field of fields) {
+                const value = task[field];
+                if (!value) continue;
+                const parsed = new Date(value);
+                if (!isNaN(parsed)) {
+                    if (parsed.getHours() === 0 && parsed.getMinutes() === 0) {
+                        parsed.setHours(12, 0, 0, 0);
+                    }
+                    return parsed;
+                }
+            }
+            return null;
+        }
+
+        function getTaskCompletedAt(task) {
+            if (!task) return null;
+            const fields = ['completedAt', 'completed_at', 'updated_at', 'updatedAt'];
+            for (const field of fields) {
+                const value = task[field];
+                if (!value) continue;
+                const parsed = new Date(value);
+                if (!isNaN(parsed)) {
+                    return parsed;
+                }
+            }
+            if (task.completed && task.due_date) {
+                const fallback = new Date(task.due_date);
+                if (!isNaN(fallback)) return fallback;
+            }
+            return null;
+        }
+
         let plannerState = {
             lists: [],
             tasks: [],
@@ -4713,7 +5312,35 @@ if (achievementsGrid) {
             plannerUnsubscribers: [],
             calendarYear: new Date().getFullYear(),
             calendarMonth: new Date().getMonth(),
+            tagLibrary: loadPlannerPreference('plannerTagLibrary', []),
+            folderLibrary: loadPlannerPreference('plannerFolderLibrary', []),
+            projectColorMap: loadPlannerPreference('plannerProjectColors', {}),
+            eventsViewDate: new Date(),
+            completedViewLimit: 5,
         };
+
+        plannerState.tagLibrary = (plannerState.tagLibrary || []).map(tag => {
+            if (!tag) return null;
+            if (typeof tag === 'string') return { name: tag, color: PLANNER_COLOR_OPTIONS[0] };
+            if (typeof tag === 'object') {
+                const name = tag.name || (typeof tag.label === 'string' ? tag.label : null);
+                if (!name) return null;
+                return { name, color: tag.color || PLANNER_COLOR_OPTIONS[0] };
+            }
+            return null;
+        }).filter(Boolean);
+        plannerState.folderLibrary = (plannerState.folderLibrary || []).map(folder => {
+            if (!folder) return null;
+            if (typeof folder === 'string') return { name: folder, color: PLANNER_COLOR_OPTIONS[1] };
+            if (typeof folder === 'object') {
+                const name = folder.name || null;
+                if (!name) return null;
+                return { name, color: folder.color || PLANNER_COLOR_OPTIONS[1] };
+            }
+            return null;
+        }).filter(Boolean);
+        savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
+        savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
         
         async function setupPlannerListeners() {
             if (!currentUser || !isValidUUID(currentUser.id)) return;
@@ -4747,44 +5374,75 @@ if (achievementsGrid) {
               renderTaskSelectionList(plannerState.tasks);
             }
           
-            // 4. Realtime subscription for lists
+            // 4. Realtime subscription for lists (FIXED)
             const listsSub = supabase
               .channel('lists-changes')
               .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'lists' },
-                async (payload) => {
+                { event: '*', schema: 'public', table: 'lists', filter: `created_by=eq.${currentUser.id}` },
+                (payload) => {
                   console.log('List change:', payload);
-                  // simplest: refetch fresh data
-                  const { data, error } = await supabase
-                    .from('lists')
-                    .select('*')
-                    .eq('created_by', currentUser.id)
-                  if (!error) {
-                    plannerState.lists = data || [];
-                    renderPlannerPage();
+                  const { eventType, new: newRecord, old: oldRecord } = payload;
+                  const recordId = newRecord?.id || oldRecord?.id;
+                  if (!recordId) return;
+
+                  if (eventType === 'INSERT') {
+                    if (!plannerState.lists.some(l => l.id === newRecord.id)) {
+                        plannerState.lists.push(newRecord);
+                    }
+                  } else if (eventType === 'UPDATE') {
+                    const index = plannerState.lists.findIndex(l => l.id === recordId);
+                    if (index > -1) {
+                        plannerState.lists[index] = newRecord;
+                    }
+                  } else if (eventType === 'DELETE') {
+                    plannerState.lists = plannerState.lists.filter(l => l.id !== recordId);
+                    if (plannerState.activeListId === recordId) {
+                        plannerState.activeListId = 'inbox'; // Fallback to inbox if active list is deleted
+                    }
                   }
+                  renderPlannerPage();
                 }
               )
               .subscribe();
           
-            // 5. Realtime subscription for tasks
+            // 5. Realtime subscription for tasks (FIXED)
             const tasksSub = supabase
               .channel('tasks-changes')
               .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'tasks' },
-                async (payload) => {
+                { event: '*', schema: 'public', table: 'tasks', filter: `created_by=eq.${currentUser.id}` },
+                (payload) => {
                   console.log('Task change:', payload);
-                  const { data, error } = await supabase
-                    .from('tasks')
-                    .select('*')
-                    .eq('created_by', currentUser.id)
-                  if (!error) {
-                    plannerState.tasks = data || [];
-                    renderPlannerPage();
-                    renderTaskSelectionList(plannerState.tasks);
+                  const { eventType, new: newRecord, old: oldRecord } = payload;
+                  const recordId = newRecord?.id || oldRecord?.id;
+                  if (!recordId) return;
+
+                  if (eventType === 'INSERT') {
+                    // Avoid adding duplicates if it's already there from the local insert
+                    if (!plannerState.tasks.some(t => t.id === newRecord.id)) {
+                        plannerState.tasks.push(newRecord);
+                    }
+                  } else if (eventType === 'UPDATE') {
+                    const index = plannerState.tasks.findIndex(t => t.id === recordId);
+                    if (index > -1) {
+                      plannerState.tasks[index] = newRecord;
+                    } else {
+                        // If not found, add it. Might happen if listener starts after initial load.
+                        plannerState.tasks.push(newRecord);
+                    }
+                  } else if (eventType === 'DELETE') {
+                    plannerState.tasks = plannerState.tasks.filter(t => t.id !== recordId);
+                    // If the deleted task was selected, deselect it
+                    if (plannerState.selectedTaskId === recordId) {
+                        plannerState.selectedTaskId = null;
+                    }
                   }
+                  
+                  // Now re-render with the updated local state.
+                  // This preserves the selectedTaskId set by addPlannerTask.
+                  renderPlannerPage();
+                  renderTaskSelectionList(plannerState.tasks);
                 }
               )
               .subscribe();
@@ -4818,7 +5476,7 @@ if (achievementsGrid) {
               </div>
               <nav class="flex-grow space-y-1">
                 <div class="planner-sidebar-item ${plannerState.activeListId === 'inbox' ? 'active' : ''}" data-list-id="inbox">
-                  <i class="fas fa-inbox w-5 mr-3"></i>
+                  <span class="project-color-dot" style="background:${getProjectColor('inbox')}"></span>
                   <span class="flex-grow">Inbox</span>
                   <span class="text-xs bg-gray-600 px-2 py-0.5 rounded-full">${inboxTasks}</span>
                 </div>
@@ -4826,7 +5484,7 @@ if (achievementsGrid) {
                   const taskCount = plannerState.tasks.filter(t => t.list_id === list.id && !t.completed).length;
                   return `
                     <div class="planner-sidebar-item relative ${plannerState.activeListId === list.id ? 'active' : ''}" data-list-id="${list.id}">
-                      <i class="fas fa-folder w-5 mr-3"></i>
+                      <span class="project-color-dot" style="background:${getProjectColor(list.id)}"></span>
                       <span class="flex-grow">${list.name}</span>
                       <span class="text-xs bg-gray-600 px-2 py-0.5 rounded-full">${taskCount}</span>
                       <button class="project-options-btn p-2 rounded-full hover:bg-gray-700/50 ml-2 -mr-1" data-list-id="${list.id}" data-list-name="${list.name}"><i class="fas fa-ellipsis-h text-xs pointer-events-none"></i></button>
@@ -4835,7 +5493,7 @@ if (achievementsGrid) {
                 }).join('')}
               </nav>
             `;
-          }          
+          }
 
           function renderPlannerMainContent() {
             const mainContent = document.getElementById('planner-main-content');
@@ -4948,12 +5606,22 @@ if (achievementsGrid) {
                 </div>
                 <div class="planner-actions">
                   <button class="planner-add-project-btn">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>Add Project</span>
+                    <i class="fas fa-plus"></i>
+                    <span class="label">Add Project</span>
                   </button>
                   <div class="action-icons">
-                    <i class="fas fa-flag planner-action-flag cursor-pointer"></i>
-                    <i class="fas fa-folder-open planner-action-folder cursor-pointer"></i>
+                    <button class="planner-action-btn planner-action-flag" data-action="flag">
+                      <i class="fas fa-flag"></i>
+                      <span class="label">Flag</span>
+                    </button>
+                    <button class="planner-action-btn planner-action-file" data-action="file">
+                      <i class="fas fa-folder-open"></i>
+                      <span class="label">File</span>
+                    </button>
+                    <button class="planner-action-btn planner-action-tag" data-action="tag">
+                      <i class="fas fa-tag"></i>
+                      <span class="label">Tag</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -4961,18 +5629,29 @@ if (achievementsGrid) {
           }          
 
           function renderPlannerCategoryView(category) {
+            if (category === 'events') {
+                renderPlannerEventsView();
+                return;
+            }
+            if (category === 'completed') {
+                renderPlannerCompletedView();
+                return;
+            }
+
             const mainContent = document.getElementById('planner-main-content');
+            if (!mainContent) return;
+
             const allTasks = plannerState.tasks;
             let tasksToShow = [];
             let title = category.charAt(0).toUpperCase() + category.slice(1);
-          
+
             const today = new Date(); today.setHours(0,0,0,0);
             const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
             const isSameDay = (d1, d2) =>
               d1.getFullYear() === d2.getFullYear() &&
               d1.getMonth() === d2.getMonth() &&
               d1.getDate() === d2.getDate();
-          
+
             switch (category) {
               case 'today':
                 tasksToShow = allTasks.filter(t => t.due_date && isSameDay(new Date(t.due_date), today));
@@ -5001,18 +5680,13 @@ if (achievementsGrid) {
               case 'flagged':
                 tasksToShow = allTasks.filter(t => t.flagged);
                 break;
-              case 'completed':
-                tasksToShow = allTasks.filter(t => t.completed);
-                break;
-              case 'events':
+              default:
                 tasksToShow = [];
-                break;
-            }          
+            }
 
-            // --- 2. Calculate Stats ---
             const uncompletedTasks = tasksToShow.filter(t => !t.completed);
-            const tasksToBeCompletedCount = uncompletedTasks.length;
             const completedTasks = tasksToShow.filter(t => t.completed);
+            const tasksToBeCompletedCount = uncompletedTasks.length;
             const completedTasksCount = completedTasks.length;
 
             const estimatedTimeMinutes = uncompletedTasks.reduce((total, task) => {
@@ -5028,15 +5702,11 @@ if (achievementsGrid) {
             }, 0);
             const elapsedHours = Math.floor(elapsedTimeMinutes / 60).toString().padStart(2, '0');
             const elapsedMins = Math.round(elapsedTimeMinutes % 60).toString().padStart(2, '0');
-            
-            let tasksToRender;
-            if (category === 'completed') {
-                tasksToRender = tasksToShow;
-            } else {
-                tasksToRender = plannerState.showCompletedInCategory ? tasksToShow.filter(t => t.completed) : uncompletedTasks;
-            }
 
-            // --- 3. Generate HTML ---
+            const tasksToRender = plannerState.showCompletedInCategory
+                ? tasksToShow.filter(t => t.completed)
+                : uncompletedTasks;
+
             mainContent.innerHTML = `
                 <div class="planner-category-view">
                     <header class="category-view-header">
@@ -5049,20 +5719,20 @@ if (achievementsGrid) {
                     </header>
                     <div class="category-stats-grid">
                         <div class="category-stat-card">
-                            <div class="stat-value">${estimatedHours}:${estimatedMins}</div>
-                            <div class="stat-label">Estimated Time</div>
+                            <div class="stat-value">${tasksToBeCompletedCount}</div>
+                            <div class="stat-label">Tasks to Do</div>
                         </div>
                         <div class="category-stat-card">
-                            <div class="stat-value">${tasksToBeCompletedCount}</div>
-                            <div class="stat-label">Tasks to be Completed</div>
+                            <div class="stat-value">${completedTasksCount}</div>
+                            <div class="stat-label">Completed</div>
+                        </div>
+                        <div class="category-stat-card">
+                            <div class="stat-value">${estimatedHours}:${estimatedMins}</div>
+                            <div class="stat-label">Estimated</div>
                         </div>
                         <div class="category-stat-card">
                             <div class="stat-value">${elapsedHours}:${elapsedMins}</div>
-                            <div class="stat-label">Elapsed Time</div>
-                        </div>
-                         <div class="category-stat-card">
-                            <div class="stat-value">${completedTasksCount}</div>
-                            <div class="stat-label">Completed Tasks</div>
+                            <div class="stat-label">Focus logged</div>
                         </div>
                     </div>
                     <div class="category-add-task-container">
@@ -5075,13 +5745,13 @@ if (achievementsGrid) {
                     </div>
                     <div class="category-task-list-container no-scrollbar">
                         ${tasksToRender.length > 0 ? tasksToRender.map(task => `
-                             <div class="category-task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
-                                <div class="task-checkbox-category ${task.completed ? 'completed' : ''}"></div>
+                            <div class="category-task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
+                                <input type="checkbox" class="task-checkbox-category ${task.completed ? 'completed' : ''}" ${task.completed ? 'checked' : ''}>
                                 <span class="task-title-category">${task.title}</span>
                                 <button class="task-play-btn"><i class="fas fa-play"></i></button>
                             </div>
                         `).join('') : `
-                             <div class="no-tasks-placeholder">
+                            <div class="no-tasks-placeholder">
                                 <i class="fas fa-calendar-check"></i>
                                 <h3>No Tasks</h3>
                                 <p>Tap the input box above to add a new task.</p>
@@ -5095,7 +5765,233 @@ if (achievementsGrid) {
                     ` : ''}
                 </div>
             `;
-        }          
+        }
+
+        function renderPlannerEventsView() {
+            const mainContent = document.getElementById('planner-main-content');
+            if (!mainContent) return;
+
+            const referenceDate = new Date(plannerState.eventsViewDate || new Date());
+            referenceDate.setHours(0, 0, 0, 0);
+
+            const startOfWeek = new Date(referenceDate);
+            const day = startOfWeek.getDay();
+            const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+            startOfWeek.setDate(diff);
+            startOfWeek.setHours(0, 0, 0, 0);
+
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            endOfWeek.setHours(23, 59, 59, 999);
+
+            const days = Array.from({ length: 7 }, (_, index) => {
+                const date = new Date(startOfWeek);
+                date.setDate(startOfWeek.getDate() + index);
+                return date;
+            });
+
+            const events = (plannerState.tasks || [])
+                .map(task => ({ task, date: getTaskDateTime(task) }))
+                .filter(item => item.date && item.date >= startOfWeek && item.date <= endOfWeek);
+
+            const startHour = 6;
+            const endHour = 22;
+            const hourHeight = 60; // pixels per hour
+            const hours = Array.from({ length: endHour - startHour + 1 }, (_, idx) => startHour + idx);
+
+            const activeDateStr = referenceDate.toISOString().split('T')[0];
+            const todayStr = new Date().toDateString();
+
+            const monthName = referenceDate.toLocaleDateString(undefined, { month: 'long' });
+            const year = referenceDate.getFullYear();
+
+            const isSameDay = (dateA, dateB) => dateA.toDateString() === dateB.toDateString();
+
+            const weekHeaderHtml = days.map(day => {
+                const iso = day.toISOString().split('T')[0];
+                const weekDayName = day.toLocaleDateString(undefined, { weekday: 'short' });
+                const dayNumber = day.getDate();
+                const classes = [
+                    'events-weekday',
+                    iso === activeDateStr ? 'active' : '',
+                    day.toDateString() === todayStr ? 'today' : ''
+                ].filter(Boolean).join(' ');
+                return `
+                    <div class="${classes}" data-date="${iso}">
+                        <span>${weekDayName}</span>
+                        <strong>${dayNumber}</strong>
+                    </div>
+                `;
+            }).join('');
+
+            const eventsColumnsHtml = days.map(day => {
+                const iso = day.toISOString().split('T')[0];
+                const dayEvents = events.filter(({ date }) => isSameDay(date, day));
+                const columnEvents = dayEvents.map(({ task, date }) => {
+                    const eventHour = date.getHours() + date.getMinutes() / 60;
+                    const topOffset = Math.max(0, (eventHour - startHour) * hourHeight);
+                    const durationMinutes = task.duration_minutes || task.durationMinutes || ((task.pomodoros_estimated || 1) * (pomodoroSettings.work || 25));
+                    const blockHeight = Math.max(52, (durationMinutes / 60) * hourHeight);
+                    const color = getProjectColor(task.list_id || task.listId || 'inbox');
+                    const timeLabel = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const durationLabel = formatMinutesFriendly(durationMinutes);
+                    return `
+                        <div class="event-block" data-task-id="${task.id}" style="top:${topOffset}px;height:${blockHeight}px;background:linear-gradient(135deg, ${color}, ${color}cc);">
+                            <small>${timeLabel}</small>
+                            <strong>${task.title}</strong>
+                            <span class="text-xs opacity-80">${durationLabel}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="events-column" data-date="${iso}">
+                        ${columnEvents}
+                    </div>
+                `;
+            }).join('');
+
+            mainContent.innerHTML = `
+                <div class="planner-events-view">
+                    <header class="category-view-header events-header">
+                        <button class="category-back-btn text-gray-400 hover:text-white">
+                             <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <div class="events-title">
+                            <span class="events-month">${monthName} ${year}</span>
+                            <div class="events-week-nav">
+                                <button data-direction="prev"><i class="fas fa-chevron-left"></i></button>
+                                <button data-direction="today">Today</button>
+                                <button data-direction="next"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                        <button class="planner-action-btn events-add-btn" data-action="add-event">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </header>
+                    <div class="events-week-header">
+                        ${weekHeaderHtml}
+                    </div>
+                    <div class="events-timeline">
+                        <div class="events-hours">
+                            ${hours.map(hour => `<div class="events-hour">${hour}:00</div>`).join('')}
+                        </div>
+                        <div class="events-columns">
+                            ${eventsColumnsHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPlannerCompletedView() {
+            const mainContent = document.getElementById('planner-main-content');
+            if (!mainContent) return;
+
+            const completedTasks = (plannerState.tasks || []).filter(task => task.completed);
+            if (completedTasks.length === 0) {
+                mainContent.innerHTML = `
+                    <div class="planner-completed-view">
+                        <header class="category-view-header">
+                            <button class="category-back-btn text-gray-400 hover:text-white">
+                                 <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                            <h2 class="category-view-title">Completed</h2>
+                        </header>
+                        <div class="no-tasks-placeholder">
+                            <i class="fas fa-check-circle"></i>
+                            <h3>No completed tasks yet</h3>
+                            <p>Your finished sessions will show up here.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const sortedTasks = [...completedTasks].sort((a, b) => {
+                const dateA = getTaskCompletedAt(a) || new Date(0);
+                const dateB = getTaskCompletedAt(b) || new Date(0);
+                return dateB - dateA;
+            });
+
+            const limit = plannerState.completedViewLimit || 5;
+            const visibleTasks = sortedTasks.slice(0, limit);
+            const hasMore = sortedTasks.length > visibleTasks.length;
+
+            const groupsMap = new Map();
+            visibleTasks.forEach(task => {
+                const completedAt = getTaskCompletedAt(task) || new Date();
+                const key = completedAt.toISOString().split('T')[0];
+                if (!groupsMap.has(key)) groupsMap.set(key, []);
+                groupsMap.get(key).push({ task, completedAt });
+            });
+
+            const sortedKeys = Array.from(groupsMap.keys()).sort((a, b) => new Date(b) - new Date(a));
+
+            const today = new Date(); today.setHours(0,0,0,0);
+            const isSameDay = (date, compare) => date.getFullYear() === compare.getFullYear() && date.getMonth() === compare.getMonth() && date.getDate() === compare.getDate();
+
+            const groupsHtml = sortedKeys.map(key => {
+                const groupDate = new Date(key + 'T00:00:00');
+                const label = isSameDay(groupDate, today)
+                    ? 'Today'
+                    : groupDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+                const items = groupsMap.get(key) || [];
+                const focusMinutes = items.reduce((total, { task }) => {
+                    const completedPomos = task.pomodoros_completed || 0;
+                    return total + (completedPomos * (pomodoroSettings.work || 25));
+                }, 0);
+                const focusLabel = formatMinutesFriendly(focusMinutes);
+                const completedCount = items.length;
+
+                const tasksHtml = items.map(({ task, completedAt }) => {
+                    const timeLabel = completedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const durationMinutes = (task.pomodoros_completed || 0) * (pomodoroSettings.work || 25);
+                    const durationLabel = durationMinutes > 0 ? formatMinutesFriendly(durationMinutes) : '—';
+                    return `
+                        <div class="completed-task-item" data-task-id="${task.id}">
+                            <div class="completed-task-icon"><i class="fas fa-check"></i></div>
+                            <div class="completed-task-details">
+                                <strong>${task.title}</strong>
+                                <span>${durationLabel}</span>
+                            </div>
+                            <div class="completed-task-time">${timeLabel}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="completed-day-group">
+                        <div class="completed-day-header">
+                            <h3>${label}</h3>
+                            <span>Focus: ${focusLabel} · Completed: ${completedCount} ${completedCount === 1 ? 'task' : 'tasks'}</span>
+                        </div>
+                        ${tasksHtml}
+                    </div>
+                `;
+            }).join('');
+
+            mainContent.innerHTML = `
+                <div class="planner-completed-view">
+                    <header class="category-view-header">
+                        <button class="category-back-btn text-gray-400 hover:text-white">
+                             <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <h2 class="category-view-title">Completed</h2>
+                    </header>
+                    <div class="completed-groups">
+                        ${groupsHtml}
+                    </div>
+                    ${hasMore ? `<button class="completed-show-more">Show More <i class="fas fa-chevron-down"></i></button>` : ''}
+                </div>
+            `;
+        }
         
         function renderPlannerTaskItem(task) {
             const priorityColors = { high: 'border-red-500', medium: 'border-yellow-500', low: 'border-blue-500', none: 'border-transparent' };
@@ -5247,9 +6143,18 @@ if (achievementsGrid) {
             // FIX: Ensure 'tags' is always an array to prevent .map() error.
             // The error occurs if 'selectedTask.tags' is null, undefined, or not an array.
             const tags = Array.isArray(selectedTask.tags) ? selectedTask.tags : [];
-            const tagsHtml = tags.map(tag => `
-                <span class="bg-gray-600 text-gray-200 text-xs font-medium px-2.5 py-1 rounded-full">${tag}</span>
-            `).join('');
+            const tagsHtml = tags.map(rawTag => {
+                const tagName = typeof rawTag === 'string' ? rawTag : rawTag?.name;
+                if (!tagName) return '';
+                const libraryTag = (plannerState.tagLibrary || []).find(t => t.name.toLowerCase() === tagName.toLowerCase());
+                const color = libraryTag?.color || '#6366f1';
+                const textColor = '#e2e8f0';
+                return `
+                    <span class="tag-chip-inline" style="background:${color}1a; color:${textColor}; border:1px solid ${color}55">
+                        <span class="tag-dot" style="background:${color}"></span>${tagName}
+                    </span>
+                `;
+            }).join('');
 
             const subtasks = selectedTask.subtasks || [];
             const subtasksHtml = subtasks.map(subtask => `
@@ -5362,48 +6267,144 @@ if (achievementsGrid) {
         function openTagsModal(taskId) {
             const modal = document.getElementById('tags-modal');
             const tagsList = document.getElementById('tags-list');
-            const addTagForm = document.getElementById('add-tag-form');
-            const addTagInput = document.getElementById('add-tag-input');
+            const createTagBtn = document.getElementById('open-create-tag-modal');
 
             const task = plannerState.tasks.find(t => t.id === taskId);
             if (!task) return;
 
-            const renderTags = () => {
-                const currentTags = Array.isArray(task.tags) ? task.tags : [];
-                tagsList.innerHTML = currentTags.map(tag => `
-                    <span class="flex items-center bg-gray-600 text-gray-200 text-sm font-medium pl-3 pr-2 py-1 rounded-full">
-                        ${tag}
-                        <button class="remove-tag-btn ml-2 text-gray-400 hover:text-white">&times;</button>
-                    </span>
-                `).join('');
-            };
+            const currentTags = Array.isArray(task.tags)
+                ? task.tags.map(tag => (typeof tag === 'string' ? tag : tag?.name)).filter(Boolean)
+                : [];
 
-            renderTags();
-            modal.classList.add('active');
-            addTagInput.focus();
-
-            addTagForm.onsubmit = (e) => {
-                e.preventDefault();
-                const newTag = addTagInput.value.trim();
-                if (newTag) {
-                    const currentTags = Array.isArray(task.tags) ? task.tags : [];
-                    if (!currentTags.includes(newTag)) {
-                        const updatedTags = [...currentTags, newTag];
-                        updatePlannerTask(taskId, { tags: updatedTags });
-                        // We don't re-render here, the realtime listener will do it
-                    }
-                    addTagInput.value = '';
+            const library = [...(plannerState.tagLibrary || [])];
+            currentTags.forEach(tagName => {
+                if (!library.some(tag => tag.name.toLowerCase() === tagName.toLowerCase())) {
+                    library.push({ name: tagName, color: '#38bdf8' });
                 }
-            };
+            });
+
+            tagsList.innerHTML = library.map(tag => {
+                const isSelected = currentTags.some(name => name.toLowerCase() === tag.name.toLowerCase());
+                const color = tag.color || '#38bdf8';
+                return `
+                    <button type="button" class="tag-chip ${isSelected ? 'selected' : ''}" data-tag-name="${tag.name}" data-tag-color="${color}">
+                        <span class="tag-chip-color" style="background:${color}"></span>
+                        <span class="tag-chip-label">${tag.name}</span>
+                        <i class="fas fa-check tag-chip-check"></i>
+                    </button>
+                `;
+            }).join('');
+
+            modal.dataset.taskId = taskId;
+            delete modal.dataset.reopenTaskId;
+            modal.classList.add('active');
 
             tagsList.onclick = (e) => {
-                if (e.target.classList.contains('remove-tag-btn')) {
-                    const tagText = e.target.parentElement.textContent.trim().slice(0, -1).trim();
-                    const currentTags = Array.isArray(task.tags) ? task.tags : [];
-                    const updatedTags = currentTags.filter(t => t !== tagText);
-                    updatePlannerTask(taskId, { tags: updatedTags });
+                const chip = e.target.closest('.tag-chip');
+                if (!chip) return;
+
+                const tagName = chip.dataset.tagName;
+                const color = chip.dataset.tagColor || '#38bdf8';
+                const current = Array.isArray(task.tags)
+                    ? task.tags.map(tag => (typeof tag === 'string' ? tag : tag?.name)).filter(Boolean)
+                    : [];
+
+                let updatedTags;
+                if (chip.classList.contains('selected')) {
+                    updatedTags = current.filter(name => name.toLowerCase() !== tagName.toLowerCase());
+                    chip.classList.remove('selected');
+                } else {
+                    updatedTags = [...current, tagName];
+                    chip.classList.add('selected');
                 }
+                updatePlannerTask(taskId, { tags: updatedTags });
+                addTagToLibrary(tagName, color);
             };
+
+            if (createTagBtn) {
+                createTagBtn.onclick = () => {
+                    modal.dataset.reopenTaskId = taskId;
+                    modal.classList.remove('active');
+                    openNewTagModal();
+                };
+            }
+        }
+
+        function renderSheetColors(container, selectedColor) {
+            if (!container) return;
+            container.innerHTML = PLANNER_COLOR_OPTIONS.map(color => `
+                <button type="button" class="sheet-color-choice ${color === selectedColor ? 'selected' : ''}" data-color="${color}" style="background:${color}"></button>
+            `).join('');
+        }
+
+        function openNewTagModal(defaults = {}) {
+            const modal = document.getElementById('new-tag-modal');
+            if (!modal) return;
+
+            const form = modal.querySelector('#new-tag-form');
+            const input = modal.querySelector('#new-tag-name');
+            const colorPicker = form.querySelector('[data-color-picker]');
+            const selectedColor = defaults.color || PLANNER_COLOR_OPTIONS[0];
+
+            form.dataset.selectedColor = selectedColor;
+            renderSheetColors(colorPicker, selectedColor);
+            input.value = defaults.name || '';
+
+            modal.classList.add('active');
+            setTimeout(() => input.focus(), 50);
+        }
+
+        function openNewFolderModal(defaults = {}) {
+            const modal = document.getElementById('new-folder-modal');
+            if (!modal) return;
+
+            const form = modal.querySelector('#new-folder-form');
+            const input = modal.querySelector('#new-folder-name');
+            const colorPicker = form.querySelector('[data-color-picker]');
+            const selectedColor = defaults.color || PLANNER_COLOR_OPTIONS[1];
+
+            form.dataset.selectedColor = selectedColor;
+            renderSheetColors(colorPicker, selectedColor);
+            input.value = defaults.name || '';
+
+            modal.classList.add('active');
+            setTimeout(() => input.focus(), 50);
+        }
+
+        function openProjectModal(options = {}) {
+            const modal = document.getElementById('add-project-modal');
+            if (!modal) return;
+
+            const { mode = 'create', listId = null, name = '', color = PLANNER_COLOR_OPTIONS[0] } = options;
+            const form = modal.querySelector('#add-project-form');
+            const input = modal.querySelector('#add-project-name');
+            const titleEl = modal.querySelector('[data-sheet-title]');
+            const doneBtn = form.querySelector('.sheet-done-btn');
+            const colorPicker = form.querySelector('[data-color-picker]');
+
+            form.dataset.selectedColor = color;
+            renderSheetColors(colorPicker, color);
+            input.value = name || '';
+
+            let editInput = form.querySelector('#edit-project-id');
+            if (mode === 'edit' && listId) {
+                if (!editInput) {
+                    editInput = document.createElement('input');
+                    editInput.type = 'hidden';
+                    editInput.id = 'edit-project-id';
+                    form.prepend(editInput);
+                }
+                editInput.value = listId;
+                if (titleEl) titleEl.textContent = 'Edit Project';
+                if (doneBtn) doneBtn.textContent = 'Save';
+            } else {
+                if (editInput) editInput.remove();
+                if (titleEl) titleEl.textContent = 'New Project';
+                if (doneBtn) doneBtn.textContent = 'Done';
+            }
+
+            modal.classList.add('active');
+            setTimeout(() => input.focus(), 50);
         }
 
         /** SUPABASE-ONLY IMPLEMENTATION **/
@@ -5452,12 +6453,12 @@ if (achievementsGrid) {
             renderTaskSelectionList(plannerState.tasks);
           }
 
-          async function addPlannerList(name) {
+          async function addPlannerList(name, color = PLANNER_COLOR_OPTIONS[0]) {
             if (!currentUser || !name.trim()) return;
 
             const { data, error } = await supabase
                 .from('lists')
-                .insert([{
+                .insert([{ 
                     name: name.trim(),
                     created_by: currentUser.id,
                 }])
@@ -5469,8 +6470,11 @@ if (achievementsGrid) {
                 showToast('Failed to create project.', 'error');
                 return;
             }
-            
-            // The realtime listener will handle the main update.
+
+            if (data?.id) {
+                setProjectColor(data.id, color);
+            }
+
             showToast(`Project "${name}" created!`, 'success');
           }
           
@@ -5667,24 +6671,7 @@ if (achievementsGrid) {
         }
 
         function openEditProjectModal(listId, listName) {
-            const modal = document.getElementById('add-project-modal');
-            if (modal) {
-                const form = modal.querySelector('#add-project-form');
-                let hiddenInput = form.querySelector('#edit-project-id');
-                if (!hiddenInput) {
-                    hiddenInput = document.createElement('input');
-                    hiddenInput.type = 'hidden';
-                    hiddenInput.id = 'edit-project-id';
-                    form.prepend(hiddenInput);
-                }
-                hiddenInput.value = listId;
-
-                modal.querySelector('.modal-title').textContent = 'Edit Project';
-                modal.querySelector('#add-project-name').value = listName;
-                modal.querySelector('button[type="submit"]').textContent = 'Save Changes';
-
-                modal.classList.add('active');
-            }
+            openProjectModal({ mode: 'edit', listId, name: listName, color: getProjectColor(listId) });
         }
 
         // --- Leaderboard Infinite Scroll State & Functions ---
@@ -8307,32 +9294,24 @@ if (achievementsGrid) {
                     renderPlannerMainContent();
                     return;
                 }
-                if (target.closest('.planner-action-folder')) {
-                    const modal = document.getElementById('add-project-modal');
-                    if (modal) {
-                        modal.classList.add('active');
-                        document.getElementById('add-project-name').focus();
-                    }
+                if (target.closest('.planner-action-file')) {
+                    openNewFolderModal();
+                    return;
+                }
+                if (target.closest('.planner-action-tag')) {
+                    openNewTagModal();
                     return;
                 }
                 
                 // --- NEW: Add List/Project button ---
                 if (target.closest('#add-list-btn')) {
-                    const modal = document.getElementById('add-project-modal');
-                    if (modal) {
-                        modal.classList.add('active');
-                        document.getElementById('add-project-name').focus();
-                    }
+                    openProjectModal();
                     return;
                 }
                 
                 // --- FIX: Add Project button in List View ---
                 if (target.closest('.planner-add-project-btn')) {
-                    const modal = document.getElementById('add-project-modal');
-                    if (modal) {
-                        modal.classList.add('active');
-                        document.getElementById('add-project-name').focus();
-                    }
+                    openProjectModal();
                     return;
                 }
                 
@@ -8351,7 +9330,51 @@ if (achievementsGrid) {
                 if (target.closest('.category-back-btn')) {
                     plannerState.activeCategory = 'list';
                     plannerState.showCompletedInCategory = false; // Reset toggle on exit
+                    plannerState.completedViewLimit = 5;
                     renderPlannerMainContent();
+                    return;
+                }
+
+                const eventsNavBtn = target.closest('.events-week-nav button');
+                if (eventsNavBtn) {
+                    const direction = eventsNavBtn.dataset.direction;
+                    const current = new Date(plannerState.eventsViewDate || new Date());
+                    if (direction === 'prev') {
+                        current.setDate(current.getDate() - 7);
+                    } else if (direction === 'next') {
+                        current.setDate(current.getDate() + 7);
+                    } else if (direction === 'today') {
+                        current.setTime(Date.now());
+                    }
+                    plannerState.eventsViewDate = current;
+                    renderPlannerEventsView();
+                    return;
+                }
+
+                const eventsDayBtn = target.closest('.events-weekday');
+                if (eventsDayBtn?.dataset.date) {
+                    plannerState.eventsViewDate = new Date(eventsDayBtn.dataset.date);
+                    renderPlannerEventsView();
+                    return;
+                }
+
+                if (target.closest('.events-add-btn')) {
+                    const baseDate = new Date(plannerState.eventsViewDate || new Date());
+                    const dateStr = baseDate.toISOString().split('T')[0];
+                    const modal = document.getElementById('quick-add-task-modal');
+                    if (modal) {
+                        document.getElementById('quick-add-task-date').textContent = baseDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+                        document.getElementById('quick-add-task-date-input').value = dateStr;
+                        modal.classList.add('active');
+                        const input = document.getElementById('quick-add-task-title-input');
+                        if (input) input.focus();
+                    }
+                    return;
+                }
+
+                if (target.closest('.completed-show-more')) {
+                    plannerState.completedViewLimit += 5;
+                    renderPlannerCompletedView();
                     return;
                 }
 
@@ -9763,22 +10786,81 @@ if (achievementsGrid) {
                 const name = input.value.trim();
                 const editIdInput = form.querySelector('#edit-project-id');
                 const editId = editIdInput ? editIdInput.value : null;
+                const selectedColor = form.dataset.selectedColor || PLANNER_COLOR_OPTIONS[0];
 
                 if (name) {
                     if (editId) {
                         await updatePlannerList(editId, name);
+                        setProjectColor(editId, selectedColor);
                     } else {
-                        await addPlannerList(name);
+                        await addPlannerList(name, selectedColor);
                     }
                     form.reset();
-                    if (editIdInput) editIdInput.value = ''; // Clear the edit ID
-                    modal.classList.remove('active');
-                    // Reset modal to "Add" state for next time
-                    setTimeout(() => {
-                        modal.querySelector('.modal-title').textContent = 'New Project';
-                        modal.querySelector('button[type="submit"]').textContent = 'Create Project';
-                        if (editIdInput) editIdInput.remove();
-                    }, 300); // Delay to prevent flicker
+                    form.dataset.selectedColor = PLANNER_COLOR_OPTIONS[0];
+                    renderSheetColors(form.querySelector('[data-color-picker]'), form.dataset.selectedColor);
+                    if (editIdInput) editIdInput.value = '';
+                    if (modal) modal.classList.remove('active');
+                }
+            });
+
+            ael('new-tag-form', 'submit', (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const modal = form.closest('.modal');
+                const input = form.querySelector('#new-tag-name');
+                const name = input.value.trim();
+                const selectedColor = form.dataset.selectedColor || PLANNER_COLOR_OPTIONS[0];
+                if (!name) return;
+                addTagToLibrary(name, selectedColor);
+                showToast('Tag saved!', 'success');
+                form.reset();
+                form.dataset.selectedColor = PLANNER_COLOR_OPTIONS[0];
+                renderSheetColors(form.querySelector('[data-color-picker]'), form.dataset.selectedColor);
+                if (modal) modal.classList.remove('active');
+                const tagsModal = document.getElementById('tags-modal');
+                if (tagsModal) {
+                    const reopenTaskId = tagsModal.dataset.reopenTaskId;
+                    if (reopenTaskId) {
+                        delete tagsModal.dataset.reopenTaskId;
+                        openTagsModal(reopenTaskId);
+                    }
+                }
+            });
+
+            ael('new-folder-form', 'submit', (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const modal = form.closest('.modal');
+                const input = form.querySelector('#new-folder-name');
+                const name = input.value.trim();
+                const selectedColor = form.dataset.selectedColor || PLANNER_COLOR_OPTIONS[1];
+                if (!name) return;
+                addFolderToLibrary(name, selectedColor);
+                showToast('Folder created!', 'success');
+                form.reset();
+                form.dataset.selectedColor = PLANNER_COLOR_OPTIONS[1];
+                renderSheetColors(form.querySelector('[data-color-picker]'), form.dataset.selectedColor);
+                if (modal) modal.classList.remove('active');
+            });
+
+            ael('folder-add-project-trigger', 'click', () => {
+                const folderModal = document.getElementById('new-folder-modal');
+                if (folderModal) folderModal.classList.remove('active');
+                openProjectModal();
+            });
+
+            document.addEventListener('click', (e) => {
+                const colorChoice = e.target.closest('.sheet-color-choice');
+                if (colorChoice) {
+                    const picker = colorChoice.closest('[data-color-picker]');
+                    if (!picker) return;
+                    picker.querySelectorAll('.sheet-color-choice').forEach(btn => {
+                        btn.classList.toggle('selected', btn === colorChoice);
+                    });
+                    const form = colorChoice.closest('form');
+                    if (form) {
+                        form.dataset.selectedColor = colorChoice.dataset.color;
+                    }
                 }
             });
 
@@ -9996,4 +11078,3 @@ async function updateUsername(newName) {
 
 </body>
 </html>
-
