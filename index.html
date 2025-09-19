@@ -1080,6 +1080,15 @@
         .planner-add-project-btn:hover {
             color: #fb923c;
         }
+        .planner-add-project-btn[aria-disabled="true"],
+        .planner-add-project-btn.planner-add-project-btn--disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .planner-add-project-btn[aria-disabled="true"]:hover,
+        .planner-add-project-btn.planner-add-project-btn--disabled:hover {
+            color: inherit;
+        }
         .planner-actions .action-icons {
             display: flex;
             gap: 0.5rem;
@@ -1339,6 +1348,20 @@
             flex-grow: 1;
             color: #e2e8f0;
             font-size: 0.95rem;
+        }
+        .sheet-input select {
+            background: transparent;
+            border: none;
+            outline: none;
+            flex-grow: 1;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            appearance: none;
+            cursor: pointer;
+        }
+        .sheet-input select option {
+            background: #0f172a;
+            color: #e2e8f0;
         }
         .sheet-color-grid {
             display: grid;
@@ -2945,6 +2968,10 @@
                 <div class="sheet-input">
                     <i class="fas fa-pen"></i>
                     <input id="add-project-name" type="text" placeholder="Project name" required>
+                </div>
+                <div class="sheet-input">
+                    <i class="fas fa-folder"></i>
+                    <select id="add-project-folder" required></select>
                 </div>
                 <div class="sheet-color-grid" data-color-picker></div>
             </form>
@@ -5398,6 +5425,69 @@ if (achievementsGrid) {
             savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
         }
 
+        function normalizeFolderName(value) {
+            return typeof value === 'string' ? value.trim() : '';
+        }
+
+        function getProjectFolder(listId) {
+            if (!listId) return '';
+            const list = Array.isArray(plannerState.lists) ? plannerState.lists.find(l => l && l.id === listId) : null;
+            if (list) {
+                const fromList = normalizeFolderName(list.folder || list.folder_name || list.folderName || list.folder_label);
+                if (fromList) return fromList;
+            }
+            const stored = plannerState.projectFolderMap?.[listId];
+            return normalizeFolderName(stored);
+        }
+
+        function setProjectFolder(listId, folderName) {
+            if (!listId) return;
+            const normalized = normalizeFolderName(folderName);
+            plannerState.projectFolderMap = plannerState.projectFolderMap || {};
+            if (normalized) {
+                plannerState.projectFolderMap[listId] = normalized;
+            } else {
+                delete plannerState.projectFolderMap[listId];
+            }
+            savePlannerPreference('plannerProjectFolders', plannerState.projectFolderMap);
+            const list = Array.isArray(plannerState.lists) ? plannerState.lists.find(l => l && l.id === listId) : null;
+            if (list) {
+                if (normalized) {
+                    list.folder = normalized;
+                } else {
+                    delete list.folder;
+                }
+            }
+        }
+
+        function applyFolderAssignmentsToLists(lists) {
+            if (!Array.isArray(lists)) return;
+            let mapChanged = false;
+            plannerState.projectFolderMap = plannerState.projectFolderMap || {};
+            for (const list of lists) {
+                if (!list || !list.id) continue;
+                const fromRecord = normalizeFolderName(list.folder || list.folder_name || list.folderName || list.folder_label);
+                const stored = normalizeFolderName(plannerState.projectFolderMap[list.id]);
+                const folderName = fromRecord || stored;
+                if (folderName) {
+                    list.folder = folderName;
+                    if (stored !== folderName) {
+                        plannerState.projectFolderMap[list.id] = folderName;
+                        mapChanged = true;
+                    }
+                } else if (stored) {
+                    delete plannerState.projectFolderMap[list.id];
+                    mapChanged = true;
+                    delete list.folder;
+                } else {
+                    delete list.folder;
+                }
+            }
+            if (mapChanged) {
+                savePlannerPreference('plannerProjectFolders', plannerState.projectFolderMap);
+            }
+        }
+
         function getTaskDateTime(task) {
             if (!task) return null;
             const fields = ['event_start', 'event_start_time', 'eventDate', 'start_time', 'startTime', 'due_date', 'dueDate'];
@@ -5446,6 +5536,7 @@ if (achievementsGrid) {
             calendarMonth: new Date().getMonth(),
             tagLibrary: loadPlannerPreference('plannerTagLibrary', []),
             folderLibrary: loadPlannerPreference('plannerFolderLibrary', []),
+            projectFolderMap: loadPlannerPreference('plannerProjectFolders', {}),
             projectColorMap: loadPlannerPreference('plannerProjectColors', {}),
             eventsViewDate: new Date(),
             completedViewLimit: 5,
@@ -5473,6 +5564,16 @@ if (achievementsGrid) {
         }).filter(Boolean);
         savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
         savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
+        const sanitizedProjectFolders = {};
+        Object.entries(plannerState.projectFolderMap || {}).forEach(([listId, folderName]) => {
+            const normalizedId = listId;
+            const trimmedName = normalizeFolderName(folderName);
+            if (normalizedId && trimmedName) {
+                sanitizedProjectFolders[normalizedId] = trimmedName;
+            }
+        });
+        plannerState.projectFolderMap = sanitizedProjectFolders;
+        savePlannerPreference('plannerProjectFolders', plannerState.projectFolderMap);
         
         async function setupPlannerListeners() {
             if (!currentUser || !isValidUUID(currentUser.id)) return;
@@ -5490,6 +5591,7 @@ if (achievementsGrid) {
               console.error('Failed to load lists:', listsError);
             } else {
               plannerState.lists = lists || [];
+              applyFolderAssignmentsToLists(plannerState.lists);
               renderPlannerPage();
             }
           
@@ -5521,16 +5623,22 @@ if (achievementsGrid) {
                   if (eventType === 'INSERT') {
                     if (!plannerState.lists.some(l => l.id === newRecord.id)) {
                         plannerState.lists.push(newRecord);
+                        applyFolderAssignmentsToLists([newRecord]);
                     }
                   } else if (eventType === 'UPDATE') {
                     const index = plannerState.lists.findIndex(l => l.id === recordId);
                     if (index > -1) {
                         plannerState.lists[index] = newRecord;
+                        applyFolderAssignmentsToLists([plannerState.lists[index]]);
                     }
                   } else if (eventType === 'DELETE') {
                     plannerState.lists = plannerState.lists.filter(l => l.id !== recordId);
                     if (plannerState.activeListId === recordId) {
                         plannerState.activeListId = 'inbox'; // Fallback to inbox if active list is deleted
+                    }
+                    if (plannerState.projectFolderMap && plannerState.projectFolderMap[recordId]) {
+                        delete plannerState.projectFolderMap[recordId];
+                        savePlannerPreference('plannerProjectFolders', plannerState.projectFolderMap);
                     }
                   }
                   renderPlannerPage();
@@ -5680,7 +5788,7 @@ if (achievementsGrid) {
         
           function renderPlannerListView(allTasks) {
             const mainContent = document.getElementById('planner-main-content');
-          
+
             const today = new Date(); today.setHours(0,0,0,0);
             const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
           
@@ -5709,7 +5817,8 @@ if (achievementsGrid) {
             const flaggedTasks = allTasks.filter(t => t.flagged && !t.completed);
             const completedTasks = allTasks.filter(t => t.completed);
             const inboxTasks = allTasks.filter(t => t.list_id === null && !t.completed);
-          
+            const hasFolders = Array.isArray(plannerState.folderLibrary) && plannerState.folderLibrary.length > 0;
+
             const categories = [
               { name: 'Today', icon: 'fa-sun', color: 'bg-yellow-500', count: todayTasks.length },
               { name: 'Tomorrow', icon: 'fa-cloud-sun', color: 'bg-orange-400', count: tomorrowTasks.length },
@@ -5737,7 +5846,7 @@ if (achievementsGrid) {
                   `).join('')}
                 </div>
                 <div class="planner-actions">
-                  <button class="planner-add-project-btn">
+                  <button class="planner-add-project-btn${hasFolders ? '' : ' planner-add-project-btn--disabled'}" ${hasFolders ? '' : 'aria-disabled="true" title="Create a folder to add a project"'}>
                     <i class="fas fa-plus"></i>
                     <span class="label">Add Project</span>
                   </button>
@@ -6633,6 +6742,47 @@ if (achievementsGrid) {
             `).join('');
         }
 
+        function populateProjectFolderSelect(selectEl, currentFolder = '') {
+            if (!selectEl) return;
+            const normalizedCurrent = normalizeFolderName(currentFolder);
+            const folders = Array.isArray(plannerState.folderLibrary) ? plannerState.folderLibrary : [];
+            const names = [];
+            const seen = new Set();
+
+            if (normalizedCurrent) {
+                names.push(normalizedCurrent);
+                seen.add(normalizedCurrent.toLowerCase());
+            }
+
+            folders.forEach(folder => {
+                if (!folder || typeof folder.name !== 'string') return;
+                const name = folder.name.trim();
+                if (!name || seen.has(name.toLowerCase())) return;
+                names.push(name);
+                seen.add(name.toLowerCase());
+            });
+
+            if (!names.length) {
+                selectEl.innerHTML = '';
+                return;
+            }
+
+            selectEl.innerHTML = '';
+            names.forEach((name, index) => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                if (normalizedCurrent) {
+                    option.selected = name.toLowerCase() === normalizedCurrent.toLowerCase();
+                } else if (index === 0) {
+                    option.selected = true;
+                }
+                selectEl.appendChild(option);
+            });
+
+            selectEl.required = true;
+        }
+
         function openNewTagModal(defaults = {}) {
             const modal = document.getElementById('new-tag-modal');
             if (!modal) return;
@@ -6672,8 +6822,16 @@ if (achievementsGrid) {
             if (!modal) return;
 
             const { mode = 'create', listId = null, name = '', color = PLANNER_COLOR_OPTIONS[0] } = options;
+            const isEditMode = mode === 'edit' && !!listId;
+            const hasFolders = Array.isArray(plannerState.folderLibrary) && plannerState.folderLibrary.length > 0;
+            if (!isEditMode && !hasFolders) {
+                showToast('Create a folder before adding a project.', 'error');
+                openNewFolderModal();
+                return;
+            }
             const form = modal.querySelector('#add-project-form');
             const input = modal.querySelector('#add-project-name');
+            const folderSelect = modal.querySelector('#add-project-folder');
             const titleEl = modal.querySelector('[data-sheet-title]');
             const doneBtn = form.querySelector('.sheet-done-btn');
             const colorPicker = form.querySelector('[data-color-picker]');
@@ -6681,9 +6839,19 @@ if (achievementsGrid) {
             form.dataset.selectedColor = color;
             renderSheetColors(colorPicker, color);
             input.value = name || '';
+            if (folderSelect) {
+                const currentFolder = isEditMode ? getProjectFolder(listId) : '';
+                populateProjectFolderSelect(folderSelect, currentFolder);
+                if (!folderSelect.options.length) {
+                    showToast('Create a folder before editing this project.', 'error');
+                    modal.classList.remove('active');
+                    openNewFolderModal();
+                    return;
+                }
+            }
 
             let editInput = form.querySelector('#edit-project-id');
-            if (mode === 'edit' && listId) {
+            if (isEditMode) {
                 if (!editInput) {
                     editInput = document.createElement('input');
                     editInput.type = 'hidden';
@@ -6749,12 +6917,12 @@ if (achievementsGrid) {
             renderTaskSelectionList(plannerState.tasks);
           }
 
-          async function addPlannerList(name, color = PLANNER_COLOR_OPTIONS[0]) {
+          async function addPlannerList(name, color = PLANNER_COLOR_OPTIONS[0], folderName = '') {
             if (!currentUser || !name.trim()) return;
 
             const { data, error } = await supabase
                 .from('lists')
-                .insert([{ 
+                .insert([{
                     name: name.trim(),
                     created_by: currentUser.id,
                 }])
@@ -6769,6 +6937,7 @@ if (achievementsGrid) {
 
             if (data?.id) {
                 setProjectColor(data.id, color);
+                setProjectFolder(data.id, folderName);
             }
 
             showToast(`Project "${name}" created!`, 'success');
@@ -11094,17 +11263,30 @@ if (achievementsGrid) {
                 const editIdInput = form.querySelector('#edit-project-id');
                 const editId = editIdInput ? editIdInput.value : null;
                 const selectedColor = form.dataset.selectedColor || PLANNER_COLOR_OPTIONS[0];
+                const folderSelect = form.querySelector('#add-project-folder');
+                const folderName = folderSelect ? folderSelect.value.trim() : '';
+
+                if (!folderName) {
+                    showToast('Please choose a folder for this project.', 'error');
+                    if (folderSelect) folderSelect.focus();
+                    return;
+                }
 
                 if (name) {
                     if (editId) {
                         await updatePlannerList(editId, name);
                         setProjectColor(editId, selectedColor);
+                        setProjectFolder(editId, folderName);
+                        renderPlannerPage();
                     } else {
-                        await addPlannerList(name, selectedColor);
+                        await addPlannerList(name, selectedColor, folderName);
                     }
                     form.reset();
                     form.dataset.selectedColor = PLANNER_COLOR_OPTIONS[0];
                     renderSheetColors(form.querySelector('[data-color-picker]'), form.dataset.selectedColor);
+                    if (folderSelect) {
+                        populateProjectFolderSelect(folderSelect);
+                    }
                     if (editIdInput) editIdInput.value = '';
                     if (modal) modal.classList.remove('active');
                 }
