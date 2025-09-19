@@ -5707,16 +5707,17 @@ if (achievementsGrid) {
             });
             const plannedTasks = allTasks.filter(t => t.due_date && !t.completed);
             const flaggedTasks = allTasks.filter(t => t.flagged && !t.completed);
+            const eventTasks = allTasks.filter(t => getTaskDateTime(t) && !t.completed);
             const completedTasks = allTasks.filter(t => t.completed);
             const inboxTasks = allTasks.filter(t => t.list_id === null && !t.completed);
-          
+
             const categories = [
               { name: 'Today', icon: 'fa-sun', color: 'bg-yellow-500', count: todayTasks.length },
               { name: 'Tomorrow', icon: 'fa-cloud-sun', color: 'bg-orange-400', count: tomorrowTasks.length },
               { name: 'This Week', icon: 'fa-calendar-week', color: 'bg-purple-500', count: thisWeekTasks.length },
               { name: 'Planned', icon: 'fa-calendar-alt', color: 'bg-blue-500', count: plannedTasks.length },
               { name: 'Flagged', icon: 'fa-flag', color: 'bg-red-500', count: flaggedTasks.length },
-              { name: 'Events', icon: 'fa-calendar-star', color: 'bg-green-500', count: 0 },
+              { name: 'Events', icon: 'fa-calendar-star', color: 'bg-green-500', count: eventTasks.length },
               { name: 'Completed', icon: 'fa-check-circle', color: 'bg-gray-500', count: completedTasks.length },
               { name: 'Tasks', icon: 'fa-tasks', color: 'bg-indigo-500', count: inboxTasks.length },
             ];
@@ -6799,12 +6800,20 @@ if (achievementsGrid) {
           }
           
           function camelToSnake(obj) {
-            const map = { listId: 'list_id', createdAt: 'created_at', createdBy: 'created_by', dueDate: 'due_date' };
+            const map = {
+              listId: 'list_id',
+              createdAt: 'created_at',
+              createdBy: 'created_by',
+              dueDate: 'due_date',
+              completedAt: 'completed_at',
+              pomodorosCompleted: 'pomodoros_completed',
+              pomodorosEstimated: 'pomodoros_estimated'
+            };
             const out = {};
             for (const [k, v] of Object.entries(obj || {})) out[map[k] || k] = v;
             return out;
           }
-          
+
           async function updatePlannerTask(taskId, data) {
             if (!currentUser || !taskId) return;
           
@@ -6814,21 +6823,37 @@ if (achievementsGrid) {
             }
 
             const payload = camelToSnake(data);
-          
-            const { error } = await supabase
+
+            const { data: updatedRows, error } = await supabase
               .from('tasks')
               .update(payload)
-              .eq('id', taskId);
-          
+              .eq('id', taskId)
+              .select();
+
             if (error) {
               console.error('Error updating task:', error);
               showToast('Failed to update task.', 'error');
+              return;
+            }
+
+            const updatedTask = Array.isArray(updatedRows) ? updatedRows[0] : updatedRows;
+            if (updatedTask) {
+              const index = plannerState.tasks.findIndex(t => t.id === taskId);
+              if (index > -1) {
+                plannerState.tasks[index] = updatedTask;
+              } else {
+                plannerState.tasks.push(updatedTask);
+              }
+
+              renderPlannerPage();
+              renderPlannerTaskDetails();
+              renderTaskSelectionList(plannerState.tasks);
             }
           }
-          
+
           async function deletePlannerTask(taskId) {
             if (!currentUser || !taskId) return;
-          
+
             const { error } = await supabase
               .from('tasks')
               .delete()
@@ -6839,9 +6864,10 @@ if (achievementsGrid) {
               showToast('Failed to delete task.', 'error');
               return;
             }
-          
+
             plannerState.selectedTaskId = null;
             plannerState.tasks = plannerState.tasks.filter(t => t.id !== taskId);
+            renderPlannerPage();
             renderPlannerTaskDetails();
             renderTaskSelectionList(plannerState.tasks);
           }
