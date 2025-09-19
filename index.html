@@ -1562,6 +1562,15 @@
             padding-left: 0.5rem;
             min-height: 600px;
         }
+        .events-column-empty {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 12px;
+            background: rgba(148, 163, 184, 0.08);
+            color: #94a3b8;
+            font-size: 0.8rem;
+            text-align: center;
+        }
         .event-block {
             position: absolute;
             left: 0.5rem;
@@ -1581,6 +1590,9 @@
         .event-block strong {
             font-size: 0.95rem;
             font-weight: 600;
+        }
+        .event-block {
+            cursor: pointer;
         }
 
         /* Completed View */
@@ -1618,6 +1630,7 @@
             padding: 0.85rem 1rem;
             margin-bottom: 0.75rem;
             box-shadow: 0 12px 25px rgba(2, 6, 23, 0.4);
+            cursor: pointer;
         }
         .completed-task-icon {
             width: 34px;
@@ -1645,6 +1658,26 @@
         .completed-task-time {
             font-size: 0.8rem;
             color: #e2e8f0;
+        }
+        .completed-task-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .completed-task-restore {
+            width: 32px;
+            height: 32px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(20, 184, 166, 0.15);
+            color: #2dd4bf;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        .completed-task-restore:hover {
+            background: rgba(20, 184, 166, 0.3);
+            color: #5eead4;
         }
         .completed-show-more {
             margin: 1.5rem auto 0;
@@ -5968,7 +6001,7 @@ if (achievementsGrid) {
                     const timeLabel = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const durationLabel = formatMinutesFriendly(durationMinutes);
                     return `
-                        <div class="event-block" data-task-id="${task.id}" style="top:${topOffset}px;height:${blockHeight}px;background:linear-gradient(135deg, ${color}, ${color}cc);">
+                        <div class="event-block" data-task-id="${task.id}" title="${task.title}" style="top:${topOffset}px;height:${blockHeight}px;background:linear-gradient(135deg, ${color}, ${color}cc);">
                             <small>${timeLabel}</small>
                             <strong>${task.title}</strong>
                             <span class="text-xs opacity-80">${durationLabel}</span>
@@ -5978,7 +6011,7 @@ if (achievementsGrid) {
 
                 return `
                     <div class="events-column" data-date="${iso}">
-                        ${columnEvents}
+                        ${columnEvents || '<div class="events-column-empty">No events</div>'}
                     </div>
                 `;
             }).join('');
@@ -6091,7 +6124,12 @@ if (achievementsGrid) {
                                 <strong>${task.title}</strong>
                                 <span>${durationLabel}</span>
                             </div>
-                            <div class="completed-task-time">${timeLabel}</div>
+                            <div class="completed-task-actions">
+                                <div class="completed-task-time">${timeLabel}</div>
+                                <button class="completed-task-restore" title="Mark as incomplete">
+                                    <i class="fas fa-rotate-left"></i>
+                                </button>
+                            </div>
                         </div>
                     `;
                 }).join('');
@@ -6799,7 +6837,18 @@ if (achievementsGrid) {
           }
           
           function camelToSnake(obj) {
-            const map = { listId: 'list_id', createdAt: 'created_at', createdBy: 'created_by', dueDate: 'due_date' };
+            const map = {
+              listId: 'list_id',
+              createdAt: 'created_at',
+              createdBy: 'created_by',
+              dueDate: 'due_date',
+              completedAt: 'completed_at',
+              eventDate: 'event_date',
+              eventStart: 'event_start',
+              eventEnd: 'event_end',
+              startTime: 'start_time',
+              endTime: 'end_time'
+            };
             const out = {};
             for (const [k, v] of Object.entries(obj || {})) out[map[k] || k] = v;
             return out;
@@ -9716,6 +9765,16 @@ if (achievementsGrid) {
                     return;
                 }
 
+                const restoreBtn = target.closest('.completed-task-restore');
+                if (restoreBtn) {
+                    const taskItem = restoreBtn.closest('.completed-task-item');
+                    const taskId = taskItem?.dataset.taskId;
+                    if (taskId) {
+                        updatePlannerTask(taskId, { completed: false, completedAt: null });
+                    }
+                    return;
+                }
+
                 // --- START: MODIFIED COMPLETION LOGIC ---
                 // --- NEW: Category View Checkbox ---
                 const categoryCheckbox = target.closest('.task-checkbox-category');
@@ -9790,7 +9849,7 @@ if (achievementsGrid) {
                 }
 
                 // Task item selection (to open details)
-                const taskItem = target.closest('.task-item, .kanban-card, .calendar-task, .category-task-item');
+                const taskItem = target.closest('.task-item, .kanban-card, .calendar-task, .category-task-item, .event-block, .completed-task-item');
                 if (taskItem && !target.matches('input[type="checkbox"]') && !target.closest('.task-play-btn')) {
                     const taskId = taskItem.dataset.taskId;
                     if (taskId !== plannerState.selectedTaskId) {
