@@ -5217,15 +5217,38 @@ let pauseStartTime = 0;
             if(profileAnonView) profileAnonView.classList.add('hidden');
             // --- END: MODIFIED PROFILE UI LOGIC ---
 
-            currentUserData = userData; 
+            currentUserData = userData;
             const username = userData.username || 'Anonymous';
             const email = userData.email || '';
             const photoURL = userData.photo_url;
             const studyGoal = userData.study_goal_hours;
 
+            if (typeof plannerState !== 'undefined') {
+                let plannerNeedsRender = false;
+                if (Object.prototype.hasOwnProperty.call(userData, 'planner_tag_library')) {
+                    const profileTags = normalizeTagLibrary(userData.planner_tag_library || []);
+                    if (!librariesEqual(plannerState.tagLibrary, profileTags)) {
+                        plannerState.tagLibrary = profileTags;
+                        savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
+                        plannerNeedsRender = true;
+                    }
+                }
+                if (Object.prototype.hasOwnProperty.call(userData, 'planner_folder_library')) {
+                    const profileFolders = normalizeFolderLibrary(userData.planner_folder_library || []);
+                    if (!librariesEqual(plannerState.folderLibrary, profileFolders)) {
+                        plannerState.folderLibrary = profileFolders;
+                        savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
+                        plannerNeedsRender = true;
+                    }
+                }
+                if (plannerNeedsRender) {
+                    renderPlannerPage();
+                }
+            }
+
             document.getElementById('profile-page-name').textContent = username;
             document.getElementById('profile-page-email').textContent = email;
-            
+
             const profileAvatar = document.getElementById('profile-page-avatar');
             
             // FIX: Make avatar updates more robust by checking if elements exist.
@@ -5371,6 +5394,95 @@ if (achievementsGrid) {
         ];
         const LIST_FOLDER_COLUMNS = ['folder', 'folder_name', 'folderName', 'folder_label'];
 
+        function normalizeTagLibrary(tags) {
+            const map = new Map();
+            (Array.isArray(tags) ? tags : []).forEach(tag => {
+                if (!tag) return;
+                const rawName = typeof tag === 'string' ? tag : tag.name || tag.label;
+                const name = typeof rawName === 'string' ? rawName.trim() : '';
+                if (!name) return;
+                const key = name.toLowerCase();
+                const color = (typeof tag === 'object' && tag.color) ? tag.color : PLANNER_COLOR_OPTIONS[0];
+                map.set(key, { name, color });
+            });
+            return Array.from(map.values());
+        }
+
+        function normalizeFolderLibrary(folders) {
+            const map = new Map();
+            (Array.isArray(folders) ? folders : []).forEach(folder => {
+                if (!folder) return;
+                const rawName = typeof folder === 'string' ? folder : folder.name;
+                const name = typeof rawName === 'string' ? rawName.trim() : '';
+                if (!name) return;
+                const key = name.toLowerCase();
+                const color = (typeof folder === 'object' && folder.color) ? folder.color : PLANNER_COLOR_OPTIONS[1];
+                map.set(key, { name, color });
+            });
+            return Array.from(map.values());
+        }
+
+        function librariesEqual(a = [], b = []) {
+            if (!Array.isArray(a) || !Array.isArray(b)) return false;
+            if (a.length !== b.length) return false;
+            const map = new Map();
+            a.forEach(entry => {
+                if (!entry || !entry.name) return;
+                map.set(entry.name.toLowerCase(), entry.color || '');
+            });
+            for (const entry of b) {
+                if (!entry || !entry.name) return false;
+                const key = entry.name.toLowerCase();
+                if (!map.has(key)) return false;
+                if ((map.get(key) || '') !== (entry.color || '')) return false;
+                map.delete(key);
+            }
+            return map.size === 0;
+        }
+
+        let persistPlannerLibrariesTimeout = null;
+
+        function schedulePersistPlannerLibraries() {
+            if (!currentUser || currentUser.isAnonymous) return;
+            if (persistPlannerLibrariesTimeout) clearTimeout(persistPlannerLibrariesTimeout);
+            persistPlannerLibrariesTimeout = setTimeout(() => {
+                persistPlannerLibrariesTimeout = null;
+                persistPlannerLibraries();
+            }, 400);
+        }
+
+        async function persistPlannerLibraries() {
+            if (!currentUser || currentUser.isAnonymous) return;
+            if (typeof plannerState === 'undefined') return;
+            try {
+                await updateUserPrivate(currentUser.id, {
+                    planner_tag_library: plannerState.tagLibrary,
+                    planner_folder_library: plannerState.folderLibrary
+                });
+            } catch (error) {
+                console.warn('Failed to persist planner libraries', error);
+            }
+        }
+
+        function mergeTagsFromTasks(tasks) {
+            if (typeof plannerState === 'undefined') return;
+            const collected = [];
+            (Array.isArray(tasks) ? tasks : []).forEach(task => {
+                const tags = Array.isArray(task?.tags) ? task.tags : [];
+                tags.forEach(tag => collected.push(tag));
+            });
+            if (!collected.length) return;
+            const merged = normalizeTagLibrary([
+                ...(Array.isArray(plannerState.tagLibrary) ? plannerState.tagLibrary : []),
+                ...collected
+            ]);
+            if (!librariesEqual(plannerState.tagLibrary, merged)) {
+                plannerState.tagLibrary = merged;
+                savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
+                schedulePersistPlannerLibraries();
+            }
+        }
+
         function loadPlannerPreference(key, fallback) {
             try {
                 if (typeof window === 'undefined' || !window.localStorage) return fallback;
@@ -5419,33 +5531,24 @@ if (achievementsGrid) {
 
         function addTagToLibrary(name, color) {
             if (!name) return;
-            plannerState.tagLibrary = plannerState.tagLibrary || [];
-            const trimmedName = name.trim();
-            if (!trimmedName) return;
-            const existingIndex = plannerState.tagLibrary.findIndex(tag => tag.name.toLowerCase() === trimmedName.toLowerCase());
-            const tagData = { name: trimmedName, color };
-            if (existingIndex >= 0) {
-                plannerState.tagLibrary[existingIndex] = tagData;
-            } else {
-                plannerState.tagLibrary.push(tagData);
-            }
+            plannerState.tagLibrary = normalizeTagLibrary([
+                ...(Array.isArray(plannerState.tagLibrary) ? plannerState.tagLibrary : []),
+                { name, color }
+            ]);
             savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
+            schedulePersistPlannerLibraries();
         }
 
         function addFolderToLibrary(name, color) {
             if (!name) return;
-            plannerState.folderLibrary = plannerState.folderLibrary || [];
+            plannerState.folderLibrary = normalizeFolderLibrary([
+                ...(Array.isArray(plannerState.folderLibrary) ? plannerState.folderLibrary : []),
+                { name, color }
+            ]);
             const trimmedName = name.trim();
-            if (!trimmedName) return;
-            const existingIndex = plannerState.folderLibrary.findIndex(folder => folder.name.toLowerCase() === trimmedName.toLowerCase());
-            const folderData = { name: trimmedName, color };
-            if (existingIndex >= 0) {
-                plannerState.folderLibrary[existingIndex] = folderData;
-            } else {
-                plannerState.folderLibrary.push(folderData);
-            }
-            plannerState.lastCreatedFolderName = trimmedName;
+            if (trimmedName) plannerState.lastCreatedFolderName = trimmedName;
             savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
+            schedulePersistPlannerLibraries();
         }
         function detectListFolderColumnFromData(lists = []) {
             if (plannerState.listFolderColumn) return plannerState.listFolderColumn;
@@ -5584,26 +5687,8 @@ if (achievementsGrid) {
             completedViewLimit: 5,
         };
 
-        plannerState.tagLibrary = (plannerState.tagLibrary || []).map(tag => {
-            if (!tag) return null;
-            if (typeof tag === 'string') return { name: tag, color: PLANNER_COLOR_OPTIONS[0] };
-            if (typeof tag === 'object') {
-                const name = tag.name || (typeof tag.label === 'string' ? tag.label : null);
-                if (!name) return null;
-                return { name, color: tag.color || PLANNER_COLOR_OPTIONS[0] };
-            }
-            return null;
-        }).filter(Boolean);
-        plannerState.folderLibrary = (plannerState.folderLibrary || []).map(folder => {
-            if (!folder) return null;
-            if (typeof folder === 'string') return { name: folder, color: PLANNER_COLOR_OPTIONS[1] };
-            if (typeof folder === 'object') {
-                const name = folder.name || null;
-                if (!name) return null;
-                return { name, color: folder.color || PLANNER_COLOR_OPTIONS[1] };
-            }
-            return null;
-        }).filter(Boolean);
+        plannerState.tagLibrary = normalizeTagLibrary(plannerState.tagLibrary);
+        plannerState.folderLibrary = normalizeFolderLibrary(plannerState.folderLibrary);
         savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
         savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
         
@@ -5636,6 +5721,7 @@ if (achievementsGrid) {
               console.error('Failed to load tasks:', tasksError);
             } else {
               plannerState.tasks = tasks || [];
+              mergeTagsFromTasks(plannerState.tasks);
               renderPlannerPage();
               renderTaskSelectionList(plannerState.tasks);
             }
@@ -5712,9 +5798,10 @@ if (achievementsGrid) {
                         plannerState.selectedTaskId = null;
                     }
                   }
-                  
+
                   // Now re-render with the updated local state.
                   // This preserves the selectedTaskId set by addPlannerTask.
+                  mergeTagsFromTasks([newRecord]);
                   renderPlannerPage();
                   renderTaskSelectionList(plannerState.tasks);
                 }
