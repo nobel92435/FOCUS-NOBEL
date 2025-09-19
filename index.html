@@ -6779,7 +6779,7 @@ if (achievementsGrid) {
             delete modal.dataset.reopenTaskId;
             modal.classList.add('active');
 
-            tagsList.onclick = (e) => {
+            tagsList.onclick = async (e) => {
                 const chip = e.target.closest('.tag-chip');
                 if (!chip) return;
 
@@ -6797,7 +6797,12 @@ if (achievementsGrid) {
                     updatedTags = [...current, tagName];
                     chip.classList.add('selected');
                 }
-                updatePlannerTask(taskId, { tags: updatedTags });
+                await updatePlannerTask(taskId, { tags: updatedTags });
+
+                // Immediately reflect the updated tags locally so subsequent selections
+                // work with the latest state even before realtime sync completes.
+                task.tags = updatedTags;
+                renderPlannerTaskDetails();
                 addTagToLibrary(tagName, color);
             };
 
@@ -10085,9 +10090,14 @@ if (achievementsGrid) {
                 const taskItem = target.closest('.task-item, .kanban-card, .calendar-task, .category-task-item, .event-block, .completed-task-item');
                 if (taskItem && !target.matches('input[type="checkbox"]') && !target.closest('.task-play-btn')) {
                     const taskId = taskItem.dataset.taskId;
-                    if (taskId !== plannerState.selectedTaskId) {
+                    if (taskId) {
+                        const wasSelected = plannerState.selectedTaskId === taskId;
                         plannerState.selectedTaskId = taskId;
-                        renderPlannerPage();
+                        if (!wasSelected) {
+                            renderPlannerPage();
+                        } else {
+                            renderPlannerTaskDetails();
+                        }
                     }
                     return;
                 }
@@ -11343,39 +11353,6 @@ if (achievementsGrid) {
             });
 
         // --- END OF UNIFIED PLANNER LISTENERS ---
-
-        ael('quick-add-task-form', 'submit', async (e) => {
-            e.preventDefault();
-                if (!currentUser) return;
-                const modal = document.getElementById('add-subject-modal');
-                const subjectName = document.getElementById('add-subject-name').value.trim();
-                const colorEl = document.querySelector('#add-subject-modal .color-dot.selected');
-                
-                if (!subjectName || !colorEl) {
-                    showToast('Please provide a name and select a color.', 'error');
-                    return;
-                }
-                const color = colorEl.dataset.color;
-
-                const { data: lastSubject } = await supabase
-                    .from('subjects')
-                    .select('order')
-                    .eq('profile_id', currentUser.id)
-                    .order('order', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-                const lastOrder = lastSubject?.order ?? -1;
-
-                await supabase.from('subjects').insert({
-                    profile_id: currentUser.id,
-                    name: subjectName,
-                    color,
-                    order: lastOrder + 1
-                });
-                modal.classList.remove('active');
-                showToast(`Subject "${subjectName}" added!`, 'success');
-            });
-
             // Ranking Page Tabs
             ael('page-ranking', 'click', (e) => {
                 const tab = e.target.closest('.ranking-tab-btn');
