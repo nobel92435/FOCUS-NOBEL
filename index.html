@@ -5393,6 +5393,31 @@ if (achievementsGrid) {
             }
         }
 
+        function normalizeTagLibraryEntry(tag) {
+            if (!tag) return null;
+            if (typeof tag === 'string') {
+                return { name: tag, color: PLANNER_COLOR_OPTIONS[0] };
+            }
+            if (typeof tag === 'object') {
+                const name = tag.name || (typeof tag.label === 'string' ? tag.label : null);
+                if (!name) return null;
+                return { name, color: tag.color || PLANNER_COLOR_OPTIONS[0] };
+            }
+            return null;
+        }
+
+        function loadPlannerTagLibrary() {
+            const stored = loadPlannerPreference('plannerTagLibrary', []);
+            if (!Array.isArray(stored)) return [];
+            return stored.map(normalizeTagLibraryEntry).filter(Boolean);
+        }
+
+        function hydratePlannerTagLibrary() {
+            const normalized = loadPlannerTagLibrary();
+            plannerState.tagLibrary = normalized;
+            return normalized;
+        }
+
         function hashString(value = '') {
             let hash = 0;
             for (let i = 0; i < value.length; i++) {
@@ -5419,16 +5444,18 @@ if (achievementsGrid) {
 
         function addTagToLibrary(name, color) {
             if (!name) return;
-            plannerState.tagLibrary = plannerState.tagLibrary || [];
             const trimmedName = name.trim();
             if (!trimmedName) return;
-            const existingIndex = plannerState.tagLibrary.findIndex(tag => tag.name.toLowerCase() === trimmedName.toLowerCase());
-            const tagData = { name: trimmedName, color };
+            const normalizedColor = color || PLANNER_COLOR_OPTIONS[0];
+            const library = hydratePlannerTagLibrary();
+            const existingIndex = library.findIndex(tag => tag.name.toLowerCase() === trimmedName.toLowerCase());
+            const tagData = normalizeTagLibraryEntry({ name: trimmedName, color: normalizedColor });
             if (existingIndex >= 0) {
-                plannerState.tagLibrary[existingIndex] = tagData;
+                library[existingIndex] = tagData;
             } else {
-                plannerState.tagLibrary.push(tagData);
+                library.push(tagData);
             }
+            plannerState.tagLibrary = library;
             savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
         }
 
@@ -5584,16 +5611,7 @@ if (achievementsGrid) {
             completedViewLimit: 5,
         };
 
-        plannerState.tagLibrary = (plannerState.tagLibrary || []).map(tag => {
-            if (!tag) return null;
-            if (typeof tag === 'string') return { name: tag, color: PLANNER_COLOR_OPTIONS[0] };
-            if (typeof tag === 'object') {
-                const name = tag.name || (typeof tag.label === 'string' ? tag.label : null);
-                if (!name) return null;
-                return { name, color: tag.color || PLANNER_COLOR_OPTIONS[0] };
-            }
-            return null;
-        }).filter(Boolean);
+        plannerState.tagLibrary = loadPlannerTagLibrary();
         plannerState.folderLibrary = (plannerState.folderLibrary || []).map(folder => {
             if (!folder) return null;
             if (typeof folder === 'string') return { name: folder, color: PLANNER_COLOR_OPTIONS[1] };
@@ -5731,6 +5749,8 @@ if (achievementsGrid) {
 
         function renderPlannerPage() {
             if (!document.getElementById('page-planner').classList.contains('active')) return;
+
+            hydratePlannerTagLibrary();
 
             renderPlannerSidebar();
             renderPlannerMainContent();
@@ -6303,7 +6323,7 @@ if (achievementsGrid) {
 
             const folders = Array.isArray(plannerState.folderLibrary) ? plannerState.folderLibrary : [];
             const projects = Array.isArray(plannerState.lists) ? plannerState.lists : [];
-            const tags = Array.isArray(plannerState.tagLibrary) ? plannerState.tagLibrary : [];
+            const tags = hydratePlannerTagLibrary();
             const tasks = Array.isArray(plannerState.tasks) ? plannerState.tasks : [];
 
             const taskCounts = new Map();
@@ -6623,10 +6643,11 @@ if (achievementsGrid) {
             // FIX: Ensure 'tags' is always an array to prevent .map() error.
             // The error occurs if 'selectedTask.tags' is null, undefined, or not an array.
             const tags = Array.isArray(selectedTask.tags) ? selectedTask.tags : [];
+            const tagLibrary = hydratePlannerTagLibrary();
             const tagsHtml = tags.map(rawTag => {
                 const tagName = typeof rawTag === 'string' ? rawTag : rawTag?.name;
                 if (!tagName) return '';
-                const libraryTag = (plannerState.tagLibrary || []).find(t => t.name.toLowerCase() === tagName.toLowerCase());
+                const libraryTag = tagLibrary.find(t => t.name.toLowerCase() === tagName.toLowerCase());
                 const color = libraryTag?.color || '#6366f1';
                 const textColor = '#e2e8f0';
                 return `
@@ -6756,7 +6777,7 @@ if (achievementsGrid) {
                 ? task.tags.map(tag => (typeof tag === 'string' ? tag : tag?.name)).filter(Boolean)
                 : [];
 
-            const library = [...(plannerState.tagLibrary || [])];
+            const library = [...hydratePlannerTagLibrary()];
             currentTags.forEach(tagName => {
                 if (!library.some(tag => tag.name.toLowerCase() === tagName.toLowerCase())) {
                     library.push({ name: tagName, color: '#38bdf8' });
