@@ -5377,6 +5377,7 @@ if (achievementsGrid) {
                 const raw = window.localStorage.getItem(key);
                 if (!raw) return fallback;
                 const parsed = JSON.parse(raw);
+                if (typeof parsed !== typeof fallback) return fallback;
                 return parsed ?? fallback;
             } catch (error) {
                 console.warn('Failed to load planner preference', key, error);
@@ -5390,6 +5391,150 @@ if (achievementsGrid) {
                 window.localStorage.setItem(key, JSON.stringify(value));
             } catch (error) {
                 console.warn('Failed to save planner preference', key, error);
+            }
+        }
+
+        const DEFAULT_PLANNER_PREFERENCES = {
+            tagLibrary: loadPlannerPreference('plannerTagLibrary', []),
+            folderLibrary: loadPlannerPreference('plannerFolderLibrary', []),
+            projectColorMap: loadPlannerPreference('plannerProjectColors', {})
+        };
+
+        let plannerPreferencesCache = {
+            tagLibrary: DEFAULT_PLANNER_PREFERENCES.tagLibrary,
+            folderLibrary: DEFAULT_PLANNER_PREFERENCES.folderLibrary,
+            projectColorMap: DEFAULT_PLANNER_PREFERENCES.projectColorMap
+        };
+        let plannerPreferencesSyncPromise = null;
+
+        function normalizeTagLibrary(tags) {
+            return (Array.isArray(tags) ? tags : []).map(tag => {
+                if (!tag) return null;
+                if (typeof tag === 'string') {
+                    const trimmed = tag.trim();
+                    if (!trimmed) return null;
+                    return { name: trimmed, color: PLANNER_COLOR_OPTIONS[0] };
+                }
+                if (typeof tag === 'object') {
+                    const name = typeof tag.name === 'string' && tag.name.trim()
+                        ? tag.name.trim()
+                        : (typeof tag.label === 'string' ? tag.label.trim() : '');
+                    if (!name) return null;
+                    return { name, color: tag.color || PLANNER_COLOR_OPTIONS[0] };
+                }
+                return null;
+            }).filter(Boolean);
+        }
+
+        function normalizeFolderLibrary(folders) {
+            return (Array.isArray(folders) ? folders : []).map(folder => {
+                if (!folder) return null;
+                if (typeof folder === 'string') {
+                    const trimmed = folder.trim();
+                    if (!trimmed) return null;
+                    return { name: trimmed, color: PLANNER_COLOR_OPTIONS[1] };
+                }
+                if (typeof folder === 'object') {
+                    const name = typeof folder.name === 'string' ? folder.name.trim() : '';
+                    if (!name) return null;
+                    return { name, color: folder.color || PLANNER_COLOR_OPTIONS[1] };
+                }
+                return null;
+            }).filter(Boolean);
+        }
+
+        function applyPlannerPreferences(preferences = plannerPreferencesCache) {
+            const normalized = {
+                tagLibrary: normalizeTagLibrary(preferences.tagLibrary),
+                folderLibrary: normalizeFolderLibrary(preferences.folderLibrary),
+                projectColorMap: (preferences.projectColorMap && typeof preferences.projectColorMap === 'object')
+                    ? { ...preferences.projectColorMap }
+                    : {}
+            };
+
+            plannerPreferencesCache = normalized;
+            plannerState.tagLibrary = normalized.tagLibrary;
+            plannerState.folderLibrary = normalized.folderLibrary;
+            plannerState.projectColorMap = normalized.projectColorMap;
+
+            savePlannerPreference('plannerTagLibrary', normalized.tagLibrary);
+            savePlannerPreference('plannerFolderLibrary', normalized.folderLibrary);
+            savePlannerPreference('plannerProjectColors', normalized.projectColorMap);
+        }
+
+        async function syncPlannerPreferencesFromSupabase() {
+            if (plannerPreferencesSyncPromise) return plannerPreferencesSyncPromise;
+
+            plannerPreferencesSyncPromise = (async () => {
+                if (!currentUser || !isValidUUID(currentUser.id)) {
+                    applyPlannerPreferences(DEFAULT_PLANNER_PREFERENCES);
+                    return plannerPreferencesCache;
+                }
+
+                try {
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .select('planner_preferences')
+                        .eq('id', currentUser.id)
+                        .maybeSingle();
+
+                    if (error) throw error;
+
+                    const prefs = data?.planner_preferences;
+                    if (prefs && typeof prefs === 'object') {
+                        applyPlannerPreferences({
+                            tagLibrary: prefs.tagLibrary,
+                            folderLibrary: prefs.folderLibrary,
+                            projectColorMap: prefs.projectColorMap
+                        });
+                    } else {
+                        applyPlannerPreferences({ tagLibrary: [], folderLibrary: [], projectColorMap: {} });
+                    }
+                } catch (error) {
+                    console.warn('Failed to load planner preferences from Supabase. Using local fallback.', error);
+                    applyPlannerPreferences({
+                        tagLibrary: plannerPreferencesCache.tagLibrary,
+                        folderLibrary: plannerPreferencesCache.folderLibrary,
+                        projectColorMap: plannerPreferencesCache.projectColorMap
+                    });
+                }
+
+                return plannerPreferencesCache;
+            })();
+
+            try {
+                return await plannerPreferencesSyncPromise;
+            } finally {
+                plannerPreferencesSyncPromise = null;
+            }
+        }
+
+        async function persistPlannerPreferences(partial = {}) {
+            const merged = {
+                tagLibrary: partial.tagLibrary !== undefined ? partial.tagLibrary : plannerPreferencesCache.tagLibrary,
+                folderLibrary: partial.folderLibrary !== undefined ? partial.folderLibrary : plannerPreferencesCache.folderLibrary,
+                projectColorMap: partial.projectColorMap !== undefined ? partial.projectColorMap : plannerPreferencesCache.projectColorMap
+            };
+
+            applyPlannerPreferences(merged);
+
+            if (!currentUser || !isValidUUID(currentUser.id)) return;
+
+            try {
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({
+                        planner_preferences: {
+                            tagLibrary: plannerPreferencesCache.tagLibrary,
+                            folderLibrary: plannerPreferencesCache.folderLibrary,
+                            projectColorMap: plannerPreferencesCache.projectColorMap
+                        }
+                    })
+                    .eq('id', currentUser.id);
+
+                if (error) throw error;
+            } catch (error) {
+                console.warn('Failed to save planner preferences to Supabase.', error);
             }
         }
 
@@ -5412,40 +5557,43 @@ if (achievementsGrid) {
 
         function setProjectColor(listId, color) {
             if (!listId || !color) return;
-            plannerState.projectColorMap = plannerState.projectColorMap || {};
-            plannerState.projectColorMap[listId] = color;
-            savePlannerPreference('plannerProjectColors', plannerState.projectColorMap);
+            const updated = { ...(plannerState.projectColorMap || {}) };
+            updated[listId] = color;
+            plannerState.projectColorMap = updated;
+            persistPlannerPreferences({ projectColorMap: updated });
         }
 
         function addTagToLibrary(name, color) {
             if (!name) return;
-            plannerState.tagLibrary = plannerState.tagLibrary || [];
             const trimmedName = name.trim();
             if (!trimmedName) return;
-            const existingIndex = plannerState.tagLibrary.findIndex(tag => tag.name.toLowerCase() === trimmedName.toLowerCase());
+            const current = Array.isArray(plannerState.tagLibrary) ? [...plannerState.tagLibrary] : [];
             const tagData = { name: trimmedName, color };
+            const existingIndex = current.findIndex(tag => tag.name.toLowerCase() === trimmedName.toLowerCase());
             if (existingIndex >= 0) {
-                plannerState.tagLibrary[existingIndex] = tagData;
+                current[existingIndex] = tagData;
             } else {
-                plannerState.tagLibrary.push(tagData);
+                current.push(tagData);
             }
-            savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
+            plannerState.tagLibrary = current;
+            persistPlannerPreferences({ tagLibrary: current });
         }
 
         function addFolderToLibrary(name, color) {
             if (!name) return;
-            plannerState.folderLibrary = plannerState.folderLibrary || [];
             const trimmedName = name.trim();
             if (!trimmedName) return;
-            const existingIndex = plannerState.folderLibrary.findIndex(folder => folder.name.toLowerCase() === trimmedName.toLowerCase());
+            const current = Array.isArray(plannerState.folderLibrary) ? [...plannerState.folderLibrary] : [];
             const folderData = { name: trimmedName, color };
+            const existingIndex = current.findIndex(folder => folder.name.toLowerCase() === trimmedName.toLowerCase());
             if (existingIndex >= 0) {
-                plannerState.folderLibrary[existingIndex] = folderData;
+                current[existingIndex] = folderData;
             } else {
-                plannerState.folderLibrary.push(folderData);
+                current.push(folderData);
             }
+            plannerState.folderLibrary = current;
             plannerState.lastCreatedFolderName = trimmedName;
-            savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
+            persistPlannerPreferences({ folderLibrary: current });
         }
         function detectListFolderColumnFromData(lists = []) {
             if (plannerState.listFolderColumn) return plannerState.listFolderColumn;
@@ -5575,41 +5723,22 @@ if (achievementsGrid) {
             plannerUnsubscribers: [],
             calendarYear: new Date().getFullYear(),
             calendarMonth: new Date().getMonth(),
-            tagLibrary: loadPlannerPreference('plannerTagLibrary', []),
-            folderLibrary: loadPlannerPreference('plannerFolderLibrary', []),
-            projectColorMap: loadPlannerPreference('plannerProjectColors', {}),
+            tagLibrary: plannerPreferencesCache.tagLibrary,
+            folderLibrary: plannerPreferencesCache.folderLibrary,
+            projectColorMap: plannerPreferencesCache.projectColorMap,
             listFolderColumn: null,
             lastCreatedFolderName: '',
             eventsViewDate: new Date(),
             completedViewLimit: 5,
         };
 
-        plannerState.tagLibrary = (plannerState.tagLibrary || []).map(tag => {
-            if (!tag) return null;
-            if (typeof tag === 'string') return { name: tag, color: PLANNER_COLOR_OPTIONS[0] };
-            if (typeof tag === 'object') {
-                const name = tag.name || (typeof tag.label === 'string' ? tag.label : null);
-                if (!name) return null;
-                return { name, color: tag.color || PLANNER_COLOR_OPTIONS[0] };
-            }
-            return null;
-        }).filter(Boolean);
-        plannerState.folderLibrary = (plannerState.folderLibrary || []).map(folder => {
-            if (!folder) return null;
-            if (typeof folder === 'string') return { name: folder, color: PLANNER_COLOR_OPTIONS[1] };
-            if (typeof folder === 'object') {
-                const name = folder.name || null;
-                if (!name) return null;
-                return { name, color: folder.color || PLANNER_COLOR_OPTIONS[1] };
-            }
-            return null;
-        }).filter(Boolean);
-        savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
-        savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
-        
+        applyPlannerPreferences(plannerPreferencesCache);
+
         async function setupPlannerListeners() {
             if (!currentUser || !isValidUUID(currentUser.id)) return;
-          
+
+            await syncPlannerPreferencesFromSupabase();
+
             // 1. Stop old subscriptions
             plannerState.plannerUnsubscribers.forEach(unsub => unsub());
             plannerState.plannerUnsubscribers = [];
