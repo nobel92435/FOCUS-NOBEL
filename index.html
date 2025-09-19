@@ -734,7 +734,14 @@
         .folder-card-header {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 0.85rem;
+        }
+        .folder-card-main {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            flex: 1;
         }
         .folder-card-icon {
             width: 42px;
@@ -799,6 +806,23 @@
             transition: background-color 0.2s ease, color 0.2s ease;
         }
         .folder-project-options:hover {
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+        }
+        .folder-card-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .folder-card-action-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            padding: 0.35rem;
+            border-radius: 9999px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .folder-card-action-btn:hover {
             background: rgba(56, 189, 248, 0.12);
             color: #38bdf8;
         }
@@ -1473,6 +1497,34 @@
             height: 10px;
             border-radius: 50%;
             display: inline-block;
+        }
+        .tag-chip-manageable {
+            padding-right: 0.4rem;
+            gap: 0.5rem;
+        }
+        .tag-chip-manageable .tag-chip-label {
+            flex: 1;
+            font-size: 0.75rem;
+        }
+        .tag-chip-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .tag-chip-action-btn {
+            background: none;
+            border: none;
+            color: inherit;
+            padding: 0.2rem;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .tag-chip-action-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #38bdf8;
         }
 
         /* Events View */
@@ -5602,20 +5654,39 @@ if (achievementsGrid) {
             }
         }
 
-        async function addTagToLibrary(name, color) {
+        async function addTagToLibrary(name, color, options = {}) {
             if (!name) return null;
             plannerState.tagLibrary = Array.isArray(plannerState.tagLibrary) ? plannerState.tagLibrary : [];
             const trimmedName = name.trim();
             if (!trimmedName) return null;
             const normalizedColor = color && color.trim ? color.trim() : color;
             const colorToUse = normalizedColor || PLANNER_COLOR_OPTIONS[0];
-            const existingIndex = plannerState.tagLibrary.findIndex(tag => tag.name.toLowerCase() === trimmedName.toLowerCase());
+            const previousName = typeof options.previousName === 'string' ? options.previousName.trim() : '';
+            const normalizedPrev = previousName ? previousName.toLowerCase() : '';
+            const tagId = options.id ? String(options.id) : null;
+
+            if (normalizedPrev && normalizedPrev !== trimmedName.toLowerCase()) {
+                plannerState.tagLibrary = plannerState.tagLibrary.filter(tag => {
+                    const tagName = typeof tag?.name === 'string' ? tag.name.toLowerCase() : '';
+                    return tagName !== normalizedPrev;
+                });
+            }
+
+            let existingIndex = -1;
+            if (tagId) {
+                existingIndex = plannerState.tagLibrary.findIndex(tag => String(tag?.id || '') === tagId);
+            }
+            if (existingIndex === -1) {
+                existingIndex = plannerState.tagLibrary.findIndex(tag => (tag?.name || '').toLowerCase() === trimmedName.toLowerCase());
+            }
+
             const baseTag = existingIndex >= 0 ? plannerState.tagLibrary[existingIndex] : {};
             const tagData = {
                 ...baseTag,
                 name: trimmedName,
                 color: colorToUse,
             };
+            if (tagId) tagData.id = tagId;
 
             if (existingIndex >= 0) {
                 plannerState.tagLibrary[existingIndex] = tagData;
@@ -5641,7 +5712,89 @@ if (achievementsGrid) {
                 }
             }
 
+            if (normalizedPrev && normalizedPrev !== trimmedName.toLowerCase()) {
+                await updateTasksForTagChange(previousName, trimmedName);
+            }
+
             return tagData;
+        }
+
+        async function deleteTagFromSupabase(tag) {
+            if (!currentUser || !tag || !tag.name) return;
+            const tables = plannerState.tagTableName ? [plannerState.tagTableName] : TAG_TABLE_CANDIDATES;
+            for (const table of tables) {
+                try {
+                    let query = supabase.from(table).delete();
+                    if (tag.id) {
+                        query = query.eq('id', tag.id);
+                    } else {
+                        query = query.eq('name', tag.name);
+                    }
+                    const { error } = await query;
+                    if (!error) {
+                        plannerState.tagTableName = table;
+                        return;
+                    }
+                    if (isMissingRelationError(error)) continue;
+                    console.error('Failed to delete tag from Supabase', error);
+                    return;
+                } catch (err) {
+                    if (isMissingRelationError(err)) continue;
+                    console.error('Failed to delete tag from Supabase', err);
+                    return;
+                }
+            }
+        }
+
+        async function deleteTagFromLibrary(tagName) {
+            if (!tagName) return;
+            plannerState.tagLibrary = Array.isArray(plannerState.tagLibrary) ? plannerState.tagLibrary : [];
+            const trimmed = tagName.trim();
+            if (!trimmed) return;
+            const normalized = trimmed.toLowerCase();
+            const existing = plannerState.tagLibrary.find(tag => (tag?.name || '').toLowerCase() === normalized) || null;
+            plannerState.tagLibrary = plannerState.tagLibrary.filter(tag => (tag?.name || '').toLowerCase() !== normalized);
+            plannerState.tagLibrary = mergeTagLibraries(plannerState.tagLibrary, []);
+            savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
+            if (existing) {
+                await deleteTagFromSupabase(existing);
+            }
+            await updateTasksForTagChange(trimmed, null);
+        }
+
+        async function updateTasksForTagChange(oldName, newName) {
+            const trimmedOld = typeof oldName === 'string' ? oldName.trim() : '';
+            if (!trimmedOld) return;
+            const normalizedOld = trimmedOld.toLowerCase();
+            const trimmedNew = typeof newName === 'string' ? newName.trim() : '';
+            const tasks = Array.isArray(plannerState.tasks) ? plannerState.tasks : [];
+            let updatedAny = false;
+            for (const task of tasks) {
+                if (!task) continue;
+                const rawTags = Array.isArray(task.tags) ? task.tags : [];
+                const currentNames = rawTags
+                    .map(tag => (typeof tag === 'string' ? tag : tag?.name))
+                    .filter(Boolean);
+                if (!currentNames.some(name => name.toLowerCase() === normalizedOld)) continue;
+                let updated = trimmedNew
+                    ? currentNames.map(name => (name.toLowerCase() === normalizedOld ? trimmedNew : name))
+                    : currentNames.filter(name => name.toLowerCase() !== normalizedOld);
+                const deduped = [];
+                const seen = new Set();
+                updated.forEach(name => {
+                    const lower = name.toLowerCase();
+                    if (seen.has(lower)) return;
+                    seen.add(lower);
+                    deduped.push(name);
+                });
+                await updatePlannerTask(task.id, { tags: deduped });
+                task.tags = deduped;
+                updatedAny = true;
+            }
+            if (updatedAny) {
+                renderPlannerTaskDetails();
+                renderTaskSelectionList(plannerState.tasks);
+            }
         }
 
         function addFolderToLibrary(name, color) {
@@ -5658,6 +5811,59 @@ if (achievementsGrid) {
             }
             plannerState.lastCreatedFolderName = trimmedName;
             savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
+        }
+
+        async function updateListsForFolderChange(previousName, nextName = null) {
+            const trimmedPrev = typeof previousName === 'string' ? previousName.trim() : '';
+            if (!trimmedPrev) return;
+            const normalizedPrev = trimmedPrev.toLowerCase();
+            const targetName = typeof nextName === 'string' ? nextName.trim() : '';
+            const lists = Array.isArray(plannerState.lists) ? plannerState.lists : [];
+            for (const list of lists) {
+                if (!list) continue;
+                const currentName = extractListFolderName(list);
+                if (!currentName || currentName.trim().toLowerCase() !== normalizedPrev) continue;
+                let result = null;
+                if (currentUser) {
+                    result = await persistListFolder(list.id, targetName);
+                }
+                if (result?.data) {
+                    Object.assign(list, result.data);
+                } else {
+                    const column = plannerState.listFolderColumn || detectListFolderColumnFromData([list]);
+                    if (column) {
+                        list[column] = targetName || null;
+                    }
+                }
+            }
+        }
+
+        async function updateFolderInLibrary(name, color, previousName = null) {
+            if (!name) return;
+            plannerState.folderLibrary = plannerState.folderLibrary || [];
+            const trimmedName = name.trim();
+            if (!trimmedName) return;
+            const trimmedPrev = typeof previousName === 'string' ? previousName.trim() : '';
+            const normalizedPrev = trimmedPrev.toLowerCase();
+            if (trimmedPrev && normalizedPrev !== trimmedName.toLowerCase()) {
+                plannerState.folderLibrary = plannerState.folderLibrary.filter(folder => (folder?.name || '').toLowerCase() !== normalizedPrev);
+                await updateListsForFolderChange(trimmedPrev, trimmedName);
+            }
+            addFolderToLibrary(trimmedName, color);
+        }
+
+        async function deleteFolderFromLibrary(name) {
+            if (!name) return;
+            plannerState.folderLibrary = plannerState.folderLibrary || [];
+            const trimmed = name.trim();
+            if (!trimmed) return;
+            const normalized = trimmed.toLowerCase();
+            plannerState.folderLibrary = plannerState.folderLibrary.filter(folder => (folder?.name || '').toLowerCase() !== normalized);
+            if (plannerState.lastCreatedFolderName && plannerState.lastCreatedFolderName.toLowerCase() === normalized) {
+                delete plannerState.lastCreatedFolderName;
+            }
+            savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
+            await updateListsForFolderChange(trimmed, null);
         }
         function detectListFolderColumnFromData(lists = []) {
             if (plannerState.listFolderColumn) return plannerState.listFolderColumn;
@@ -6702,12 +6908,22 @@ if (achievementsGrid) {
                 return `
                     <section class="folder-card">
                         <header class="folder-card-header">
-                            <div class="folder-card-icon" style="color:${accent};border:1px solid ${accent}55;background:${accent}1a;">
-                                <i class="fas fa-folder"></i>
+                            <div class="folder-card-main">
+                                <div class="folder-card-icon" style="color:${accent};border:1px solid ${accent}55;background:${accent}1a;">
+                                    <i class="fas fa-folder"></i>
+                                </div>
+                                <div>
+                                    <h3>${folder.name}</h3>
+                                    <p>${projectCountLabel}</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3>${folder.name}</h3>
-                                <p>${projectCountLabel}</p>
+                            <div class="folder-card-actions">
+                                <button class="folder-card-action-btn folder-edit-btn" data-folder-name="${folder.name}" data-folder-color="${accent}" title="Edit folder">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                <button class="folder-card-action-btn folder-delete-btn" data-folder-name="${folder.name}" title="Delete folder">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </div>
                         </header>
                         <div class="folder-project-list">
@@ -6779,7 +6995,17 @@ if (achievementsGrid) {
                     .map(tag => {
                         const tagName = tag?.name || 'Tag';
                         const color = tag?.color || '#38bdf8';
-                        return `<span class="tag-chip-inline" style="background:${color}1a;border:1px solid ${color}44;color:#e2e8f0;"><span class="tag-dot" style="background:${color}"></span>${tagName}</span>`;
+                        const tagId = tag?.id ? String(tag.id) : '';
+                        return `
+                            <div class="tag-chip-inline tag-chip-manageable" style="background:${color}1a;border:1px solid ${color}44;color:#e2e8f0;" data-tag-name="${tagName}" data-tag-color="${color}" data-tag-id="${tagId}">
+                                <span class="tag-dot" style="background:${color}"></span>
+                                <span class="tag-chip-label">${tagName}</span>
+                                <div class="tag-chip-actions">
+                                    <button type="button" class="tag-chip-action-btn tag-edit-btn" title="Edit tag"><i class="fas fa-pen"></i></button>
+                                    <button type="button" class="tag-chip-action-btn tag-delete-btn" title="Delete tag"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                        `;
                     }).join('')
                 : `<div class="folder-card-empty">No tags yet. Create one from the List view.</div>`;
 
@@ -7129,7 +7355,26 @@ if (achievementsGrid) {
             const input = modal.querySelector('#new-tag-name');
             const colorPicker = form.querySelector('[data-color-picker]');
             const selectedColor = defaults.color || PLANNER_COLOR_OPTIONS[0];
-
+            const mode = defaults.mode || 'create';
+            const titleEl = modal.querySelector('.sheet-title-text');
+            const doneBtn = form.querySelector('.sheet-done-btn');
+            form.dataset.mode = mode;
+            if (mode === 'edit') {
+                const originalName = typeof defaults.originalName === 'string' ? defaults.originalName : defaults.name;
+                form.dataset.originalName = originalName || '';
+                if (defaults.id) {
+                    form.dataset.tagId = String(defaults.id);
+                } else {
+                    delete form.dataset.tagId;
+                }
+                if (titleEl) titleEl.textContent = 'Edit Tag';
+                if (doneBtn) doneBtn.textContent = 'Save';
+            } else {
+                delete form.dataset.originalName;
+                delete form.dataset.tagId;
+                if (titleEl) titleEl.textContent = 'New Tag';
+                if (doneBtn) doneBtn.textContent = 'Done';
+            }
             form.dataset.selectedColor = selectedColor;
             renderSheetColors(colorPicker, selectedColor);
             input.value = defaults.name || '';
@@ -7146,7 +7391,23 @@ if (achievementsGrid) {
             const input = modal.querySelector('#new-folder-name');
             const colorPicker = form.querySelector('[data-color-picker]');
             const selectedColor = defaults.color || PLANNER_COLOR_OPTIONS[1];
-
+            const mode = defaults.mode || 'create';
+            const titleEl = modal.querySelector('.sheet-title-text');
+            const doneBtn = form.querySelector('.sheet-done-btn');
+            const addProjectTrigger = form.querySelector('#folder-add-project-trigger');
+            form.dataset.mode = mode;
+            if (mode === 'edit') {
+                const originalName = typeof defaults.originalName === 'string' ? defaults.originalName : defaults.name;
+                form.dataset.originalName = originalName || '';
+                if (titleEl) titleEl.textContent = 'Edit Folder';
+                if (doneBtn) doneBtn.textContent = 'Save';
+                if (addProjectTrigger) addProjectTrigger.classList.add('hidden');
+            } else {
+                delete form.dataset.originalName;
+                if (titleEl) titleEl.textContent = 'New Folder';
+                if (doneBtn) doneBtn.textContent = 'Done';
+                if (addProjectTrigger) addProjectTrigger.classList.remove('hidden');
+            }
             form.dataset.selectedColor = selectedColor;
             renderSheetColors(colorPicker, selectedColor);
             input.value = defaults.name || '';
@@ -10185,6 +10446,59 @@ if (achievementsGrid) {
                 }
                 // --- CHANGE END ---
 
+                const folderEditBtn = target.closest('.folder-edit-btn');
+                if (folderEditBtn) {
+                    const folderName = folderEditBtn.dataset.folderName || '';
+                    const folderColor = folderEditBtn.dataset.folderColor || PLANNER_COLOR_OPTIONS[1];
+                    openNewFolderModal({ mode: 'edit', name: folderName, color: folderColor, originalName: folderName });
+                    return;
+                }
+
+                const folderDeleteBtn = target.closest('.folder-delete-btn');
+                if (folderDeleteBtn) {
+                    const folderName = folderDeleteBtn.dataset.folderName || '';
+                    if (!folderName) return;
+                    showConfirmationModal(
+                        'Delete Folder?',
+                        `Projects in the "${folderName}" folder will be moved to Unfiled.`,
+                        async () => {
+                            await deleteFolderFromLibrary(folderName);
+                            showToast('Folder deleted!', 'success');
+                            renderPlannerPage();
+                        }
+                    );
+                    return;
+                }
+
+                const tagEditBtn = target.closest('.tag-edit-btn');
+                if (tagEditBtn) {
+                    const chip = tagEditBtn.closest('.tag-chip-manageable');
+                    if (!chip) return;
+                    const tagName = chip.dataset.tagName || '';
+                    const tagColor = chip.dataset.tagColor || PLANNER_COLOR_OPTIONS[0];
+                    const tagId = chip.dataset.tagId || '';
+                    openNewTagModal({ mode: 'edit', name: tagName, color: tagColor, id: tagId, originalName: tagName });
+                    return;
+                }
+
+                const tagDeleteBtn = target.closest('.tag-delete-btn');
+                if (tagDeleteBtn) {
+                    const chip = tagDeleteBtn.closest('.tag-chip-manageable');
+                    if (!chip) return;
+                    const tagName = chip.dataset.tagName || '';
+                    if (!tagName) return;
+                    showConfirmationModal(
+                        'Delete Tag?',
+                        `This will remove the "${tagName}" tag from your tasks.`,
+                        async () => {
+                            await deleteTagFromLibrary(tagName);
+                            showToast('Tag deleted!', 'success');
+                            renderPlannerPage();
+                        }
+                    );
+                    return;
+                }
+
                 if (target.closest('.task-play-btn')) {
                     const taskEl = target.closest('[data-task-id]');
                     const taskId = taskEl?.dataset.taskId;
@@ -11726,13 +12040,20 @@ if (achievementsGrid) {
                 const input = form.querySelector('#new-tag-name');
                 const name = input.value.trim();
                 const selectedColor = form.dataset.selectedColor || PLANNER_COLOR_OPTIONS[0];
+                const mode = form.dataset.mode || 'create';
+                const previousName = form.dataset.originalName || '';
+                const tagId = form.dataset.tagId || null;
                 if (!name) return;
-                await addTagToLibrary(name, selectedColor);
-                showToast('Tag saved!', 'success');
+                await addTagToLibrary(name, selectedColor, { previousName, id: tagId });
+                showToast(mode === 'edit' ? 'Tag updated!' : 'Tag saved!', 'success');
                 form.reset();
+                form.dataset.mode = 'create';
+                delete form.dataset.originalName;
+                delete form.dataset.tagId;
                 form.dataset.selectedColor = PLANNER_COLOR_OPTIONS[0];
                 renderSheetColors(form.querySelector('[data-color-picker]'), form.dataset.selectedColor);
                 if (modal) modal.classList.remove('active');
+                renderPlannerPage();
                 const tagsModal = document.getElementById('tags-modal');
                 if (tagsModal) {
                     const reopenTaskId = tagsModal.dataset.reopenTaskId;
@@ -11743,20 +12064,30 @@ if (achievementsGrid) {
                 }
             });
 
-            ael('new-folder-form', 'submit', (e) => {
+            ael('new-folder-form', 'submit', async (e) => {
                 e.preventDefault();
                 const form = e.target;
                 const modal = form.closest('.modal');
                 const input = form.querySelector('#new-folder-name');
                 const name = input.value.trim();
                 const selectedColor = form.dataset.selectedColor || PLANNER_COLOR_OPTIONS[1];
+                const mode = form.dataset.mode || 'create';
+                const previousName = form.dataset.originalName || '';
                 if (!name) return;
-                addFolderToLibrary(name, selectedColor);
-                showToast('Folder created!', 'success');
+                if (mode === 'edit') {
+                    await updateFolderInLibrary(name, selectedColor, previousName);
+                    showToast('Folder updated!', 'success');
+                } else {
+                    addFolderToLibrary(name, selectedColor);
+                    showToast('Folder created!', 'success');
+                }
                 form.reset();
+                form.dataset.mode = 'create';
+                delete form.dataset.originalName;
                 form.dataset.selectedColor = PLANNER_COLOR_OPTIONS[1];
                 renderSheetColors(form.querySelector('[data-color-picker]'), form.dataset.selectedColor);
                 if (modal) modal.classList.remove('active');
+                renderPlannerPage();
             });
 
             ael('folder-add-project-trigger', 'click', () => {
@@ -11764,6 +12095,10 @@ if (achievementsGrid) {
                 let folderName = '';
                 if (folderModal) {
                     const input = folderModal.querySelector('#new-folder-name');
+                    const form = folderModal.querySelector('#new-folder-form');
+                    if (form && form.dataset.mode === 'edit') {
+                        return;
+                    }
                     folderName = input ? input.value.trim() : '';
                     folderModal.classList.remove('active');
                 }
