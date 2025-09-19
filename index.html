@@ -7126,12 +7126,20 @@ if (achievementsGrid) {
 
         /** SUPABASE-ONLY IMPLEMENTATION **/
           
+          let addPlannerTaskInFlight = false;
+
           async function addPlannerTask(title, dueDateStr = null) {
             if (!currentUser || !title.trim()) return;
-          
+
+            // Prevent accidental double submissions that result in duplicate tasks.
+            if (addPlannerTaskInFlight) {
+              return;
+            }
+            addPlannerTaskInFlight = true;
+
             // 'inbox' is a UI concept; DB wants either a UUID or null
             const listIdForDb = plannerState.activeListId === 'inbox' ? null : plannerState.activeListId;
-          
+
             // Build minimal, safe payload (only columns you actually have)
             const payload = {
               title: title.trim(),
@@ -7151,23 +7159,27 @@ if (achievementsGrid) {
               payload.due_date = new Date(dueDateStr + 'T00:00:00Z').toISOString();
             }
           
-            const { data, error } = await supabase
-              .from('tasks')
-              .insert([payload])
-              .select()
-              .single();
-          
-            if (error) {
-              console.error('Error adding task:', error);
-              showToast('Failed to add task.', 'error');
-              return;
+            try {
+              const { data, error } = await supabase
+                .from('tasks')
+                .insert([payload])
+                .select()
+                .single();
+
+              if (error) {
+                console.error('Error adding task:', error);
+                showToast('Failed to add task.', 'error');
+                return;
+              }
+
+              // Update your local state (optional)
+              plannerState.tasks.push(data);
+              plannerState.selectedTaskId = data.id;
+              renderPlannerPage();            // refresh list/board/calendar
+              renderTaskSelectionList(plannerState.tasks);
+            } finally {
+              addPlannerTaskInFlight = false;
             }
-          
-            // Update your local state (optional)
-            plannerState.tasks.push(data);
-            plannerState.selectedTaskId = data.id;
-            renderPlannerPage();            // refresh list/board/calendar
-            renderTaskSelectionList(plannerState.tasks);
           }
 
           async function addPlannerList(name, color = PLANNER_COLOR_OPTIONS[0], folderName = '') {
@@ -7255,22 +7267,31 @@ if (achievementsGrid) {
           
           async function updatePlannerTask(taskId, data) {
             if (!currentUser || !taskId) return;
-          
+
             // FIX: When moving a task to the inbox, the list_id should be null, not the string "inbox".
             if (data.hasOwnProperty('listId') && data.listId === 'inbox') {
               data.listId = null;
             }
 
             const payload = camelToSnake(data);
-          
+
             const { error } = await supabase
               .from('tasks')
               .update(payload)
               .eq('id', taskId);
-          
+
             if (error) {
               console.error('Error updating task:', error);
               showToast('Failed to update task.', 'error');
+              return;
+            }
+
+            const taskIndex = plannerState.tasks.findIndex(t => t.id === taskId);
+            if (taskIndex > -1) {
+              plannerState.tasks[taskIndex] = {
+                ...plannerState.tasks[taskIndex],
+                ...payload,
+              };
             }
           }
           
