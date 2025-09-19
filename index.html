@@ -5370,6 +5370,8 @@ if (achievementsGrid) {
             '#f973a0', '#fca5a5'
         ];
         const LIST_FOLDER_COLUMNS = ['folder', 'folder_name', 'folderName', 'folder_label'];
+        const TAG_TABLE_CANDIDATES = ['planner_tags', 'tags'];
+        const TAG_OWNER_COLUMNS = ['created_by', 'profile_id', 'user_id'];
 
         function loadPlannerPreference(key, fallback) {
             try {
@@ -5417,19 +5419,229 @@ if (achievementsGrid) {
             savePlannerPreference('plannerProjectColors', plannerState.projectColorMap);
         }
 
-        function addTagToLibrary(name, color) {
-            if (!name) return;
-            plannerState.tagLibrary = plannerState.tagLibrary || [];
+        function normalizeTag(tag) {
+            if (!tag) return null;
+            if (typeof tag === 'string') {
+                const trimmed = tag.trim();
+                return trimmed ? { name: trimmed, color: PLANNER_COLOR_OPTIONS[0] } : null;
+            }
+            if (typeof tag !== 'object') return null;
+            const name = typeof tag.name === 'string' ? tag.name.trim()
+                : typeof tag.label === 'string' ? tag.label.trim() : '';
+            if (!name) return null;
+            const color = typeof tag.color === 'string' && tag.color.trim() ? tag.color : PLANNER_COLOR_OPTIONS[0];
+            const normalized = { name, color };
+            if (tag.id) normalized.id = tag.id;
+            return normalized;
+        }
+
+        function mergeTagLibraries(primary = [], fallback = []) {
+            const map = new Map();
+            [...primary, ...fallback].forEach(raw => {
+                const normalized = normalizeTag(raw);
+                if (!normalized) return;
+                const key = normalized.name.toLowerCase();
+                const current = map.get(key) || {};
+                map.set(key, {
+                    ...current,
+                    ...normalized,
+                    color: normalized.color || current.color || PLANNER_COLOR_OPTIONS[0],
+                });
+            });
+            return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+        }
+
+        function isMissingRelationError(error) {
+            const message = (error && typeof error.message === 'string') ? error.message : '';
+            const code = error && typeof error.code === 'string' ? error.code : '';
+            return /relation .* does not exist/i.test(message) || code === '42P01';
+        }
+
+        function isMissingColumnError(error) {
+            const message = (error && typeof error.message === 'string') ? error.message : '';
+            const code = error && typeof error.code === 'string' ? error.code : '';
+            return /column .* does not exist/i.test(message) || code === '42703';
+        }
+
+        function detectTagOwnerColumnFromRows(rows = []) {
+            if (plannerState.tagOwnerColumn) return plannerState.tagOwnerColumn;
+            for (const row of rows) {
+                if (!row || typeof row !== 'object') continue;
+                for (const column of TAG_OWNER_COLUMNS) {
+                    if (Object.prototype.hasOwnProperty.call(row, column)) {
+                        plannerState.tagOwnerColumn = column;
+                        return column;
+                    }
+                }
+            }
+            return plannerState.tagOwnerColumn;
+        }
+
+        async function persistTagToSupabase(tagData) {
+            if (!currentUser) return null;
+            const tables = plannerState.tagTableName ? [plannerState.tagTableName] : TAG_TABLE_CANDIDATES;
+            for (const table of tables) {
+                try {
+                    if (tagData.id) {
+                        const result = await supabase
+                            .from(table)
+                            .update({ name: tagData.name, color: tagData.color || PLANNER_COLOR_OPTIONS[0] })
+                            .eq('id', tagData.id)
+                            .select()
+                            .maybeSingle();
+                        const { data, error } = result || {};
+                        if (error) {
+                            if (isMissingRelationError(error)) continue;
+                            if (isMissingColumnError(error)) break;
+                            throw error;
+                        }
+                        if (data) {
+                            plannerState.tagTableName = table;
+                            detectTagOwnerColumnFromRows([data]);
+                            return data;
+                        }
+                        continue;
+                    }
+
+                    const ownerCandidates = plannerState.tagOwnerColumn
+                        ? [plannerState.tagOwnerColumn]
+                        : [...TAG_OWNER_COLUMNS, null];
+                    let insertError = null;
+                    for (const ownerColumn of ownerCandidates) {
+                        const payload = {
+                            name: tagData.name,
+                            color: tagData.color || PLANNER_COLOR_OPTIONS[0],
+                        };
+                        if (ownerColumn) payload[ownerColumn] = currentUser.id;
+
+                        const result = await supabase
+                            .from(table)
+                            .insert([payload])
+                            .select()
+                            .single();
+                        const { data, error } = result || {};
+                        if (error) {
+                            insertError = error;
+                            if (isMissingRelationError(error)) {
+                                insertError = error;
+                                break;
+                            }
+                            if (ownerColumn && isMissingColumnError(error)) {
+                                continue;
+                            }
+                            throw error;
+                        }
+                        if (data) {
+                            plannerState.tagTableName = table;
+                            if (ownerColumn) plannerState.tagOwnerColumn = ownerColumn;
+                            detectTagOwnerColumnFromRows([data]);
+                            return data;
+                        }
+                    }
+                    if (insertError && isMissingRelationError(insertError)) {
+                        continue;
+                    }
+                    if (insertError) {
+                        throw insertError;
+                    }
+                } catch (err) {
+                    if (isMissingRelationError(err)) {
+                        continue;
+                    }
+                    if (isMissingColumnError(err)) {
+                        console.error('Planner tags table is missing expected column', err);
+                        break;
+                    }
+                    console.error('Failed to persist tag to Supabase', err);
+                    break;
+                }
+            }
+            return null;
+        }
+
+        async function loadTagLibraryFromSupabase() {
+            if (!currentUser) return;
+            const tables = plannerState.tagTableName ? [plannerState.tagTableName] : TAG_TABLE_CANDIDATES;
+            for (const table of tables) {
+                try {
+                    const { data, error } = await supabase
+                        .from(table)
+                        .select('*')
+                        .eq('created_by', currentUser.id)
+                        .order('name', { ascending: true });
+
+                    if (error) {
+                        if (isMissingRelationError(error)) continue;
+                        throw error;
+                    }
+
+                    plannerState.tagTableName = table;
+                    if (Array.isArray(data) && data.length > 0) {
+                        detectTagOwnerColumnFromRows(data);
+                        const normalized = data
+                            .map(row => normalizeTag(row))
+                            .filter(Boolean);
+                        plannerState.tagLibrary = mergeTagLibraries(normalized, plannerState.tagLibrary);
+                        savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
+                    } else if (Array.isArray(data) && data.length === 0 && Array.isArray(plannerState.tagLibrary)) {
+                        // If Supabase has no tags yet but local storage does, push them up.
+                        for (const existingTag of plannerState.tagLibrary) {
+                            const persisted = await persistTagToSupabase(existingTag);
+                            if (persisted?.id) existingTag.id = persisted.id;
+                        }
+                        savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
+                    }
+                    return;
+                } catch (err) {
+                    if (isMissingRelationError(err)) {
+                        continue;
+                    }
+                    console.error('Failed to load planner tags from Supabase', err);
+                    return;
+                }
+            }
+        }
+
+        async function addTagToLibrary(name, color) {
+            if (!name) return null;
+            plannerState.tagLibrary = Array.isArray(plannerState.tagLibrary) ? plannerState.tagLibrary : [];
             const trimmedName = name.trim();
-            if (!trimmedName) return;
+            if (!trimmedName) return null;
+            const normalizedColor = color && color.trim ? color.trim() : color;
+            const colorToUse = normalizedColor || PLANNER_COLOR_OPTIONS[0];
             const existingIndex = plannerState.tagLibrary.findIndex(tag => tag.name.toLowerCase() === trimmedName.toLowerCase());
-            const tagData = { name: trimmedName, color };
+            const baseTag = existingIndex >= 0 ? plannerState.tagLibrary[existingIndex] : {};
+            const tagData = {
+                ...baseTag,
+                name: trimmedName,
+                color: colorToUse,
+            };
+
             if (existingIndex >= 0) {
                 plannerState.tagLibrary[existingIndex] = tagData;
             } else {
                 plannerState.tagLibrary.push(tagData);
             }
+
+            plannerState.tagLibrary = mergeTagLibraries(plannerState.tagLibrary, []);
             savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
+
+            const persisted = await persistTagToSupabase(tagData);
+            if (persisted) {
+                const normalizedPersisted = normalizeTag(persisted);
+                if (normalizedPersisted) {
+                    const idx = plannerState.tagLibrary.findIndex(tag => tag.name.toLowerCase() === normalizedPersisted.name.toLowerCase());
+                    if (idx >= 0) {
+                        plannerState.tagLibrary[idx] = { ...plannerState.tagLibrary[idx], ...normalizedPersisted };
+                    } else {
+                        plannerState.tagLibrary.push(normalizedPersisted);
+                    }
+                    plannerState.tagLibrary = mergeTagLibraries(plannerState.tagLibrary, []);
+                    savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
+                }
+            }
+
+            return tagData;
         }
 
         function addFolderToLibrary(name, color) {
@@ -5582,18 +5794,11 @@ if (achievementsGrid) {
             lastCreatedFolderName: '',
             eventsViewDate: new Date(),
             completedViewLimit: 5,
+            tagTableName: null,
+            tagOwnerColumn: null,
         };
 
-        plannerState.tagLibrary = (plannerState.tagLibrary || []).map(tag => {
-            if (!tag) return null;
-            if (typeof tag === 'string') return { name: tag, color: PLANNER_COLOR_OPTIONS[0] };
-            if (typeof tag === 'object') {
-                const name = tag.name || (typeof tag.label === 'string' ? tag.label : null);
-                if (!name) return null;
-                return { name, color: tag.color || PLANNER_COLOR_OPTIONS[0] };
-            }
-            return null;
-        }).filter(Boolean);
+        plannerState.tagLibrary = mergeTagLibraries(plannerState.tagLibrary, []);
         plannerState.folderLibrary = (plannerState.folderLibrary || []).map(folder => {
             if (!folder) return null;
             if (typeof folder === 'string') return { name: folder, color: PLANNER_COLOR_OPTIONS[1] };
@@ -5613,7 +5818,9 @@ if (achievementsGrid) {
             // 1. Stop old subscriptions
             plannerState.plannerUnsubscribers.forEach(unsub => unsub());
             plannerState.plannerUnsubscribers = [];
-          
+
+            await loadTagLibraryFromSupabase();
+
             // 2. Initial fetch of lists
             const { data: lists, error: listsError } = await supabase
               .from('lists')
@@ -6803,7 +7010,7 @@ if (achievementsGrid) {
                 // work with the latest state even before realtime sync completes.
                 task.tags = updatedTags;
                 renderPlannerTaskDetails();
-                addTagToLibrary(tagName, color);
+                await addTagToLibrary(tagName, color);
             };
 
             if (createTagBtn) {
@@ -11413,7 +11620,7 @@ if (achievementsGrid) {
                 }
             });
 
-            ael('new-tag-form', 'submit', (e) => {
+            ael('new-tag-form', 'submit', async (e) => {
                 e.preventDefault();
                 const form = e.target;
                 const modal = form.closest('.modal');
@@ -11421,7 +11628,7 @@ if (achievementsGrid) {
                 const name = input.value.trim();
                 const selectedColor = form.dataset.selectedColor || PLANNER_COLOR_OPTIONS[0];
                 if (!name) return;
-                addTagToLibrary(name, selectedColor);
+                await addTagToLibrary(name, selectedColor);
                 showToast('Tag saved!', 'success');
                 form.reset();
                 form.dataset.selectedColor = PLANNER_COLOR_OPTIONS[0];
