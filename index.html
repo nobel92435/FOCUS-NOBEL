@@ -5607,6 +5607,16 @@ if (achievementsGrid) {
         savePlannerPreference('plannerTagLibrary', plannerState.tagLibrary);
         savePlannerPreference('plannerFolderLibrary', plannerState.folderLibrary);
         
+        function upsertPlannerTaskInState(task) {
+            if (!task || !task.id) return;
+            const index = plannerState.tasks.findIndex(t => t.id === task.id);
+            if (index > -1) {
+                plannerState.tasks[index] = { ...plannerState.tasks[index], ...task };
+            } else {
+                plannerState.tasks.push(task);
+            }
+        }
+
         async function setupPlannerListeners() {
             if (!currentUser || !isValidUUID(currentUser.id)) return;
           
@@ -5693,18 +5703,9 @@ if (achievementsGrid) {
                   }
 
                   if (eventType === 'INSERT') {
-                    // Avoid adding duplicates if it's already there from the local insert
-                    if (!plannerState.tasks.some(t => t.id === newRecord.id)) {
-                        plannerState.tasks.push(newRecord);
-                    }
+                    upsertPlannerTaskInState(newRecord);
                   } else if (eventType === 'UPDATE') {
-                    const index = plannerState.tasks.findIndex(t => t.id === recordId);
-                    if (index > -1) {
-                      plannerState.tasks[index] = newRecord;
-                    } else {
-                        // If not found, add it. Might happen if listener starts after initial load.
-                        plannerState.tasks.push(newRecord);
-                    }
+                    upsertPlannerTaskInState(newRecord);
                   } else if (eventType === 'DELETE') {
                     plannerState.tasks = plannerState.tasks.filter(t => t.id !== recordId);
                     // If the deleted task was selected, deselect it
@@ -6798,6 +6799,8 @@ if (achievementsGrid) {
                     chip.classList.add('selected');
                 }
                 updatePlannerTask(taskId, { tags: updatedTags });
+                task.tags = updatedTags;
+                renderPlannerTaskDetails();
                 addTagToLibrary(tagName, color);
             };
 
@@ -6951,8 +6954,8 @@ if (achievementsGrid) {
               return;
             }
           
-            // Update your local state (optional)
-            plannerState.tasks.push(data);
+            // Update your local state while avoiding duplicates
+            upsertPlannerTaskInState(data);
             plannerState.selectedTaskId = data.id;
             renderPlannerPage();            // refresh list/board/calendar
             renderTaskSelectionList(plannerState.tasks);
@@ -10085,9 +10088,15 @@ if (achievementsGrid) {
                 const taskItem = target.closest('.task-item, .kanban-card, .calendar-task, .category-task-item, .event-block, .completed-task-item');
                 if (taskItem && !target.matches('input[type="checkbox"]') && !target.closest('.task-play-btn')) {
                     const taskId = taskItem.dataset.taskId;
-                    if (taskId !== plannerState.selectedTaskId) {
-                        plannerState.selectedTaskId = taskId;
+                    if (!taskId) return;
+                    const isDifferentTask = taskId !== plannerState.selectedTaskId;
+                    const detailsPanelEl = document.getElementById('planner-task-details');
+                    const detailsHidden = !detailsPanelEl || detailsPanelEl.classList.contains('hidden') || !detailsPanelEl.classList.contains('open');
+                    plannerState.selectedTaskId = taskId;
+                    if (isDifferentTask || detailsHidden) {
                         renderPlannerPage();
+                    } else {
+                        renderPlannerTaskDetails();
                     }
                     return;
                 }
