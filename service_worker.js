@@ -153,9 +153,15 @@ function scheduleNotification(payload) {
                 self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
                     const visibleClients = clients.filter(client => client.visibilityState === 'visible');
                     if (visibleClients.length > 0) {
-                        visibleClients.forEach(client => client.postMessage(transitionMessage));
+                        visibleClients.forEach(client => client.postMessage({
+                            ...transitionMessage,
+                            source: 'service-worker'
+                        }));
                     } else if (clients.length > 0) { // If no clients are visible, but some exist, try to focus one
-                        clients[0].focus().then(client => client.postMessage(transitionMessage));
+                        clients[0].focus().then(client => client.postMessage({
+                            ...transitionMessage,
+                            source: 'service-worker'
+                        }));
                     } else { // No clients at all, just log
                         console.log('[Service Worker] No clients to send TIMER_ENDED message to.');
                     }
@@ -195,4 +201,67 @@ self.addEventListener('notificationclick', (event) => {
             console.warn('[Service Worker] No client found to handle notification action.');
         }
     });
+});
+
+self.addEventListener('push', event => {
+    if (!event.data) {
+        console.warn('[Service Worker] Push event received with no data.');
+        return;
+    }
+
+    let payload;
+    try {
+        payload = event.data.json();
+    } catch (error) {
+        console.warn('[Service Worker] Failed to parse push payload as JSON, using text fallback.', error);
+        payload = { title: 'FocusFlow', body: event.data.text() };
+    }
+
+    const title = payload.title || 'FocusFlow';
+    const options = {
+        body: payload.body || '',
+        icon: payload.icon || './icons/play.png',
+        badge: payload.badge || './icons/play.png',
+        tag: payload.tag || notificationTag,
+        data: payload.data || {},
+        actions: payload.actions || [
+            { action: 'pause', title: 'Pause', icon: './icons/pause.png' },
+            { action: 'resume', title: 'Resume', icon: './icons/play.png' },
+            { action: 'stop', title: 'Stop', icon: './icons/stop.png' }
+        ]
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(title, options).then(() =>
+            self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+                clients.forEach(client => client.postMessage({
+                    type: 'TIMER_ENDED',
+                    newState: payload.newState,
+                    oldState: payload.oldState,
+                    source: 'service-worker'
+                }));
+            })
+        )
+    );
+});
+
+self.addEventListener('pushsubscriptionchange', event => {
+    event.waitUntil(
+        self.registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: event.oldSubscription && event.oldSubscription.options
+                ? event.oldSubscription.options.applicationServerKey
+                : undefined,
+        }).then(newSubscription =>
+            self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+                clients.forEach(client => client.postMessage({
+                    type: 'PUSH_SUBSCRIPTION_REFRESH',
+                    subscription: newSubscription.toJSON(),
+                    source: 'service-worker'
+                }));
+            })
+        ).catch(error => {
+            console.error('[Service Worker] Failed to resubscribe after pushsubscriptionchange:', error);
+        })
+    );
 });
