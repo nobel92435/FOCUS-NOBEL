@@ -1,5 +1,5 @@
 // HYBRID Service Worker for FocusFlow
-// Version 1.0.2 (updated for timer reliability and notification options fix)
+// Version 1.1.0 (adds push notification support and subscription recovery)
 
 const CACHE_NAME = 'focusflow-cache-v2'; // Increment cache version for updates
 const OFFLINE_URL = './offline.html'; // Path to your dedicated offline page
@@ -104,14 +104,20 @@ let notificationTag = 'pomodoro-timer'; // A tag for notifications to group them
 
 // Listen for messages from the main page
 self.addEventListener('message', (event) => {
-    const { type, payload } = event.data;
+    const { type, payload } = event.data || {};
 
     switch (type) {
         case 'SCHEDULE_ALARM':
             scheduleNotification(payload);
             break;
+        case 'SCHEDULE_NOTIFICATION':
+            scheduleNotification(payload);
+            break;
         case 'CANCEL_ALARM':
             cancelAlarm(payload.timerId);
+            break;
+        case 'CANCEL_NOTIFICATION':
+            cancelAlarm(payload?.timerId);
             break;
     }
 });
@@ -131,7 +137,7 @@ function scheduleNotification(payload) {
 
     // Actions for notification buttons - ensure icons are accessible
     // These paths are relative to the Service Worker's scope
-    notificationOptions.actions = [
+    notificationOptions.actions = notificationOptions.actions || [
         { action: 'pause', title: 'Pause', icon: './icons/pause.png' },
         { action: 'resume', title: 'Resume', icon: './icons/play.png' },
         { action: 'stop', title: 'Stop', icon: './icons/stop.png' }
@@ -150,16 +156,7 @@ function scheduleNotification(payload) {
             .then(() => {
                 console.log(`[Service Worker]: Notification "${title}" shown.`);
                 // Send message to all visible clients, or attempt to focus if none are visible
-                self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-                    const visibleClients = clients.filter(client => client.visibilityState === 'visible');
-                    if (visibleClients.length > 0) {
-                        visibleClients.forEach(client => client.postMessage(transitionMessage));
-                    } else if (clients.length > 0) { // If no clients are visible, but some exist, try to focus one
-                        clients[0].focus().then(client => client.postMessage(transitionMessage));
-                    } else { // No clients at all, just log
-                        console.log('[Service Worker] No clients to send TIMER_ENDED message to.');
-                    }
-                });
+                broadcastMessageToClients(transitionMessage, true);
             })
             .catch(error => {
                 console.error('[Service Worker] Error showing notification:', error);
@@ -184,15 +181,74 @@ self.addEventListener('notificationclick', (event) => {
     const action = event.action; // Get the action clicked (e.g., 'pause', 'resume', 'stop')
 
     // Find all window clients (tabs/windows) that this Service Worker controls
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-        let clientToFocus = clients.find(client => client.visibilityState === 'visible') || clients[0];
-
-        if (clientToFocus) {
-            clientToFocus.focus().then(() => {
-                clientToFocus.postMessage({ type: 'notification_action', action: action });
-            });
-        } else {
-            console.warn('[Service Worker] No client found to handle notification action.');
-        }
-    });
+    broadcastMessageToClients({ type: 'notification_action', action }, true, true);
 });
+
+// Listen for push notifications from the server (Supabase Edge Functions)
+self.addEventListener('push', (event) => {
+    console.log('[Service Worker] Push event received.');
+
+    const dataText = event.data ? event.data.text() : null;
+    let payload = {};
+
+    if (dataText) {
+        try {
+            payload = JSON.parse(dataText);
+        } catch (error) {
+            console.warn('[Service Worker] Failed to parse push payload as JSON, using text body.', error);
+            payload = { body: dataText };
+        }
+    }
+
+    const title = payload.title || 'FocusFlow';
+    const options = Object.assign({}, payload.options || {});
+    options.body = options.body || payload.body || '';
+    options.tag = options.tag || notificationTag;
+    options.renotify = options.renotify ?? true;
+    options.icon = options.icon || './favicon.ico';
+    options.badge = options.badge || './favicon.ico';
+    options.actions = options.actions || [
+        { action: 'pause', title: 'Pause', icon: './icons/pause.png' },
+        { action: 'resume', title: 'Resume', icon: './icons/play.png' },
+        { action: 'stop', title: 'Stop', icon: './icons/stop.png' }
+    ];
+
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+            .then(() => {
+                broadcastMessageToClients({ type: 'SERVER_PUSH_NOTIFICATION', payload });
+            })
+            .catch(error => {
+                console.error('[Service Worker] Error showing push notification:', error);
+            })
+    );
+});
+
+// Notify clients if the push subscription changes so the app can resubscribe
+self.addEventListener('pushsubscriptionchange', (event) => {
+    console.log('[Service Worker] pushsubscriptionchange detected.');
+    event.waitUntil(broadcastMessageToClients({ type: 'PUSH_SUBSCRIPTION_EXPIRED' }));
+});
+
+function broadcastMessageToClients(message, focusClient = false, notifyIfNoClients = false) {
+    return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+        if (clients.length === 0) {
+            if (notifyIfNoClients) {
+                console.warn('[Service Worker] No clients available to receive message:', message);
+            }
+            return;
+        }
+
+        let target = clients.find(client => client.visibilityState === 'visible') || clients[0];
+
+        if (focusClient && target && 'focus' in target) {
+            return target.focus().then(() => {
+                target.postMessage(message);
+            });
+        }
+
+        clients.forEach(client => client.postMessage(message));
+    }).catch(error => {
+        console.error('[Service Worker] Failed to broadcast message to clients:', error);
+    });
+}

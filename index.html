@@ -3091,6 +3091,8 @@
     const supabase = createClient(supabaseUrl, supabaseKey);
     const auth = supabase.auth;
     const storage = supabase.storage;
+    // Provide your public VAPID key via a global (window.__FOCUSFLOW_VAPID_PUBLIC_KEY__) or replace the empty string below.
+    const VAPID_PUBLIC_KEY = window.__FOCUSFLOW_VAPID_PUBLIC_KEY__ || '';
 
     /**
      * Compresses an image file using a canvas.
@@ -3244,6 +3246,9 @@
     }
 
     let currentUser = null;
+    let serviceWorkerRegistration = null;
+    let pushSubscriptionSynced = false;
+    let hasDisplayedPushSuccessToast = false;
 
     // restore user on page load + watch changes
     async function restoreUser() {
@@ -3347,6 +3352,7 @@
             // Ensure daily totals persist across refreshes
             await loadDailyTotal();
             showPage('page-timer');
+            ensurePushSubscription();
         }
     }
         const ACHIEVEMENTS = {
@@ -3604,7 +3610,7 @@ async function triggerServerNotification(messageData) {
                 userId: currentUser.id,
                 appId,
                 title: messageData.title,
-                body: messageData.options.body,
+                body: messageData.options?.body || '',
                 newState: messageData.newState,
                 oldState: messageData.oldState
             }
@@ -3616,6 +3622,150 @@ async function triggerServerNotification(messageData) {
         showToast('Failed to schedule notification.', 'error');
     }
 }
+
+    function isPushNotificationSupported() {
+        return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    async function updatePushSubscriptionOnServer(subscription) {
+        if (!currentUser?.id) return;
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ push_subscription: subscription })
+                .eq('id', currentUser.id);
+
+            if (error) throw error;
+
+            currentUserData = { ...currentUserData, push_subscription: subscription };
+        } catch (error) {
+            console.error('Failed to update push subscription on server:', error);
+            throw error;
+        }
+    }
+
+    async function ensurePushSubscription(force = false) {
+        if (!isPushNotificationSupported()) return;
+        if (!currentUser || currentUser.isAnonymous) return;
+        if (!VAPID_PUBLIC_KEY) {
+            console.warn('Push notifications disabled: missing public VAPID key.');
+            return;
+        }
+
+        const registration = serviceWorkerRegistration || await navigator.serviceWorker.ready.catch(() => null);
+        if (!registration) return;
+
+        if (!force && pushSubscriptionSynced) return;
+
+        try {
+            let permission = Notification.permission;
+            if (permission === 'default') {
+                permission = await Notification.requestPermission();
+            }
+
+            if (permission !== 'granted') {
+                console.warn('Notification permission not granted. Push subscription skipped.');
+                return;
+            }
+
+            let subscription = await registration.pushManager.getSubscription();
+
+            if (!subscription) {
+                const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey
+                });
+
+                if (!hasDisplayedPushSuccessToast) {
+                    showToast('Push notifications enabled! We\'ll keep you on track.', 'success');
+                    hasDisplayedPushSuccessToast = true;
+                }
+            }
+
+            const serialized = subscription.toJSON();
+            const existing = currentUserData?.push_subscription || null;
+            if (force || JSON.stringify(serialized) !== JSON.stringify(existing)) {
+                await updatePushSubscriptionOnServer(serialized);
+            }
+
+            pushSubscriptionSynced = true;
+        } catch (error) {
+            pushSubscriptionSynced = false;
+            console.error('Failed to ensure push subscription:', error);
+        }
+    }
+
+    async function disablePushNotificationsForCurrentUser() {
+        pushSubscriptionSynced = false;
+        hasDisplayedPushSuccessToast = false;
+
+        if (currentUser?.id) {
+            try {
+                await updatePushSubscriptionOnServer(null);
+            } catch (error) {
+                console.warn('Could not clear push subscription on server:', error);
+            }
+        }
+
+        if (!isPushNotificationSupported()) return;
+
+        try {
+            const registration = serviceWorkerRegistration || await navigator.serviceWorker.ready.catch(() => null);
+            if (!registration) return;
+
+            const subscription = await registration.pushManager.getSubscription();
+            if (subscription) {
+                await subscription.unsubscribe();
+            }
+        } catch (error) {
+            console.warn('Failed to unsubscribe from push notifications:', error);
+        }
+    }
+
+    function handleNotificationAction(action) {
+        switch (action) {
+            case 'pause':
+                pauseTimer();
+                break;
+            case 'resume':
+                resumeTimer();
+                break;
+            case 'stop':
+                stopTimer();
+                break;
+            default:
+                break;
+        }
+    }
+
+    async function handleUserSignOut() {
+        try {
+            await disablePushNotificationsForCurrentUser();
+        } catch (error) {
+            console.warn('Error disabling push notifications during sign out:', error);
+        }
+
+        try {
+            await auth.signOut();
+        } catch (error) {
+            console.error('Sign out error', error);
+            showToast('Failed to sign out.', 'error');
+        }
+    }
 
         // Timer State
         // Add these lines
@@ -3881,7 +4031,8 @@ let pauseStartTime = 0;
             
             if (data) {
                 // This function will now update all parts of the profile UI
-                updateProfileUI(data); 
+                updateProfileUI(data);
+                ensurePushSubscription();
             }
         }
 
@@ -10173,7 +10324,7 @@ if (achievementsGrid) {
 
         ael('go-to-auth-btn', 'click', async () => {
             // Sign out the anonymous user and show the auth screen
-            await auth.signOut();
+            await handleUserSignOut();
             // showPage will be called by onAuthStateChanged
         });
         // --- END: NEW EVENT LISTENERS FOR GUEST MODE ---
@@ -10324,12 +10475,7 @@ if (achievementsGrid) {
         });
 
         ael('sign-out-btn', 'click', async () => {
-            try {
-                await auth.signOut();
-            } catch (error) {
-                console.error("Sign out error", error);
-                showToast("Failed to sign out.", "error");
-            }
+            await handleUserSignOut();
         });
 
         // Navigation
@@ -12284,13 +12430,30 @@ if (achievementsGrid) {
             // Service Workers require a secure context (HTTPS or localhost) to register.
             // This check prevents the registration error in unsupported environments (like 'blob:').
             if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-                // IMPORTANT CHANGE HERE: Use './service-worker.js' or '/Focus-Clock/service-worker.js'
-                // if your app is hosted in a subfolder like /Focus-Clock/
-                // './service-worker.js' is generally preferred for relative paths.
+                const handleServiceWorkerMessage = (event) => {
+                    const data = event.data;
+                    if (!data) return;
+
+                    if (data.type === 'TIMER_ENDED') {
+                        handlePomodoroPhaseEnd(data);
+                    } else if (data.type === 'notification_action') {
+                        handleNotificationAction(data.action);
+                    } else if (data.type === 'PUSH_SUBSCRIPTION_EXPIRED') {
+                        pushSubscriptionSynced = false;
+                        ensurePushSubscription(true);
+                    } else if (data.type === 'SERVER_PUSH_NOTIFICATION') {
+                        console.log('Push notification delivered:', data.payload);
+                    }
+                };
+
+                navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+
                 navigator.serviceWorker
                     .register('./service-worker.js', { scope: './' }) // Updated path and added scope
                     .then(registration => {
+                        serviceWorkerRegistration = registration;
                         console.log('Service Worker registered successfully with scope:', registration.scope);
+                        ensurePushSubscription();
                         // --- START NEW CODE FOR SERVICE WORKER UPDATES ---
                         registration.onupdatefound = () => {
                             const installingWorker = registration.installing;
@@ -12311,6 +12474,15 @@ if (achievementsGrid) {
                     })
                     .catch(error => {
                         console.error('Service Worker registration failed:', error);
+                    });
+
+                navigator.serviceWorker.ready
+                    .then(registration => {
+                        serviceWorkerRegistration = registration;
+                        ensurePushSubscription();
+                    })
+                    .catch(error => {
+                        console.error('Service Worker ready check failed:', error);
                     });
 
                 // --- START NEW CODE TO RELOAD PAGE ON CONTROLLER CHANGE ---
