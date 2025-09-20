@@ -5389,7 +5389,12 @@ if (achievementsGrid) {
                     schema: 'public',
                     table: 'sessions',
                     filter: `profile_id=eq.${currentUser.id}`
-                }, () => loadSessions())
+                }, (payload) => {
+                    if (payload.eventType !== 'DELETE' && !payload.new?.endedAt) {
+                        return;
+                    }
+                    loadSessions();
+                })
                 .subscribe();
             loadSessions();
 
@@ -8191,7 +8196,10 @@ if (achievementsGrid) {
             .channel(`sessions:me:${currentUser.id}`)
             .on('postgres_changes',
                 { event: '*', schema: 'public', table: 'sessions', filter: `profile_id=eq.${currentUser.id}` },
-                async () => {
+                async (payload) => {
+                  if (payload.eventType !== 'DELETE' && !payload.new?.endedAt) {
+                    return;
+                  }
                   await __reloadSessions();
                   __renderActiveView();
                 })
