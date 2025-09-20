@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FocusFlow - Real-time Study Timer</title>
+    <meta name="focusflow-vapid-public-key" content="">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -3092,6 +3093,99 @@
     const auth = supabase.auth;
     const storage = supabase.storage;
 
+    const vapidMeta = document.querySelector('meta[name="focusflow-vapid-public-key"]');
+    const VAPID_PUBLIC_KEY = (window.__FOCUSFLOW_VAPID_PUBLIC_KEY ?? vapidMeta?.content ?? '').trim();
+    const PUSH_SUB_STORAGE_KEY = 'focusflowPushSubscription';
+    let hasUploadedPushSubscription = false;
+    let currentUser = null;
+
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    function subscriptionToJSON(subscription) {
+        if (!subscription) return null;
+        if (typeof subscription.toJSON === 'function') {
+            return subscription.toJSON();
+        }
+        if (subscription.endpoint) {
+            return subscription;
+        }
+        return null;
+    }
+
+    async function sendVapidKeyToWorker(registration) {
+        if (!registration || !registration.active || !VAPID_PUBLIC_KEY) {
+            return;
+        }
+        registration.active.postMessage({ type: 'SET_VAPID_KEY', payload: VAPID_PUBLIC_KEY });
+    }
+
+    async function persistPushSubscription(subscription) {
+        if (!currentUser) return;
+        const subscriptionJson = subscriptionToJSON(subscription);
+        const serialized = subscriptionJson ? JSON.stringify(subscriptionJson) : '';
+        const cached = localStorage.getItem(PUSH_SUB_STORAGE_KEY) || '';
+
+        if (serialized === cached) {
+            hasUploadedPushSubscription = !!serialized;
+            return;
+        }
+
+        try {
+            await updateUserPrivate(currentUser.id, { push_subscription: subscriptionJson });
+            localStorage.setItem(PUSH_SUB_STORAGE_KEY, serialized);
+            hasUploadedPushSubscription = !!serialized;
+        } catch (error) {
+            console.error('Failed to persist push subscription:', error);
+        }
+    }
+
+    async function ensurePushSubscription() {
+        if (!currentUser || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+            return;
+        }
+        if (!VAPID_PUBLIC_KEY) {
+            console.warn('VAPID public key is not configured; skipping push subscription.');
+            return;
+        }
+        if (Notification.permission === 'denied') {
+            console.warn('Notification permission denied. Push subscription skipped.');
+            return;
+        }
+
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            await sendVapidKeyToWorker(registration);
+
+            if (Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    return;
+                }
+            }
+
+            let subscription = await registration.pushManager.getSubscription();
+            if (!subscription) {
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+            }
+
+            await persistPushSubscription(subscription);
+        } catch (error) {
+            console.error('Failed to ensure push subscription:', error);
+        }
+    }
+
     /**
      * Compresses an image file using a canvas.
      * @param {File} file The image file to compress.
@@ -3243,8 +3337,6 @@
         if (error) throw error;
     }
 
-    let currentUser = null;
-
     // restore user on page load + watch changes
     async function restoreUser() {
         const { data: { user } } = await auth.getUser();
@@ -3257,6 +3349,10 @@
         // For user updates (like changing a profile picture), we just want to refresh
         // the profile data without navigating them away from their current page.
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+            if (event === 'SIGNED_OUT') {
+                localStorage.removeItem(PUSH_SUB_STORAGE_KEY);
+                hasUploadedPushSubscription = false;
+            }
             routeAfterAuth();
         } else if (event === 'USER_UPDATED' && currentUser) {
             loadMyProfile();
@@ -3346,6 +3442,7 @@
             setupRealtimeListeners();
             // Ensure daily totals persist across refreshes
             await loadDailyTotal();
+            await ensurePushSubscription();
             showPage('page-timer');
         }
     }
@@ -3511,6 +3608,22 @@
         }
 
 
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', event => {
+                const data = event.data;
+                if (!data) return;
+                if (data.type === 'TIMER_ENDED') {
+                    handlePomodoroPhaseEnd(data);
+                } else if (data.type === 'notification_action') {
+                    handleNotificationAction(data.action);
+                } else if (data.type === 'push_subscription_changed') {
+                    persistPushSubscription(data.subscription);
+                    ensurePushSubscription();
+                }
+            });
+        }
+
+
         // --- Application Setup ---
         const getCurrentDate = () => new Date();
 
@@ -3536,7 +3649,27 @@
         
             const sessionType = oldState === 'work' ? 'study' : 'break';
             const subject = oldState === 'work' ? activeSubject : oldState.replace('_', ' ');
-            await saveSession(subject, sessionDuration, sessionType);
+            await saveSession(subject, sessionDuration, sessionType, { persist: false });
+
+            const transitionMessage = oldState === 'work'
+                ? {
+                    title: 'Focus complete!',
+                    options: { body: `Time for a ${newState.replace('_', ' ')}.`, tag: 'pomodoro-transition' },
+                    newState,
+                    oldState
+                }
+                : {
+                    title: 'Break is over!',
+                    options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' },
+                    newState,
+                    oldState
+                };
+
+            await triggerServerNotification(transitionMessage);
+            await loadDailyTotal();
+            if (sessionType === 'study') {
+                await checkAndAwardAchievements(sessionDuration);
+            }
 
             // If a work session just ended, increment the pomodoro count for the active task
             if (oldState === 'work' && activeTaskId) {
@@ -3593,9 +3726,8 @@
  * @param {object} messageData - Includes title, options.body, newState and oldState.
  */
 async function triggerServerNotification(messageData) {
-    if (!currentUser) {
+    if (!currentUser || !messageData) {
         console.error('User not authenticated, cannot send server notification.');
-        showToast('Please sign in to enable server notifications.', 'error');
         return;
     }
     try {
@@ -3604,7 +3736,7 @@ async function triggerServerNotification(messageData) {
                 userId: currentUser.id,
                 appId,
                 title: messageData.title,
-                body: messageData.options.body,
+                body: messageData.options?.body ?? '',
                 newState: messageData.newState,
                 oldState: messageData.oldState
             }
@@ -3613,7 +3745,6 @@ async function triggerServerNotification(messageData) {
         console.log('Server notification triggered:', data);
     } catch (error) {
         console.error('Error triggering server notification:', error);
-        showToast('Failed to schedule notification.', 'error');
     }
 }
 
@@ -4030,7 +4161,7 @@ let pauseStartTime = 0;
          * @param {string} title - The title of the notification.
          * @param {object} options - The options for the notification (e.g., body, icon, tag).
          */
-        function scheduleTransitionNotification(delayInMs, title, options) {
+        function scheduleTransitionNotification(delayInMs, title, options = {}, transitionMessage = null) {
             // First, make sure Service Workers and Notifications are supported.
             if (!('serviceWorker' in navigator) || !('Notification' in window)) {
                 console.warn('Service Workers or Notifications are not supported in this browser.');
@@ -4043,21 +4174,27 @@ let pauseStartTime = 0;
                 Notification.requestPermission().then(permission => {
                     if (permission === 'granted') {
                         // Permission granted, now schedule.
-                        scheduleNow(delayInMs, title, options);
+                        scheduleNow(delayInMs, title, options, transitionMessage);
                     }
                 });
             } else if (Notification.permission === 'granted') {
-                scheduleNow(delayInMs, title, options);
+                scheduleNow(delayInMs, title, options, transitionMessage);
             }
-            
-            function scheduleNow(delay, title, opts) {
+
+            function scheduleNow(delay, title, opts, transition) {
+                const { transitionMessage: embeddedMessage, ...restOptions } = opts || {};
+                const message = transition || embeddedMessage || null;
+                const timerTag = restOptions?.tag || 'pomodoro-transition';
                 navigator.serviceWorker.ready.then(registration => {
+                    if (!registration.active) return;
                     registration.active.postMessage({
-                        type: 'SCHEDULE_NOTIFICATION',
+                        type: 'SCHEDULE_ALARM',
                         payload: {
                             delay: delay,
                             title: title,
-                            options: opts
+                            options: { ...restOptions, tag: timerTag },
+                            transitionMessage: message,
+                            timerId: timerTag
                         }
                     });
                 });
@@ -4932,22 +5069,8 @@ let pauseStartTime = 0;
                     }
                 }, 1000);
             } else { // Pomodoro Mode
-                pomodoroState = 'work';
                 playSound(pomodoroSounds.start, pomodoroSounds.volume);
-
-                const workDurationSeconds = pomodoroSettings.work * 60;
-                pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
-
-                // Use the new reliable SW alarm
-                await triggerServerNotification({
-        title: 'Focus complete!',
-        options: { body: `Time for a short break.`, tag: 'pomodoro-transition' }, // Options for the FCM notification
-        newState: 'short_break',
-        oldState: 'work',
-    });
-
-                pomodoroStatusDisplay.textContent = `Work (1/${pomodoroSettings.long_break_interval})`;
-                pomodoroStatusDisplay.style.color = '#3b82f6';
+                await startNextPomodoroPhase('work');
             }
 
             document.getElementById('start-studying-btn').classList.add('hidden');
@@ -5066,6 +5189,23 @@ let pauseStartTime = 0;
             }
         }
 
+        function handleNotificationAction(action) {
+            if (!action) return;
+            switch (action) {
+                case 'pause':
+                    pauseTimer();
+                    break;
+                case 'resume':
+                    resumeTimer();
+                    break;
+                case 'stop':
+                    stopTimer().catch(error => console.error('Failed to stop timer from notification:', error));
+                    break;
+                default:
+                    break;
+            }
+        }
+
         // --- NEW: Helper to start the next Pomodoro phase ---
         async function startNextPomodoroPhase(state) {
             if (state === 'work' && activeTaskRemainingPomodoros !== null && activeTaskRemainingPomodoros <= 0) {
@@ -5110,7 +5250,10 @@ let pauseStartTime = 0;
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e0b' : '#3b82f6';
 
-            await triggerServerNotification(transitionMessage);
+            scheduleTransitionNotification(durationSeconds * 1000, transitionMessage.title, {
+                ...transitionMessage.options,
+                transitionMessage
+            });
 
             // Update cycle in Supabase only after a break is completed (meaning a work session is starting)
             if (state === 'work') {
@@ -5135,10 +5278,12 @@ let pauseStartTime = 0;
             totalBreakTimeDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
         }
 
-        async function saveSession(subject, durationSeconds, sessionType = 'study') { // Default to 'study'
+        async function saveSession(subject, durationSeconds, sessionType = 'study', options = {}) { // Default to 'study'
             if (!currentUser || durationSeconds <= 0) {
                 return;
             }
+
+            const { persist = true } = options;
 
             // --- START: ADDED GUEST LOGIC ---
             // For anonymous users, just update local state without saving to Supabase
@@ -5156,6 +5301,17 @@ let pauseStartTime = 0;
 
             const MAX_BREAK_SECONDS = 3 * 3600; // 3 hours in seconds
             const cappedDuration = (sessionType === 'break' && durationSeconds > MAX_BREAK_SECONDS) ? MAX_BREAK_SECONDS : durationSeconds;
+
+            if (!persist) {
+                if (sessionType === 'study') {
+                    totalTimeTodayInSeconds += cappedDuration;
+                } else {
+                    totalBreakTimeTodayInSeconds += cappedDuration;
+                }
+                updateTotalTimeDisplay();
+                showToast(`Session of ${formatTime(cappedDuration, false)} recorded!`, "success");
+                return;
+            }
 
             try {
                 // Fetch current profile
@@ -12291,6 +12447,7 @@ if (achievementsGrid) {
                     .register('./service-worker.js', { scope: './' }) // Updated path and added scope
                     .then(registration => {
                         console.log('Service Worker registered successfully with scope:', registration.scope);
+                        sendVapidKeyToWorker(registration);
                         // --- START NEW CODE FOR SERVICE WORKER UPDATES ---
                         registration.onupdatefound = () => {
                             const installingWorker = registration.installing;
@@ -12316,6 +12473,7 @@ if (achievementsGrid) {
                 // --- START NEW CODE TO RELOAD PAGE ON CONTROLLER CHANGE ---
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
                     console.log('New service worker activated, reloading page for latest content.');
+                    navigator.serviceWorker.ready.then(sendVapidKeyToWorker);
                     window.location.reload();
                 });
                 // --- END NEW CODE TO RELOAD PAGE ON CONTROLLER CHANGE ---
