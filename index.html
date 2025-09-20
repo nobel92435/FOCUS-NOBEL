@@ -8233,20 +8233,13 @@ if (achievementsGrid) {
         }
         
         function __setupLiveTicker() {
-          // Always clear any existing ticker when the studying state changes.
+          // if currently studying/break, tick every 1s; else stop
           if (__stats.liveInterval) { clearInterval(__stats.liveInterval); __stats.liveInterval = null; }
-
-          // We used to refresh the Stats view every second while a session was live to
-          // display an in-progress virtual entry. This resulted in frequent re-renders and
-          // unnecessary database activity for consumers watching the network tab.
-          //
-          // Instead, we now leave the Stats view alone until a session actually finishes.
-          // The realtime listener on the `sessions` table will trigger a reload once the
-          // new session row is inserted, which keeps the data accurate without hammering
-          // Supabase every second.
           if (!__stats.liveStudying || !__stats.liveStudying.startTime) return;
-          // No interval is scheduled here on purpose – the view will refresh after
-          // session completion events.
+          __stats.liveInterval = setInterval(() => {
+            // update only the active tab; charts update too
+            __renderActiveView(true /*tick*/);
+          }, 1000);
         }
         
         /* ---------- render routing ---------- */
