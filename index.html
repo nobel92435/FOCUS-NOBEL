@@ -3092,6 +3092,21 @@
     const auth = supabase.auth;
     const storage = supabase.storage;
 
+    const vapidMeta = document.querySelector('meta[name="vapid-public-key"]');
+    const VAPID_PUBLIC_KEY = (window?.ENV?.VAPID_PUBLIC_KEY ?? window?.SUPABASE_VAPID_PUBLIC_KEY ?? vapidMeta?.content ?? '').trim();
+    let isSyncingPushSubscription = false;
+
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
     /**
      * Compresses an image file using a canvas.
      * @param {File} file The image file to compress.
@@ -3195,6 +3210,123 @@
             .update(values)
             .eq('id', userId);
         if (error) throw error;
+    }
+
+    async function ensurePushSubscription(profile) {
+        if (isSyncingPushSubscription) return;
+        if (!currentUser || currentUser.isAnonymous) return;
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        if (!('Notification' in window)) return;
+        if (!VAPID_PUBLIC_KEY) {
+            console.warn('VAPID public key is not configured; skipping push subscription setup.');
+            return;
+        }
+
+        const permission = Notification.permission === 'default'
+            ? await Notification.requestPermission()
+            : Notification.permission;
+        if (permission !== 'granted') {
+            console.warn('Notifications are not permitted by the user.');
+            return;
+        }
+
+        try {
+            isSyncingPushSubscription = true;
+            const registration = await navigator.serviceWorker.ready;
+            const existingSubscription = await registration.pushManager.getSubscription();
+            const profileSubscription = profile?.push_subscription ?? null;
+
+            if (!existingSubscription) {
+                const newSubscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+                const serialized = newSubscription?.toJSON?.() ?? newSubscription;
+                await updateProfile(currentUser.id, { push_subscription: serialized });
+                if (currentUserData) currentUserData.push_subscription = serialized;
+                console.log('Push subscription stored for user.');
+                return;
+            }
+
+            const serializedExisting = existingSubscription?.toJSON?.() ?? existingSubscription;
+            if (JSON.stringify(serializedExisting) !== JSON.stringify(profileSubscription)) {
+                await updateProfile(currentUser.id, { push_subscription: serializedExisting });
+                if (currentUserData) currentUserData.push_subscription = serializedExisting;
+                console.log('Push subscription refreshed for user.');
+            }
+        } catch (error) {
+            console.error('Failed to ensure push subscription:', error);
+        } finally {
+            isSyncingPushSubscription = false;
+        }
+    }
+
+    async function scheduleBackgroundNotification(delayInMs, transitionMessage) {
+        if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
+        if (Notification.permission === 'default') {
+            const permissionResult = await Notification.requestPermission();
+            if (permissionResult !== 'granted') return;
+        }
+        if (Notification.permission !== 'granted') return;
+
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const activeWorker = registration.active ?? navigator.serviceWorker.controller;
+            if (!activeWorker) return;
+
+            const tag = transitionMessage?.options?.tag || 'pomodoro-timer';
+            activeWorker.postMessage({
+                type: 'SCHEDULE_NOTIFICATION',
+                payload: {
+                    delay: delayInMs,
+                    title: transitionMessage?.title ?? 'FocusFlow',
+                    options: transitionMessage?.options ?? {},
+                    tag,
+                    data: {
+                        newState: transitionMessage?.newState,
+                        oldState: transitionMessage?.oldState,
+                        body: transitionMessage?.options?.body ?? '',
+                        title: transitionMessage?.title ?? 'FocusFlow'
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Failed to schedule background notification:', error);
+        }
+    }
+
+    async function cancelBackgroundNotification(tag = 'pomodoro-timer') {
+        if (!('serviceWorker' in navigator)) return;
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const activeWorker = registration.active ?? navigator.serviceWorker.controller;
+            if (!activeWorker) return;
+            activeWorker.postMessage({
+                type: 'CANCEL_NOTIFICATION',
+                payload: { tag }
+            });
+        } catch (error) {
+            console.error('Failed to cancel background notification:', error);
+        }
+    }
+
+    function handleNotificationActionFromSW(action, data) {
+        if (!action) return;
+        switch (action) {
+            case 'pause':
+                if (!isPaused) {
+                    pauseTimer();
+                }
+                break;
+            case 'resume':
+                if (isPaused) {
+                    resumeTimer();
+                }
+                break;
+            case 'stop':
+                stopTimer().catch((error) => console.error('Failed to stop timer from notification:', error));
+                break;
+        }
     }
 
     async function fetchLatestSession(userId) {
@@ -3491,25 +3623,24 @@
         };
         // --- FIX END ---
 
-        // --- Service Worker Communication Functions ---
-        function scheduleSWAlarm(payload) {
-            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({
-                    type: 'SCHEDULE_ALARM',
-                    payload: payload
-                });
-            }
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                const message = event.data;
+                if (!message || typeof message !== 'object') return;
+                if (message.type === 'TIMER_ENDED') {
+                    const { newState, oldState } = message;
+                    if (newState && oldState) {
+                        handlePomodoroPhaseEnd({ newState, oldState });
+                    }
+                } else if (message.type === 'notification_action') {
+                    handleNotificationActionFromSW(message.action, message.data);
+                } else if (message.type === 'pushsubscriptionchange') {
+                    if (currentUserData) {
+                        ensurePushSubscription(currentUserData).catch((error) => console.error('Failed to refresh push subscription after change:', error));
+                    }
+                }
+            });
         }
-
-        function cancelSWAlarm(timerId) {
-            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({
-                    type: 'CANCEL_ALARM',
-                    payload: { timerId: timerId }
-                });
-            }
-        }
-
 
         // --- Application Setup ---
         const getCurrentDate = () => new Date();
@@ -3525,7 +3656,9 @@
         // --- FIX START: Add the function to handle Pomodoro phase transitions ---
         async function handlePomodoroPhaseEnd(data) {
             const { newState, oldState } = data;
-        
+
+            await cancelBackgroundNotification();
+
             // Play the appropriate sound for the end of the phase
             playSound(oldState === 'work' ? pomodoroSounds.break : pomodoroSounds.focus, pomodoroSounds.volume);
         
@@ -4939,12 +5072,14 @@ let pauseStartTime = 0;
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
 
                 // Use the new reliable SW alarm
-                await triggerServerNotification({
-        title: 'Focus complete!',
-        options: { body: `Time for a short break.`, tag: 'pomodoro-transition' }, // Options for the FCM notification
-        newState: 'short_break',
-        oldState: 'work',
-    });
+                const initialTransitionMessage = {
+                    title: 'Focus complete!',
+                    options: { body: 'Time for a short break.', tag: 'pomodoro-transition' },
+                    newState: 'short_break',
+                    oldState: 'work'
+                };
+                await scheduleBackgroundNotification(workDurationSeconds * 1000, initialTransitionMessage);
+                await triggerServerNotification(initialTransitionMessage);
 
                 pomodoroStatusDisplay.textContent = `Work (1/${pomodoroSettings.long_break_interval})`;
                 pomodoroStatusDisplay.style.color = '#3b82f6';
@@ -4968,6 +5103,7 @@ let pauseStartTime = 0;
         async function stopTimer() {
             // Stop the UI timer in the web worker
             pomodoroWorker.postMessage({ command: 'stop' });
+            await cancelBackgroundNotification();
 
             // --- ADD THIS BLOCK TO RESET PAUSE STATE ---
             isPaused = false;
@@ -5109,6 +5245,8 @@ let pauseStartTime = 0;
             pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds });
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e0b' : '#3b82f6';
+
+            await scheduleBackgroundNotification(durationSeconds * 1000, transitionMessage);
 
             await triggerServerNotification(transitionMessage);
 
@@ -5306,7 +5444,8 @@ let pauseStartTime = 0;
             if(profileAnonView) profileAnonView.classList.add('hidden');
             // --- END: MODIFIED PROFILE UI LOGIC ---
 
-            currentUserData = userData; 
+            currentUserData = userData;
+            ensurePushSubscription(userData).catch((error) => console.error('Push subscription setup failed:', error));
             const username = userData.username || 'Anonymous';
             const email = userData.email || '';
             const photoURL = userData.photo_url;
@@ -12288,7 +12427,7 @@ if (achievementsGrid) {
                 // if your app is hosted in a subfolder like /Focus-Clock/
                 // './service-worker.js' is generally preferred for relative paths.
                 navigator.serviceWorker
-                    .register('./service-worker.js', { scope: './' }) // Updated path and added scope
+                    .register('./service_worker.js', { scope: './' })
                     .then(registration => {
                         console.log('Service Worker registered successfully with scope:', registration.scope);
                         // --- START NEW CODE FOR SERVICE WORKER UPDATES ---
