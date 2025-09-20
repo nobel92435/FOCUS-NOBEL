@@ -8206,8 +8206,10 @@ if (achievementsGrid) {
                 (payload) => {
                   const row = payload.new || payload.old || {};
                   __stats.liveStudying = row.studying || null;
-                  __setupLiveTicker();     // restart/stop ticking depending on state
-                  __renderActiveView();    // re-render quickly (subject/type may change)
+                  __setupLiveTicker();     // ensure any previous interval is cleared
+                  // Intentionally skip re-rendering here. The stats view will refresh
+                  // when the completed session is stored and picked up by the sessions
+                  // subscription, preventing extra database calls while the timer runs.
                 })
             .subscribe();
         }
@@ -8233,13 +8235,13 @@ if (achievementsGrid) {
         }
         
         function __setupLiveTicker() {
-          // if currently studying/break, tick every 1s; else stop
+          // Always clear any existing ticker.
           if (__stats.liveInterval) { clearInterval(__stats.liveInterval); __stats.liveInterval = null; }
-          if (!__stats.liveStudying || !__stats.liveStudying.startTime) return;
-          __stats.liveInterval = setInterval(() => {
-            // update only the active tab; charts update too
-            __renderActiveView(true /*tick*/);
-          }, 1000);
+
+          // We intentionally avoid live ticking to prevent repeated renders (and the
+          // database fetches they triggered) while a session is in progress. The
+          // stats view will now refresh only after a session completes and a new
+          // row is written to the `sessions` table.
         }
         
         /* ---------- render routing ---------- */
