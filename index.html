@@ -2591,6 +2591,9 @@
                                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
                              </svg>
                          </button>
+                         <button id="premium-btn" class="w-10 h-10 rounded-full bg-yellow-900/50 border border-yellow-800 flex items-center justify-center text-yellow-400 hover:bg-yellow-800/60 transition" title="Premium Features">
+                             <i class="fas fa-star"></i>
+                         </button>
                          <button id="profile-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition overflow-hidden">
                              <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
                          </button>
@@ -2954,11 +2957,39 @@
     <div id="image-view-modal" class="modal"><div class="modal-content p-1 bg-transparent"><img id="fullscreen-image" src="" class="max-w-full max-h-[90vh]"><button class="close-modal absolute top-2 right-2 text-white bg-black/50 rounded-full w-8 h-8">&times;</button></div></div>
     <div id="user-profile-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">User Profile</div><button class="close-modal">&times;</button></div><div id="user-profile-loading"><i class="fas fa-spinner fa-spin fa-2x"></i></div><div id="user-profile-details" class="hidden"><div class="flex items-center mb-4"><div id="user-profile-avatar" class="profile-avatar bg-blue-500 mr-4"></div><div><div id="user-profile-name" class="profile-name"></div></div></div><div class="space-y-2 text-sm"><div class="flex justify-between"><span>Total Today:</span><span id="user-profile-total-today" class="font-semibold"></span></div><div class="flex justify-between"><span>Total Overall:</span><span id="user-profile-total-overall" class="font-semibold"></span></div><div class="flex justify-between"><span>Last Active:</span><span id="user-profile-last-active" class="font-semibold"></span></div></div></div></div></div>
     <div id="quick-add-task-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Add Task for <span id="quick-add-task-date"></span></h2><button class="close-modal">&times;</button></div><form id="quick-add-task-form"><input type="hidden" id="quick-add-task-date-input"><input id="quick-add-task-title-input" type="text" class="w-full bg-gray-700 rounded-lg p-3 text-white" placeholder="e.g., Review chapter 5" required><button type="submit" class="w-full mt-3 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg">Add Task</button></form></div></div>
-    <div id="edit-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Edit Session</h2><button class="close-modal">&times;</button></div><form id="edit-session-form"><input type="hidden" id="edit-session-id"><input type="hidden" id="edit-session-old-duration"><input type="hidden" id="edit-session-ended-at"><div class="mb-4"><label for="edit-session-duration" class="block text-gray-300 mb-2">Duration (minutes)</label><input type="number" id="edit-session-duration" class="w-full bg-gray-700 rounded-lg p-3" min="1" required></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
+    <div id="edit-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Edit Session</h2><button class="close-modal">&times;</button></div><form id="edit-session-form" class="space-y-4"><input type="hidden" id="edit-session-id"><input type="hidden" id="edit-session-old-duration"><input type="hidden" id="edit-session-ended-at"><div><label for="edit-session-subject" class="block text-gray-300 mb-2">Subject</label><input type="text" id="edit-session-subject" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div><label for="edit-session-duration" class="block text-gray-300 mb-2">Duration (minutes)</label><input type="number" id="edit-session-duration" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" min="1" required></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
     <div id="avatar-character-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Choose Character</h2><button class="close-modal">&times;</button></div><div id="avatar-character-picker" class="avatar-picker max-h-60 overflow-y-auto"></div><button id="save-character-avatar-btn" class="w-full mt-4 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Character</button></div></div>
     <div id="project-select-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Move to Project</h2><button class="close-modal">&times;</button></div><div id="project-select-list" class="space-y-1 max-h-60 overflow-y-auto"></div></div></div>
     <div id="repeat-settings-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Repeat Settings</h2><button class="close-modal">&times;</button></div><form id="repeat-settings-form"><div class="mb-4"><label for="repeat-type-select" class="block text-gray-300 mb-2">Repeat Frequency</label><select id="repeat-type-select" class="w-full bg-gray-700 rounded-lg p-3"><option value="none">None</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Set Repeat</button></form></div></div>
     <!-- END: Added Missing Modals -->
+
+    <!-- Premium Features Modal -->
+    <div id="premium-modal" class="modal">
+        <div class="modal-content max-w-md">
+            <div class="modal-header">
+                <h3 class="modal-title flex items-center">
+                    <i class="fas fa-star text-yellow-400 mr-3"></i>
+                    FocusFlow Premium
+                </h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="py-4">
+                <p class="text-gray-400 mb-6">Unlock your full potential and achieve more with our exclusive premium features.</p>
+                <ul class="space-y-4 text-gray-200">
+                    <li class="flex items-center"><i class="fas fa-chart-line text-teal-400 w-6 text-center"></i><span class="ml-3">Advanced Analytics & Insights</span></li>
+                    <li class="flex items-center"><i class="fas fa-palette text-indigo-400 w-6 text-center"></i><span class="ml-3">Exclusive Themes & Sounds</span></li>
+                    <li class="flex items-center"><i class="fas fa-cloud-upload-alt text-sky-400 w-6 text-center"></i><span class="ml-3">Cloud Sync Across Devices</span></li>
+                    <li class="flex items-center"><i class="fas fa-tags text-rose-400 w-6 text-center"></i><span class="ml-3">Advanced Tagging & Filtering</span></li>
+                    <li class="flex items-center"><i class="fas fa-headset text-amber-400 w-6 text-center"></i><span class="ml-3">Focus with Ambient Soundscapes</span></li>
+                </ul>
+            </div>
+            <div class="mt-4">
+                <button class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/40 hover:scale-105">
+                    Upgrade Now
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- START: TAG & PROJECT MODALS -->
     <div id="new-tag-modal" class="modal sheet-modal">
@@ -4836,21 +4867,28 @@ let pauseStartTime = 0;
             // Clear break status from UI
             pomodoroStatusDisplay.textContent = ''; // Clear the "On Break" status
 
-            // --- New: Check and save idle time before starting a new study session ---
-            if (currentUser) {
+            // --- Modified: Check and save idle time before starting a new study session ---
+            if (currentUser && !currentUser.isAnonymous) {
                 const lastSession = await fetchLatestSession(currentUser.id);
-                if (lastSession?.endedAt && lastSession.type === 'study') {
+                
+                // Only calculate idle time if there was a previous session
+                if (lastSession?.endedAt) {
                     const endedAt = new Date(lastSession.endedAt);
-                    const now = Date.now();
-                    if (!isNaN(endedAt) && endedAt.getTime() < now) {
-                        const idleDurationSeconds = Math.floor((now - endedAt.getTime()) / 1000);
+                    const now = new Date(); // Use Date object for consistency
+                    const todayStr = now.toISOString().split('T')[0];
+                    const endedAtStr = endedAt.toISOString().split('T')[0];
+
+                    // Condition: The last session must have ended *today* to count the gap as today's break.
+                    if (endedAtStr === todayStr && endedAt.getTime() < now.getTime()) {
+                        const idleDurationSeconds = Math.floor((now.getTime() - endedAt.getTime()) / 1000);
                         if (idleDurationSeconds > 0) {
+                            // The session type of the gap is 'break', regardless of what the last session was.
                             await saveSession('Idle Break', idleDurationSeconds, 'break');
                         }
                     }
                 }
             }
-            // --- End New idle time tracking ---
+            // --- End Modified idle time tracking ---
 
             activeTaskId = task ? task.id : null;
             if (task) {
@@ -8001,6 +8039,63 @@ if (achievementsGrid) {
         
           // start realtime + initial load
           __startStatsRealtime();
+        
+          // --- FIX START: Add a persistent, delegated event listener ---
+          // Remove any old listener to prevent duplicates
+          if (insightsContainer._delegatedListener) {
+            insightsContainer.removeEventListener('click', insightsContainer._delegatedListener);
+          }
+        
+          // Define the new listener
+          insightsContainer._delegatedListener = function(e) {
+            const logContainer = document.getElementById('session-log-container-recent');
+            if (!logContainer || !logContainer.contains(e.target)) return;
+        
+            const optionsBtn = e.target.closest('.log-options-btn');
+            if (optionsBtn) {
+              const menu = optionsBtn.nextElementSibling;
+              logContainer.querySelectorAll('.log-options-menu').forEach(m => {
+                if (m !== menu) m.classList.remove('active');
+              });
+              menu.classList.toggle('active');
+              return;
+            }
+        
+            const delBtn = e.target.closest('.log-delete-btn');
+            if (delBtn) {
+              const item = delBtn.closest('.session-log-item');
+              const dataBtn = item.querySelector('.log-options-btn');
+              const id = dataBtn.dataset.sessionId;
+              const duration = parseInt(dataBtn.dataset.durationSeconds, 10);
+              const endedAt = new Date(dataBtn.dataset.endedAt);
+              showConfirmationModal('Delete Session?', 'Are you sure you want to permanently delete this study session?', () => {
+                deleteSession(id, duration, endedAt);
+              });
+              return;
+            }
+        
+            const editBtn = e.target.closest('.log-edit-btn');
+            if (editBtn) {
+              const item = editBtn.closest('.session-log-item');
+              const dataBtn = item.querySelector('.log-options-btn');
+              const id = dataBtn.dataset.sessionId;
+              const subject = dataBtn.dataset.sessionSubject;
+              const duration = parseInt(dataBtn.dataset.durationSeconds, 10);
+              const endedAtISO = dataBtn.dataset.endedAt;
+              const modal = document.getElementById('edit-session-modal');
+              document.getElementById('edit-session-id').value = id;
+              document.getElementById('edit-session-subject').value = subject;
+              document.getElementById('edit-session-duration').value = Math.round(duration / 60);
+              document.getElementById('edit-session-old-duration').value = duration;
+              document.getElementById('edit-session-ended-at').value = endedAtISO;
+              modal.classList.add('active');
+              return;
+            }
+          }
+        
+          // Attach the new listener
+          insightsContainer.addEventListener('click', insightsContainer._delegatedListener);
+          // --- FIX END ---
         }
         
         /* ---------------- internals ---------------- */
@@ -8206,7 +8301,11 @@ if (achievementsGrid) {
             </section>
             
             <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Today's Analysis</h2>
-            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="card"><h3 class="font-semibold text-xl mb-4">Today's Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="day-subject-ratio-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl mb-4">Time Per Hour Today</h3><div class="chart-container" style="height:250px;"><canvas id="day-time-per-hour-chart"></canvas></div></div>
+            </section>
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
               <div class="card"><h3 class="font-semibold text-xl mb-4">Study vs. Break</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-break-chart"></canvas></div></div>
               <div class="card"><h3 class="font-semibold text-xl mb-4">Study Time by Subject</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-time-by-subject-chart"></canvas></div></div>
               <div class="card"><h3 class="font-semibold text-xl mb-4">Start/End Times</h3><div class="chart-container" style="height:250px;"><canvas id="day-start-end-distribution-chart"></canvas></div></div>
@@ -8229,9 +8328,16 @@ if (achievementsGrid) {
             </section>
 
             <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Historical Performance (Last 28 Days)</h2>
-            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="28d-subject-ratio-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Time Per Day</h3><div class="chart-container"><canvas id="28d-time-per-day-chart"></canvas></div></div>
+            <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Total Time (28d)</h3><p id="28d-total-time" class="text-4xl font-bold text-pink-400 mt-2">--:--:--</p></div>
+                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Daily Average (28d)</h3><p id="28d-daily-avg" class="text-4xl font-bold text-pink-400 mt-2">--:--:--</p></div>
+                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Focus Score</h3><p id="28d-focus-score" class="text-4xl font-bold text-pink-400 mt-2">--</p></div>
+                <div class="card bg-gradient-to-br from-pink-500 to-rose-600 p-6"><h3 class="text-white text-lg font-medium flex items-center"><i data-lucide="brain-circuit" class="mr-2"></i>AI Insight (28d)</h3><p id="28d-ai-insight-text" class="text-white mt-2 text-sm">Analyzing historical patterns...</p></div>
+            </section>
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+              <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Cumulative Study Time (Last 28 Days)</h3><div class="chart-container" style="height:250px;"><canvas id="28d-cumulative-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl mb-4">Subject Ratio (28d)</h3><div class="chart-container" style="height:250px;"><canvas id="28d-subject-ratio-chart"></canvas></div></div>
+              <div class="card lg:col-span-3"><h3 class="font-semibold text-xl mb-4">Time Per Day (28d)</h3><div class="chart-container"><canvas id="28d-time-per-day-chart"></canvas></div></div>
             </section>
             
             <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Trends & Forecasts</h2>
@@ -8268,6 +8374,21 @@ if (achievementsGrid) {
           generateAIInsight(todayStudyData, 'day-ai-insight-text');
 
           // --- Today's Charts ---
+          const subjToday = todayStudyData.reduce((a,s)=> (a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
+          __stats.charts['day-subject-ratio-chart'] = new Chart(document.getElementById('day-subject-ratio-chart'), {
+            type:'pie', plugins: withDataLabels,
+            data:{ labels:Object.keys(subjToday), datasets:[{ data:Object.values(subjToday), backgroundColor: __palette(Object.keys(subjToday).length), borderColor:'#1e293b', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:'#cbd5e1' } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
+          });
+          
+          const perHour = Array(24).fill(0);
+          todayStudyData.forEach(s => { perHour[s.startTime.getHours()] += s.duration; });
+          __stats.charts['day-time-per-hour-chart'] = new Chart(document.getElementById('day-time-per-hour-chart'), {
+            type:'bar',
+            data:{ labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets:[{ label:'Minutes Studied', data:perHour, backgroundColor: CHART_COLORS.sky, borderRadius:5 }] },
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8', maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
+          });
+
           const todayStudyMin = todayAllData.filter(s=>s.type==='study').reduce((sum,s)=>sum+s.duration,0);
           const todayBreakMin = todayAllData.filter(s=>s.type==='break').reduce((sum,s)=>sum+s.duration,0);
           __stats.charts['day-study-break-chart'] = new Chart(document.getElementById('day-study-break-chart'), {
@@ -8352,7 +8473,25 @@ if (achievementsGrid) {
             options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'day' }, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ min:0, max:24, grid:{color:'#334155'}, ticks:{color:'#94a3b8', stepSize:4, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ labels:{ color:'#cbd5e1' } } } }
           });
 
-          // --- 28-Day and Trend Charts (Largely unchanged) ---
+          // --- 28-Day and Trend Charts ---
+          const totalMin28d = last28DaysStudyData.reduce((s,x)=>s+x.duration,0);
+          const dailyAvg28d = totalMin28d / 28;
+          document.getElementById('28d-total-time').textContent = __fmtHMS(totalMin28d);
+          document.getElementById('28d-daily-avg').textContent = __fmtHMS(dailyAvg28d);
+          generateAIInsight(last28DaysStudyData, '28d-ai-insight-text');
+
+          // Focus Score Calculation
+          const uniqueDays28 = new Set(last28DaysStudyData.map(s => s.startTime.toISOString().split('T')[0])).size;
+          const avgSession28d = last28DaysStudyData.length ? totalMin28d / last28DaysStudyData.length : 0;
+          const consistencyScore = (uniqueDays28 / 28) * 5;
+          let depthScore = 1;
+          if (avgSession28d > 90) depthScore = 5;
+          else if (avgSession28d > 60) depthScore = 4;
+          else if (avgSession28d > 40) depthScore = 3;
+          else if (avgSession28d > 20) depthScore = 2;
+          const focusScore = Math.min(10, Math.round(consistencyScore + depthScore));
+          document.getElementById('28d-focus-score').textContent = focusScore;
+          
           const subjAgg28d = last28DaysStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a),{});
           __stats.charts['28d-subject-ratio-chart'] = new Chart(document.getElementById('28d-subject-ratio-chart'), {
             type:'doughnut', plugins: withDataLabels,
@@ -8369,6 +8508,34 @@ if (achievementsGrid) {
             options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8', maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
           });
           
+          const cumulativePerDay = perDay28d.reduce((acc, val) => {
+            acc.push((acc.length > 0 ? acc[acc.length - 1] : 0) + val);
+            return acc;
+          }, []);
+          __stats.charts['28d-cumulative-chart'] = new Chart(document.getElementById('28d-cumulative-chart'), {
+              type: 'line',
+              data: {
+                  labels: labels28d,
+                  datasets: [{
+                      label: 'Cumulative Minutes Studied',
+                      data: cumulativePerDay,
+                      borderColor: CHART_BORDERS.cyan,
+                      backgroundColor: CHART_COLORS.cyan,
+                      fill: true,
+                      tension: 0.1
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                      y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                      x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                  },
+                  plugins: { legend: { display: false } }
+              }
+          });
+
           const reg = appData.filter(s=>s.type==='study').slice(-50).map(s => ({ x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, r: Math.max(3, s.duration/10) }));
           __stats.charts['regularity-chart'] = new Chart(document.getElementById('regularity-chart'), {
             type:'bubble',
@@ -8411,6 +8578,7 @@ if (achievementsGrid) {
                 <div class="text-lg font-bold text-sky-400 mr-4">${s.duration.toFixed(0)} min</div>
                 <button class="log-options-btn p-2 rounded-full hover:bg-slate-600"
                         data-session-id="${s.id}"
+                        data-session-subject="${escapeAttribute(s.subject)}"
                         data-duration-seconds="${s.durationSeconds}"
                         data-ended-at="${s.endTime.toISOString()}">
                   <i data-lucide="more-vertical" class="w-5 h-5 pointer-events-none"></i>
@@ -8424,38 +8592,9 @@ if (achievementsGrid) {
           });
           if (typeof lucide !== 'undefined') lucide.createIcons();
         
-          // delegate actions (delete/edit) — uses your existing deleteSession handler
-          wrap.addEventListener('click', e => {
-            const optionsBtn = e.target.closest('.log-options-btn');
-            if (optionsBtn) {
-              const menu = optionsBtn.nextElementSibling;
-              wrap.querySelectorAll('.log-options-menu').forEach(m => { if (m !== menu) m.classList.remove('active'); });
-              menu.classList.toggle('active'); return;
-            }
-            const del = e.target.closest('.log-delete-btn');
-            if (del) {
-              const btn = del.closest('.session-log-item').querySelector('.log-options-btn');
-              const id = btn.dataset.sessionId;
-              const duration = parseInt(btn.dataset.durationSeconds, 10);
-              const endedAt = new Date(btn.dataset.endedAt);
-              showConfirmationModal('Delete Session?', 'Are you sure you want to permanently delete this study session?', () => {
-                deleteSession(id, duration, endedAt);
-              });
-            }
-            const edit = e.target.closest('.log-edit-btn');
-            if (edit) {
-              const btn = edit.closest('.session-log-item').querySelector('.log-options-btn');
-              const id = btn.dataset.sessionId;
-              const duration = parseInt(btn.dataset.durationSeconds, 10);
-              const endedAtISO = btn.dataset.endedAt;
-              const modal = document.getElementById('edit-session-modal');
-              document.getElementById('edit-session-id').value = id;
-              document.getElementById('edit-session-duration').value = Math.round(duration/60);
-              document.getElementById('edit-session-old-duration').value = duration;
-              document.getElementById('edit-session-ended-at').value = endedAtISO;
-              modal.classList.add('active');
-            }
-          }, { once: true }); // avoid stacking handlers
+          // --- FIX START: Removed the unreliable, single-use event listener. ---
+          // The event handling is now managed by a persistent listener on the parent container.
+          // --- FIX END ---
         }
                  
         
@@ -10223,6 +10362,10 @@ if (achievementsGrid) {
             renderJoinedGroups(); 
             showPage('page-my-groups'); 
         });
+        ael('premium-btn', 'click', () => {
+            const premiumModal = document.getElementById('premium-modal');
+            if (premiumModal) premiumModal.classList.add('active');
+        });
         ael('go-to-find-groups-btn', 'click', () => { 
              if (currentUser && currentUser.isAnonymous) {
                 showToast('Please create an account to use study groups.', 'info');
@@ -11637,10 +11780,15 @@ if (achievementsGrid) {
             e.preventDefault();
             const modal = document.getElementById('edit-session-modal');
             const sessionId = document.getElementById('edit-session-id').value;
+            const newSubject = document.getElementById('edit-session-subject').value.trim();
             const newDurationMinutes = parseInt(document.getElementById('edit-session-duration').value, 10);
             const oldDurationSeconds = parseInt(document.getElementById('edit-session-old-duration').value, 10);
             const endedAt = new Date(document.getElementById('edit-session-ended-at').value);
             
+            if (!newSubject) {
+                showToast('Please enter a subject name.', 'error');
+                return;
+            }
             if (isNaN(newDurationMinutes) || newDurationMinutes < 1) {
                 showToast('Please enter a valid duration.', 'error');
                 return;
@@ -11653,16 +11801,28 @@ if (achievementsGrid) {
                 // Determine if the session being edited is a study or break session
                 const { data: sessionRow, error: sessionErr } = await supabase
                     .from('sessions')
-                    .select('type, profile_id')
+                    .select('type, profile_id, subject')
                     .eq('id', sessionId)
                     .single();
                 if (sessionErr) throw sessionErr;
 
                 const sessionType = sessionRow?.type || 'study';
+                
+                const updates = {
+                    durationSeconds: newDurationSeconds,
+                    subject: newSubject
+                };
+
+                // For non-study sessions, don't allow changing the "subject" from its type (e.g., 'Break')
+                if (sessionType !== 'study' && newSubject !== sessionRow.subject) {
+                    showToast(`Cannot change the subject of a '${sessionType}' session.`, 'info');
+                    updates.subject = sessionRow.subject; // Revert to original subject
+                }
+
 
                 const { error: updateSessionErr } = await supabase
                     .from('sessions')
-                    .update({ durationSeconds: newDurationSeconds })
+                    .update(updates)
                     .eq('id', sessionId);
                 if (updateSessionErr) throw updateSessionErr;
 
@@ -12313,3 +12473,8 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
+
+
+
+
