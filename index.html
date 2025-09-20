@@ -3091,100 +3091,6 @@
     const supabase = createClient(supabaseUrl, supabaseKey);
     const auth = supabase.auth;
     const storage = supabase.storage;
-    const VAPID_PUBLIC_KEY = window.FOCUSFLOW_VAPID_PUBLIC_KEY || window.focusflowConfig?.vapidPublicKey || 'BJqi2nFBuazVXwx9OdCSLwKDhG65fZOL7IBsAzQI1YxBr0zmV4nTl80JtAZFeOIobDgJ0kNqwVpPf_BjEmblNa0';
-
-    function urlBase64ToUint8Array(base64String) {
-        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-        const rawData = atob(base64);
-        const outputArray = new Uint8Array(rawData.length);
-        for (let i = 0; i < rawData.length; ++i) {
-            outputArray[i] = rawData.charCodeAt(i);
-        }
-        return outputArray;
-    }
-
-    async function syncPushSubscriptionWithServer(subscription, userId = currentUser?.id) {
-        if (!userId) return;
-        try {
-            await updateProfile(userId, { push_subscription: subscription });
-            if (currentUser && currentUser.id === userId && currentUserData) {
-                currentUserData = { ...currentUserData, push_subscription: subscription };
-            }
-        } catch (error) {
-            console.error('Failed to persist push subscription:', error);
-        }
-    }
-
-    async function clearPushSubscription(userId = currentUser?.id) {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-        try {
-            const registration = await navigator.serviceWorker.ready;
-            const existing = await registration.pushManager.getSubscription();
-            if (existing) {
-                await existing.unsubscribe();
-            }
-        } catch (error) {
-            console.warn('Error while unsubscribing from push notifications:', error);
-        }
-        await syncPushSubscriptionWithServer(null, userId);
-    }
-
-    async function ensurePushSubscription() {
-        if (!currentUser || Notification.permission !== 'granted') return;
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-            console.warn('Push notifications are not supported in this browser.');
-            return;
-        }
-        if (!VAPID_PUBLIC_KEY) {
-            console.warn('Missing VAPID public key. Set window.FOCUSFLOW_VAPID_PUBLIC_KEY before initializing.');
-            return;
-        }
-
-        try {
-            const registration = await navigator.serviceWorker.ready;
-            let subscription = await registration.pushManager.getSubscription();
-
-            if (!subscription) {
-                subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-                });
-            }
-
-            const serialized = subscription?.toJSON() ?? null;
-            const existing = currentUserData?.push_subscription || null;
-            if (JSON.stringify(existing) !== JSON.stringify(serialized)) {
-                await syncPushSubscriptionWithServer(serialized);
-            }
-        } catch (error) {
-            console.error('Failed to register push subscription:', error);
-        }
-    }
-
-    async function initializePushNotifications(promptUser = false) {
-        if (!currentUser) return;
-        if (!('Notification' in window)) {
-            console.warn('Notifications are not supported in this environment.');
-            return;
-        }
-
-        let permission = Notification.permission;
-        if (permission === 'default' && promptUser) {
-            try {
-                permission = await Notification.requestPermission();
-            } catch (error) {
-                console.error('Notification permission request failed:', error);
-                return;
-            }
-        }
-
-        if (permission === 'granted') {
-            await ensurePushSubscription();
-        } else if (permission === 'denied') {
-            await clearPushSubscription(currentUser?.id);
-        }
-    }
 
     /**
      * Compresses an image file using a canvas.
@@ -3345,11 +3251,7 @@
         currentUser = user ?? null;
     }
     auth.onAuthStateChange((event, session) => {
-        const previousUserId = currentUser?.id;
         currentUser = session?.user ?? null;
-        if (event === 'SIGNED_OUT' && previousUserId) {
-            syncPushSubscriptionWithServer(null, previousUserId).catch(error => console.error('Failed to clear push subscription on sign-out:', error));
-        }
         // This is a more robust way to handle auth state changes.
         // We only want to re-route the user on sign-in or sign-out events.
         // For user updates (like changing a profile picture), we just want to refresh
@@ -3979,8 +3881,7 @@ let pauseStartTime = 0;
             
             if (data) {
                 // This function will now update all parts of the profile UI
-                updateProfileUI(data);
-                await initializePushNotifications(false);
+                updateProfileUI(data); 
             }
         }
 
@@ -4151,24 +4052,14 @@ let pauseStartTime = 0;
             
             function scheduleNow(delay, title, opts) {
                 navigator.serviceWorker.ready.then(registration => {
-                    const message = {
-                        type: 'SCHEDULE_ALARM',
+                    registration.active.postMessage({
+                        type: 'SCHEDULE_NOTIFICATION',
                         payload: {
                             delay: delay,
-                            timerId: 'pomodoro-transition',
-                            transitionMessage: {
-                                type: 'LOCAL_NOTIFICATION',
-                                title: title,
-                                options: opts
-                            }
+                            title: title,
+                            options: opts
                         }
-                    };
-
-                    if (registration.active) {
-                        registration.active.postMessage(message);
-                    } else if (navigator.serviceWorker.controller) {
-                        navigator.serviceWorker.controller.postMessage(message);
-                    }
+                    });
                 });
             }
         }
@@ -10646,7 +10537,6 @@ if (achievementsGrid) {
                 sessionTimerDisplay.textContent = formatPomodoroTime(pomodoroSettings.work * 60);
                 pomodoroStatusDisplay.textContent = 'Ready for Pomodoro';
                 pomodoroStatusDisplay.style.color = '#9ca3af';
-                initializePushNotifications(true).catch(error => console.error('Push initialization failed:', error));
             } else { // 'normal'
                 sessionTimerDisplay.textContent = formatTime(0);
                 pomodoroStatusDisplay.textContent = '';
