@@ -7310,8 +7310,9 @@ if (achievementsGrid) {
             const tagsList = document.getElementById('tags-list');
             const createTagBtn = document.getElementById('open-create-tag-modal');
 
-            const task = plannerState.tasks.find(t => t.id === taskId);
-            if (!task) return;
+            const taskIndex = plannerState.tasks.findIndex(t => t.id === taskId);
+            if (taskIndex === -1) return;
+            const task = plannerState.tasks[taskIndex];
 
             const currentTags = Array.isArray(task.tags)
                 ? task.tags.map(tag => (typeof tag === 'string' ? tag : tag?.name)).filter(Boolean)
@@ -7346,24 +7347,28 @@ if (achievementsGrid) {
 
                 const tagName = chip.dataset.tagName;
                 const color = chip.dataset.tagColor || '#38bdf8';
-                const current = Array.isArray(task.tags)
-                    ? task.tags.map(tag => (typeof tag === 'string' ? tag : tag?.name)).filter(Boolean)
+                const currentTaskIndex = plannerState.tasks.findIndex(t => t.id === taskId);
+                if (currentTaskIndex === -1) return;
+
+                const currentTask = plannerState.tasks[currentTaskIndex];
+                const current = Array.isArray(currentTask?.tags)
+                    ? currentTask.tags.map(tag => (typeof tag === 'string' ? tag : tag?.name)).filter(Boolean)
                     : [];
 
-                let updatedTags;
-                if (chip.classList.contains('selected')) {
-                    updatedTags = current.filter(name => name.toLowerCase() !== tagName.toLowerCase());
-                    chip.classList.remove('selected');
-                } else {
-                    updatedTags = [...current, tagName];
-                    chip.classList.add('selected');
-                }
-                await updatePlannerTask(taskId, { tags: updatedTags });
+                const wasSelected = chip.classList.contains('selected');
+                const normalizedTag = tagName.toLowerCase();
+                const filteredTags = current.filter(name => name.toLowerCase() !== normalizedTag);
+                const updatedTags = wasSelected ? filteredTags : [...filteredTags, tagName];
 
-                // Immediately reflect the updated tags locally so subsequent selections
-                // work with the latest state even before realtime sync completes.
-                task.tags = updatedTags;
+                chip.classList.toggle('selected', !wasSelected);
+
+                plannerState.tasks[currentTaskIndex] = {
+                    ...currentTask,
+                    tags: updatedTags,
+                };
+
                 renderPlannerTaskDetails();
+                await updatePlannerTask(taskId, { tags: updatedTags });
                 await addTagToLibrary(tagName, color);
             };
 
@@ -12085,7 +12090,7 @@ if (achievementsGrid) {
 
             // Handler for form submissions
             plannerPage.addEventListener('submit', e => {
-                 if (e.target.id === 'category-add-task-form') {
+                if (e.target.id === 'category-add-task-form') {
                     e.preventDefault();
                     const input = document.getElementById('category-add-task-input');
                     const title = input.value.trim();
@@ -12099,8 +12104,16 @@ if (achievementsGrid) {
                             tomorrow.setDate(today.getDate() + 1);
                             dueDate = tomorrow;
                         }
-                        
+
                         addPlannerTask(title, dueDate ? dueDate.toISOString().split('T')[0] : null);
+                        input.value = '';
+                    }
+                } else if (e.target.id === 'add-planner-task-form') {
+                    e.preventDefault();
+                    const input = document.getElementById('add-planner-task-input');
+                    const title = input.value.trim();
+                    if (title) {
+                        addPlannerTask(title);
                         input.value = '';
                     }
                 }
@@ -12125,19 +12138,6 @@ if (achievementsGrid) {
                 }
             });
 
-            // Planner Page Form Submission (Delegated)
-            ael('page-planner', 'submit', (e) => {
-                if (e.target.id === 'add-planner-task-form') {
-                    e.preventDefault();
-                    const input = document.getElementById('add-planner-task-input');
-                    const title = input.value.trim();
-                    if (title) {
-                        addPlannerTask(title);
-                        input.value = '';
-                    }
-                }
-            });
-            
             // NEW: Add Project Form Submission
             ael('add-project-form', 'submit', async (e) => {
                 e.preventDefault();
