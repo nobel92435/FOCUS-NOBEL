@@ -8200,13 +8200,26 @@ if (achievementsGrid) {
               <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Avg. Session</h3><p id="day-avg-session" class="text-4xl font-bold text-cyan-400 mt-2">--m</p></div>
               <div class="card bg-gradient-to-br from-sky-500 to-indigo-600 p-6"><h3 class="text-white text-lg font-medium flex items-center"><i data-lucide="brain-circuit" class="mr-2"></i>AI Insight</h3><p id="day-ai-insight-text" class="text-white mt-2 text-sm">Analyzing today's patterns...</p></div>
             </section>
-            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div class="card"><h3 class="font-semibold text-xl mb-4">Today's Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="day-subject-ratio-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl mb-4">Study vs. Break Today</h3><div class="chart-container"><canvas id="day-study-break-chart"></canvas></div></div>
               <div class="card"><h3 class="font-semibold text-xl mb-4">Time Per Hour Today</h3><div class="chart-container"><canvas id="day-time-per-hour-chart"></canvas></div></div>
             </section>
             <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Today's Session Log</h3><div id="session-log-container-day" class="max-h-80 overflow-y-auto pr-2"></div></div>
+              <div class="card"><h3 class="font-semibold text-xl mb-4">Study Time by Subject Today</h3><div class="chart-container"><canvas id="day-study-time-by-subject-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl mb-4">Start/End Time Distribution Today</h3><div class="chart-container"><canvas id="day-start-end-distribution-chart"></canvas></div></div>
+            </section>
+            <section class="grid grid-cols-1 gap-6">
               <div class="card"><h3 class="font-semibold text-xl mb-4">Recent Session Log</h3><div id="session-log-container-recent" class="max-h-80 overflow-y-auto pr-2"></div></div>
+            </section>
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div class="card"><h3 class="font-semibold text-xl mb-4">Study vs. Break (Last 7 Days)</h3><div class="chart-container"><canvas id="week-study-break-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl mb-4">Study Time by Subject (Last 7 Days)</h3><div class="chart-container"><canvas id="week-study-time-by-subject-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl mb-4">Start/End Time Distribution (Last 7 Days)</h3><div class="chart-container"><canvas id="week-start-end-distribution-chart"></canvas></div></div>
+            </section>
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="card"><h3 class="font-semibold text-xl mb-4">Subject Ratio (Last 7 Days)</h3><div class="chart-container" style="height:250px;"><canvas id="week-subject-ratio-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl mb-4">Time Per Day (Last 7 Days)</h3><div class="chart-container"><canvas id="week-time-per-day-chart"></canvas></div></div>
             </section>
             <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div class="card"><h3 class="font-semibold text-xl mb-4">Study vs. Break (This Month)</h3><div class="chart-container"><canvas id="study-break-chart"></canvas></div></div>
@@ -8233,16 +8246,18 @@ if (achievementsGrid) {
           `;
 
           const todayStr = today.toISOString().split('T')[0];
-          const todayData = appData.filter(d => d.type==='study' && d.startTime.toISOString().split('T')[0]===todayStr);
+          const todayAll = appData.filter(d => d.startTime.toISOString().split('T')[0]===todayStr);
+          const todayData = todayAll.filter(d => d.type==='study');
+          const todayBreaks = todayAll.filter(d => d.type==='break');
 
           const totalMin = todayData.reduce((s,x)=>s+x.duration,0);
           const count = todayData.length;
           const avg = count ? totalMin / count : 0;
-        
+
           document.getElementById('day-total-time').textContent = __fmtHMS(totalMin);
           document.getElementById('day-session-count').textContent = count;
           document.getElementById('day-avg-session').textContent = `${avg.toFixed(0)}m`;
-        
+
           generateAIInsight(todayData, 'day-ai-insight-text');
 
           const subjToday = todayData.reduce((a,s)=> (a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
@@ -8255,7 +8270,20 @@ if (achievementsGrid) {
               datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return ((v*100/s).toFixed(0))+'%'; }, color:'#fff', font:{weight:'bold'} } : undefined
             } }
           });
-        
+
+          const todayStudyMinutes = totalMin;
+          const todayBreakMinutes = todayBreaks.reduce((s,x)=>s+x.duration,0);
+          destroyChart('day-study-break-chart');
+          __stats.charts['day-study-break-chart'] = new Chart(document.getElementById('day-study-break-chart'), {
+            type:'doughnut', plugins: withDataLabels,
+            data:{ labels:['Study','Break'], datasets:[{ data:[todayStudyMinutes, todayBreakMinutes], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#1e293b', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{
+              legend:{ position:'top', labels:{ color:'#cbd5e1' }},
+              tooltip:{ callbacks:{ label(ctx){ const t=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; const pct=((ctx.parsed/t)*100).toFixed(1)+'%'; return `${ctx.label}: ${pct}`; } } },
+              datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return ((v*100/s).toFixed(1))+'%'; }, color:'#fff', font:{weight:'bold'} } : undefined
+            } }
+          });
+
           const perHour = Array(24).fill(0);
           todayData.forEach(s => { perHour[s.startTime.getHours()] += s.duration; });
           destroyChart('day-time-per-hour-chart');
@@ -8265,9 +8293,103 @@ if (achievementsGrid) {
             options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8', maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
           });
 
-          __renderSessionLog(todayData.slice().reverse(), 'session-log-container-day');
+          destroyChart('day-study-time-by-subject-chart');
+          __stats.charts['day-study-time-by-subject-chart'] = new Chart(document.getElementById('day-study-time-by-subject-chart'), {
+            type:'bar',
+            data:{ labels:Object.keys(subjToday), datasets:[{ label:'Minutes Studied', data:Object.values(subjToday), backgroundColor: __palette(Object.keys(subjToday).length) }] },
+            options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
+          });
+
+          const dayDist = todayData.map(s => ({
+            x: s.startTime,
+            y: s.startTime.getHours()+s.startTime.getMinutes()/60,
+            yEnd: s.endTime.getHours()+s.endTime.getMinutes()/60
+          }));
+          destroyChart('day-start-end-distribution-chart');
+          __stats.charts['day-start-end-distribution-chart'] = new Chart(document.getElementById('day-start-end-distribution-chart'), {
+            type:'scatter',
+            data:{ datasets:[
+              { label:'Start Time', data: dayDist.map(d=>({x:d.x,y:d.y})), backgroundColor: CHART_COLORS.sky },
+              { label:'End Time',   data: dayDist.map(d=>({x:d.x,y:d.yEnd})), backgroundColor: CHART_COLORS.pink }
+            ]},
+            options:{ responsive:true, maintainAspectRatio:false, scales:{
+              x:{ type:'time', time:{ unit:'hour', displayFormats:{ hour:'HH:mm' } }, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} },
+              y:{ beginAtZero:true, max:24, grid:{color:'#334155'}, ticks:{color:'#94a3b8', stepSize:2, callback:(v)=>`${v}:00`} }
+            }, plugins:{ legend:{ labels:{ color:'#cbd5e1' } } } }
+          });
+
           const recentSessions = appData.filter(s=>s.type==='study').slice().reverse().slice(0,20);
           __renderSessionLog(recentSessions, 'session-log-container-recent');
+
+          const last7All = appData.filter(d => (today - d.startTime)/86400000 <= 6);
+          const last7Study = last7All.filter(s=>s.type==='study');
+          const last7Break = last7All.filter(s=>s.type==='break');
+
+          const studyMin7 = last7Study.reduce((sum,s)=>sum+s.duration,0);
+          const breakMin7 = last7Break.reduce((sum,s)=>sum+s.duration,0);
+
+          destroyChart('week-study-break-chart');
+          __stats.charts['week-study-break-chart'] = new Chart(document.getElementById('week-study-break-chart'), {
+            type:'doughnut', plugins: withDataLabels,
+            data:{ labels:['Study','Break'], datasets:[{ data:[studyMin7, breakMin7], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#1e293b', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{
+              legend:{ position:'top', labels:{ color:'#cbd5e1' }},
+              tooltip:{ callbacks:{ label(ctx){ const t=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; const pct=((ctx.parsed/t)*100).toFixed(1)+'%'; return `${ctx.label}: ${pct}`; } } },
+              datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return ((v*100/s).toFixed(1))+'%'; }, color:'#fff', font:{weight:'bold'} } : undefined
+            } }
+          });
+
+          const weekBySubject = last7Study.reduce((a,s)=> (a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
+          destroyChart('week-study-time-by-subject-chart');
+          __stats.charts['week-study-time-by-subject-chart'] = new Chart(document.getElementById('week-study-time-by-subject-chart'), {
+            type:'bar',
+            data:{ labels:Object.keys(weekBySubject), datasets:[{ label:'Minutes Studied', data:Object.values(weekBySubject), backgroundColor: __palette(Object.keys(weekBySubject).length) }] },
+            options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
+          });
+
+          const weekDist = last7Study.map(s => ({
+            x: s.startTime,
+            y: s.startTime.getHours()+s.startTime.getMinutes()/60,
+            yEnd: s.endTime.getHours()+s.endTime.getMinutes()/60
+          }));
+          destroyChart('week-start-end-distribution-chart');
+          __stats.charts['week-start-end-distribution-chart'] = new Chart(document.getElementById('week-start-end-distribution-chart'), {
+            type:'scatter',
+            data:{ datasets:[
+              { label:'Start Time', data: weekDist.map(d=>({x:d.x,y:d.y})), backgroundColor: CHART_COLORS.sky },
+              { label:'End Time',   data: weekDist.map(d=>({x:d.x,y:d.yEnd})), backgroundColor: CHART_COLORS.pink }
+            ]},
+            options:{ responsive:true, maintainAspectRatio:false, scales:{
+              x:{ type:'time', time:{ unit:'day' }, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} },
+              y:{ beginAtZero:true, max:24, grid:{color:'#334155'}, ticks:{color:'#94a3b8', stepSize:2, callback:(v)=>`${v}:00`} }
+            }, plugins:{ legend:{ labels:{ color:'#cbd5e1' } } } }
+          });
+
+          const weekSubjAgg = last7Study.reduce((a,s)=> (a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
+          destroyChart('week-subject-ratio-chart');
+          __stats.charts['week-subject-ratio-chart'] = new Chart(document.getElementById('week-subject-ratio-chart'), {
+            type:'doughnut', plugins: withDataLabels,
+            data:{ labels:Object.keys(weekSubjAgg), datasets:[{ data:Object.values(weekSubjAgg), backgroundColor: __palette(Object.keys(weekSubjAgg).length), borderColor:'#1e293b', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{
+              legend:{ position:'right', labels:{ color:'#cbd5e1' } },
+              tooltip:{ callbacks:{ label(ctx){ const t=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; const pct=((ctx.parsed/t)*100).toFixed(1)+'%'; return `${ctx.label}: ${pct}`; } } },
+              datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return ((v*100/s).toFixed(1))+'%'; }, color:'#fff', font:{weight:'bold'} } : undefined
+            } }
+          });
+
+          const perDay7 = Array(7).fill(0);
+          last7Study.forEach(s=>{
+            const diff = Math.floor((today - s.startTime)/86400000);
+            const idx = 6 - diff;
+            if (idx>=0 && idx<7) perDay7[idx] += s.duration;
+          });
+          const labels7 = Array.from({length:7},(_,i)=>{ const d=new Date(today); d.setDate(today.getDate()-(6-i)); return `${d.getMonth()+1}/${d.getDate()}`; });
+          destroyChart('week-time-per-day-chart');
+          __stats.charts['week-time-per-day-chart'] = new Chart(document.getElementById('week-time-per-day-chart'), {
+            type:'bar',
+            data:{ labels: labels7, datasets:[{ label:'Minutes Studied', data: perDay7, backgroundColor: CHART_COLORS.sky, borderColor: CHART_BORDERS.sky, borderWidth:1, borderRadius:5 }] },
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
+          });
 
           const thisMonth = appData.filter(d => d.startTime.getMonth()===today.getMonth() && d.startTime.getFullYear()===today.getFullYear());
           const studyMin = thisMonth.filter(s=>s.type==='study').reduce((sum,s)=>sum+s.duration,0);
