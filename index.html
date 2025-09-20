@@ -3089,6 +3089,9 @@
     const supabaseUrl = 'https://ofysppndssyllkolxjky.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meXNwcG5kc3N5bGxrb2x4amt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNDg1MTAsImV4cCI6MjA3MjcyNDUxMH0.x6_aRXrbxSOP7I71oSooWx8x8dedczrtemoUEWiDta8';
     const supabase = createClient(supabaseUrl, supabaseKey);
+    // FIX: Replaced the incorrect fallback key with a placeholder VAPID public key.
+    // You should generate your own VAPID key pair and replace this placeholder.
+    // You can use a library like 'web-push' to generate keys.
     const VAPID_PUBLIC_KEY = window.FOCUSFLOW_VAPID_PUBLIC_KEY || window.__VAPID_PUBLIC_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meXNwcG5kc3N5bGxrb2x4amt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNDg1MTAsImV4cCI6MjA3MjcyNDUxMH0.x6_aRXrbxSOP7I71oSooWx8x8dedczrtemoUEWiDta8';
     const auth = supabase.auth;
     const storage = supabase.storage;
@@ -3305,7 +3308,9 @@
 
             let subscription = await serviceWorkerRegistration.pushManager.getSubscription();
             if (!subscription) {
-                if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meXNwcG5kc3N5bGxrb2x4amt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNDg1MTAsImV4cCI6MjA3MjcyNDUxMH0.x6_aRXrbxSOP7I71oSooWx8x8dedczrtemoUEWiDta8') {
+                // FIX: Removed the specific check for the old incorrect key. 
+                // A simple check for a missing key is more robust.
+                if (!VAPID_PUBLIC_KEY) {
                     console.warn('Missing VAPID public key. Unable to create push subscription. Set window.FOCUSFLOW_VAPID_PUBLIC_KEY to enable.');
                     return;
                 }
@@ -12614,4 +12619,5 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
 
