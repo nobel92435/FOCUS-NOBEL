@@ -4779,6 +4779,10 @@ let pauseStartTime = 0;
                  const targetScreen = document.getElementById(pageId);
                  if(targetScreen) targetScreen.classList.add('active');
             }
+
+            if (pageId === 'page-planner') {
+                renderPlannerPage();
+            }
             
             const mainNav = document.getElementById('main-nav');
             const groupNav = document.getElementById('group-detail-nav');
