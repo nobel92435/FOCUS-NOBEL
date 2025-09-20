@@ -4729,8 +4729,7 @@ let pauseStartTime = 0;
 
                 const avatarEl = document.getElementById('user-profile-avatar');
                 if (profileData.photo_url) {
-                    const cacheBustedUrl = `${profileData.photo_url.split('?')[0]}?t=${new Date().getTime()}`;
-                    avatarEl.innerHTML = `<img src="${cacheBustedUrl}" alt="${profileData.username}" class="w-full h-full object-cover">`;
+                    avatarEl.innerHTML = `<img src="${profileData.photo_url}" alt="${profileData.username}" class="w-full h-full object-cover">`;
                 } else {
                     const initial = profileData.username ? profileData.username.charAt(0).toUpperCase() : 'U';
                     avatarEl.innerHTML = `<span>${initial}</span>`;
@@ -5323,8 +5322,7 @@ let pauseStartTime = 0;
             [headerAvatar, profileAvatar].forEach(el => {
                 if (el) { // Only update if the element is found in the DOM
                     if (photoURL) {
-                        const imageUrlWithCacheBuster = `${photoURL.split('?')[0]}?t=${new Date().getTime()}`;
-                        el.innerHTML = `<img src="${imageUrlWithCacheBuster}" alt="${username}" class="w-full h-full object-cover">`;
+                        el.innerHTML = `<img src="${photoURL}" alt="${username}" class="w-full h-full object-cover">`;
                     } else {
                         const initial = username ? username.charAt(0).toUpperCase() : 'U';
                         el.innerHTML = `<span>${initial}</span>`;
@@ -7941,8 +7939,8 @@ if (achievementsGrid) {
                     if (rank === 2) rankClass = 'rank-2';
                     if (rank === 3) rankClass = 'rank-3';
 
-                    const avatarHTML = user.photo_url 
-                        ? `<img src="${user.photo_url.split('?')[0]}?t=${new Date().getTime()}" class="w-full h-full object-cover">`
+                    const avatarHTML = user.photo_url
+                        ? `<img src="${user.photo_url}" class="w-full h-full object-cover">`
                         : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                     return `
@@ -9269,7 +9267,7 @@ if (achievementsGrid) {
                         if (!member) return '';
                         const isStudying = member.studying && member.studying.type === 'study';
                         const avatarHTML = member.photo_url
-                            ? `<img src="${member.photo_url.split('?')[0]}?t=${new Date().getTime()}" class="w-full h-full object-cover">`
+                            ? `<img src="${member.photo_url}" class="w-full h-full object-cover">`
                             : `<span>${(member.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                         const lastSession = (groupRealtimeData.sessions[member.id] || [])[0];
@@ -9577,101 +9575,99 @@ if (achievementsGrid) {
         }
 
         function setupGroupMemberListeners(memberIds) {
-            // clear previous
             groupDetailUnsubscribers.forEach(unsub => unsub());
             groupDetailUnsubscribers = [];
             memberTimerIntervals.forEach(clearInterval);
             memberTimerIntervals = [];
             groupRealtimeData = { members: {}, sessions: {} };
-          
-            memberIds.forEach(async (memberId) => {
-              // initial user
-              const { data: u } = await supabase.from('profiles').select('*').eq('id', memberId).single();
-              if (u) {
-                groupRealtimeData.members[memberId] = u;
+
+            if (!memberIds || memberIds.length === 0) {
                 const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
-                if (activeSubPage === 'home') {
-                    const isStudiconView = document.getElementById('studicon-view-btn')?.classList.contains('active');
-                    if (isStudiconView) {
-                        renderGroupStudiconView();
-                    } else {
-                        renderGroupMembers();
-                    }
+                renderGroupSubPage(activeSubPage);
+                return;
+            }
+
+            const fetchInitialData = async () => {
+                const { data: profiles, error: pErr } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .in('id', memberIds);
+
+                const { data: sessions, error: sErr } = await supabase
+                    .from('sessions')
+                    .select('id, subject, durationSeconds, endedAt, type, profile_id')
+                    .in('profile_id', memberIds)
+                    .order('endedAt', { ascending: false });
+
+                if (pErr || sErr) {
+                    console.error('Failed to fetch initial group data', pErr || sErr);
+                    return;
                 }
-              }
-          
-              // initial sessions
-              const { data: sRows } = await supabase
-                .from('sessions')
-                .select('id,subject,durationSeconds,endedAt,type')
-                .eq('profile_id', memberId)
-                .order('endedAt', { ascending: false });
-              groupRealtimeData.sessions[memberId] = (sRows || []).map(s => ({ ...s, endedAt: s.endedAt ? new Date(s.endedAt) : null, type: s.type || 'study' }));
-              const sp = document.querySelector('#group-detail-nav .active')?.dataset.subpage;
-              if (sp === 'rankings') renderGroupLeaderboard();
-              if (sp === 'attendance') renderGroupAttendance();
-          
-              // realtime user
-              const uChan = supabase
-                .channel(`profiles:${memberId}`)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${memberId}` }, (payload) => {
-                  groupRealtimeData.members[memberId] = payload.new || payload.old;
-                  const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
-                    if (activeSubPage === 'home') {
-                        const isStudiconView = document.getElementById('studicon-view-btn')?.classList.contains('active');
-                        if (isStudiconView) {
-                            renderGroupStudiconView();
-                        } else {
-                            renderGroupMembers();
+
+                groupRealtimeData = { members: {}, sessions: {} };
+                (profiles || []).forEach(profile => {
+                    groupRealtimeData.members[profile.id] = profile;
+                });
+
+                (sessions || []).forEach(session => {
+                    if (!groupRealtimeData.sessions[session.profile_id]) {
+                        groupRealtimeData.sessions[session.profile_id] = [];
+                    }
+                    groupRealtimeData.sessions[session.profile_id].push({
+                        ...session,
+                        endedAt: session.endedAt ? new Date(session.endedAt) : null,
+                        type: session.type || 'study'
+                    });
+                });
+
+                const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
+                renderGroupSubPage(activeSubPage);
+            };
+
+            fetchInitialData();
+
+            const memberFilter = memberIds.join(',');
+
+            const profileSubscription = supabase
+                .channel(`group-profiles:${currentGroupId}`)
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'profiles',
+                    filter: `id=in.(${memberFilter})`
+                }, payload => {
+                    const updatedProfile = payload.new;
+                    if (updatedProfile && groupRealtimeData.members[updatedProfile.id]) {
+                        groupRealtimeData.members[updatedProfile.id] = updatedProfile;
+                        const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
+                        if (activeSubPage === 'home') {
+                            const isStudiconView = document.getElementById('studicon-view-btn')?.classList.contains('active');
+                            if (isStudiconView) {
+                                renderGroupStudiconView();
+                            } else {
+                                renderGroupMembers();
+                            }
                         }
                     }
                 })
                 .subscribe();
-              groupDetailUnsubscribers.push(() => supabase.removeChannel(uChan));
-          
-              // realtime sessions
-              const sChan = supabase
-                .channel(`sessions:${memberId}`)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `profile_id=eq.${memberId}` }, (payload) => {
-                    const { eventType, old: oldRecord, new: newRecord } = payload;
-                    const record = newRecord || oldRecord;
-                    const recordMemberId = record?.profile_id;
-                    if (!recordMemberId || !groupRealtimeData.sessions[recordMemberId]) return;
-                    
-                    const sessions = groupRealtimeData.sessions[recordMemberId];
-                    const recordId = record.id;
-                    const existingIndex = sessions.findIndex(s => s.id === recordId);
-                    
-                    const processRecord = (rec) => ({ ...rec, endedAt: rec.endedAt ? new Date(rec.endedAt) : null, type: rec.type || 'study' });
 
-                    if (eventType === 'INSERT') {
-                        if (existingIndex === -1) sessions.unshift(processRecord(newRecord));
-                    } else if (eventType === 'UPDATE') {
-                        if (existingIndex > -1) sessions[existingIndex] = processRecord(newRecord);
-                    } else if (eventType === 'DELETE') {
-                        if (existingIndex > -1) sessions.splice(existingIndex, 1);
-                    }
-                    
-                    sessions.sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0));
+            groupDetailUnsubscribers.push(() => supabase.removeChannel(profileSubscription));
 
-                    const currentSubpage = document.querySelector('#group-detail-nav .active')?.dataset.subpage;
-                    if (currentSubpage === 'rankings') {
-                        const isGlobal = document.getElementById('global-ranking-scope-btn')?.classList.contains('active');
-                        const period = document.querySelector('#group-ranking-period-tabs .ranking-tab-btn.active')?.dataset.period || 'weekly';
-                        if (isGlobal) {
-                            renderLeaderboard(period, 'group-ranking-list');
-                        } else {
-                            renderGroupLeaderboard(period);
-                        }
-                    }
-                    if (currentSubpage === 'attendance') {
-                        renderGroupAttendance();
-                    }
+            const sessionSubscription = supabase
+                .channel(`group-sessions:${currentGroupId}`)
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'sessions',
+                    filter: `profile_id=in.(${memberFilter})`
+                }, async () => {
+                    await fetchInitialData();
                 })
                 .subscribe();
-              groupDetailUnsubscribers.push(() => supabase.removeChannel(sChan));
-            });
-          }          
+
+            groupDetailUnsubscribers.push(() => supabase.removeChannel(sessionSubscription));
+        }
 
         // --- Group Leaderboard Infinite Scroll State & Functions ---
         const groupDetailPageContainer = document.getElementById('page-group-detail');
@@ -9735,7 +9731,7 @@ if (achievementsGrid) {
                     if (rank === 3) rankClass = 'rank-3';
 
                     const avatarHTML = user.photo_url
-                        ? `<img src="${user.photo_url.split('?')[0]}?t=${new Date().getTime()}" class="w-full h-full object-cover">`
+                        ? `<img src="${user.photo_url}" class="w-full h-full object-cover">`
                         : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                     return `
@@ -9879,7 +9875,7 @@ if (achievementsGrid) {
                     const memberAttendanceRate = Math.round((memberStats.daysStudied.size / daysInMonth) * 100);
                     
                     const avatarHTML = userData.photo_url
-                        ? `<img src="${userData.photo_url.split('?')[0]}?t=${new Date().getTime()}" class="w-full h-full object-cover">`
+                        ? `<img src="${userData.photo_url}" class="w-full h-full object-cover">`
                         : `<span>${(userData.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                     return `
