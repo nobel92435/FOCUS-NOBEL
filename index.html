@@ -3089,9 +3089,102 @@
     const supabaseUrl = 'https://ofysppndssyllkolxjky.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meXNwcG5kc3N5bGxrb2x4amt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNDg1MTAsImV4cCI6MjA3MjcyNDUxMH0.x6_aRXrbxSOP7I71oSooWx8x8dedczrtemoUEWiDta8';
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const VAPID_PUBLIC_KEY = window.FOCUSFLOW_VAPID_PUBLIC_KEY || window.__VAPID_PUBLIC_KEY || 'BJqi2nFBuazVXwx9OdCSLwKDhG65fZOL7IBsAzQI1YxBr0zmV4nTl80JtAZFeOIobDgJ0kNqwVpPf_BjEmblNa0';
     const auth = supabase.auth;
     const storage = supabase.storage;
+    const VAPID_PUBLIC_KEY = window.FOCUSFLOW_VAPID_PUBLIC_KEY || window.focusflowConfig?.vapidPublicKey || 'BJqi2nFBuazVXwx9OdCSLwKDhG65fZOL7IBsAzQI1YxBr0zmV4nTl80JtAZFeOIobDgJ0kNqwVpPf_BjEmblNa0';
+
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    async function syncPushSubscriptionWithServer(subscription, userId = currentUser?.id) {
+        if (!userId) return;
+        try {
+            await updateProfile(userId, { push_subscription: subscription });
+            if (currentUser && currentUser.id === userId && currentUserData) {
+                currentUserData = { ...currentUserData, push_subscription: subscription };
+            }
+        } catch (error) {
+            console.error('Failed to persist push subscription:', error);
+        }
+    }
+
+    async function clearPushSubscription(userId = currentUser?.id) {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const existing = await registration.pushManager.getSubscription();
+            if (existing) {
+                await existing.unsubscribe();
+            }
+        } catch (error) {
+            console.warn('Error while unsubscribing from push notifications:', error);
+        }
+        await syncPushSubscriptionWithServer(null, userId);
+    }
+
+    async function ensurePushSubscription() {
+        if (!currentUser || Notification.permission !== 'granted') return;
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.warn('Push notifications are not supported in this browser.');
+            return;
+        }
+        if (!VAPID_PUBLIC_KEY) {
+            console.warn('Missing VAPID public key. Set window.FOCUSFLOW_VAPID_PUBLIC_KEY before initializing.');
+            return;
+        }
+
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            let subscription = await registration.pushManager.getSubscription();
+
+            if (!subscription) {
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+            }
+
+            const serialized = subscription?.toJSON() ?? null;
+            const existing = currentUserData?.push_subscription || null;
+            if (JSON.stringify(existing) !== JSON.stringify(serialized)) {
+                await syncPushSubscriptionWithServer(serialized);
+            }
+        } catch (error) {
+            console.error('Failed to register push subscription:', error);
+        }
+    }
+
+    async function initializePushNotifications(promptUser = false) {
+        if (!currentUser) return;
+        if (!('Notification' in window)) {
+            console.warn('Notifications are not supported in this environment.');
+            return;
+        }
+
+        let permission = Notification.permission;
+        if (permission === 'default' && promptUser) {
+            try {
+                permission = await Notification.requestPermission();
+            } catch (error) {
+                console.error('Notification permission request failed:', error);
+                return;
+            }
+        }
+
+        if (permission === 'granted') {
+            await ensurePushSubscription();
+        } else if (permission === 'denied') {
+            await clearPushSubscription(currentUser?.id);
+        }
+    }
 
     /**
      * Compresses an image file using a canvas.
@@ -3252,7 +3345,11 @@
         currentUser = user ?? null;
     }
     auth.onAuthStateChange((event, session) => {
+        const previousUserId = currentUser?.id;
         currentUser = session?.user ?? null;
+        if (event === 'SIGNED_OUT' && previousUserId) {
+            syncPushSubscriptionWithServer(null, previousUserId).catch(error => console.error('Failed to clear push subscription on sign-out:', error));
+        }
         // This is a more robust way to handle auth state changes.
         // We only want to re-route the user on sign-in or sign-out events.
         // For user updates (like changing a profile picture), we just want to refresh
@@ -3263,78 +3360,6 @@
             loadMyProfile();
         }
     });
-
-    function urlBase64ToUint8Array(base64String) {
-        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-        const base64 = (base64String + padding)
-            .replace(/-/g, '+')
-            .replace(/_/g, '/');
-
-        const rawData = atob(base64);
-        const outputArray = new Uint8Array(rawData.length);
-
-        for (let i = 0; i < rawData.length; ++i) {
-            outputArray[i] = rawData.charCodeAt(i);
-        }
-        return outputArray;
-    }
-
-    async function ensurePushSubscription() {
-        try {
-            if (!currentUser || !currentUser.id) {
-                return;
-            }
-            if (!serviceWorkerRegistration) {
-                return;
-            }
-            if (!('Notification' in window) || !('PushManager' in window)) {
-                console.warn('Push notifications are not supported in this browser.');
-                return;
-            }
-
-            if (Notification.permission === 'default') {
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') {
-                    console.warn('Notification permission not granted. Push subscription skipped.');
-                    return;
-                }
-            } else if (Notification.permission !== 'granted') {
-                console.warn('Notification permission denied. Push subscription skipped.');
-                return;
-            }
-
-            let subscription = await serviceWorkerRegistration.pushManager.getSubscription();
-            if (!subscription) {
-                if (!VAPID_PUBLIC_KEY) {
-                    console.warn('Missing VAPID public key. Unable to create push subscription. Set window.FOCUSFLOW_VAPID_PUBLIC_KEY to enable.');
-                    return;
-                }
-
-                subscription = await serviceWorkerRegistration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-                });
-            }
-
-            if (!subscription) {
-                return;
-            }
-
-            const subscriptionPayload = subscription.toJSON ? subscription.toJSON() : subscription;
-            const { error } = await supabase
-                .from('profiles')
-                .update({ push_subscription: subscriptionPayload })
-                .eq('id', currentUser.id);
-
-            if (error) {
-                throw error;
-            }
-            console.log('Push subscription synced with Supabase.');
-        } catch (error) {
-            console.error('Failed to initialise push notifications:', error);
-            showToast('Unable to enable push notifications. Check console for details.', 'error');
-        }
-    }
 
     // ensure profile row exists (call after sign up / first login)
     async function ensureProfileRow() {
@@ -3419,7 +3444,6 @@
             setupRealtimeListeners();
             // Ensure daily totals persist across refreshes
             await loadDailyTotal();
-            await ensurePushSubscription();
             showPage('page-timer');
         }
     }
@@ -3591,7 +3615,6 @@
         // --- App State ---
         let currentUserData = {};
         let dashboardCharts = {};
-        let serviceWorkerRegistration = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         let userSessions = [];
         let isAudioUnlocked = false;
@@ -3668,12 +3691,6 @@
  * @param {object} messageData - Includes title, options.body, newState and oldState.
  */
 async function triggerServerNotification(messageData) {
-    // THIS FUNCTION IS DEPRECATED AND CAUSES ERRORS.
-    // It attempts to call a Supabase Edge Function which is not correctly configured
-    // or is failing. Replaced with local Service Worker notifications via scheduleSWAlarm.
-    return; // Immediately exit to prevent errors.
-
-    /*
     if (!currentUser) {
         console.error('User not authenticated, cannot send server notification.');
         showToast('Please sign in to enable server notifications.', 'error');
@@ -3696,7 +3713,6 @@ async function triggerServerNotification(messageData) {
         console.error('Error triggering server notification:', error);
         showToast('Failed to schedule notification.', 'error');
     }
-    */
 }
 
         // Timer State
@@ -3963,7 +3979,8 @@ let pauseStartTime = 0;
             
             if (data) {
                 // This function will now update all parts of the profile UI
-                updateProfileUI(data); 
+                updateProfileUI(data);
+                await initializePushNotifications(false);
             }
         }
 
@@ -4134,14 +4151,24 @@ let pauseStartTime = 0;
             
             function scheduleNow(delay, title, opts) {
                 navigator.serviceWorker.ready.then(registration => {
-                    registration.active.postMessage({
-                        type: 'SCHEDULE_NOTIFICATION',
+                    const message = {
+                        type: 'SCHEDULE_ALARM',
                         payload: {
                             delay: delay,
-                            title: title,
-                            options: opts
+                            timerId: 'pomodoro-transition',
+                            transitionMessage: {
+                                type: 'LOCAL_NOTIFICATION',
+                                title: title,
+                                options: opts
+                            }
                         }
-                    });
+                    };
+
+                    if (registration.active) {
+                        registration.active.postMessage(message);
+                    } else if (navigator.serviceWorker.controller) {
+                        navigator.serviceWorker.controller.postMessage(message);
+                    }
                 });
             }
         }
@@ -5021,24 +5048,12 @@ let pauseStartTime = 0;
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
 
                 // Use the new reliable SW alarm
-                // OLD, FAILING FUNCTION CALL
-                /*
                 await triggerServerNotification({
-                    title: 'Focus complete!',
-                    options: { body: `Time for a short break.`, tag: 'pomodoro-transition' }, // Options for the FCM notification
-                    newState: 'short_break',
-                    oldState: 'work',
-                });
-                */
-                // NEW: Schedule a notification via the local Service Worker
-                scheduleSWAlarm({
-                    delay: workDurationSeconds * 1000,
-                    title: 'Focus complete!',
-                    options: { body: `Time for a short break.`, tag: 'pomodoro-transition' },
-                    newState: 'short_break',
-                    oldState: 'work'
-                });
-
+        title: 'Focus complete!',
+        options: { body: `Time for a short break.`, tag: 'pomodoro-transition' }, // Options for the FCM notification
+        newState: 'short_break',
+        oldState: 'work',
+    });
 
                 pomodoroStatusDisplay.textContent = `Work (1/${pomodoroSettings.long_break_interval})`;
                 pomodoroStatusDisplay.style.color = '#3b82f6';
@@ -5204,19 +5219,7 @@ let pauseStartTime = 0;
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e0b' : '#3b82f6';
 
-            // OLD, FAILING FUNCTION CALL
-            /*
             await triggerServerNotification(transitionMessage);
-            */
-            // NEW: Schedule a notification via the local Service Worker
-            scheduleSWAlarm({
-                delay: durationSeconds * 1000,
-                title: transitionMessage.title,
-                options: transitionMessage.options,
-                newState: transitionMessage.newState,
-                oldState: transitionMessage.oldState
-            });
-
 
             // Update cycle in Supabase only after a break is completed (meaning a work session is starting)
             if (state === 'work') {
@@ -10643,6 +10646,7 @@ if (achievementsGrid) {
                 sessionTimerDisplay.textContent = formatPomodoroTime(pomodoroSettings.work * 60);
                 pomodoroStatusDisplay.textContent = 'Ready for Pomodoro';
                 pomodoroStatusDisplay.style.color = '#9ca3af';
+                initializePushNotifications(true).catch(error => console.error('Push initialization failed:', error));
             } else { // 'normal'
                 sessionTimerDisplay.textContent = formatTime(0);
                 pomodoroStatusDisplay.textContent = '';
@@ -12390,14 +12394,12 @@ if (achievementsGrid) {
             // Service Workers require a secure context (HTTPS or localhost) to register.
             // This check prevents the registration error in unsupported environments (like 'blob:').
             if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-                // IMPORTANT CHANGE HERE: Use './service_worker.js' or '/Focus-Clock/service_worker.js'
+                // IMPORTANT CHANGE HERE: Use './service-worker.js' or '/Focus-Clock/service-worker.js'
                 // if your app is hosted in a subfolder like /Focus-Clock/
-                // './service_worker.js' is generally preferred for relative paths.
+                // './service-worker.js' is generally preferred for relative paths.
                 navigator.serviceWorker
-                    .register('./service_worker.js', { scope: './' }) // Updated path and added scope
+                    .register('./service-worker.js', { scope: './' }) // Updated path and added scope
                     .then(registration => {
-                        serviceWorkerRegistration = registration;
-                        ensurePushSubscription();
                         console.log('Service Worker registered successfully with scope:', registration.scope);
                         // --- START NEW CODE FOR SERVICE WORKER UPDATES ---
                         registration.onupdatefound = () => {
@@ -12421,47 +12423,12 @@ if (achievementsGrid) {
                         console.error('Service Worker registration failed:', error);
                     });
 
-                navigator.serviceWorker.ready
-                    .then(registration => {
-                        serviceWorkerRegistration = registration;
-                        ensurePushSubscription();
-                    })
-                    .catch(error => {
-                        console.error('Service Worker ready promise rejected:', error);
-                    });
-
                 // --- START NEW CODE TO RELOAD PAGE ON CONTROLLER CHANGE ---
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
                     console.log('New service worker activated, reloading page for latest content.');
                     window.location.reload();
                 });
                 // --- END NEW CODE TO RELOAD PAGE ON CONTROLLER CHANGE ---
-
-                navigator.serviceWorker.addEventListener('message', (event) => {
-                    const message = event.data || {};
-                    switch (message.type) {
-                        case 'TIMER_ENDED':
-                            handlePomodoroPhaseEnd(message);
-                            break;
-                        case 'notification_action':
-                            if (message.action === 'pause') {
-                                pauseTimer();
-                            } else if (message.action === 'resume') {
-                                resumeTimer();
-                            } else if (message.action === 'stop') {
-                                stopTimer().catch(err => console.error('Failed to stop timer from notification action', err));
-                            }
-                            break;
-                        case 'PUSH_SUBSCRIPTION_CHANGED':
-                            ensurePushSubscription();
-                            break;
-                        case 'PUSH_NOTIFICATION':
-                            console.log('Push notification payload received:', message.payload);
-                            break;
-                        default:
-                            break;
-                    }
-                });
 
             } else {
                 console.warn('Service Worker not registered. This feature requires a secure context (HTTPS or localhost). The Pomodoro timer will be less reliable in the background.');
@@ -12614,5 +12581,3 @@ async function updateUsername(newName) {
 
 </body>
 </html>
-
-
