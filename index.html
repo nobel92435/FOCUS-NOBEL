@@ -8206,10 +8206,12 @@ if (achievementsGrid) {
             </section>
             
             <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Today's Analysis</h2>
-            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <section class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
               <div class="card"><h3 class="font-semibold text-xl mb-4">Study vs. Break</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-break-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Study Time by Subject</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-time-by-subject-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Start/End Times</h3><div class="chart-container" style="height:250px;"><canvas id="day-start-end-distribution-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl mb-4">Today's Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="day-subject-ratio-chart"></canvas></div></div>
+              <div class="card lg:col-span-2 xl:col-span-2"><h3 class="font-semibold text-xl mb-4">Time Per Hour Today</h3><div class="chart-container" style="height:250px;"><canvas id="day-time-per-hour-chart"></canvas></div></div>
+              <div class="card lg:col-span-2 xl:col-span-2"><h3 class="font-semibold text-xl mb-4">Study Time by Subject</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-time-by-subject-chart"></canvas></div></div>
+              <div class="card lg:col-span-2 xl:col-span-2"><h3 class="font-semibold text-xl mb-4">Start/End Times</h3><div class="chart-container" style="height:250px;"><canvas id="day-start-end-distribution-chart"></canvas></div></div>
             </section>
 
             <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Last 7 Days Performance</h2>
@@ -8229,9 +8231,16 @@ if (achievementsGrid) {
             </section>
 
             <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Historical Performance (Last 28 Days)</h2>
-            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium text-center">Total Time (Last 28 Days)</h3><p id="28d-total-time" class="text-3xl font-bold text-cyan-400 mt-2">--:--:--</p></div>
+              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium text-center">Daily Average (Last 28 Days)</h3><p id="28d-daily-average" class="text-3xl font-bold text-cyan-400 mt-2">--:--:--</p></div>
+              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium text-center">Focus Score</h3><p id="28d-focus-score" class="text-4xl font-bold text-emerald-400 mt-2">--</p><p class="text-xs text-slate-400">Out of 100</p></div>
+              <div class="card bg-gradient-to-br from-purple-500/80 to-indigo-600 p-6"><h3 class="text-white text-lg font-medium flex items-center"><i data-lucide="sparkles" class="mr-2"></i>AI Insight</h3><p id="28d-ai-insight-text" class="text-white mt-2 text-sm">Reviewing long-term trends...</p></div>
+            </section>
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
               <div class="card"><h3 class="font-semibold text-xl mb-4">Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="28d-subject-ratio-chart"></canvas></div></div>
               <div class="card"><h3 class="font-semibold text-xl mb-4">Time Per Day</h3><div class="chart-container"><canvas id="28d-time-per-day-chart"></canvas></div></div>
+              <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Cumulative Study Time (Last 28 Days)</h3><div class="chart-container"><canvas id="28d-cumulative-chart"></canvas></div></div>
             </section>
             
             <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Trends & Forecasts</h2>
@@ -8255,8 +8264,9 @@ if (achievementsGrid) {
 
           const thisMonthAllData = appData.filter(d => d.startTime.getMonth() === today.getMonth() && d.startTime.getFullYear() === today.getFullYear());
           const thisMonthStudyData = thisMonthAllData.filter(d => d.type === 'study');
-          
-          const last28DaysStudyData = appData.filter(d => (today - d.startTime)/86400000 <= 28 && d.type === 'study');
+
+          const last28DaysAllData = appData.filter(d => (today - d.startTime)/86400000 <= 28);
+          const last28DaysStudyData = last28DaysAllData.filter(d => d.type === 'study');
 
           // --- Today's Snapshot Cards ---
           const totalMinToday = todayStudyData.reduce((s,x)=>s+x.duration,0);
@@ -8277,12 +8287,27 @@ if (achievementsGrid) {
           });
           
           const bySubjectToday = todayStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
+          __stats.charts['day-subject-ratio-chart'] = new Chart(document.getElementById('day-subject-ratio-chart'), {
+            type:'doughnut', plugins: withDataLabels,
+            data:{ labels:Object.keys(bySubjectToday), datasets:[{ data:Object.values(bySubjectToday), backgroundColor: __palette(Object.keys(bySubjectToday).length), borderColor:'#1e293b', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:'#cbd5e1' } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s>0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
+          });
+
           __stats.charts['day-study-time-by-subject-chart'] = new Chart(document.getElementById('day-study-time-by-subject-chart'), {
             type:'bar',
             data:{ labels:Object.keys(bySubjectToday), datasets:[{ label:'Minutes Studied', data:Object.values(bySubjectToday), backgroundColor: __palette(Object.keys(bySubjectToday).length) }] },
             options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
           });
-          
+
+          const perHourToday = Array(24).fill(0);
+          todayStudyData.forEach(s => { const hr = s.startTime.getHours(); if (hr>=0 && hr<24) perHourToday[hr] += s.duration; });
+          const hourLabels = Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`);
+          __stats.charts['day-time-per-hour-chart'] = new Chart(document.getElementById('day-time-per-hour-chart'), {
+            type:'bar',
+            data:{ labels: hourLabels, datasets:[{ label:'Minutes Studied', data: perHourToday, backgroundColor: CHART_COLORS.cyan, borderRadius:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8', maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
+          });
+
           const distToday = todayStudyData.map(s => ({ x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, yEnd: s.endTime.getHours()+s.endTime.getMinutes()/60 }));
           __stats.charts['day-start-end-distribution-chart'] = new Chart(document.getElementById('day-start-end-distribution-chart'), {
             type:'scatter',
@@ -8353,6 +8378,20 @@ if (achievementsGrid) {
           });
 
           // --- 28-Day and Trend Charts (Largely unchanged) ---
+          const totalStudyMin28d = last28DaysStudyData.reduce((sum,s)=>sum+s.duration,0);
+          const totalBreakMin28d = last28DaysAllData.filter(s=>s.type==='break').reduce((sum,s)=>sum+s.duration,0);
+          const activeDays28d = new Set(last28DaysStudyData.map(s=>s.startTime.toISOString().split('T')[0])).size;
+          const avgDaily28d = totalStudyMin28d / 28;
+          const balanceRatio28d = totalStudyMin28d / Math.max(totalStudyMin28d + totalBreakMin28d, 1);
+          const intensityRatio28d = Math.min(totalStudyMin28d / (28 * 120), 1);
+          const focusScoreRaw = (balanceRatio28d * 40) + ((activeDays28d / 28) * 30) + (intensityRatio28d * 30);
+          const focusScore28d = Number.isFinite(focusScoreRaw) ? Math.round(Math.min(100, Math.max(0, focusScoreRaw))) : 0;
+
+          const totalTimeEl = document.getElementById('28d-total-time'); if (totalTimeEl) totalTimeEl.textContent = __fmtHMS(totalStudyMin28d);
+          const avgEl = document.getElementById('28d-daily-average'); if (avgEl) avgEl.textContent = __fmtHMS(avgDaily28d);
+          const focusEl = document.getElementById('28d-focus-score'); if (focusEl) focusEl.textContent = focusScore28d.toString();
+          generateAIInsight(last28DaysStudyData, '28d-ai-insight-text');
+
           const subjAgg28d = last28DaysStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a),{});
           __stats.charts['28d-subject-ratio-chart'] = new Chart(document.getElementById('28d-subject-ratio-chart'), {
             type:'doughnut', plugins: withDataLabels,
@@ -8369,6 +8408,14 @@ if (achievementsGrid) {
             options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8', maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
           });
           
+          const cumulative28d = [];
+          perDay28d.reduce((running,val)=>{ const next = running + val; cumulative28d.push(next); return next; }, 0);
+          __stats.charts['28d-cumulative-chart'] = new Chart(document.getElementById('28d-cumulative-chart'), {
+            type:'line',
+            data:{ labels: labels28d, datasets:[{ label:'Cumulative Minutes', data: cumulative28d, borderColor: CHART_BORDERS.sky, backgroundColor: CHART_COLORS.sky, fill:true, tension:0.2 }] },
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8', maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
+          });
+
           const reg = appData.filter(s=>s.type==='study').slice(-50).map(s => ({ x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, r: Math.max(3, s.duration/10) }));
           __stats.charts['regularity-chart'] = new Chart(document.getElementById('regularity-chart'), {
             type:'bubble',
