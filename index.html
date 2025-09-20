@@ -3347,6 +3347,14 @@
             // Ensure daily totals persist across refreshes
             await loadDailyTotal();
             showPage('page-timer');
+
+            if (VAPID_PUBLIC_KEY && VAPID_PUBLIC_KEY !== 'YOUR_VAPID_PUBLIC_KEY') {
+                await ensurePushSubscription(VAPID_PUBLIC_KEY);
+            }
+
+            if (pendingPushSubscription) {
+                await persistPushSubscription(pendingPushSubscription);
+            }
         }
     }
         const ACHIEVEMENTS = {
@@ -3518,6 +3526,7 @@
         let currentUserData = {};
         let dashboardCharts = {};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const VAPID_PUBLIC_KEY = typeof __vapid_public_key !== 'undefined' ? __vapid_public_key : 'YOUR_VAPID_PUBLIC_KEY';
         let userSessions = [];
         let isAudioUnlocked = false;
         let isAddingSubjectFromStartSession = false; // Flag to track modal origin
@@ -3525,18 +3534,23 @@
         // --- FIX START: Add the function to handle Pomodoro phase transitions ---
         async function handlePomodoroPhaseEnd(data) {
             const { newState, oldState } = data;
-        
+
             // Play the appropriate sound for the end of the phase
             playSound(oldState === 'work' ? pomodoroSounds.break : pomodoroSounds.focus, pomodoroSounds.volume);
-        
+
+            if (pomodoroState !== oldState) {
+                console.warn('Ignoring stale pomodoro transition', { expected: pomodoroState, received: oldState });
+                return;
+            }
+
             // Save the session that just ended
-            const sessionDuration = oldState === 'work' 
+            const sessionDuration = oldState === 'work'
                 ? pomodoroSettings.work * 60
                 : (oldState === 'short_break' ? pomodoroSettings.short_break * 60 : pomodoroSettings.long_break * 60);
-        
+
             const sessionType = oldState === 'work' ? 'study' : 'break';
             const subject = oldState === 'work' ? activeSubject : oldState.replace('_', ' ');
-            await saveSession(subject, sessionDuration, sessionType);
+            await saveSession(subject, sessionDuration, sessionType, { skipRemote: true });
 
             // If a work session just ended, increment the pomodoro count for the active task
             if (oldState === 'work' && activeTaskId) {
@@ -3606,7 +3620,8 @@ async function triggerServerNotification(messageData) {
                 title: messageData.title,
                 body: messageData.options.body,
                 newState: messageData.newState,
-                oldState: messageData.oldState
+                oldState: messageData.oldState,
+                subject: messageData.subject ?? (messageData.newState === 'work' ? (activeSubject || 'Focus') : undefined)
             }
         });
         if (error) throw error;
@@ -3639,6 +3654,8 @@ let pauseStartTime = 0;
             members: {},
             sessions: {}
         };
+
+        let pendingPushSubscription = null;
         
         // --- NEW: State for Group Rankings Infinite Scroll ---
         let groupRankingsState = {
@@ -4944,6 +4961,7 @@ let pauseStartTime = 0;
         options: { body: `Time for a short break.`, tag: 'pomodoro-transition' }, // Options for the FCM notification
         newState: 'short_break',
         oldState: 'work',
+        subject: activeSubject || 'Focus'
     });
 
                 pomodoroStatusDisplay.textContent = `Work (1/${pomodoroSettings.long_break_interval})`;
@@ -5091,7 +5109,8 @@ let pauseStartTime = 0;
                     newState: nextState,
                     oldState: 'work',
                     title: 'Focus complete!',
-                    options: { body: `Time for a ${nextState.replace('_', ' ')}.`, tag: 'pomodoro-transition' }
+                    options: { body: `Time for a ${nextState.replace('_', ' ')}.`, tag: 'pomodoro-transition' },
+                    subject: activeSubject || 'Focus'
                 };
             } else { // It's a break
                 durationSeconds = state === 'short_break' ? pomodoroSettings.short_break * 60 : pomodoroSettings.long_break * 60;
@@ -5101,7 +5120,8 @@ let pauseStartTime = 0;
                     newState: 'work',
                     oldState: state,
                     title: 'Break is over!',
-                    options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' }
+                    options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' },
+                    subject: state.replace('_', ' ')
                 };
             }
             
@@ -5112,12 +5132,57 @@ let pauseStartTime = 0;
 
             await triggerServerNotification(transitionMessage);
 
+            await syncStudyingStatusForPhase(state);
+
             // Update cycle in Supabase only after a break is completed (meaning a work session is starting)
             if (state === 'work') {
                 const newCycleCount = (currentUserData.pomodoroCycle || 0) + 1;
                 currentUserData.pomodoroCycle = newCycleCount;
                 if (currentUser) {
                     await updateUserPrivate(currentUser.id, { pomodoroCycle: newCycleCount });
+                }
+            }
+        }
+
+        async function syncStudyingStatusForPhase(state) {
+            if (!currentUser) {
+                return;
+            }
+
+            const startTime = nowIso();
+
+            if (state === 'work') {
+                const studyingStatus = {
+                    type: 'study',
+                    subject: activeSubject || 'Focus',
+                    startTime
+                };
+
+                if (activeTaskId) {
+                    const task = plannerState.tasks.find(t => t.id === activeTaskId);
+                    if (task) {
+                        studyingStatus.taskId = task.id;
+                        studyingStatus.taskTitle = task.title;
+                    }
+                }
+
+                try {
+                    await updateUserPrivate(currentUser.id, { studying: studyingStatus });
+                } catch (error) {
+                    console.error('Failed to sync studying status for work phase:', error);
+                }
+            } else if (state && state.includes('break')) {
+                const breakLabel = state.replace('_', ' ');
+                try {
+                    await updateUserPrivate(currentUser.id, {
+                        studying: {
+                            type: 'break',
+                            subject: breakLabel,
+                            startTime
+                        }
+                    });
+                } catch (error) {
+                    console.error('Failed to sync studying status for break phase:', error);
                 }
             }
         }
@@ -5135,10 +5200,12 @@ let pauseStartTime = 0;
             totalBreakTimeDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
         }
 
-        async function saveSession(subject, durationSeconds, sessionType = 'study') { // Default to 'study'
+        async function saveSession(subject, durationSeconds, sessionType = 'study', options = {}) { // Default to 'study'
             if (!currentUser || durationSeconds <= 0) {
                 return;
             }
+
+            const { skipRemote = false } = options || {};
 
             // --- START: ADDED GUEST LOGIC ---
             // For anonymous users, just update local state without saving to Supabase
@@ -5197,13 +5264,15 @@ let pauseStartTime = 0;
                     .eq('id', currentUser.id);
 
                 // Log session
-                await supabase.from('sessions').insert({
-                    profile_id: currentUser.id,
-                    subject: subject,
-                    durationSeconds: cappedDuration,
-                    endedAt: new Date().toISOString(),
-                    type: sessionType
-                });
+                if (!skipRemote) {
+                    await supabase.from('sessions').insert({
+                        profile_id: currentUser.id,
+                        subject: subject,
+                        durationSeconds: cappedDuration,
+                        endedAt: new Date().toISOString(),
+                        type: sessionType
+                    });
+                }
 
                 // Update UI and check for achievements
                 updateTotalTimeDisplay();
@@ -5252,6 +5321,96 @@ let pauseStartTime = 0;
         console.error('Error checking achievements:', error);
     }
 }
+
+        function urlBase64ToUint8Array(base64String) {
+            if (!base64String) {
+                return new Uint8Array();
+            }
+
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+
+            try {
+                const rawData = atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; i++) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+                return outputArray;
+            } catch (error) {
+                console.error('Failed to decode VAPID public key:', error);
+                return new Uint8Array();
+            }
+        }
+
+        async function persistPushSubscription(subscriptionJson) {
+            if (!subscriptionJson) {
+                return;
+            }
+
+            pendingPushSubscription = subscriptionJson;
+
+            if (!currentUser || currentUser.isAnonymous) {
+                return;
+            }
+
+            try {
+                await updateUserPrivate(currentUser.id, { push_subscription: subscriptionJson });
+                pendingPushSubscription = null;
+            } catch (error) {
+                console.error('Failed to save push subscription:', error);
+            }
+        }
+
+        async function ensurePushSubscription(vapidPublicKey) {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+                return null;
+            }
+
+            if (!vapidPublicKey || vapidPublicKey === 'YOUR_VAPID_PUBLIC_KEY') {
+                return null;
+            }
+
+            if (Notification.permission === 'denied') {
+                console.warn('Notification permission was previously denied.');
+                return null;
+            }
+
+            const permission = Notification.permission === 'granted'
+                ? 'granted'
+                : await Notification.requestPermission();
+
+            if (permission !== 'granted') {
+                console.warn('Notification permission not granted.');
+                return null;
+            }
+
+            const registration = await navigator.serviceWorker.ready;
+            const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+
+            if (!applicationServerKey || applicationServerKey.length === 0) {
+                console.warn('Invalid VAPID public key provided.');
+                return null;
+            }
+
+            let subscription = await registration.pushManager.getSubscription();
+
+            if (!subscription) {
+                try {
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey
+                    });
+                } catch (error) {
+                    console.error('Failed to subscribe to push notifications:', error);
+                    return null;
+                }
+            }
+
+            const subscriptionJson = subscription.toJSON();
+            await persistPushSubscription(subscriptionJson);
+            return subscription;
+        }
 
         async function loadDailyTotal() {
             if (!currentUser) return;
@@ -12278,6 +12437,23 @@ if (achievementsGrid) {
             }
 
             // --- END: ADDED EVENT LISTENERS ---
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.addEventListener('message', async (event) => {
+                    const message = event.data;
+                    if (!message || typeof message !== 'object') {
+                        return;
+                    }
+
+                    if (message.type === 'PUSH_SUBSCRIPTION_REFRESH' && message.subscription) {
+                        await persistPushSubscription(message.subscription);
+                    }
+
+                    if (message.type === 'TIMER_ENDED' && message.source === 'service-worker' && message.newState && message.oldState) {
+                        handlePomodoroPhaseEnd({ newState: message.newState, oldState: message.oldState });
+                    }
+                });
+            }
 
             // --- Service Worker Registration (Robust Version) ---
         if ('serviceWorker' in navigator) {
