@@ -3089,6 +3089,7 @@
     const supabaseUrl = 'https://ofysppndssyllkolxjky.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meXNwcG5kc3N5bGxrb2x4amt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNDg1MTAsImV4cCI6MjA3MjcyNDUxMH0.x6_aRXrbxSOP7I71oSooWx8x8dedczrtemoUEWiDta8';
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const VAPID_PUBLIC_KEY = window.__VAPID_PUBLIC_KEY || 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY';
     const auth = supabase.auth;
     const storage = supabase.storage;
 
@@ -3263,6 +3264,78 @@
         }
     });
 
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding)
+            .replace(/-/g, '+')
+            .replace(/_/g, '/');
+
+        const rawData = atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    async function ensurePushSubscription() {
+        try {
+            if (!currentUser || !currentUser.id) {
+                return;
+            }
+            if (!serviceWorkerRegistration) {
+                return;
+            }
+            if (!('Notification' in window) || !('PushManager' in window)) {
+                console.warn('Push notifications are not supported in this browser.');
+                return;
+            }
+
+            if (Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    console.warn('Notification permission not granted. Push subscription skipped.');
+                    return;
+                }
+            } else if (Notification.permission !== 'granted') {
+                console.warn('Notification permission denied. Push subscription skipped.');
+                return;
+            }
+
+            let subscription = await serviceWorkerRegistration.pushManager.getSubscription();
+            if (!subscription) {
+                if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY === 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY') {
+                    console.warn('Missing VAPID public key. Unable to create push subscription.');
+                    return;
+                }
+
+                subscription = await serviceWorkerRegistration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+            }
+
+            if (!subscription) {
+                return;
+            }
+
+            const subscriptionPayload = subscription.toJSON ? subscription.toJSON() : subscription;
+            const { error } = await supabase
+                .from('profiles')
+                .update({ push_subscription: subscriptionPayload })
+                .eq('id', currentUser.id);
+
+            if (error) {
+                throw error;
+            }
+            console.log('Push subscription synced with Supabase.');
+        } catch (error) {
+            console.error('Failed to initialise push notifications:', error);
+            showToast('Unable to enable push notifications. Check console for details.', 'error');
+        }
+    }
+
     // ensure profile row exists (call after sign up / first login)
     async function ensureProfileRow() {
         const { data: { user } } = await auth.getUser();
@@ -3346,6 +3419,7 @@
             setupRealtimeListeners();
             // Ensure daily totals persist across refreshes
             await loadDailyTotal();
+            await ensurePushSubscription();
             showPage('page-timer');
         }
     }
@@ -3517,6 +3591,7 @@
         // --- App State ---
         let currentUserData = {};
         let dashboardCharts = {};
+        let serviceWorkerRegistration = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         let userSessions = [];
         let isAudioUnlocked = false;
@@ -12284,12 +12359,14 @@ if (achievementsGrid) {
             // Service Workers require a secure context (HTTPS or localhost) to register.
             // This check prevents the registration error in unsupported environments (like 'blob:').
             if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-                // IMPORTANT CHANGE HERE: Use './service-worker.js' or '/Focus-Clock/service-worker.js'
+                // IMPORTANT CHANGE HERE: Use './service_worker.js' or '/Focus-Clock/service_worker.js'
                 // if your app is hosted in a subfolder like /Focus-Clock/
-                // './service-worker.js' is generally preferred for relative paths.
+                // './service_worker.js' is generally preferred for relative paths.
                 navigator.serviceWorker
-                    .register('./service-worker.js', { scope: './' }) // Updated path and added scope
+                    .register('./service_worker.js', { scope: './' }) // Updated path and added scope
                     .then(registration => {
+                        serviceWorkerRegistration = registration;
+                        ensurePushSubscription();
                         console.log('Service Worker registered successfully with scope:', registration.scope);
                         // --- START NEW CODE FOR SERVICE WORKER UPDATES ---
                         registration.onupdatefound = () => {
@@ -12313,12 +12390,47 @@ if (achievementsGrid) {
                         console.error('Service Worker registration failed:', error);
                     });
 
+                navigator.serviceWorker.ready
+                    .then(registration => {
+                        serviceWorkerRegistration = registration;
+                        ensurePushSubscription();
+                    })
+                    .catch(error => {
+                        console.error('Service Worker ready promise rejected:', error);
+                    });
+
                 // --- START NEW CODE TO RELOAD PAGE ON CONTROLLER CHANGE ---
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
                     console.log('New service worker activated, reloading page for latest content.');
                     window.location.reload();
                 });
                 // --- END NEW CODE TO RELOAD PAGE ON CONTROLLER CHANGE ---
+
+                navigator.serviceWorker.addEventListener('message', (event) => {
+                    const message = event.data || {};
+                    switch (message.type) {
+                        case 'TIMER_ENDED':
+                            handlePomodoroPhaseEnd(message);
+                            break;
+                        case 'notification_action':
+                            if (message.action === 'pause') {
+                                pauseTimer();
+                            } else if (message.action === 'resume') {
+                                resumeTimer();
+                            } else if (message.action === 'stop') {
+                                stopTimer().catch(err => console.error('Failed to stop timer from notification action', err));
+                            }
+                            break;
+                        case 'PUSH_SUBSCRIPTION_CHANGED':
+                            ensurePushSubscription();
+                            break;
+                        case 'PUSH_NOTIFICATION':
+                            console.log('Push notification payload received:', message.payload);
+                            break;
+                        default:
+                            break;
+                    }
+                });
 
             } else {
                 console.warn('Service Worker not registered. This feature requires a secure context (HTTPS or localhost). The Pomodoro timer will be less reliable in the background.');
