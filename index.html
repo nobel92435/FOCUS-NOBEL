@@ -8206,10 +8206,16 @@ if (achievementsGrid) {
             </section>
             
             <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Today's Analysis</h2>
-            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Study vs. Break</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-break-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Study Time by Subject</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-time-by-subject-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Start/End Times</h3><div class="chart-container" style="height:250px;"><canvas id="day-start-end-distribution-chart"></canvas></div></div>
+            <section class="space-y-6">
+              <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="card"><h3 class="font-semibold text-xl mb-4">Study vs. Break</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-break-chart"></canvas></div></div>
+                <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Study Time by Subject</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-time-by-subject-chart"></canvas></div></div>
+                <div class="card"><h3 class="font-semibold text-xl mb-4">Start/End Times</h3><div class="chart-container" style="height:250px;"><canvas id="day-start-end-distribution-chart"></canvas></div></div>
+              </div>
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card"><h3 class="font-semibold text-xl mb-4">Today's Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="day-subject-ratio-chart"></canvas></div></div>
+                <div class="card"><h3 class="font-semibold text-xl mb-4">Time Per Hour Today</h3><div class="chart-container" style="height:250px;"><canvas id="day-time-per-hour-chart"></canvas></div></div>
+              </div>
             </section>
 
             <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Last 7 Days Performance</h2>
@@ -8229,9 +8235,18 @@ if (achievementsGrid) {
             </section>
 
             <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Historical Performance (Last 28 Days)</h2>
-            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="28d-subject-ratio-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Time Per Day</h3><div class="chart-container"><canvas id="28d-time-per-day-chart"></canvas></div></div>
+            <section class="space-y-6">
+              <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                <div class="card p-6"><h3 class="text-slate-400 text-lg font-medium">Total Time (Last 28 Days)</h3><p id="28d-total-time" class="text-3xl font-bold text-cyan-400 mt-2">--:--:--</p></div>
+                <div class="card p-6"><h3 class="text-slate-400 text-lg font-medium">Daily Average (Last 28 Days)</h3><p id="28d-daily-average" class="text-3xl font-bold text-cyan-400 mt-2">--m</p></div>
+                <div class="card p-6"><h3 class="text-slate-400 text-lg font-medium">Focus Score</h3><div class="flex items-baseline mt-4"><p id="28d-focus-score" class="text-4xl font-bold text-emerald-400">--</p><span class="text-slate-500 ml-2">/100</span></div><p class="text-sm text-slate-500 mt-2">Based on study volume and consistency.</p></div>
+                <div class="card bg-gradient-to-br from-emerald-500 to-cyan-600 border-0 text-white p-6 shadow-xl"><h3 class="text-lg font-semibold flex items-center"><i data-lucide="sparkles" class="mr-2"></i>AI Insight</h3><p id="28d-ai-insight-text" class="mt-3 text-sm">Crunching your long-term progress...</p></div>
+              </div>
+              <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div class="card"><h3 class="font-semibold text-xl mb-4">Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="28d-subject-ratio-chart"></canvas></div></div>
+                <div class="card xl:col-span-1"><h3 class="font-semibold text-xl mb-4">Time Per Day</h3><div class="chart-container"><canvas id="28d-time-per-day-chart"></canvas></div></div>
+                <div class="card xl:col-span-3"><h3 class="font-semibold text-xl mb-4">Cumulative Study Time (Last 28 Days)</h3><div class="chart-container"><canvas id="28d-cumulative-chart"></canvas></div></div>
+              </div>
             </section>
             
             <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Trends & Forecasts</h2>
@@ -8258,6 +8273,43 @@ if (achievementsGrid) {
           
           const last28DaysStudyData = appData.filter(d => (today - d.startTime)/86400000 <= 28 && d.type === 'study');
 
+          const computeHourlyMinutes = (sessions) => {
+            const buckets = Array(24).fill(0);
+            sessions.forEach(session => {
+              if (!session.startTime || !session.endTime) return;
+              let cursor = new Date(session.startTime);
+              const sessionEnd = new Date(session.endTime);
+              if (cursor > sessionEnd) return;
+              while (cursor < sessionEnd) {
+                const hourIndex = cursor.getHours();
+                const nextHour = new Date(cursor);
+                nextHour.setHours(hourIndex + 1, 0, 0, 0);
+                const sliceEnd = nextHour < sessionEnd ? nextHour : sessionEnd;
+                const diffMinutes = (sliceEnd - cursor) / 60000;
+                if (diffMinutes > 0 && hourIndex >= 0 && hourIndex < 24) {
+                  buckets[hourIndex] += diffMinutes;
+                }
+                cursor = sliceEnd;
+              }
+            });
+            return buckets;
+          };
+
+          const totalMinutes28d = last28DaysStudyData.reduce((sum, s) => sum + s.duration, 0);
+          const uniqueDays28d = new Set(last28DaysStudyData.map(s => s.startTime.toISOString().split('T')[0]));
+          const dailyAverage28d = totalMinutes28d / 28;
+          const volumeFactor28d = Math.min(totalMinutes28d / (28 * 120), 1);
+          const consistencyFactor28d = Math.min(uniqueDays28d.size / 28, 1);
+          const focusScore28d = Math.round((volumeFactor28d * 0.6 + consistencyFactor28d * 0.4) * 100);
+
+          const totalEl28d = document.getElementById('28d-total-time');
+          if (totalEl28d) totalEl28d.textContent = __fmtHMS(totalMinutes28d);
+          const avgEl28d = document.getElementById('28d-daily-average');
+          if (avgEl28d) avgEl28d.textContent = `${Math.round(dailyAverage28d)}m`;
+          const scoreEl28d = document.getElementById('28d-focus-score');
+          if (scoreEl28d) scoreEl28d.textContent = Number.isFinite(focusScore28d) ? focusScore28d : 0;
+          generateAIInsight(last28DaysStudyData, '28d-ai-insight-text');
+
           // --- Today's Snapshot Cards ---
           const totalMinToday = todayStudyData.reduce((s,x)=>s+x.duration,0);
           const countToday = todayStudyData.length;
@@ -8282,7 +8334,27 @@ if (achievementsGrid) {
             data:{ labels:Object.keys(bySubjectToday), datasets:[{ label:'Minutes Studied', data:Object.values(bySubjectToday), backgroundColor: __palette(Object.keys(bySubjectToday).length) }] },
             options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
           });
-          
+
+          const subjectRatioLabelsToday = Object.keys(bySubjectToday);
+          const subjectRatioValuesToday = Object.values(bySubjectToday);
+          if (subjectRatioLabelsToday.length === 0) {
+            subjectRatioLabelsToday.push('No Data');
+            subjectRatioValuesToday.push(1);
+          }
+          __stats.charts['day-subject-ratio-chart'] = new Chart(document.getElementById('day-subject-ratio-chart'), {
+            type:'doughnut', plugins: withDataLabels,
+            data:{ labels: subjectRatioLabelsToday, datasets:[{ data: subjectRatioValuesToday, backgroundColor: __palette(subjectRatioLabelsToday.length), borderColor:'#1e293b', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:'#cbd5e1' } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((acc,val)=>acc+val,0)||1; return s>0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{ weight:'bold' } } : undefined } }
+          });
+
+          const hourlyMinutesToday = computeHourlyMinutes(todayStudyData);
+          const hourlyLabelsToday = Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`);
+          __stats.charts['day-time-per-hour-chart'] = new Chart(document.getElementById('day-time-per-hour-chart'), {
+            type:'line',
+            data:{ labels: hourlyLabelsToday, datasets:[{ label:'Minutes Studied', data: hourlyMinutesToday, borderColor: CHART_BORDERS.cyan, backgroundColor: CHART_COLORS.cyan, fill:true, tension:0.3, pointRadius:2 }] },
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{ color:'#94a3b8' } }, x:{ grid:{color:'#334155'}, ticks:{ color:'#94a3b8', maxRotation:0, autoSkip:true, maxTicksLimit:8 } } }, plugins:{ legend:{ display:false } } }
+          });
+
           const distToday = todayStudyData.map(s => ({ x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, yEnd: s.endTime.getHours()+s.endTime.getMinutes()/60 }));
           __stats.charts['day-start-end-distribution-chart'] = new Chart(document.getElementById('day-start-end-distribution-chart'), {
             type:'scatter',
@@ -8367,6 +8439,14 @@ if (achievementsGrid) {
             type:'bar',
             data:{ labels: labels28d, datasets:[{ label:'Minutes Studied', data: perDay28d, backgroundColor: CHART_COLORS.pink, borderRadius:5 }] },
             options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8', maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
+          });
+
+          let running28d = 0;
+          const cumulative28d = perDay28d.map(value => (running28d += value));
+          __stats.charts['28d-cumulative-chart'] = new Chart(document.getElementById('28d-cumulative-chart'), {
+            type:'line',
+            data:{ labels: labels28d, datasets:[{ label:'Cumulative Minutes', data: cumulative28d, borderColor: CHART_BORDERS.indigo, backgroundColor: CHART_COLORS.indigo, fill:true, tension:0.25, pointRadius:0 }] },
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{ color:'#94a3b8' } }, x:{ grid:{color:'#334155'}, ticks:{ color:'#94a3b8', maxRotation:90, minRotation:45 } } }, plugins:{ legend:{ display:false } } }
           });
           
           const reg = appData.filter(s=>s.type==='study').slice(-50).map(s => ({ x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, r: Math.max(3, s.duration/10) }));
