@@ -3670,10 +3670,6 @@
         const blob = new Blob([workerCode], { type: 'application/javascript' });
         const pomodoroWorker = new Worker(URL.createObjectURL(blob));
 
-        const POMODORO_NOTIFICATION_ICON = 'https://placehold.co/192x192/0a0a0a/e0e0e0?text=Flow+192';
-        const POMODORO_NOTIFICATION_BADGE = 'https://placehold.co/96x96/0a0a0a/e0e0e0?text=Flow';
-        const POMODORO_NOTIFICATION_VIBRATE = [200, 100, 200, 100, 200];
-
         // --- FIX START: Listen for messages from the Pomodoro Web Worker ---
         pomodoroWorker.onmessage = (e) => {
             const { type, timeLeft } = e.data;
@@ -3688,19 +3684,9 @@
                 const oldState = pomodoroState;
                 if (oldState === 'idle') return; // Safety check, don't transition if already stopped
 
-                let newState;
-                if (oldState === 'work') {
-                    // A work session just finished. Check if it's time for a long break.
-                    const completedWorkSessions = currentUserData.pomodoroCycle || 0;
-                    const isLongBreakTime = completedWorkSessions > 0 && (completedWorkSessions % pomodoroSettings.long_break_interval === 0);
-                    newState = isLongBreakTime ? 'long_break' : 'short_break';
-                } else {
-                    // A break just finished. Time to get back to work.
-                    newState = 'work';
-                }
-
-                // Call the existing handler function to manage the transition.
-                handlePomodoroPhaseEnd({ newState, oldState });
+                // FIX #1: The logic to determine the next state AND increment the cycle
+                // should be done in one place for consistency. We'll do it in `handlePomodoroPhaseEnd`.
+                handlePomodoroPhaseEnd({ oldState });
             }
         };
         // --- FIX END ---
@@ -3738,7 +3724,23 @@
 
         // --- FIX START: Add the function to handle Pomodoro phase transitions ---
         async function handlePomodoroPhaseEnd(data) {
-            const { newState, oldState } = data;
+            const { oldState } = data;
+            let newState;
+
+            // Determine the next state and update cycle count
+            if (oldState === 'work') {
+                const newCycleCount = (currentUserData.pomodoroCycle || 0) + 1;
+                currentUserData.pomodoroCycle = newCycleCount;
+                if (currentUser && !currentUser.isAnonymous) {
+                    await updateUserPrivate(currentUser.id, { pomodoroCycle: newCycleCount });
+                }
+
+                const isLongBreakTime = newCycleCount > 0 && (newCycleCount % pomodoroSettings.long_break_interval === 0);
+                newState = isLongBreakTime ? 'long_break' : 'short_break';
+            } else { // It was a break
+                newState = 'work';
+            }
+
 
             // Play the appropriate sound for the end of the phase
             playSound(oldState === 'work' ? pomodoroSounds.break : pomodoroSounds.focus, pomodoroSounds.volume);
@@ -3750,31 +3752,25 @@
 
             const sessionType = oldState === 'work' ? 'study' : 'break';
             const subject = oldState === 'work' ? activeSubject : oldState.replace('_', ' ');
+            await saveSession(subject, sessionDuration, sessionType);
 
             const transitionMessage = oldState === 'work'
                 ? {
                     title: 'Focus complete!',
-                    options: buildPomodoroNotificationOptions({ body: `Time for a ${newState.replace('_', ' ')}.` }, { newState, oldState })
+                    options: { body: `Time for a ${newState.replace('_', ' ')}.`, tag: 'pomodoro-transition' }
                 }
                 : {
                     title: 'Break is over!',
-                    options: buildPomodoroNotificationOptions({ body: 'Time to get back to focus.' }, { newState, oldState })
+                    options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' }
                 };
 
-            const serverResult = await triggerServerNotification({
+            const serverHandled = await triggerServerNotification({
                 ...transitionMessage,
                 newState,
                 oldState
             });
 
-            const recordedByServer = Boolean(serverResult && serverResult.recorded && serverResult.profile);
-
-            await saveSession(subject, sessionDuration, sessionType, {
-                skipSessionInsert: recordedByServer,
-                serverProfile: recordedByServer ? serverResult.profile : null
-            });
-
-            if ((!serverResult || !serverResult.delivered) && Notification.permission === 'granted') {
+            if (!serverHandled && Notification.permission === 'granted') {
                 scheduleTransitionNotification(0, transitionMessage.title, transitionMessage.options, {
                     type: 'TIMER_ENDED',
                     newState,
@@ -3840,23 +3836,22 @@ async function triggerServerNotification(messageData) {
     if (!currentUser) {
         console.error('User not authenticated, cannot send server notification.');
         showToast('Please sign in to enable server notifications.', 'error');
-        return { ok: false, delivered: false, recorded: false, profile: null, session: null, error: 'unauthenticated' };
+        return false;
     }
 
     if (!messageData || !messageData.newState || !messageData.oldState) {
         console.warn('triggerServerNotification called without required state information.', messageData);
-        return { ok: false, delivered: false, recorded: false, profile: null, session: null, error: 'missing-state' };
+        return false;
     }
 
-    let options = messageData.options ? { ...messageData.options } : {};
+    const options = messageData.options ? { ...messageData.options } : {};
+    if (options && !options.tag) {
+        options.tag = 'pomodoro-transition';
+    }
     const bodyText = typeof messageData.body === 'string'
         ? messageData.body
         : (typeof options.body === 'string' ? options.body : '');
     options.body = bodyText;
-    options = buildPomodoroNotificationOptions(options, {
-        newState: messageData.newState,
-        oldState: messageData.oldState
-    });
 
     let activeSubscription = null;
     try {
@@ -3871,7 +3866,7 @@ async function triggerServerNotification(messageData) {
 
     if (!activeSubscription) {
         console.warn('No valid push subscription available. Skipping server notification request.');
-        return { ok: false, delivered: false, recorded: false, profile: null, session: null, error: 'no-subscription' };
+        return false;
     }
 
     try {
@@ -3882,47 +3877,24 @@ async function triggerServerNotification(messageData) {
                 title: messageData.title,
                 body: options.body,
                 newState: messageData.newState,
-                oldState: messageData.oldState,
-                options
+                oldState: messageData.oldState
             }
         });
         if (error) throw error;
-
-        if (data?.error && /auth/i.test(data.error)) {
-            console.warn('Server reported invalid push subscription. Forcing resubscribe.');
-            await ensurePushSubscription({ forceRefresh: true });
-        }
-
-        if (!data) {
-            console.warn('Server notification returned no data response.');
-            return { ok: false, delivered: false, recorded: false, profile: null, session: null, error: 'empty-response' };
-        }
-
-        if (!data.success) {
+        if (!data?.success) {
+            if (data?.error && /auth/i.test(data.error)) {
+                console.warn('Server reported invalid push subscription. Forcing resubscribe.');
+                await ensurePushSubscription({ forceRefresh: true });
+            }
             console.warn('Server notification did not confirm delivery:', data);
-        } else {
-            console.log('Server notification triggered:', data);
+            return false;
         }
-
-        return {
-            ok: true,
-            delivered: Boolean(data.delivered),
-            recorded: Boolean(data.recorded),
-            profile: data.profile || null,
-            session: data.session || null,
-            error: data.error || null
-        };
+        console.log('Server notification triggered:', data);
+        return true;
     } catch (error) {
         console.error('Error triggering server notification:', error);
         showToast('Failed to schedule notification.', 'error');
-        return {
-            ok: false,
-            delivered: false,
-            recorded: false,
-            profile: null,
-            session: null,
-            error: error instanceof Error ? error.message : String(error)
-        };
+        return false;
     }
 }
 
@@ -4332,30 +4304,6 @@ let pauseStartTime = 0;
             return undefined;
         }
 
-        function buildPomodoroNotificationOptions(baseOptions = {}, transitionMeta = {}) {
-            const opts = { ...(baseOptions || {}) };
-            opts.tag = opts.tag || 'pomodoro-transition';
-            opts.renotify = opts.renotify ?? true;
-            opts.requireInteraction = opts.requireInteraction ?? true;
-            opts.icon = opts.icon || POMODORO_NOTIFICATION_ICON;
-            opts.badge = opts.badge || POMODORO_NOTIFICATION_BADGE;
-            opts.vibrate = opts.vibrate || POMODORO_NOTIFICATION_VIBRATE;
-            opts.timestamp = opts.timestamp || Date.now();
-
-            const data = typeof opts.data === 'object' && opts.data !== null
-                ? { ...opts.data }
-                : {};
-
-            data.transition = {
-                ...(data.transition || {}),
-                ...transitionMeta,
-                triggeredAt: Date.now(),
-            };
-
-            opts.data = data;
-            return opts;
-        }
-
         /**
          * Sends a message to the Service Worker to schedule a notification.
          * This is the key to reliable background timers on mobile.
@@ -4382,7 +4330,7 @@ let pauseStartTime = 0;
             } else if (Notification.permission === 'granted') {
                 scheduleNow(delayInMs, title, options);
             }
-
+            
             function scheduleNow(delay, title, opts) {
                 navigator.serviceWorker.ready.then(registration => {
                     const target = registration.active || registration.waiting || registration.installing;
@@ -4390,20 +4338,19 @@ let pauseStartTime = 0;
                         console.warn('No active service worker available to schedule a notification.');
                         return;
                     }
-                    const enrichedOptions = buildPomodoroNotificationOptions(opts, transitionPayload);
                     const transitionMessage = {
                         type: transitionPayload.type || 'TIMER_ENDED',
                         newState: transitionPayload.newState,
                         oldState: transitionPayload.oldState,
                         title,
-                        options: enrichedOptions
+                        options: opts
                     };
                     target.postMessage({
                         type: 'SCHEDULE_NOTIFICATION',
                         payload: {
                             delay: delay,
                             title: title,
-                            options: enrichedOptions,
+                            options: opts,
                             transitionMessage
                         }
                     });
@@ -5282,12 +5229,22 @@ let pauseStartTime = 0;
                 pomodoroState = 'work';
                 playSound(pomodoroSounds.start, pomodoroSounds.volume);
 
+                const currentCycle = (currentUserData.pomodoroCycle || 0);
+                 // If the last completed cycle was a long break interval, reset it.
+                if (currentCycle > 0 && (currentCycle % pomodoroSettings.long_break_interval === 0)) {
+                    currentUserData.pomodoroCycle = 0;
+                    if (currentUser && !currentUser.isAnonymous) {
+                         updateUserPrivate(currentUser.id, { pomodoroCycle: 0 }); // Persist reset
+                    }
+                }
+
+                const cycleForDisplay = (currentUserData.pomodoroCycle || 0) % pomodoroSettings.long_break_interval + 1;
+                pomodoroStatusDisplay.textContent = `Work (${cycleForDisplay}/${pomodoroSettings.long_break_interval})`;
+                pomodoroStatusDisplay.style.color = '#3b82f6';
+                
                 const workDurationSeconds = pomodoroSettings.work * 60;
                 await ensurePushSubscription();
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
-
-                pomodoroStatusDisplay.textContent = `Work (1/${pomodoroSettings.long_break_interval})`;
-                pomodoroStatusDisplay.style.color = '#3b82f6';
             }
 
             document.getElementById('start-studying-btn').classList.add('hidden');
@@ -5419,12 +5376,12 @@ let pauseStartTime = 0;
             let durationSeconds = 0;
             let statusText = '';
 
-            const currentCycle = Math.floor((currentUserData.pomodoroCycle || 0) / 2);
+            const currentCycle = currentUserData.pomodoroCycle || 0;
 
             if (state === 'work') {
                 durationSeconds = pomodoroSettings.work * 60;
-                const nextState = ((currentCycle + 1) % pomodoroSettings.long_break_interval === 0) ? 'long_break' : 'short_break';
-                statusText = `Work (${currentCycle + 1}/${pomodoroSettings.long_break_interval})`;
+                const displayCycle = (currentCycle % pomodoroSettings.long_break_interval) + 1;
+                statusText = `Work (${displayCycle}/${pomodoroSettings.long_break_interval})`;
             } else { // It's a break
                 durationSeconds = state === 'short_break' ? pomodoroSettings.short_break * 60 : pomodoroSettings.long_break * 60;
                 statusText = state.replace('_', ' ');
@@ -5433,16 +5390,9 @@ let pauseStartTime = 0;
             // Start the UI timer
             pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds });
             pomodoroStatusDisplay.textContent = statusText;
-            pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e0b' : '#3b82f6';
+            pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
 
-            // Update cycle in Supabase only after a break is completed (meaning a work session is starting)
-            if (state === 'work') {
-                const newCycleCount = (currentUserData.pomodoroCycle || 0) + 1;
-                currentUserData.pomodoroCycle = newCycleCount;
-                if (currentUser) {
-                    await updateUserPrivate(currentUser.id, { pomodoroCycle: newCycleCount });
-                }
-            }
+            // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
         }
 
         function updateBreakTimerDisplay() {
@@ -5458,7 +5408,7 @@ let pauseStartTime = 0;
             totalBreakTimeDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
         }
 
-        async function saveSession(subject, durationSeconds, sessionType = 'study', opts = {}) { // Default to 'study'
+        async function saveSession(subject, durationSeconds, sessionType = 'study') { // Default to 'study'
             if (!currentUser || durationSeconds <= 0) {
                 return;
             }
@@ -5479,40 +5429,17 @@ let pauseStartTime = 0;
 
             const MAX_BREAK_SECONDS = 3 * 3600; // 3 hours in seconds
             const cappedDuration = (sessionType === 'break' && durationSeconds > MAX_BREAK_SECONDS) ? MAX_BREAK_SECONDS : durationSeconds;
-            const { skipSessionInsert = false, serverProfile = null } = opts || {};
 
             try {
-                if (serverProfile) {
-                    applyServerProfileSnapshot(serverProfile, sessionType);
-                    showToast(`Session of ${formatTime(cappedDuration, false)} saved!`, "success");
-                    if (sessionType === 'study') {
-                        await checkAndAwardAchievements(cappedDuration);
-                    }
-                    return;
-                }
+                // Fetch current profile
+                const { data: userData, error: fetchErr } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
+                if (fetchErr) throw fetchErr;
 
                 const todayStr = new Date().toISOString().split('T')[0];
-                let userData = currentUserData || {};
-
-                if (!userData || !userData.id || skipSessionInsert) {
-                    const { data: fetchedProfile, error: fetchErr } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .eq('id', currentUser.id)
-                        .single();
-                    if (fetchErr) throw fetchErr;
-                    userData = fetchedProfile;
-                }
-
-                if (skipSessionInsert) {
-                    applyServerProfileSnapshot(userData, sessionType);
-                    showToast(`Session of ${formatTime(cappedDuration, false)} saved!`, "success");
-                    if (sessionType === 'study') {
-                        await checkAndAwardAchievements(cappedDuration);
-                    }
-                    return;
-                }
-
                 const profileUpdate = {};
 
                 if (sessionType === 'study') {
@@ -5536,31 +5463,22 @@ let pauseStartTime = 0;
                     totalBreakTimeTodayInSeconds = currentDailyBreak + cappedDuration;
                 }
 
-                if (!skipSessionInsert) {
-                    await supabase
-                        .from('profiles')
-                        .update(profileUpdate)
-                        .eq('id', currentUser.id);
+                // Update profile totals
+                await supabase
+                    .from('profiles')
+                    .update(profileUpdate)
+                    .eq('id', currentUser.id);
 
-                    await supabase.from('sessions').insert({
-                        profile_id: currentUser.id,
-                        subject: subject,
-                        durationSeconds: cappedDuration,
-                        endedAt: new Date().toISOString(),
-                        type: sessionType
-                    });
-                }
+                // Log session
+                await supabase.from('sessions').insert({
+                    profile_id: currentUser.id,
+                    subject: subject,
+                    durationSeconds: cappedDuration,
+                    endedAt: new Date().toISOString(),
+                    type: sessionType
+                });
 
-                currentUserData = currentUserData || {};
-                Object.assign(currentUserData, profileUpdate);
-
-                if (profileUpdate.total_time_today) {
-                    currentUserData.total_time_today = profileUpdate.total_time_today;
-                }
-                if (profileUpdate.total_break_time_today) {
-                    currentUserData.total_break_time_today = profileUpdate.total_break_time_today;
-                }
-
+                // Update UI and check for achievements
                 updateTotalTimeDisplay();
                 showToast(`Session of ${formatTime(cappedDuration, false)} saved!`, "success");
                 if (sessionType === 'study') {
@@ -5570,57 +5488,6 @@ let pauseStartTime = 0;
             } catch (error) {
                 console.error("Error saving session: ", error);
                 showToast("Error saving session.", "error");
-            }
-        }
-
-        function applyServerProfileSnapshot(profile, sessionType) {
-            if (!profile || typeof profile !== 'object') return;
-
-            currentUserData = currentUserData || {};
-
-            const newTotalStudySeconds = pick(profile.total_study_seconds, currentUserData.total_study_seconds);
-            if (newTotalStudySeconds !== undefined) {
-                currentUserData.total_study_seconds = newTotalStudySeconds;
-            }
-
-            const newTotalBreakSeconds = pick(profile.total_break_seconds, currentUserData.total_break_seconds);
-            if (newTotalBreakSeconds !== undefined) {
-                currentUserData.total_break_seconds = newTotalBreakSeconds;
-            }
-
-            if (profile.total_time_today && typeof profile.total_time_today.seconds === 'number') {
-                totalTimeTodayInSeconds = profile.total_time_today.seconds;
-                currentUserData.total_time_today = profile.total_time_today;
-            }
-
-            if (profile.total_break_time_today && typeof profile.total_break_time_today.seconds === 'number') {
-                totalBreakTimeTodayInSeconds = profile.total_break_time_today.seconds;
-                currentUserData.total_break_time_today = profile.total_break_time_today;
-            }
-
-            if (profile.current_streak !== undefined && profile.current_streak !== null) {
-                currentUserData.current_streak = profile.current_streak;
-            }
-
-            if (profile.pomodoroCycle !== undefined && profile.pomodoroCycle !== null) {
-                currentUserData.pomodoroCycle = profile.pomodoroCycle;
-            }
-
-            if (profile.last_study_day) {
-                currentUserData.last_study_day = profile.last_study_day;
-            }
-
-            if ('studying' in profile) {
-                currentUserData.studying = profile.studying;
-            }
-
-            updateTotalTimeDisplay();
-
-            if (sessionType === 'study' && !profile.total_time_today) {
-                totalTimeTodayInSeconds += 0;
-            }
-            if (sessionType === 'break' && !profile.total_break_time_today) {
-                totalBreakTimeTodayInSeconds += 0;
             }
         }
         async function checkAndAwardAchievements(completedSessionDuration) {
@@ -5713,6 +5580,14 @@ let pauseStartTime = 0;
             // --- END: MODIFIED PROFILE UI LOGIC ---
 
             currentUserData = userData; 
+            // FIX #2: Load persisted Pomodoro settings from the database
+            if (userData.pomodoro_settings) {
+                // Merge with defaults to ensure all keys are present even if some are missing from DB
+                pomodoroSettings = { ...pomodoroSettings, ...userData.pomodoro_settings };
+            }
+            if (userData.pomodoro_sounds) {
+                pomodoroSounds = { ...pomodoroSounds, ...userData.pomodoro_sounds };
+            }
             const username = userData.username || 'Anonymous';
             const email = userData.email || '';
             const photoURL = userData.photo_url;
@@ -12806,3 +12681,4 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
