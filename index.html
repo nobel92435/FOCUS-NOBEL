@@ -3604,7 +3604,7 @@ async function triggerServerNotification(messageData) {
                 userId: currentUser.id,
                 appId,
                 title: messageData.title,
-                body: messageData.options.body,
+                body: messageData?.options?.body || messageData?.body || '',
                 newState: messageData.newState,
                 oldState: messageData.oldState
             }
@@ -4052,7 +4052,12 @@ let pauseStartTime = 0;
             
             function scheduleNow(delay, title, opts) {
                 navigator.serviceWorker.ready.then(registration => {
-                    registration.active.postMessage({
+                    const sw = registration.active || registration.waiting || registration.installing;
+                    if (!sw) {
+                        console.warn('No active service worker to schedule notification.');
+                        return;
+                    }
+                    sw.postMessage({
                         type: 'SCHEDULE_NOTIFICATION',
                         payload: {
                             delay: delay,
@@ -12213,11 +12218,11 @@ if (achievementsGrid) {
             // Service Workers require a secure context (HTTPS or localhost) to register.
             // This check prevents the registration error in unsupported environments (like 'blob:').
             if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-                // IMPORTANT CHANGE HERE: Use './service-worker.js' or '/Focus-Clock/service-worker.js'
+                // IMPORTANT CHANGE HERE: Use './service_worker.js' or '/Focus-Clock/service_worker.js'
                 // if your app is hosted in a subfolder like /Focus-Clock/
                 // './service-worker.js' is generally preferred for relative paths.
                 navigator.serviceWorker
-                    .register('./service-worker.js', { scope: './' }) // Updated path and added scope
+                    .register('./service_worker.js', { scope: './' }) // Updated path and added scope
                     .then(registration => {
                         console.log('Service Worker registered successfully with scope:', registration.scope);
                         // --- START NEW CODE FOR SERVICE WORKER UPDATES ---
