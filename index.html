@@ -3141,7 +3141,7 @@
         if (!parsed || typeof parsed !== 'object') return null;
 
         const { endpoint, keys = {}, expirationTime = null } = parsed;
-        if (!endpoint) return null;
+        if (typeof endpoint !== 'string' || !endpoint.trim()) return null;
 
         const authKey = typeof keys.auth === 'string' && keys.auth.trim() ? keys.auth.trim() : null;
         const p256dhKey = typeof keys.p256dh === 'string' && keys.p256dh.trim() ? keys.p256dh.trim() : null;
@@ -3149,13 +3149,18 @@
         if (!authKey || !p256dhKey) return null;
 
         return {
-            endpoint,
-            expirationTime,
+            endpoint: endpoint.trim(),
+            expirationTime: expirationTime ?? null,
             keys: {
                 auth: authKey,
                 p256dh: p256dhKey
             }
         };
+    }
+
+    function serializePushSubscription(value) {
+        const normalized = normalizePushSubscription(value);
+        return normalized ? JSON.stringify(normalized) : null;
     }
 
     function areSubscriptionsEqual(a, b) {
@@ -3242,9 +3247,11 @@
 
                 const storedSubscription = normalizePushSubscription(currentUserData?.push_subscription);
                 if (!areSubscriptionsEqual(storedSubscription, normalizedSubscription)) {
+                    const serializedSubscription = serializePushSubscription(normalizedSubscription);
+                    const updatePayload = serializedSubscription ? { push_subscription: serializedSubscription } : { push_subscription: null };
                     const { error } = await supabase
                         .from('profiles')
-                        .update({ push_subscription: normalizedSubscription })
+                        .update(updatePayload)
                         .eq('id', currentUser.id);
 
                     if (error) {
@@ -3252,7 +3259,7 @@
                     } else {
                         currentUserData = {
                             ...(currentUserData || {}),
-                            push_subscription: normalizedSubscription
+                            push_subscription: serializedSubscription
                         };
                     }
                 }
@@ -3836,33 +3843,57 @@ async function triggerServerNotification(messageData) {
         return false;
     }
 
-    try {
-        const { data, error } = await supabase.functions.invoke('send-pomodoro-notification', {
-            body: {
-                userId: currentUser.id,
-                appId,
-                title: messageData.title,
-                body: options.body,
-                newState: messageData.newState,
-                oldState: messageData.oldState
+    const serializedSubscription = serializePushSubscription(activeSubscription);
+    let attempt = 0;
+
+    while (attempt < 2) {
+        try {
+            const { data, error } = await supabase.functions.invoke('send-pomodoro-notification', {
+                body: {
+                    userId: currentUser.id,
+                    appId,
+                    title: messageData.title,
+                    body: options.body,
+                    newState: messageData.newState,
+                    oldState: messageData.oldState,
+                    subscription: serializedSubscription
+                }
+            });
+            if (error) throw error;
+            if (data?.success) {
+                console.log('Server notification triggered:', data);
+                return true;
             }
-        });
-        if (error) throw error;
-        if (!data?.success) {
+
+            if (data?.error && /PushSubscriber\.fromJSON is not a function/i.test(data.error) && attempt === 0) {
+                console.warn('Server failed to deserialize push subscription. Refreshing subscription and retrying.');
+                await ensurePushSubscription({ forceRefresh: true });
+                activeSubscription = normalizePushSubscription(currentUserData?.push_subscription);
+                if (!activeSubscription) break;
+                attempt++;
+                continue;
+            }
+
             if (data?.error && /auth/i.test(data.error)) {
                 console.warn('Server reported invalid push subscription. Forcing resubscribe.');
                 await ensurePushSubscription({ forceRefresh: true });
             }
+
             console.warn('Server notification did not confirm delivery:', data);
             return false;
+        } catch (error) {
+            console.error('Error triggering server notification:', error);
+            if (attempt === 0) {
+                await ensurePushSubscription({ forceRefresh: true });
+                attempt++;
+                continue;
+            }
+            showToast('Failed to schedule notification.', 'error');
+            return false;
         }
-        console.log('Server notification triggered:', data);
-        return true;
-    } catch (error) {
-        console.error('Error triggering server notification:', error);
-        showToast('Failed to schedule notification.', 'error');
-        return false;
     }
+
+    return false;
 }
 
         // Timer State
