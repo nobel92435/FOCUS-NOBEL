@@ -4,15 +4,13 @@
 const CACHE_NAME = 'focusflow-cache-v2'; // Increment cache version for updates
 const OFFLINE_URL = './offline.html'; // Path to your dedicated offline page
 
-// IMPORTANT: These paths should be relative to the root of the Service Worker's scope.
-// If your service-worker.js is at /Focus-Clock/service-worker.js, then './' refers to /Focus-Clock/
+// These paths should be relative to the root of the Service Worker's scope.
 const urlsToCache = [
-    './', // Represents /Focus-Clock/
+    './', // Represents the root of your app
     './index.html',
-    './fina.html',
     './manifest.json',
     './pomodoro-worker.js', // This worker is for the main app, not the SW
-    './icons/pause.png', // Ensure these paths are correct
+    './icons/pause.png',
     './icons/play.png',
     './icons/stop.png',
     OFFLINE_URL, // Add the offline page to cache
@@ -22,17 +20,14 @@ const urlsToCache = [
 
 // --- Service Worker Lifecycle Events ---
 
-// Install event: Pre-cache essential assets and skip waiting
 self.addEventListener('install', (event) => {
     console.log('[Service Worker] Installing...');
-    // Force the waiting service worker to become the active service worker immediately
-    self.skipWaiting(); 
+    self.skipWaiting();
 
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
                 console.log('[Service Worker] Caching essential app shell assets:', urlsToCache);
-                // Ensure all cache operations are part of the waitUntil promise
                 return cache.addAll(urlsToCache);
             })
             .catch(error => {
@@ -41,57 +36,45 @@ self.addEventListener('install', (event) => {
     );
 });
 
-// Activate event: Clean up old caches and take control of existing clients
 self.addEventListener('activate', (event) => {
     console.log('[Service Worker] Activating...');
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames
-                    .filter(cacheName => cacheName !== CACHE_NAME) // Filter out the current cache
+                    .filter(cacheName => cacheName !== CACHE_NAME)
                     .map(cacheName => {
                         console.log('[Service Worker] Deleting old cache:', cacheName);
-                        return caches.delete(cacheName); // Delete old caches
+                        return caches.delete(cacheName);
                     })
             );
-        }).then(() => self.clients.claim()) // Take control of all clients immediately
+        }).then(() => self.clients.claim())
     );
 });
 
-// Fetch event handler: Cache-first, then Network, with offline fallback
 self.addEventListener('fetch', (event) => {
-    // Only handle GET requests
     if (event.request.method !== 'GET') {
         return;
     }
 
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
-            // If a response is found in cache, return it immediately
             if (cachedResponse) {
                 return cachedResponse;
             }
 
-            // Otherwise, fetch from the network
             return fetch(event.request).then(networkResponse => {
-                // Check if we received a valid response to cache
                 if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-                    return networkResponse; // Don't cache invalid responses
+                    return networkResponse;
                 }
 
-                // IMPORTANT: Clone the response. A response is a stream and can only be consumed once.
-                // We're consuming it once to cache it, and once to return it.
                 const responseToCache = networkResponse.clone();
-
                 caches.open(CACHE_NAME).then(cache => {
-                    cache.put(event.request, responseToCache); // Add response to cache
+                    cache.put(event.request, responseToCache);
                 });
-
                 return networkResponse;
             }).catch(error => {
-                // This catch block handles network errors (e.g., when offline)
                 console.error('[Service Worker] Fetch failed:', event.request.url, error);
-                // Serve the pre-cached offline page as a fallback
                 return caches.match(OFFLINE_URL);
             });
         })
@@ -100,41 +83,15 @@ self.addEventListener('fetch', (event) => {
 
 // --- Service Worker Timer/Notification Logic ---
 
-let notificationTag = 'pomodoro-timer'; // A tag for notifications to group them
+let notificationTag = 'pomodoro-timer';
 
-const supportsNotificationTriggers = (() => {
-    try {
-        return typeof self !== 'undefined'
-            && 'Notification' in self
-            && Notification?.prototype
-            && 'showTrigger' in Notification.prototype
-            && 'TimestampTrigger' in self;
-    } catch (error) {
-        console.warn('[Service Worker] Failed to detect notification trigger support:', error);
-        return false;
-    }
-})();
-
-// Listen for messages from the main page
 self.addEventListener('message', (event) => {
     const { type, payload } = event.data || {};
 
     switch (type) {
         case 'SCHEDULE_ALARM':
-            scheduleNotification(payload);
-            break;
         case 'SCHEDULE_NOTIFICATION':
-            scheduleNotification({
-                delay: payload?.delay,
-                timerId: payload?.timerId,
-                transitionMessage: payload?.transitionMessage || {
-                    type: payload?.type || 'TIMER_ENDED',
-                    newState: payload?.newState,
-                    oldState: payload?.oldState,
-                    title: payload?.title,
-                    options: payload?.options
-                }
-            });
+            scheduleNotification(payload);
             break;
         case 'CANCEL_ALARM':
             cancelAlarm(payload?.timerId);
@@ -142,108 +99,31 @@ self.addEventListener('message', (event) => {
     }
 });
 
-// --- Notification Scheduling ---
 function scheduleNotification(payload = {}) {
     const delay = typeof payload.delay === 'number' ? payload.delay : 0;
-    const timerId = payload.timerId || 'pomodoro-transition';
-    const transitionMessage = payload.transitionMessage || {
-        type: payload.type || 'TIMER_ENDED',
-        newState: payload.newState,
-        oldState: payload.oldState,
-        title: payload.title,
-        options: payload.options
-    };
+    const transitionMessage = payload.transitionMessage || {};
+    const { title, options = {} } = transitionMessage;
 
-    if (!transitionMessage || !transitionMessage.title) {
+    if (!title) {
         console.warn('[Service Worker] Missing notification title, skipping schedule.');
         return;
     }
-
-    const { title, options = {} } = transitionMessage;
-    const notificationOptions = { ...options };
-
-    notificationOptions.tag = notificationOptions.tag || notificationTag;
-    notificationOptions.renotify = notificationOptions.renotify ?? true;
-
-    if (!notificationOptions.actions || notificationOptions.actions.length === 0) {
-        notificationOptions.actions = [
-            { action: 'pause', title: 'Pause', icon: './icons/pause.png' },
-            { action: 'resume', title: 'Resume', icon: './icons/play.png' },
-            { action: 'stop', title: 'Stop', icon: './icons/stop.png' }
-        ];
-    }
-
-    const now = Date.now();
-    const triggerTime = now + Math.max(delay, 0);
-    const existingData = typeof notificationOptions.data === 'object' && notificationOptions.data !== null
-        ? notificationOptions.data
-        : {};
-
-    notificationOptions.data = {
-        ...existingData,
-        transitionMessage,
-        timerId,
-        scheduledAt: now,
-        triggerTime
+    
+    options.tag = options.tag || notificationTag;
+    options.renotify = options.renotify ?? true;
+    options.data = {
+        ...options.data,
+        transitionMessage
     };
 
-    self.registration.getNotifications({ tag: notificationOptions.tag }).then(notifications => {
+    self.registration.getNotifications({ tag: options.tag }).then(notifications => {
         notifications.forEach(notification => notification.close());
     });
 
-    if (supportsNotificationTriggers && delay > 0) {
-        try {
-            notificationOptions.showTrigger = new TimestampTrigger(triggerTime);
-            self.registration.showNotification(title, notificationOptions)
-                .then(() => {
-                    console.log(`[Service Worker]: Scheduled notification "${title}" with trigger for timerId ${timerId}.`);
-                })
-                .catch(error => {
-                    console.error('[Service Worker] Error scheduling notification with trigger:', error);
-                });
-        } catch (error) {
-            console.error('[Service Worker] Failed to use notification trigger, falling back to timeout:', error);
-            scheduleWithTimeout(title, notificationOptions, transitionMessage, delay);
-        }
-    } else {
-        scheduleWithTimeout(title, notificationOptions, transitionMessage, delay);
-    }
-}
-
-function scheduleWithTimeout(title, notificationOptions, transitionMessage, delay = 0) {
-    const safeDelay = Math.max(delay, 0);
     setTimeout(() => {
-        self.registration.showNotification(title, notificationOptions)
-            .then(() => {
-                console.log(`[Service Worker]: Notification "${title}" shown after timeout.`);
-                notifyClientsOfTransition(transitionMessage);
-            })
-            .catch(error => {
-                console.error('[Service Worker] Error showing notification:', error);
-            });
-    }, safeDelay);
-}
-
-function notifyClientsOfTransition(transitionMessage) {
-    if (!transitionMessage) {
-        return;
-    }
-
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-        const visibleClients = clients.filter(client => client.visibilityState === 'visible');
-        if (visibleClients.length > 0) {
-            visibleClients.forEach(client => client.postMessage(transitionMessage));
-        } else if (clients.length > 0) {
-            const [firstClient] = clients;
-            if (firstClient && typeof firstClient.focus === 'function') {
-                firstClient.focus().then(() => firstClient.postMessage(transitionMessage));
-            } else {
-                firstClient?.postMessage?.(transitionMessage);
-            }
-        } else {
-            console.log('[Service Worker] No clients to send TIMER_ENDED message to.');
-        }
-    });
+        self.registration.showNotification(title, options)
+            .catch(err => console.error('Error showing notification:', err));
+    }, Math.max(delay, 0));
 }
 
 function cancelAlarm(timerId) {
@@ -252,32 +132,21 @@ function cancelAlarm(timerId) {
             notifications.forEach(notification => notification.close());
         });
     }
-    // Add logic for other timerIds if needed in the future
 }
 
-// Notification click handler
 self.addEventListener('notificationclick', (event) => {
-    event.notification.close(); // Close the notification after click
-
-    const action = event.action; // Get the action clicked (e.g., 'pause', 'resume', 'stop')
+    event.notification.close();
     const transitionMessage = event.notification?.data?.transitionMessage;
 
-    if (transitionMessage) {
-        notifyClientsOfTransition(transitionMessage);
-    }
-
-    // Find all window clients (tabs/windows) that this Service Worker controls
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-        let clientToFocus = clients.find(client => client.visibilityState === 'visible') || clients[0];
-
-        if (clientToFocus) {
-            clientToFocus.focus().then(() => {
-                clientToFocus.postMessage({ type: 'notification_action', action: action });
-            });
-        } else {
-            console.warn('[Service Worker] No client found to handle notification action.');
-        }
-    });
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+            const client = clients.find(c => c.visibilityState === 'visible') || clients[0];
+            if (client) {
+                client.postMessage(transitionMessage);
+                return client.focus();
+            }
+        })
+    );
 });
 
 self.addEventListener('push', (event) => {
@@ -294,36 +163,11 @@ self.addEventListener('push', (event) => {
     }
 
     const title = payload.title || 'FocusFlow';
-    const options = payload.options ? { ...payload.options } : {};
+    const options = payload.options || {};
     if (payload.body && !options.body) {
         options.body = payload.body;
     }
-
     options.tag = options.tag || notificationTag;
-    options.renotify = options.renotify ?? true;
-
-    if (payload.transitionMessage) {
-        const existingData = typeof options.data === 'object' && options.data !== null ? options.data : {};
-        options.data = {
-            ...existingData,
-            transitionMessage: payload.transitionMessage
-        };
-    }
-
-    if (!options.actions || options.actions.length === 0) {
-        options.actions = [
-            { action: 'pause', title: 'Pause', icon: './icons/pause.png' },
-            { action: 'resume', title: 'Resume', icon: './icons/play.png' },
-            { action: 'stop', title: 'Stop', icon: './icons/stop.png' }
-        ];
-    }
-
-    event.waitUntil(
-        self.registration.showNotification(title, options)
-            .then(() => {
-                if (payload.transitionMessage) {
-                    notifyClientsOfTransition(payload.transitionMessage);
-                }
-            })
-    );
+    
+    event.waitUntil(self.registration.showNotification(title, options));
 });
