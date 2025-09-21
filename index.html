@@ -3138,7 +3138,11 @@
             }
         }
 
-        if (typeof parsed !== 'object') return null;
+        if (typeof parsed === 'object' && typeof parsed.toJSON === 'function') {
+            parsed = parsed.toJSON();
+        }
+
+        if (typeof parsed !== 'object' || !parsed) return null;
         const { endpoint, keys = {}, expirationTime = null } = parsed;
         if (!endpoint) return null;
 
@@ -3807,10 +3811,20 @@ async function triggerServerNotification(messageData) {
         : (typeof options.body === 'string' ? options.body : '');
     options.body = bodyText;
 
+    let activeSubscription = null;
     try {
-        await ensurePushSubscription();
+        activeSubscription = await ensurePushSubscription();
     } catch (subscriptionError) {
         console.warn('Unable to confirm push subscription before sending notification:', subscriptionError);
+    }
+
+    const normalizedSubscription = normalizePushSubscription(
+        activeSubscription || currentUserData?.push_subscription
+    );
+
+    if (!normalizedSubscription) {
+        console.warn('No push subscription available for server notification.');
+        return false;
     }
 
     try {
@@ -3821,7 +3835,8 @@ async function triggerServerNotification(messageData) {
                 title: messageData.title,
                 body: options.body,
                 newState: messageData.newState,
-                oldState: messageData.oldState
+                oldState: messageData.oldState,
+                pushSubscription: normalizedSubscription
             }
         });
         if (error) throw error;
