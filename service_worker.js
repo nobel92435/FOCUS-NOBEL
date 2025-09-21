@@ -20,6 +20,14 @@ const urlsToCache = [
     'https://placehold.co/512x512/0a0a0a/e0e0e0?text=Flow+512',
 ];
 
+const supportsNotificationTriggers = (
+    typeof self !== 'undefined' &&
+    'Notification' in self &&
+    Notification?.prototype &&
+    'showTrigger' in Notification.prototype &&
+    'TimestampTrigger' in self
+);
+
 // --- Service Worker Lifecycle Events ---
 
 // Install event: Pre-cache essential assets and skip waiting
@@ -102,56 +110,31 @@ self.addEventListener('fetch', (event) => {
 
 let notificationTag = 'pomodoro-timer'; // A tag for notifications to group them
 
-const supportsNotificationTriggers = (() => {
-    try {
-        return typeof self !== 'undefined'
-            && 'Notification' in self
-            && Notification?.prototype
-            && 'showTrigger' in Notification.prototype
-            && 'TimestampTrigger' in self;
-    } catch (error) {
-        console.warn('[Service Worker] Failed to detect notification trigger support:', error);
-        return false;
-    }
-})();
-
 // Listen for messages from the main page
 self.addEventListener('message', (event) => {
     const { type, payload } = event.data || {};
 
     switch (type) {
         case 'SCHEDULE_ALARM':
-            scheduleNotification(payload);
-            break;
         case 'SCHEDULE_NOTIFICATION':
-            scheduleNotification({
-                delay: payload?.delay,
-                timerId: payload?.timerId,
-                transitionMessage: payload?.transitionMessage || {
-                    type: payload?.type || 'TIMER_ENDED',
-                    newState: payload?.newState,
-                    oldState: payload?.oldState,
-                    title: payload?.title,
-                    options: payload?.options
-                }
-            });
+            event.waitUntil(scheduleNotification(payload));
             break;
         case 'CANCEL_ALARM':
-            cancelAlarm(payload?.timerId);
+            event.waitUntil(cancelAlarm(payload?.timerId));
             break;
     }
 });
 
 // --- Notification Scheduling ---
-function scheduleNotification(payload = {}) {
-    const delay = typeof payload.delay === 'number' ? payload.delay : 0;
-    const timerId = payload.timerId || 'pomodoro-transition';
-    const transitionMessage = payload.transitionMessage || {
-        type: payload.type || 'TIMER_ENDED',
-        newState: payload.newState,
-        oldState: payload.oldState,
-        title: payload.title,
-        options: payload.options
+async function scheduleNotification(payload = {}) {
+    const delay = typeof payload?.delay === 'number' ? Math.max(payload.delay, 0) : 0;
+    const timerId = payload?.timerId || 'pomodoro-transition';
+    const transitionMessage = payload?.transitionMessage || {
+        type: payload?.type || 'TIMER_ENDED',
+        newState: payload?.newState,
+        oldState: payload?.oldState,
+        title: payload?.title,
+        options: payload?.options
     };
 
     if (!transitionMessage || !transitionMessage.title) {
@@ -173,86 +156,81 @@ function scheduleNotification(payload = {}) {
         ];
     }
 
-    const now = Date.now();
-    const triggerTime = now + Math.max(delay, 0);
-    const existingData = typeof notificationOptions.data === 'object' && notificationOptions.data !== null
-        ? notificationOptions.data
-        : {};
-
     notificationOptions.data = {
-        ...existingData,
-        transitionMessage,
+        ...(notificationOptions.data || {}),
         timerId,
-        scheduledAt: now,
-        triggerTime
+        transitionMessage
     };
 
-    self.registration.getNotifications({ tag: notificationOptions.tag }).then(notifications => {
-        notifications.forEach(notification => notification.close());
-    });
+    const notificationLookup = supportsNotificationTriggers
+        ? { tag: notificationOptions.tag, includeTriggered: true }
+        : { tag: notificationOptions.tag };
+
+    const existing = await self.registration.getNotifications(notificationLookup);
+    existing.forEach(notification => notification.close());
+
+    const triggerTime = Date.now() + delay;
 
     if (supportsNotificationTriggers && delay > 0) {
         try {
             notificationOptions.showTrigger = new TimestampTrigger(triggerTime);
-            self.registration.showNotification(title, notificationOptions)
-                .then(() => {
-                    console.log(`[Service Worker]: Scheduled notification "${title}" with trigger for timerId ${timerId}.`);
-                })
-                .catch(error => {
-                    console.error('[Service Worker] Error scheduling notification with trigger:', error);
-                });
+            await self.registration.showNotification(title, notificationOptions);
+            console.log(`[Service Worker]: Scheduled notification "${title}" at ${new Date(triggerTime).toISOString()} using showTrigger.`);
+            return;
         } catch (error) {
-            console.error('[Service Worker] Failed to use notification trigger, falling back to timeout:', error);
-            scheduleWithTimeout(title, notificationOptions, transitionMessage, delay);
+            console.warn('[Service Worker] Failed to schedule notification with showTrigger, falling back to timeout.', error);
+            delete notificationOptions.showTrigger;
         }
-    } else {
-        scheduleWithTimeout(title, notificationOptions, transitionMessage, delay);
     }
-}
 
-function scheduleWithTimeout(title, notificationOptions, transitionMessage, delay = 0) {
-    const safeDelay = Math.max(delay, 0);
-    setTimeout(() => {
-        self.registration.showNotification(title, notificationOptions)
-            .then(() => {
-                console.log(`[Service Worker]: Notification "${title}" shown after timeout.`);
-                notifyClientsOfTransition(transitionMessage);
-            })
-            .catch(error => {
-                console.error('[Service Worker] Error showing notification:', error);
-            });
-    }, safeDelay);
-}
+    if (delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+    }
 
-function notifyClientsOfTransition(transitionMessage) {
-    if (!transitionMessage) {
+    try {
+        await self.registration.showNotification(title, notificationOptions);
+        console.log(`[Service Worker]: Notification "${title}" shown for timerId ${timerId}.`);
+    } catch (error) {
+        console.error('[Service Worker] Error showing notification:', error);
         return;
     }
 
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+    await notifyClientsOfTransition(transitionMessage);
+}
+
+async function cancelAlarm(timerId) {
+    if (timerId === 'pomodoro-transition') {
+        const lookupOptions = supportsNotificationTriggers
+            ? { tag: notificationTag, includeTriggered: true }
+            : { tag: notificationTag };
+        const notifications = await self.registration.getNotifications(lookupOptions);
+        notifications.forEach(notification => notification.close());
+    }
+    // Add logic for other timerIds if needed in the future
+}
+
+async function notifyClientsOfTransition(transitionMessage) {
+    if (!transitionMessage) return;
+
+    try {
+        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
         const visibleClients = clients.filter(client => client.visibilityState === 'visible');
+
         if (visibleClients.length > 0) {
             visibleClients.forEach(client => client.postMessage(transitionMessage));
         } else if (clients.length > 0) {
-            const [firstClient] = clients;
-            if (firstClient && typeof firstClient.focus === 'function') {
-                firstClient.focus().then(() => firstClient.postMessage(transitionMessage));
-            } else {
-                firstClient?.postMessage?.(transitionMessage);
+            try {
+                await clients[0].focus();
+            } catch (focusError) {
+                console.warn('[Service Worker] Unable to focus client:', focusError);
             }
+            clients[0].postMessage(transitionMessage);
         } else {
             console.log('[Service Worker] No clients to send TIMER_ENDED message to.');
         }
-    });
-}
-
-function cancelAlarm(timerId) {
-    if (timerId === 'pomodoro-transition') {
-        self.registration.getNotifications({ tag: notificationTag }).then(notifications => {
-            notifications.forEach(notification => notification.close());
-        });
+    } catch (error) {
+        console.error('[Service Worker] Failed to notify clients of transition:', error);
     }
-    // Add logic for other timerIds if needed in the future
 }
 
 // Notification click handler
@@ -262,22 +240,26 @@ self.addEventListener('notificationclick', (event) => {
     const action = event.action; // Get the action clicked (e.g., 'pause', 'resume', 'stop')
     const transitionMessage = event.notification?.data?.transitionMessage;
 
-    if (transitionMessage) {
-        notifyClientsOfTransition(transitionMessage);
-    }
-
-    // Find all window clients (tabs/windows) that this Service Worker controls
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-        let clientToFocus = clients.find(client => client.visibilityState === 'visible') || clients[0];
+    event.waitUntil((async () => {
+        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const clientToFocus = clients.find(client => client.visibilityState === 'visible') || clients[0];
 
         if (clientToFocus) {
-            clientToFocus.focus().then(() => {
-                clientToFocus.postMessage({ type: 'notification_action', action: action });
-            });
+            try {
+                await clientToFocus.focus();
+            } catch (focusError) {
+                console.warn('[Service Worker] Unable to focus client on notification click:', focusError);
+            }
+
+            if (transitionMessage) {
+                clientToFocus.postMessage(transitionMessage);
+            }
+
+            clientToFocus.postMessage({ type: 'notification_action', action: action });
         } else {
             console.warn('[Service Worker] No client found to handle notification action.');
         }
-    });
+    })());
 });
 
 self.addEventListener('push', (event) => {
@@ -302,14 +284,6 @@ self.addEventListener('push', (event) => {
     options.tag = options.tag || notificationTag;
     options.renotify = options.renotify ?? true;
 
-    if (payload.transitionMessage) {
-        const existingData = typeof options.data === 'object' && options.data !== null ? options.data : {};
-        options.data = {
-            ...existingData,
-            transitionMessage: payload.transitionMessage
-        };
-    }
-
     if (!options.actions || options.actions.length === 0) {
         options.actions = [
             { action: 'pause', title: 'Pause', icon: './icons/pause.png' },
@@ -320,10 +294,5 @@ self.addEventListener('push', (event) => {
 
     event.waitUntil(
         self.registration.showNotification(title, options)
-            .then(() => {
-                if (payload.transitionMessage) {
-                    notifyClientsOfTransition(payload.transitionMessage);
-                }
-            })
     );
 });
