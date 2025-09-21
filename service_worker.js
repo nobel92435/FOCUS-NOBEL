@@ -18,6 +18,10 @@ const urlsToCache = [
     'https://placehold.co/512x512/0a0a0a/e0e0e0?text=Flow+512',
 ];
 
+const DEFAULT_NOTIFICATION_ICON = 'https://placehold.co/192x192/0a0a0a/e0e0e0?text=Flow+192';
+const DEFAULT_NOTIFICATION_BADGE = 'https://placehold.co/96x96/0a0a0a/e0e0e0?text=Flow';
+const DEFAULT_NOTIFICATION_VIBRATE = [200, 100, 200, 100, 200];
+
 // --- Service Worker Lifecycle Events ---
 
 self.addEventListener('install', (event) => {
@@ -108,9 +112,14 @@ function scheduleNotification(payload = {}) {
         console.warn('[Service Worker] Missing notification title, skipping schedule.');
         return;
     }
-    
+
     options.tag = options.tag || notificationTag;
     options.renotify = options.renotify ?? true;
+    options.requireInteraction = options.requireInteraction ?? true;
+    options.icon = options.icon || DEFAULT_NOTIFICATION_ICON;
+    options.badge = options.badge || DEFAULT_NOTIFICATION_BADGE;
+    options.vibrate = options.vibrate || DEFAULT_NOTIFICATION_VIBRATE;
+    options.timestamp = options.timestamp || Date.now();
     options.data = {
         ...options.data,
         transitionMessage
@@ -169,10 +178,12 @@ self.addEventListener('push', (event) => {
         options.body = fallbackBody;
     }
 
-    const defaultIcon = 'https://placehold.co/192x192/0a0a0a/e0e0e0?text=Flow+192';
-    options.icon = options.icon || payload.icon || defaultIcon;
-    options.badge = options.badge || payload.badge;
-    options.vibrate = options.vibrate || payload.vibrate || [100, 50, 100];
+    options.icon = options.icon || payload.icon || DEFAULT_NOTIFICATION_ICON;
+    options.badge = options.badge || payload.badge || DEFAULT_NOTIFICATION_BADGE;
+    options.vibrate = options.vibrate || payload.vibrate || DEFAULT_NOTIFICATION_VIBRATE;
+    options.requireInteraction = options.requireInteraction ?? true;
+    options.renotify = options.renotify ?? true;
+    options.timestamp = options.timestamp || Date.now();
     options.tag = options.tag || notificationTag;
     options.data = {
         ...(options.data || {}),
