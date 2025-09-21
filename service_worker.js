@@ -20,45 +20,7 @@ const urlsToCache = [
 
 const DEFAULT_NOTIFICATION_ICON = 'https://placehold.co/192x192/0a0a0a/e0e0e0?text=Flow+192';
 const DEFAULT_NOTIFICATION_BADGE = 'https://placehold.co/96x96/0a0a0a/e0e0e0?text=Flow';
-const STRONG_NOTIFICATION_VIBRATE = [400, 120, 400, 120, 400, 120, 600];
-const DEFAULT_NOTIFICATION_ACTIONS = [
-    {
-        action: 'resume-focus',
-        title: 'Back to Focus',
-        icon: './icons/play.png'
-    },
-    {
-        action: 'extend-break',
-        title: 'Snooze 5 min',
-        icon: './icons/pause.png'
-    }
-];
-
-function buildStrongNotificationOptions(baseOptions = {}) {
-    const options = { ...baseOptions };
-
-    options.tag = options.tag || notificationTag;
-    options.renotify = options.renotify ?? true;
-    options.requireInteraction = options.requireInteraction ?? true;
-    options.icon = options.icon || DEFAULT_NOTIFICATION_ICON;
-    options.badge = options.badge || DEFAULT_NOTIFICATION_BADGE;
-    options.vibrate = Array.isArray(options.vibrate) && options.vibrate.length > 0
-        ? options.vibrate
-        : STRONG_NOTIFICATION_VIBRATE;
-    options.silent = options.silent ?? false;
-    options.timestamp = options.timestamp || Date.now();
-    options.data = {
-        ...options.data,
-        importance: 'high',
-        priority: 'max'
-    };
-
-    if (!options.actions || options.actions.length === 0) {
-        options.actions = DEFAULT_NOTIFICATION_ACTIONS;
-    }
-
-    return options;
-}
+const DEFAULT_NOTIFICATION_VIBRATE = [200, 100, 200, 100, 200];
 
 // --- Service Worker Lifecycle Events ---
 
@@ -127,13 +89,19 @@ self.addEventListener('fetch', (event) => {
 
 let notificationTag = 'pomodoro-timer';
 
+const pendingNotifications = new Map();
+
 self.addEventListener('message', (event) => {
     const { type, payload } = event.data || {};
 
     switch (type) {
         case 'SCHEDULE_ALARM':
         case 'SCHEDULE_NOTIFICATION':
-            scheduleNotification(payload);
+            if (typeof event.waitUntil === 'function') {
+                event.waitUntil(scheduleNotification(payload));
+            } else {
+                scheduleNotification(payload);
+            }
             break;
         case 'CANCEL_ALARM':
             cancelAlarm(payload?.timerId);
@@ -148,30 +116,90 @@ function scheduleNotification(payload = {}) {
 
     if (!title) {
         console.warn('[Service Worker] Missing notification title, skipping schedule.');
-        return;
+        return Promise.resolve();
     }
 
-    const strongOptions = buildStrongNotificationOptions(options);
-    strongOptions.data = {
-        ...strongOptions.data,
+    options.tag = options.tag || notificationTag;
+    options.renotify = options.renotify ?? true;
+    options.requireInteraction = options.requireInteraction ?? true;
+    options.icon = options.icon || DEFAULT_NOTIFICATION_ICON;
+    options.badge = options.badge || DEFAULT_NOTIFICATION_BADGE;
+    options.vibrate = options.vibrate || DEFAULT_NOTIFICATION_VIBRATE;
+    options.timestamp = options.timestamp || Date.now();
+    options.data = {
+        ...options.data,
         transitionMessage
     };
 
-    self.registration.getNotifications({ tag: strongOptions.tag }).then(notifications => {
+    const timerKey = payload.timerId || options.tag || notificationTag;
+    const existingController = pendingNotifications.get(timerKey);
+    if (existingController) {
+        existingController.abort();
+        pendingNotifications.delete(timerKey);
+    }
+
+    const controller = new AbortController();
+    pendingNotifications.set(timerKey, controller);
+
+    return (async () => {
+        try {
+            await closeExistingNotifications(options.tag);
+
+            if (delay > 0) {
+                await waitForDelay(delay, controller.signal);
+            }
+
+            if (controller.signal.aborted) {
+                return;
+            }
+
+            await self.registration.showNotification(title, options);
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error('Error showing scheduled notification:', err);
+            }
+        } finally {
+            const stored = pendingNotifications.get(timerKey);
+            if (stored === controller) {
+                pendingNotifications.delete(timerKey);
+            }
+        }
+    })();
+}
+
+function waitForDelay(delay, signal) {
+    return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+            signal.removeEventListener('abort', onAbort);
+            resolve();
+        }, Math.max(delay, 0));
+
+        function onAbort() {
+            clearTimeout(timeoutId);
+            signal.removeEventListener('abort', onAbort);
+            reject(new DOMException('Notification scheduling aborted', 'AbortError'));
+        }
+
+        signal.addEventListener('abort', onAbort);
+    });
+}
+
+function closeExistingNotifications(tag) {
+    return self.registration.getNotifications(tag ? { tag } : {}).then(notifications => {
         notifications.forEach(notification => notification.close());
     });
-
-    setTimeout(() => {
-        self.registration.showNotification(title, strongOptions)
-            .catch(err => console.error('Error showing notification:', err));
-    }, Math.max(delay, 0));
 }
 
 function cancelAlarm(timerId) {
-    if (timerId === 'pomodoro-transition') {
-        self.registration.getNotifications({ tag: notificationTag }).then(notifications => {
-            notifications.forEach(notification => notification.close());
-        });
+    const key = timerId || notificationTag;
+    const controller = pendingNotifications.get(key);
+    if (controller) {
+        controller.abort();
+        pendingNotifications.delete(key);
+    }
+
+    if (timerId === 'pomodoro-transition' || !timerId) {
+        closeExistingNotifications(notificationTag);
     }
 }
 
@@ -179,23 +207,15 @@ self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     const transitionMessage = event.notification?.data?.transitionMessage;
 
-    event.waitUntil((async () => {
-        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-        const client = clients.find(c => c.visibilityState === 'visible') || clients[0];
-
-        if (event.action === 'extend-break') {
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+            const client = clients.find(c => c.visibilityState === 'visible') || clients[0];
             if (client) {
-                client.postMessage({ type: 'EXTEND_BREAK_REQUEST', transitionMessage });
-                await client.focus();
+                client.postMessage(transitionMessage);
+                return client.focus();
             }
-            return;
-        }
-
-        if (client) {
-            client.postMessage(transitionMessage);
-            await client.focus();
-        }
-    })());
+        })
+    );
 });
 
 self.addEventListener('push', (event) => {
@@ -212,22 +232,19 @@ self.addEventListener('push', (event) => {
     }
 
     const title = payload.title || 'FocusFlow';
-    const options = buildStrongNotificationOptions({ ...(payload.options || {}) });
+    const options = { ...(payload.options || {}) };
     const fallbackBody = typeof payload.body === 'string' ? payload.body : undefined;
     if (fallbackBody && !options.body) {
         options.body = fallbackBody;
     }
 
-    if (payload.icon) {
-        options.icon = payload.icon;
-    }
-    if (payload.badge) {
-        options.badge = payload.badge;
-    }
-    if (Array.isArray(payload.vibrate) && payload.vibrate.length > 0) {
-        options.vibrate = payload.vibrate;
-    }
-
+    options.icon = options.icon || payload.icon || DEFAULT_NOTIFICATION_ICON;
+    options.badge = options.badge || payload.badge || DEFAULT_NOTIFICATION_BADGE;
+    options.vibrate = options.vibrate || payload.vibrate || DEFAULT_NOTIFICATION_VIBRATE;
+    options.requireInteraction = options.requireInteraction ?? true;
+    options.renotify = options.renotify ?? true;
+    options.timestamp = options.timestamp || Date.now();
+    options.tag = options.tag || notificationTag;
     options.data = {
         ...(options.data || {}),
         dateOfArrival: Date.now(),
