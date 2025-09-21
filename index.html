@@ -3138,11 +3138,7 @@
             }
         }
 
-        if (typeof parsed === 'object' && typeof parsed.toJSON === 'function') {
-            parsed = parsed.toJSON();
-        }
-
-        if (typeof parsed !== 'object' || !parsed) return null;
+        if (typeof parsed !== 'object') return null;
         const { endpoint, keys = {}, expirationTime = null } = parsed;
         if (!endpoint) return null;
 
@@ -3811,21 +3807,27 @@ async function triggerServerNotification(messageData) {
         : (typeof options.body === 'string' ? options.body : '');
     options.body = bodyText;
 
-    let activeSubscription = null;
     try {
-        activeSubscription = await ensurePushSubscription();
+        await ensurePushSubscription();
     } catch (subscriptionError) {
         console.warn('Unable to confirm push subscription before sending notification:', subscriptionError);
     }
 
-    const normalizedSubscription = normalizePushSubscription(
-        activeSubscription || currentUserData?.push_subscription
-    );
-
+    const normalizedSubscription = normalizePushSubscription(currentUserData?.push_subscription);
     if (!normalizedSubscription) {
-        console.warn('No push subscription available for server notification.');
+        console.warn('No push subscription available to send to server. Falling back to local notification.');
         return false;
     }
+    const subscriptionPayload = normalizedSubscription
+        ? {
+            endpoint: normalizedSubscription.endpoint,
+            expirationTime: normalizedSubscription.expirationTime ?? null,
+            keys: {
+                auth: normalizedSubscription.keys?.auth,
+                p256dh: normalizedSubscription.keys?.p256dh
+            }
+        }
+        : null;
 
     try {
         const { data, error } = await supabase.functions.invoke('send-pomodoro-notification', {
@@ -3836,7 +3838,7 @@ async function triggerServerNotification(messageData) {
                 body: options.body,
                 newState: messageData.newState,
                 oldState: messageData.oldState,
-                pushSubscription: normalizedSubscription
+                subscription: subscriptionPayload
             }
         });
         if (error) throw error;
