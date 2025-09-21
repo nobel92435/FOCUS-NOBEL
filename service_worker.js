@@ -89,13 +89,19 @@ self.addEventListener('fetch', (event) => {
 
 let notificationTag = 'pomodoro-timer';
 
+const pendingNotifications = new Map();
+
 self.addEventListener('message', (event) => {
     const { type, payload } = event.data || {};
 
     switch (type) {
         case 'SCHEDULE_ALARM':
         case 'SCHEDULE_NOTIFICATION':
-            scheduleNotification(payload);
+            if (typeof event.waitUntil === 'function') {
+                event.waitUntil(scheduleNotification(payload));
+            } else {
+                scheduleNotification(payload);
+            }
             break;
         case 'CANCEL_ALARM':
             cancelAlarm(payload?.timerId);
@@ -110,7 +116,7 @@ function scheduleNotification(payload = {}) {
 
     if (!title) {
         console.warn('[Service Worker] Missing notification title, skipping schedule.');
-        return;
+        return Promise.resolve();
     }
 
     options.tag = options.tag || notificationTag;
@@ -125,21 +131,75 @@ function scheduleNotification(payload = {}) {
         transitionMessage
     };
 
-    self.registration.getNotifications({ tag: options.tag }).then(notifications => {
+    const timerKey = payload.timerId || options.tag || notificationTag;
+    const existingController = pendingNotifications.get(timerKey);
+    if (existingController) {
+        existingController.abort();
+        pendingNotifications.delete(timerKey);
+    }
+
+    const controller = new AbortController();
+    pendingNotifications.set(timerKey, controller);
+
+    return (async () => {
+        try {
+            await closeExistingNotifications(options.tag);
+
+            if (delay > 0) {
+                await waitForDelay(delay, controller.signal);
+            }
+
+            if (controller.signal.aborted) {
+                return;
+            }
+
+            await self.registration.showNotification(title, options);
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error('Error showing scheduled notification:', err);
+            }
+        } finally {
+            const stored = pendingNotifications.get(timerKey);
+            if (stored === controller) {
+                pendingNotifications.delete(timerKey);
+            }
+        }
+    })();
+}
+
+function waitForDelay(delay, signal) {
+    return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+            signal.removeEventListener('abort', onAbort);
+            resolve();
+        }, Math.max(delay, 0));
+
+        function onAbort() {
+            clearTimeout(timeoutId);
+            signal.removeEventListener('abort', onAbort);
+            reject(new DOMException('Notification scheduling aborted', 'AbortError'));
+        }
+
+        signal.addEventListener('abort', onAbort);
+    });
+}
+
+function closeExistingNotifications(tag) {
+    return self.registration.getNotifications(tag ? { tag } : {}).then(notifications => {
         notifications.forEach(notification => notification.close());
     });
-
-    setTimeout(() => {
-        self.registration.showNotification(title, options)
-            .catch(err => console.error('Error showing notification:', err));
-    }, Math.max(delay, 0));
 }
 
 function cancelAlarm(timerId) {
-    if (timerId === 'pomodoro-transition') {
-        self.registration.getNotifications({ tag: notificationTag }).then(notifications => {
-            notifications.forEach(notification => notification.close());
-        });
+    const key = timerId || notificationTag;
+    const controller = pendingNotifications.get(key);
+    if (controller) {
+        controller.abort();
+        pendingNotifications.delete(key);
+    }
+
+    if (timerId === 'pomodoro-transition' || !timerId) {
+        closeExistingNotifications(notificationTag);
     }
 }
 
