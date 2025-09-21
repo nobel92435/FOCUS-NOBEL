@@ -3692,6 +3692,10 @@
         async function handlePomodoroPhaseEnd(data) {
             const { newState, oldState } = data;
 
+            pomodoroPhaseEndsAt = null;
+            pomodoroPhaseRemainingMs = 0;
+            pomodoroScheduledTransition = null;
+
             // Play the appropriate sound for the end of the phase
             playSound(oldState === 'work' ? pomodoroSounds.break : pomodoroSounds.focus, pomodoroSounds.volume);
 
@@ -3725,7 +3729,7 @@
                     type: 'TIMER_ENDED',
                     newState,
                     oldState
-                });
+                }, 'pomodoro-transition');
             }
 
             // If a work session just ended, increment the pomodoro count for the active task
@@ -3856,6 +3860,10 @@ let pauseStartTime = 0;
             members: {},
             sessions: {}
         };
+
+        let pomodoroPhaseEndsAt = null;
+        let pomodoroPhaseRemainingMs = 0;
+        let pomodoroScheduledTransition = null;
         
         // --- NEW: State for Group Rankings Infinite Scroll ---
         let groupRankingsState = {
@@ -4240,6 +4248,51 @@ let pauseStartTime = 0;
             return undefined;
         }
 
+        function determineNextPomodoroState(oldState) {
+            if (oldState === 'work') {
+                const completedWorkSessions = ((currentUserData?.pomodoroCycle) || 0) + 1;
+                const interval = Math.max(pomodoroSettings.long_break_interval || 4, 1);
+                const isLongBreakTime = completedWorkSessions > 0 && (completedWorkSessions % interval === 0);
+                return isLongBreakTime ? 'long_break' : 'short_break';
+            }
+            if (oldState === 'short_break' || oldState === 'long_break') {
+                return 'work';
+            }
+            return null;
+        }
+
+        function schedulePomodoroPhaseNotification(oldState, durationMs, nextStateOverride) {
+            const effectiveDuration = Math.max(Number(durationMs) || 0, 0);
+            const nextState = nextStateOverride || determineNextPomodoroState(oldState);
+            if (!nextState) return;
+
+            const transitionMessage = oldState === 'work'
+                ? {
+                    title: 'Focus complete!',
+                    options: { body: `Time for a ${nextState.replace('_', ' ')}.`, tag: 'pomodoro-transition' }
+                }
+                : {
+                    title: 'Break is over!',
+                    options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' }
+                };
+
+            pomodoroPhaseRemainingMs = effectiveDuration;
+            pomodoroPhaseEndsAt = effectiveDuration > 0 ? Date.now() + effectiveDuration : Date.now();
+            pomodoroScheduledTransition = {
+                oldState,
+                newState: nextState,
+                title: transitionMessage.title,
+                options: transitionMessage.options
+            };
+
+            cancelSWAlarm('pomodoro-transition');
+            scheduleTransitionNotification(effectiveDuration, transitionMessage.title, transitionMessage.options, {
+                type: 'TIMER_ENDED',
+                newState: nextState,
+                oldState
+            }, 'pomodoro-transition');
+        }
+
         /**
          * Sends a message to the Service Worker to schedule a notification.
          * This is the key to reliable background timers on mobile.
@@ -4247,7 +4300,7 @@ let pauseStartTime = 0;
          * @param {string} title - The title of the notification.
          * @param {object} options - The options for the notification (e.g., body, icon, tag).
          */
-        function scheduleTransitionNotification(delayInMs, title, options, transitionPayload = {}) {
+        function scheduleTransitionNotification(delayInMs, title, options, transitionPayload = {}, timerId = 'pomodoro-transition') {
             // First, make sure Service Workers and Notifications are supported.
             if (!('serviceWorker' in navigator) || !('Notification' in window)) {
                 console.warn('Service Workers or Notifications are not supported in this browser.');
@@ -4287,7 +4340,8 @@ let pauseStartTime = 0;
                             delay: delay,
                             title: title,
                             options: opts,
-                            transitionMessage
+                            transitionMessage,
+                            timerId
                         }
                     });
                 });
@@ -5169,6 +5223,9 @@ let pauseStartTime = 0;
                 await ensurePushSubscription();
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
 
+                const upcomingState = determineNextPomodoroState('work');
+                schedulePomodoroPhaseNotification('work', workDurationSeconds * 1000, upcomingState);
+
                 pomodoroStatusDisplay.textContent = `Work (1/${pomodoroSettings.long_break_interval})`;
                 pomodoroStatusDisplay.style.color = '#3b82f6';
             }
@@ -5191,6 +5248,10 @@ let pauseStartTime = 0;
         async function stopTimer() {
             // Stop the UI timer in the web worker
             pomodoroWorker.postMessage({ command: 'stop' });
+            cancelSWAlarm('pomodoro-transition');
+            pomodoroPhaseEndsAt = null;
+            pomodoroPhaseRemainingMs = 0;
+            pomodoroScheduledTransition = null;
 
             // --- ADD THIS BLOCK TO RESET PAUSE STATE ---
             isPaused = false;
@@ -5263,6 +5324,11 @@ let pauseStartTime = 0;
                 document.getElementById('resume-btn').classList.remove('hidden');
             } else if (timerMode === 'pomodoro' && !isPaused) {
                 pomodoroWorker.postMessage({ command: 'pause' });
+                if (pomodoroPhaseEndsAt) {
+                    pomodoroPhaseRemainingMs = Math.max(pomodoroPhaseEndsAt - Date.now(), 0);
+                    pomodoroPhaseEndsAt = null;
+                }
+                cancelSWAlarm('pomodoro-transition');
                 isPaused = true;
                 document.getElementById('pause-btn').classList.add('hidden');
                 document.getElementById('resume-btn').classList.remove('hidden');
@@ -5283,6 +5349,17 @@ let pauseStartTime = 0;
                 document.getElementById('resume-btn').classList.add('hidden');
             } else if (timerMode === 'pomodoro' && isPaused) {
                 pomodoroWorker.postMessage({ command: 'resume' });
+                const remainingMs = pomodoroPhaseRemainingMs > 0
+                    ? pomodoroPhaseRemainingMs
+                    : (pomodoroPhaseEndsAt ? Math.max(pomodoroPhaseEndsAt - Date.now(), 0) : 0);
+                const transitionDetails = pomodoroScheduledTransition || {
+                    oldState: pomodoroState,
+                    newState: determineNextPomodoroState(pomodoroState)
+                };
+                if (remainingMs > 0 && transitionDetails?.newState) {
+                    schedulePomodoroPhaseNotification(transitionDetails.oldState || pomodoroState, remainingMs, transitionDetails.newState);
+                }
+                pomodoroPhaseRemainingMs = 0;
                 isPaused = false;
                 document.getElementById('pause-btn').classList.remove('hidden');
                 document.getElementById('resume-btn').classList.add('hidden');
@@ -5301,20 +5378,23 @@ let pauseStartTime = 0;
 
             let durationSeconds = 0;
             let statusText = '';
+            let upcomingState = 'work';
 
             const currentCycle = Math.floor((currentUserData.pomodoroCycle || 0) / 2);
 
             if (state === 'work') {
                 durationSeconds = pomodoroSettings.work * 60;
-                const nextState = ((currentCycle + 1) % pomodoroSettings.long_break_interval === 0) ? 'long_break' : 'short_break';
+                upcomingState = ((currentCycle + 1) % pomodoroSettings.long_break_interval === 0) ? 'long_break' : 'short_break';
                 statusText = `Work (${currentCycle + 1}/${pomodoroSettings.long_break_interval})`;
             } else { // It's a break
                 durationSeconds = state === 'short_break' ? pomodoroSettings.short_break * 60 : pomodoroSettings.long_break * 60;
                 statusText = state.replace('_', ' ');
+                upcomingState = 'work';
             }
 
             // Start the UI timer
             pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds });
+            schedulePomodoroPhaseNotification(state, durationSeconds * 1000, upcomingState);
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e0b' : '#3b82f6';
 
