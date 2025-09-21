@@ -20,6 +20,14 @@ const urlsToCache = [
     'https://placehold.co/512x512/0a0a0a/e0e0e0?text=Flow+512',
 ];
 
+const supportsNotificationTriggers = (
+    typeof self !== 'undefined' &&
+    'Notification' in self &&
+    Notification?.prototype &&
+    'showTrigger' in Notification.prototype &&
+    'TimestampTrigger' in self
+);
+
 // --- Service Worker Lifecycle Events ---
 
 // Install event: Pre-cache essential assets and skip waiting
@@ -106,52 +114,32 @@ let notificationTag = 'pomodoro-timer'; // A tag for notifications to group them
 self.addEventListener('message', (event) => {
     const { type, payload } = event.data || {};
 
-    let taskPromise = null;
-
     switch (type) {
         case 'SCHEDULE_ALARM':
-            taskPromise = scheduleNotification(payload);
-            break;
         case 'SCHEDULE_NOTIFICATION':
-            taskPromise = scheduleNotification({
-                delay: payload?.delay,
-                timerId: payload?.timerId,
-                transitionMessage: payload?.transitionMessage || {
-                    type: payload?.type || 'TIMER_ENDED',
-                    newState: payload?.newState,
-                    oldState: payload?.oldState,
-                    title: payload?.title,
-                    options: payload?.options
-                }
-            });
+            event.waitUntil(scheduleNotification(payload));
             break;
         case 'CANCEL_ALARM':
-            cancelAlarm(payload?.timerId);
+            event.waitUntil(cancelAlarm(payload?.timerId));
             break;
-    }
-
-    if (taskPromise && typeof event.waitUntil === 'function') {
-        event.waitUntil(taskPromise);
     }
 });
 
 // --- Notification Scheduling ---
-const scheduledTimers = new Map();
-
-function scheduleNotification(payload = {}) {
-    const delay = typeof payload.delay === 'number' ? payload.delay : 0;
+async function scheduleNotification(payload = {}) {
+    const delay = typeof payload?.delay === 'number' ? Math.max(payload.delay, 0) : 0;
     const timerId = payload?.timerId || 'pomodoro-transition';
-    const transitionMessage = payload.transitionMessage || {
-        type: payload.type || 'TIMER_ENDED',
-        newState: payload.newState,
-        oldState: payload.oldState,
-        title: payload.title,
-        options: payload.options
+    const transitionMessage = payload?.transitionMessage || {
+        type: payload?.type || 'TIMER_ENDED',
+        newState: payload?.newState,
+        oldState: payload?.oldState,
+        title: payload?.title,
+        options: payload?.options
     };
 
     if (!transitionMessage || !transitionMessage.title) {
         console.warn('[Service Worker] Missing notification title, skipping schedule.');
-        return Promise.resolve();
+        return;
     }
 
     const { title, options = {} } = transitionMessage;
@@ -168,69 +156,81 @@ function scheduleNotification(payload = {}) {
         ];
     }
 
-    // Clear any existing timer with the same ID before scheduling a new one
-    const existingTimer = scheduledTimers.get(timerId);
-    if (existingTimer) {
-        clearTimeout(existingTimer.timeoutId);
-        scheduledTimers.delete(timerId);
+    notificationOptions.data = {
+        ...(notificationOptions.data || {}),
+        timerId,
+        transitionMessage
+    };
+
+    const notificationLookup = supportsNotificationTriggers
+        ? { tag: notificationOptions.tag, includeTriggered: true }
+        : { tag: notificationOptions.tag };
+
+    const existing = await self.registration.getNotifications(notificationLookup);
+    existing.forEach(notification => notification.close());
+
+    const triggerTime = Date.now() + delay;
+
+    if (supportsNotificationTriggers && delay > 0) {
+        try {
+            notificationOptions.showTrigger = new TimestampTrigger(triggerTime);
+            await self.registration.showNotification(title, notificationOptions);
+            console.log(`[Service Worker]: Scheduled notification "${title}" at ${new Date(triggerTime).toISOString()} using showTrigger.`);
+            return;
+        } catch (error) {
+            console.warn('[Service Worker] Failed to schedule notification with showTrigger, falling back to timeout.', error);
+            delete notificationOptions.showTrigger;
+        }
     }
 
-    const promise = (async () => {
-        const notificationList = await self.registration.getNotifications({ tag: notificationOptions.tag });
-        notificationList.forEach(notification => notification.close());
+    if (delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+    }
 
-        await new Promise((resolve, reject) => {
-            const timeoutId = setTimeout(async () => {
-                try {
-                    await self.registration.showNotification(title, notificationOptions);
-                    console.log(`[Service Worker]: Notification "${title}" shown for timerId ${timerId}.`);
+    try {
+        await self.registration.showNotification(title, notificationOptions);
+        console.log(`[Service Worker]: Notification "${title}" shown for timerId ${timerId}.`);
+    } catch (error) {
+        console.error('[Service Worker] Error showing notification:', error);
+        return;
+    }
 
-                    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-                    const visibleClients = clients.filter(client => client.visibilityState === 'visible');
-
-                    if (visibleClients.length > 0) {
-                        visibleClients.forEach(client => client.postMessage(transitionMessage));
-                    } else if (clients.length > 0) {
-                        const [client] = clients;
-                        try {
-                            await client.focus();
-                            client.postMessage(transitionMessage);
-                        } catch (focusError) {
-                            console.warn('[Service Worker] Could not focus client:', focusError);
-                            client.postMessage(transitionMessage);
-                        }
-                    } else {
-                        console.log('[Service Worker] No clients to send TIMER_ENDED message to.');
-                    }
-
-                    resolve();
-                } catch (error) {
-                    console.error('[Service Worker] Error showing notification:', error);
-                    reject(error);
-                } finally {
-                    scheduledTimers.delete(timerId);
-                }
-            }, Math.max(0, delay));
-
-            scheduledTimers.set(timerId, { timeoutId, transitionMessage });
-        });
-    })();
-
-    return promise;
+    await notifyClientsOfTransition(transitionMessage);
 }
 
-function cancelAlarm(timerId) {
+async function cancelAlarm(timerId) {
     if (timerId === 'pomodoro-transition') {
-        self.registration.getNotifications({ tag: notificationTag }).then(notifications => {
-            notifications.forEach(notification => notification.close());
-        });
-    }
-    const scheduled = scheduledTimers.get(timerId);
-    if (scheduled) {
-        clearTimeout(scheduled.timeoutId);
-        scheduledTimers.delete(timerId);
+        const lookupOptions = supportsNotificationTriggers
+            ? { tag: notificationTag, includeTriggered: true }
+            : { tag: notificationTag };
+        const notifications = await self.registration.getNotifications(lookupOptions);
+        notifications.forEach(notification => notification.close());
     }
     // Add logic for other timerIds if needed in the future
+}
+
+async function notifyClientsOfTransition(transitionMessage) {
+    if (!transitionMessage) return;
+
+    try {
+        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const visibleClients = clients.filter(client => client.visibilityState === 'visible');
+
+        if (visibleClients.length > 0) {
+            visibleClients.forEach(client => client.postMessage(transitionMessage));
+        } else if (clients.length > 0) {
+            try {
+                await clients[0].focus();
+            } catch (focusError) {
+                console.warn('[Service Worker] Unable to focus client:', focusError);
+            }
+            clients[0].postMessage(transitionMessage);
+        } else {
+            console.log('[Service Worker] No clients to send TIMER_ENDED message to.');
+        }
+    } catch (error) {
+        console.error('[Service Worker] Failed to notify clients of transition:', error);
+    }
 }
 
 // Notification click handler
@@ -238,19 +238,28 @@ self.addEventListener('notificationclick', (event) => {
     event.notification.close(); // Close the notification after click
 
     const action = event.action; // Get the action clicked (e.g., 'pause', 'resume', 'stop')
+    const transitionMessage = event.notification?.data?.transitionMessage;
 
-    // Find all window clients (tabs/windows) that this Service Worker controls
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-        let clientToFocus = clients.find(client => client.visibilityState === 'visible') || clients[0];
+    event.waitUntil((async () => {
+        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const clientToFocus = clients.find(client => client.visibilityState === 'visible') || clients[0];
 
         if (clientToFocus) {
-            clientToFocus.focus().then(() => {
-                clientToFocus.postMessage({ type: 'notification_action', action: action });
-            });
+            try {
+                await clientToFocus.focus();
+            } catch (focusError) {
+                console.warn('[Service Worker] Unable to focus client on notification click:', focusError);
+            }
+
+            if (transitionMessage) {
+                clientToFocus.postMessage(transitionMessage);
+            }
+
+            clientToFocus.postMessage({ type: 'notification_action', action: action });
         } else {
             console.warn('[Service Worker] No client found to handle notification action.');
         }
-    });
+    })());
 });
 
 self.addEventListener('push', (event) => {
