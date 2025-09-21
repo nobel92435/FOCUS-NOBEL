@@ -3598,15 +3598,37 @@ async function triggerServerNotification(messageData) {
         showToast('Please sign in to enable server notifications.', 'error');
         return;
     }
+
+    if (!messageData || typeof messageData !== 'object') {
+        console.error('Invalid notification payload supplied:', messageData);
+        return;
+    }
+
+    const {
+        title,
+        newState,
+        oldState,
+        options = {},
+        body: fallbackBody
+    } = messageData;
+
+    if (!title) {
+        console.error('Notification payload missing title.');
+        return;
+    }
+
+    const body = options.body ?? fallbackBody ?? '';
+
     try {
         const { data, error } = await supabase.functions.invoke('send-pomodoro-notification', {
             body: {
                 userId: currentUser.id,
                 appId,
-                title: messageData.title,
-                body: messageData.options.body,
-                newState: messageData.newState,
-                oldState: messageData.oldState
+                title,
+                body,
+                options,
+                newState,
+                oldState,
             }
         });
         if (error) throw error;

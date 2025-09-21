@@ -1,23 +1,17 @@
 // HYBRID Service Worker for FocusFlow
 // Version 1.0.2 (updated for timer reliability and notification options fix)
 
-const CACHE_NAME = 'focusflow-cache-v2'; // Increment cache version for updates
-const OFFLINE_URL = './offline.html'; // Path to your dedicated offline page
+const CACHE_NAME = 'focusflow-cache-v3'; // Increment cache version for updates
+const OFFLINE_URL = './index.html'; // Use the main page as the offline fallback
 
 // IMPORTANT: These paths should be relative to the root of the Service Worker's scope.
 // If your service-worker.js is at /Focus-Clock/service-worker.js, then './' refers to /Focus-Clock/
 const urlsToCache = [
-    './', // Represents /Focus-Clock/
+    './',
     './index.html',
-    './fina.html',
     './manifest.json',
-    './pomodoro-worker.js', // This worker is for the main app, not the SW
-    './icons/pause.png', // Ensure these paths are correct
-    './icons/play.png',
-    './icons/stop.png',
-    OFFLINE_URL, // Add the offline page to cache
-    'https://placehold.co/192x192/0a0a0a/e0e0e0?text=Flow+192',
-    'https://placehold.co/512x512/0a0a0a/e0e0e0?text=Flow+512',
+    './favicon.ico',
+    OFFLINE_URL,
 ];
 
 // --- Service Worker Lifecycle Events ---
@@ -154,9 +148,9 @@ function scheduleNotification(payload = {}) {
 
     if (!notificationOptions.actions || notificationOptions.actions.length === 0) {
         notificationOptions.actions = [
-            { action: 'pause', title: 'Pause', icon: './icons/pause.png' },
-            { action: 'resume', title: 'Resume', icon: './icons/play.png' },
-            { action: 'stop', title: 'Stop', icon: './icons/stop.png' }
+            { action: 'pause', title: 'Pause', icon: './favicon.ico' },
+            { action: 'resume', title: 'Resume', icon: './favicon.ico' },
+            { action: 'stop', title: 'Stop', icon: './favicon.ico' }
         ];
     }
 
@@ -239,9 +233,9 @@ self.addEventListener('push', (event) => {
 
     if (!options.actions || options.actions.length === 0) {
         options.actions = [
-            { action: 'pause', title: 'Pause', icon: './icons/pause.png' },
-            { action: 'resume', title: 'Resume', icon: './icons/play.png' },
-            { action: 'stop', title: 'Stop', icon: './icons/stop.png' }
+            { action: 'pause', title: 'Pause', icon: './favicon.ico' },
+            { action: 'resume', title: 'Resume', icon: './favicon.ico' },
+            { action: 'stop', title: 'Stop', icon: './favicon.ico' }
         ];
     }
 
