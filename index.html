@@ -3096,20 +3096,23 @@
 
     const focusflowConfig = window.__FOCUSFLOW_CONFIG || {};
 
+    function normalizeVapidKey(value) {
+        return typeof value === 'string' ? value.replace(/\s+/g, '') : '';
+    }
+
     function getVapidPublicKey() {
-        const configKey = typeof focusflowConfig.vapidPublicKey === 'string'
-            ? focusflowConfig.vapidPublicKey.trim()
-            : '';
+        const configKey = normalizeVapidKey(focusflowConfig.vapidPublicKey);
         if (configKey) return configKey;
 
         const metaTag = document.querySelector('meta[name="vapid-public-key"]');
-        const metaValue = metaTag?.content ? metaTag.content.trim() : '';
+        const metaValue = normalizeVapidKey(metaTag?.content);
         return metaValue;
     }
 
     function urlBase64ToUint8Array(base64String) {
-        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-        const base64 = (base64String + padding)
+        const sanitized = normalizeVapidKey(base64String);
+        const padding = '='.repeat((4 - (sanitized.length % 4)) % 4);
+        const base64 = (sanitized + padding)
             .replace(/-/g, '+')
             .replace(/_/g, '/');
 
@@ -3818,6 +3821,10 @@ async function triggerServerNotification(messageData) {
             }
         });
         if (error) throw error;
+        if (!data?.success) {
+            console.warn('Server notification did not confirm delivery:', data);
+            return false;
+        }
         console.log('Server notification triggered:', data);
         return true;
     } catch (error) {
