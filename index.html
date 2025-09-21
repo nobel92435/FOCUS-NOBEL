@@ -3096,20 +3096,23 @@
 
     const focusflowConfig = window.__FOCUSFLOW_CONFIG || {};
 
+    function normalizeVapidKey(value) {
+        return typeof value === 'string' ? value.replace(/\s+/g, '') : '';
+    }
+
     function getVapidPublicKey() {
-        const configKey = typeof focusflowConfig.vapidPublicKey === 'string'
-            ? focusflowConfig.vapidPublicKey.trim()
-            : '';
+        const configKey = normalizeVapidKey(focusflowConfig.vapidPublicKey);
         if (configKey) return configKey;
 
         const metaTag = document.querySelector('meta[name="vapid-public-key"]');
-        const metaValue = metaTag?.content ? metaTag.content.trim() : '';
+        const metaValue = normalizeVapidKey(metaTag?.content);
         return metaValue;
     }
 
     function urlBase64ToUint8Array(base64String) {
-        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-        const base64 = (base64String + padding)
+        const sanitized = normalizeVapidKey(base64String);
+        const padding = '='.repeat((4 - (sanitized.length % 4)) % 4);
+        const base64 = (sanitized + padding)
             .replace(/-/g, '+')
             .replace(/_/g, '/');
 
@@ -3222,32 +3225,19 @@
                 const subscriptionJSON = subscription.toJSON();
                 const storedSubscription = normalizePushSubscription(currentUserData?.push_subscription);
                 if (!areSubscriptionsEqual(storedSubscription, subscriptionJSON)) {
-                    let savedValue = subscriptionJSON;
-                    let { error } = await supabase
+                    const { error } = await supabase
                         .from('profiles')
                         .update({ push_subscription: subscriptionJSON })
                         .eq('id', currentUser.id);
 
                     if (error) {
-                        console.warn('Failed to persist push subscription as JSON, retrying as string:', error.message || error);
-                        const serialized = JSON.stringify(subscriptionJSON);
-                        const { error: fallbackError } = await supabase
-                            .from('profiles')
-                            .update({ push_subscription: serialized })
-                            .eq('id', currentUser.id);
-
-                        if (fallbackError) {
-                            console.error('Failed to save push subscription to Supabase:', fallbackError);
-                            throw fallbackError;
-                        }
-
-                        savedValue = serialized;
+                        console.error('Failed to save push subscription to Supabase:', error);
+                    } else {
+                        currentUserData = {
+                            ...(currentUserData || {}),
+                            push_subscription: subscriptionJSON
+                        };
                     }
-
-                    currentUserData = {
-                        ...(currentUserData || {}),
-                        push_subscription: savedValue
-                    };
                 }
 
                 return subscriptionJSON;
@@ -3813,17 +3803,10 @@ async function triggerServerNotification(messageData) {
         : (typeof options.body === 'string' ? options.body : '');
     options.body = bodyText;
 
-    let subscription = null;
     try {
-        subscription = await ensurePushSubscription();
+        await ensurePushSubscription();
     } catch (subscriptionError) {
         console.warn('Unable to confirm push subscription before sending notification:', subscriptionError);
-    }
-
-    if (!subscription) {
-        console.warn('No push subscription is available; skipping server-triggered notification.');
-        showToast('Enable browser notifications to receive push alerts.', 'warning');
-        return false;
     }
 
     try {
@@ -3838,6 +3821,10 @@ async function triggerServerNotification(messageData) {
             }
         });
         if (error) throw error;
+        if (!data?.success) {
+            console.warn('Server notification did not confirm delivery:', data);
+            return false;
+        }
         console.log('Server notification triggered:', data);
         return true;
     } catch (error) {
