@@ -5361,40 +5361,15 @@ if (achievementsGrid) {
         function setupRealtimeListeners() {
             if (!currentUser) return;
 
-            // Profile updates
-            supabase.channel('profiles-changes')
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'profiles',
-                    filter: `id=eq.${currentUser.id}`
-                }, () => loadMyProfile())
-                .subscribe();
+            // Stop any and all previous subscriptions.
+            supabase.removeAllChannels();
 
-            // Subjects
-            supabase.channel('subjects-changes')
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'subjects',
-                    filter: `profile_id=eq.${currentUser.id}`
-                }, () => loadSubjects())
-                .subscribe();
+            // This function is now only responsible for loading the initial data once.
+            // There are NO persistent listeners for personal data.
+            loadMyProfile();
             loadSubjects();
-
-            // Sessions
-            supabase.channel('sessions-changes')
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'sessions',
-                    filter: `profile_id=eq.${currentUser.id}`
-                }, () => loadSessions())
-                .subscribe();
             loadSessions();
-
-            // --- NEW PLANNER LISTENERS ---
-            setupPlannerListeners();
+            setupPlannerListeners(); // This will also be changed to just load data.
         }
 
         async function loadSubjects() {
@@ -6139,135 +6114,41 @@ if (achievementsGrid) {
 
         async function setupPlannerListeners() {
             if (!currentUser || !isValidUUID(currentUser.id)) return;
-          
-            // 1. Stop old subscriptions
+
+            // Stop old subscriptions (none will be created now, but keep cleanup for safety)
             plannerState.plannerUnsubscribers.forEach(unsub => unsub());
             plannerState.plannerUnsubscribers = [];
 
             await loadTagLibraryFromSupabase();
 
-            // 2. Initial fetch of lists
+            // Load lists once
             const { data: lists, error: listsError } = await supabase
-              .from('lists')
-              .select('*')
-              .eq('created_by', currentUser.id)   // or whichever column marks ownership
+                .from('lists')
+                .select('*')
+                .eq('created_by', currentUser.id);
             if (listsError) {
-              console.error('Failed to load lists:', listsError);
+                console.error('Failed to load lists:', listsError);
             } else {
-              plannerState.lists = lists || [];
-              detectListFolderColumnFromData(plannerState.lists);
-              renderPlannerPage();
+                plannerState.lists = lists || [];
+                detectListFolderColumnFromData(plannerState.lists);
+                renderPlannerPage();
             }
-          
-            // 3. Initial fetch of tasks
+
+            // Load tasks once
             const { data: tasks, error: tasksError } = await supabase
-              .from('tasks')
-              .select('*')
-              .eq('created_by', currentUser.id)
+                .from('tasks')
+                .select('*')
+                .eq('created_by', currentUser.id);
             if (tasksError) {
-              console.error('Failed to load tasks:', tasksError);
+                console.error('Failed to load tasks:', tasksError);
             } else {
-              plannerState.tasks = (tasks || [])
-                .map(normalizePlannerTask)
-                .filter(Boolean);
-              renderPlannerPage();
-              renderTaskSelectionList(plannerState.tasks);
+                plannerState.tasks = (tasks || [])
+                    .map(normalizePlannerTask)
+                    .filter(Boolean);
+                renderPlannerPage();
+                renderTaskSelectionList(plannerState.tasks);
             }
-          
-            // 4. Realtime subscription for lists (FIXED)
-            const listsSub = supabase
-              .channel('lists-changes')
-              .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'lists', filter: `created_by=eq.${currentUser.id}` },
-                (payload) => {
-                  console.log('List change:', payload);
-                  const { eventType, new: newRecord, old: oldRecord } = payload;
-                  const recordId = newRecord?.id || oldRecord?.id;
-                  if (!recordId) return;
-
-                  if (newRecord) {
-                      detectListFolderColumnFromData([newRecord]);
-                  }
-
-                  if (eventType === 'INSERT') {
-                    if (!plannerState.lists.some(l => l.id === newRecord.id)) {
-                        plannerState.lists.push(newRecord);
-                    }
-                  } else if (eventType === 'UPDATE') {
-                    const index = plannerState.lists.findIndex(l => l.id === recordId);
-                    if (index > -1) {
-                        plannerState.lists[index] = newRecord;
-                    }
-                  } else if (eventType === 'DELETE') {
-                    plannerState.lists = plannerState.lists.filter(l => l.id !== recordId);
-                    if (plannerState.activeListId === recordId) {
-                        plannerState.activeListId = 'inbox'; // Fallback to inbox if active list is deleted
-                    }
-                  }
-                  renderPlannerPage();
-                }
-              )
-              .subscribe();
-          
-            // 5. Realtime subscription for tasks (FIXED)
-            const tasksSub = supabase
-              .channel('tasks-changes')
-              .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'tasks', filter: `created_by=eq.${currentUser.id}` },
-                (payload) => {
-                  console.log('Task change:', payload);
-                  const { eventType, new: newRecord, old: oldRecord } = payload;
-                  const recordIdRaw = newRecord?.id ?? oldRecord?.id;
-                  const recordId = recordIdRaw !== undefined && recordIdRaw !== null ? String(recordIdRaw) : null;
-                  if (!recordId) return;
-
-                  let normalizedRecord = null;
-                  if (newRecord) {
-                      detectListFolderColumnFromData([newRecord]);
-                      normalizedRecord = normalizePlannerTask(newRecord);
-                  }
-
-                  if (eventType === 'INSERT') {
-                    if (!normalizedRecord) return;
-                    const existingIndex = plannerState.tasks.findIndex(t => t.id === normalizedRecord.id);
-                    if (existingIndex > -1) {
-                        plannerState.tasks[existingIndex] = normalizedRecord;
-                    } else {
-                        plannerState.tasks.push(normalizedRecord);
-                    }
-                  } else if (eventType === 'UPDATE') {
-                    if (!normalizedRecord) return;
-                    const index = plannerState.tasks.findIndex(t => t.id === normalizedRecord.id);
-                    if (index > -1) {
-                      plannerState.tasks[index] = normalizedRecord;
-                    } else {
-                        // If not found, add it. Might happen if listener starts after initial load.
-                        plannerState.tasks.push(normalizedRecord);
-                    }
-                  } else if (eventType === 'DELETE') {
-                    plannerState.tasks = plannerState.tasks.filter(t => String(t.id) !== recordId);
-                    // If the deleted task was selected, deselect it
-                    if (String(plannerState.selectedTaskId) === recordId) {
-                        plannerState.selectedTaskId = null;
-                    }
-                  }
-                  
-                  // Now re-render with the updated local state.
-                  // This preserves the selectedTaskId set by addPlannerTask.
-                  renderPlannerPage();
-                  renderTaskSelectionList(plannerState.tasks);
-                }
-              )
-              .subscribe();
-          
-            // 6. Save unsubscribers
-            plannerState.plannerUnsubscribers = [
-              () => supabase.removeChannel(listsSub),
-              () => supabase.removeChannel(tasksSub),
-            ];
-          }
+        }
           
 
         function renderPlannerPage() {
@@ -9178,67 +9059,41 @@ if (achievementsGrid) {
         
         async function renderGroupDetail(groupId) {
             currentGroupId = groupId;
-          
-            // Populate selector with my groups
-            const { data: myGroups } = await supabase
-              .from('group_members')
-              .select('group_id, groups!inner(id, name)')
-              .eq('profile_id', currentUser.id);
-            const groupSelector = document.getElementById('group-selector');
-            if (groupSelector) {
-              groupSelector.innerHTML = '';
-              (myGroups || []).forEach(row => {
-                const g = row.groups;
-                const opt = document.createElement('option');
-                opt.value = g.id; opt.textContent = g.name;
-                if (g.id === groupId) opt.selected = true;
-                groupSelector.appendChild(opt);
-              });
-              groupSelector.value = groupId;
-              groupSelector.onchange = (e) => renderGroupDetail(e.target.value);
-            }
-          
-            // Load group
-            const { data: group, error } = await supabase.from('groups').select('*').eq('id', groupId).single();
-            if (error || !group) { showPage('page-my-groups'); return; }
-          
-            // Settings icons
-            const settingsBtnContainer = document.getElementById('group-settings-btn-container');
-            const settingsBtnContainerMobile = document.getElementById('group-settings-btn-container-mobile');
-            if (settingsBtnContainer) settingsBtnContainer.innerHTML = `<button id="group-settings-btn" class="text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700"><i class="fas fa-cog"></i></button>`;
-            if (settingsBtnContainerMobile) settingsBtnContainerMobile.innerHTML = `<button id="group-settings-btn-mobile" class="text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700"><i class="fas fa-cog"></i></button>`;
-          
-            // Subscribe to group and membership changes
+
+            // Stop any previous polling intervals or listeners
             groupDetailUnsubscribers.forEach(unsub => unsub());
             groupDetailUnsubscribers = [];
-          
-            const grpChan = supabase
-              .channel(`groups:${groupId}`)
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'groups', filter: `id=eq.${groupId}` }, () => {
-                const sub = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
-                renderGroupSubPage(sub);
-              })
-              .subscribe();
-            groupDetailUnsubscribers.push(() => supabase.removeChannel(grpChan));
-          
-            const memChan = supabase
-              .channel(`group_members:${groupId}`)
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members', filter: `group_id=eq.${groupId}` },
-                async () => {
-                  const { data: rows } = await supabase.from('group_members').select('profile_id').eq('group_id', groupId);
-                  const memberIds = (rows || []).map(r => r.profile_id);
-                  setupGroupMemberListeners(memberIds);
-                })
-              .subscribe();
-            groupDetailUnsubscribers.push(() => supabase.removeChannel(memChan));
-          
-            // Initial members
+            memberTimerIntervals.forEach(clearInterval);
+            memberTimerIntervals = [];
+
+            // Populate selector with my groups (no change here)
+            const { data: myGroups } = await supabase.from('group_members').select('group_id, groups!inner(id, name)').eq('profile_id', currentUser.id);
+            const groupSelector = document.getElementById('group-selector');
+            if (groupSelector) {
+                groupSelector.innerHTML = (myGroups || []).map(row => `<option value="${row.groups.id}" ${row.groups.id === groupId ? 'selected' : ''}>${row.groups.name}</option>`).join('');
+                groupSelector.onchange = (e) => renderGroupDetail(e.target.value);
+            }
+
+            // Load group data once (no real-time needed for this)
+            const { data: group, error } = await supabase.from('groups').select('*').eq('id', groupId).single();
+            if (error || !group) { showPage('page-my-groups'); return; }
+
+            // Settings icons (no change here)
+            const settingsBtnContainer = document.getElementById('group-settings-btn-container');
+            if (settingsBtnContainer) settingsBtnContainer.innerHTML = `<button id="group-settings-btn" class="text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700"><i class="fas fa-cog"></i></button>`;
+            const settingsBtnContainerMobile = document.getElementById('group-settings-btn-container-mobile');
+            if (settingsBtnContainerMobile) settingsBtnContainerMobile.innerHTML = `<button id="group-settings-btn-mobile" class="text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700"><i class="fas fa-cog"></i></button>`;
+
+            // NO MORE REAL-TIME CHANNEL CREATION HERE
+
+            // Fetch initial members and start the polling process
             const { data: rows } = await supabase.from('group_members').select('profile_id').eq('group_id', groupId);
             setupGroupMemberListeners((rows || []).map(r => r.profile_id));
-          
+
+            // Render the initial sub-page
             const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
             renderGroupSubPage(activeSubPage);
-          }
+        }
           
         function renderGroupMembers() {
             const container = document.getElementById('group-detail-content');
@@ -9577,98 +9432,55 @@ if (achievementsGrid) {
         }
 
         function setupGroupMemberListeners(memberIds) {
-            groupDetailUnsubscribers.forEach(unsub => unsub());
-            groupDetailUnsubscribers = [];
+            // Clear any previous polling intervals.
             memberTimerIntervals.forEach(clearInterval);
             memberTimerIntervals = [];
-            groupRealtimeData = { members: {}, sessions: {} };
+            groupRealtimeData.sessions = {};
 
             if (!memberIds || memberIds.length === 0) {
-                const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
-                renderGroupSubPage(activeSubPage);
+                groupRealtimeData = { members: {}, sessions: {} };
+                renderGroupSubPage(document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home');
                 return;
             }
 
-            const fetchInitialData = async () => {
-                const { data: profiles, error: pErr } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .in('id', memberIds);
-
-                const { data: sessions, error: sErr } = await supabase
-                    .from('sessions')
-                    .select('id, subject, durationSeconds, endedAt, type, profile_id')
-                    .in('profile_id', memberIds)
-                    .order('endedAt', { ascending: false });
-
-                if (pErr || sErr) {
-                    console.error('Failed to fetch initial group data', pErr || sErr);
+            // Define the async function to fetch status via RPC.
+            async function refreshGroupStatus() {
+                if (!currentGroupId) {
+                    memberTimerIntervals.forEach(clearInterval);
                     return;
                 }
 
-                groupRealtimeData = { members: {}, sessions: {} };
-                (profiles || []).forEach(profile => {
-                    groupRealtimeData.members[profile.id] = profile;
+                // Call the RPC to get all member data in one efficient request.
+                const { data: memberData, error } = await supabase.rpc('get_group_realtime_status', {
+                    group_id_param: currentGroupId
                 });
 
-                (sessions || []).forEach(session => {
-                    if (!groupRealtimeData.sessions[session.profile_id]) {
-                        groupRealtimeData.sessions[session.profile_id] = [];
-                    }
-                    groupRealtimeData.sessions[session.profile_id].push({
-                        ...session,
-                        endedAt: session.endedAt ? new Date(session.endedAt) : null,
-                        type: session.type || 'study'
-                    });
-                });
+                if (error) {
+                    console.error('Error fetching group status via RPC:', error);
+                    return;
+                }
 
+                // Update local state with the fresh data.
+                const newMembers = {};
+                (memberData || []).forEach(profile => { newMembers[profile.id] = profile; });
+                groupRealtimeData.members = newMembers;
+
+                // Re-render the relevant part of the UI.
                 const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
-                renderGroupSubPage(activeSubPage);
-            };
-
-            fetchInitialData();
-
-            const memberFilter = memberIds.join(',');
-
-            const profileSubscription = supabase
-                .channel(`group-profiles:${currentGroupId}`)
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'profiles',
-                    filter: `id=in.(${memberFilter})`
-                }, payload => {
-                    const updatedProfile = payload.new;
-                    if (updatedProfile && groupRealtimeData.members[updatedProfile.id]) {
-                        groupRealtimeData.members[updatedProfile.id] = updatedProfile;
-                        const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
-                        if (activeSubPage === 'home') {
-                            const isStudiconView = document.getElementById('studicon-view-btn')?.classList.contains('active');
-                            if (isStudiconView) {
-                                renderGroupStudiconView();
-                            } else {
-                                renderGroupMembers();
-                            }
-                        }
+                if (activeSubPage === 'home') {
+                    const isStudiconView = document.getElementById('studicon-view-btn')?.classList.contains('active');
+                    if (isStudiconView) {
+                        renderGroupStudiconView();
+                    } else {
+                        renderGroupMembers();
                     }
-                })
-                .subscribe();
+                }
+            }
 
-            groupDetailUnsubscribers.push(() => supabase.removeChannel(profileSubscription));
-
-            const sessionSubscription = supabase
-                .channel(`group-sessions:${currentGroupId}`)
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'sessions',
-                    filter: `profile_id=in.(${memberFilter})`
-                }, async () => {
-                    await fetchInitialData();
-                })
-                .subscribe();
-
-            groupDetailUnsubscribers.push(() => supabase.removeChannel(sessionSubscription));
+            // Fetch initial data immediately, then poll every 20 seconds.
+            refreshGroupStatus();
+            const refreshInterval = setInterval(refreshGroupStatus, 20000);
+            memberTimerIntervals.push(refreshInterval);
         }
 
         // --- Group Leaderboard Infinite Scroll State & Functions ---
@@ -9930,60 +9742,85 @@ if (achievementsGrid) {
             const chatForm = document.getElementById('chat-form');
             const chatInput = document.getElementById('chat-input');
             if (!chatMessagesContainer || !chatForm) return;
-          
-            async function loadMessages() {
-              const { data: msgs, error } = await supabase
-                .from('group_messages')
-                .select('*')
-                .eq('group_id', groupId)
-                .order('created_at', { ascending: true });
-              if (error) { console.error('load messages failed', error); return; }
-          
-              chatMessagesContainer.innerHTML = '';
-              (msgs || []).forEach(msg => {
-                const isSent = msg.sender_id === currentUser.id;
-                const el = document.createElement('div');
-                el.classList.add('chat-message', isSent ? 'sent' : 'received');
-          
-                let content = '';
-                if (msg.text) content = `<div>${msg.text}</div>`;
-                else if (msg.image_url) content = `<img src="${msg.image_url}" class="rounded-lg max-w-full h-auto cursor-pointer" style="max-height: 300px;" onclick="viewImage(this.src)">`;
-          
-                const ts = msg.created_at ? new Date(msg.created_at) : null;
-                const timeText = ts ? ts.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
-          
-                el.innerHTML = `
-                  <div class="chat-bubble ${isSent ? 'sent' : 'received'}">
-                    ${!isSent ? `<div class="chat-sender">${msg.sender_name || ''}</div>` : ''}
-                    ${content}
-                    <div class="text-xs ${isSent ? 'text-blue-200' : 'text-gray-400'} text-right mt-1">${timeText}</div>
-                  </div>`;
-                chatMessagesContainer.appendChild(el);
-              });
-              chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+
+            let lastMessageTimestamp = new Date(0).toISOString();
+            let chatPollInterval = null;
+
+            // Stop any existing polling for other groups
+            groupDetailUnsubscribers.forEach(unsub => unsub());
+            groupDetailUnsubscribers = [];
+
+            async function loadMessages(isInitialLoad = false) {
+                // Fetch only messages created after the last one we saw
+                const { data: msgs, error } = await supabase
+                    .from('group_messages')
+                    .select('*')
+                    .eq('group_id', groupId)
+                    .gt('created_at', lastMessageTimestamp)
+                    .order('created_at', { ascending: true });
+
+                if (error) {
+                    console.error('Failed to load chat messages:', error);
+                    return;
+                }
+
+                if (isInitialLoad) {
+                    chatMessagesContainer.innerHTML = '';
+                }
+
+                if (msgs && msgs.length > 0) {
+                    // Update the timestamp of the last message
+                    lastMessageTimestamp = msgs[msgs.length - 1].created_at;
+
+                    msgs.forEach(msg => {
+                        const isSent = msg.sender_id === currentUser.id;
+                        const el = document.createElement('div');
+                        el.classList.add('chat-message', isSent ? 'sent' : 'received');
+
+                        let content = msg.text ? `<div>${msg.text}</div>` : `<img src="${msg.image_url}" class="rounded-lg max-w-full h-auto cursor-pointer" style="max-height: 300px;" onclick="viewImage(this.src)">`;
+                        const timeText = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                        el.innerHTML = `
+                          <div class="chat-bubble ${isSent ? 'sent' : 'received'}">
+                            ${!isSent ? `<div class="chat-sender">${msg.sender_name || ''}</div>` : ''}
+                            ${content}
+                            <div class="text-xs ${isSent ? 'text-blue-200' : 'text-gray-400'} text-right mt-1">${timeText}</div>
+                          </div>`;
+                        chatMessagesContainer.appendChild(el);
+                    });
+                    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+                }
             }
-          
-            loadMessages();
-          
-            const chatChan = supabase
-              .channel(`group_messages:${groupId}`)
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'group_messages', filter: `group_id=eq.${groupId}` }, loadMessages)
-              .subscribe();
-            groupDetailUnsubscribers.push(() => supabase.removeChannel(chatChan));
-          
+
+            // Initial load, then start polling
+            loadMessages(true);
+            chatPollInterval = setInterval(() => loadMessages(false), 5000); // Poll every 5 seconds
+
+            // Store the interval clear function to be called when leaving the page
+            groupDetailUnsubscribers.push(() => {
+                if (chatPollInterval) clearInterval(chatPollInterval);
+            });
+
             chatForm.onsubmit = async (e) => {
-              e.preventDefault();
-              const text = chatInput.value.trim();
-              if (!text || !currentUser) return;
-          
-              const senderName = currentUserData?.username || currentUser.email || 'Anonymous';
-              const { error } = await supabase
-                .from('group_messages')
-                .insert([{ group_id: groupId, sender_id: currentUser.id, sender_name: senderName, text }]);
-              if (error) { console.error('send msg failed', error); return; }
-              chatInput.value = '';
+                e.preventDefault();
+                const text = chatInput.value.trim();
+                if (!text || !currentUser) return;
+
+                chatInput.value = ''; // Optimistic UI update
+                const senderName = currentUserData?.username || 'Anonymous';
+
+                const { error } = await supabase
+                    .from('group_messages')
+                    .insert([{ group_id: groupId, sender_id: currentUser.id, sender_name: senderName, text }]);
+
+                if (error) {
+                    console.error('send msg failed', error);
+                    chatInput.value = text; // Revert on failure
+                } else {
+                    loadMessages(); // Immediately fetch after sending for quick feedback
+                }
             };
-          }          
+        }
 
         // --- Event Listeners ---
         const ael = (id, event, callback) => {
