@@ -3676,6 +3676,7 @@
             if (type === 'tick' && sessionTimerDisplay) {
                 // Update the timer display on every tick from the worker
                 sessionTimerDisplay.textContent = formatPomodoroTime(timeLeft);
+                refreshTabTitle();
             } else if (type === 'phase_ended') {
                 // This is a local trigger from the worker when a phase ends.
                 // It's the primary way the UI transitions when the app is in the foreground.
@@ -3818,13 +3819,14 @@
                 await startNextPomodoroPhase(newState);
             } else {
                 // If not auto-starting, show the manual start button
-                pomodoroState = 'idle'; 
+                pomodoroState = 'idle';
                 nextPomodoroPhase = newState;
                 document.getElementById('manual-start-btn').classList.remove('hidden');
                 document.getElementById('stop-studying-btn').classList.add('hidden');
                 document.getElementById('pause-btn').classList.add('hidden');
                 pomodoroStatusDisplay.textContent = `Ready for ${newState.replace('_', ' ')}`;
             }
+            refreshTabTitle();
         }
         // --- FIX END ---
 
@@ -4074,6 +4076,69 @@ let pauseStartTime = 0;
         const totalBreakTimeDisplay = document.getElementById('total-break-time-display');
         const activeSubjectDisplay = document.getElementById('active-subject-display');
         const pomodoroStatusDisplay = document.getElementById('pomodoro-status');
+        const originalDocumentTitle = document.title;
+
+        function updateTabTitle(timeText = null, label = '') {
+            if (!timeText) {
+                document.title = originalDocumentTitle;
+                return;
+            }
+
+            const titleParts = [timeText];
+            if (label) {
+                titleParts.push(label);
+            }
+            titleParts.push(originalDocumentTitle);
+            document.title = titleParts.join(' • ');
+        }
+
+        function refreshTabTitle() {
+            if (!sessionTimerDisplay) return;
+
+            const timeText = (sessionTimerDisplay.textContent || '').trim();
+            if (!timeText) {
+                updateTabTitle();
+                return;
+            }
+
+            if (breakTimerInterval) {
+                const breakLabel = (pomodoroStatusDisplay?.textContent || 'Break') + (isPaused ? ' (Paused)' : '');
+                updateTabTitle(timeText, breakLabel.trim());
+                return;
+            }
+
+            if (timerMode === 'pomodoro') {
+                if (pomodoroState && pomodoroState !== 'idle') {
+                    let label = '';
+                    if (pomodoroState === 'work') {
+                        label = activeSubject || 'Focus';
+                    } else if (pomodoroStatusDisplay?.textContent) {
+                        label = pomodoroStatusDisplay.textContent;
+                    } else {
+                        label = pomodoroState.replace('_', ' ');
+                    }
+                    if (isPaused) {
+                        label = `${label} (Paused)`;
+                    }
+                    updateTabTitle(timeText, label.trim());
+                    return;
+                }
+
+                updateTabTitle();
+                return;
+            }
+
+            if (timerInterval || isPaused) {
+                let label = activeSubject || 'Studying';
+                if (isPaused) {
+                    label = `${label} (Paused)`;
+                }
+                updateTabTitle(timeText, label.trim());
+                return;
+            }
+
+            updateTabTitle();
+        }
 
         window.viewImage = function(src) {
             const modal = document.getElementById('image-view-modal');
@@ -5213,16 +5278,19 @@ let pauseStartTime = 0;
                 sessionTimerDisplay.textContent = activeTaskTargetSeconds
                     ? formatTime(activeTaskTargetSeconds)
                     : formatTime(0);
+                refreshTabTitle();
                 timerInterval = setInterval(() => {
                     const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
                     if (activeTaskTargetSeconds) {
                         const remainingSeconds = activeTaskTargetSeconds - elapsedSeconds;
                         sessionTimerDisplay.textContent = formatTime(Math.max(remainingSeconds, 0));
+                        refreshTabTitle();
                         if (remainingSeconds <= 0) {
                             stopTimer().catch(err => console.error('Failed to auto-stop timer', err));
                         }
                     } else {
                         sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
+                        refreshTabTitle();
                     }
                 }, 1000);
             } else { // Pomodoro Mode
@@ -5241,10 +5309,11 @@ let pauseStartTime = 0;
                 const cycleForDisplay = (currentUserData.pomodoroCycle || 0) % pomodoroSettings.long_break_interval + 1;
                 pomodoroStatusDisplay.textContent = `Work (${cycleForDisplay}/${pomodoroSettings.long_break_interval})`;
                 pomodoroStatusDisplay.style.color = '#3b82f6';
-                
+
                 const workDurationSeconds = pomodoroSettings.work * 60;
                 await ensurePushSubscription();
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
+                refreshTabTitle();
             }
 
             document.getElementById('start-studying-btn').classList.add('hidden');
@@ -5314,6 +5383,7 @@ let pauseStartTime = 0;
                 : formatTime(0);
             pomodoroStatusDisplay.textContent = timerMode === 'pomodoro' ? 'Ready for Pomodoro' : '';
             pomodoroStatusDisplay.style.color = '#9ca3af';
+            refreshTabTitle();
 
             // Reset button visibility
             document.getElementById('start-studying-btn').classList.remove('hidden');
@@ -5341,8 +5411,9 @@ let pauseStartTime = 0;
                 document.getElementById('pause-btn').classList.add('hidden');
                 document.getElementById('resume-btn').classList.remove('hidden');
             }
+            refreshTabTitle();
         }
-        
+
         function resumeTimer() {
             if (timerMode === 'normal' && isPaused) {
                 const pauseDuration = Date.now() - pauseStartTime;
@@ -5350,6 +5421,7 @@ let pauseStartTime = 0;
                 timerInterval = setInterval(() => {
                     const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
                     sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
+                    refreshTabTitle();
                 }, 1000);
                 isPaused = false;
                 pauseStartTime = 0;
@@ -5361,6 +5433,7 @@ let pauseStartTime = 0;
                 document.getElementById('pause-btn').classList.remove('hidden');
                 document.getElementById('resume-btn').classList.add('hidden');
             }
+            refreshTabTitle();
         }
 
         // --- NEW: Helper to start the next Pomodoro phase ---
@@ -5392,6 +5465,8 @@ let pauseStartTime = 0;
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
 
+            refreshTabTitle();
+
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
         }
 
@@ -5401,6 +5476,7 @@ let pauseStartTime = 0;
             sessionTimerDisplay.textContent = formatTime(elapsedSeconds); // Show break time on main timer display
             pomodoroStatusDisplay.textContent = 'On Break'; // Indicate break status
             pomodoroStatusDisplay.style.color = '#f59e0b'; // Break color
+            refreshTabTitle();
         }
         
         function updateTotalTimeDisplay() {
@@ -10323,6 +10399,7 @@ if (achievementsGrid) {
                 currentUserData = { ...currentUserData, pomodoro_settings: newSettings };
                 if (timerMode === 'pomodoro' && pomodoroState === 'idle') {
                     sessionTimerDisplay.textContent = formatPomodoroTime(length * 60);
+                    refreshTabTitle();
                 }
             }
 
@@ -10751,6 +10828,7 @@ if (achievementsGrid) {
                 sessionTimerDisplay.textContent = formatTime(0);
                 pomodoroStatusDisplay.textContent = '';
             }
+            refreshTabTitle();
         }
         
         ael('normal-timer-btn', 'click', () => switchTimerMode('normal'));
