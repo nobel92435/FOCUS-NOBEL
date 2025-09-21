@@ -10,6 +10,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <link rel="manifest" href="manifest.json">
+    <!-- Set the content attribute to your app's VAPID public key so push subscriptions can be created -->
+    <meta name="vapid-public-key" content="">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel='icon' href="favicon.ico">
@@ -3092,6 +3094,161 @@
     const auth = supabase.auth;
     const storage = supabase.storage;
 
+    const focusflowConfig = window.__FOCUSFLOW_CONFIG || {};
+
+    function getVapidPublicKey() {
+        const configKey = typeof focusflowConfig.vapidPublicKey === 'string'
+            ? focusflowConfig.vapidPublicKey.trim()
+            : '';
+        if (configKey) return configKey;
+
+        const metaTag = document.querySelector('meta[name="vapid-public-key"]');
+        const metaValue = metaTag?.content ? metaTag.content.trim() : '';
+        return metaValue;
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding)
+            .replace(/-/g, '+')
+            .replace(/_/g, '/');
+
+        const rawData = atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    function normalizePushSubscription(value) {
+        if (!value) return null;
+        let parsed = value;
+
+        if (typeof value === 'string') {
+            try {
+                parsed = JSON.parse(value);
+            } catch (error) {
+                console.warn('Failed to parse stored push subscription.', error);
+                return null;
+            }
+        }
+
+        if (typeof parsed !== 'object') return null;
+        const { endpoint, keys = {}, expirationTime = null } = parsed;
+        if (!endpoint) return null;
+
+        return {
+            endpoint,
+            expirationTime,
+            keys: {
+                auth: keys.auth,
+                p256dh: keys.p256dh
+            }
+        };
+    }
+
+    function areSubscriptionsEqual(a, b) {
+        const left = normalizePushSubscription(a);
+        const right = normalizePushSubscription(b);
+        if (!left || !right) return false;
+        return left.endpoint === right.endpoint && JSON.stringify(left.keys || {}) === JSON.stringify(right.keys || {});
+    }
+
+    let pushSubscriptionPromise = null;
+
+    async function ensurePushSubscription({ forceRefresh = false } = {}) {
+        if (typeof window === 'undefined') return null;
+        if (!currentUser || currentUser.isAnonymous) return null;
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.warn('Push messaging is not supported in this browser.');
+            return null;
+        }
+
+        if (typeof Notification === 'undefined') {
+            console.warn('Notifications API not available in this environment.');
+            return null;
+        }
+
+        if (Notification.permission === 'denied') {
+            console.warn('Notifications are blocked by the user.');
+            return null;
+        }
+
+        if (Notification.permission === 'default') {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    return null;
+                }
+            } catch (error) {
+                console.warn('Notification permission request failed:', error);
+                return null;
+            }
+        }
+
+        const vapidPublicKey = getVapidPublicKey();
+        if (!vapidPublicKey) {
+            console.warn('Missing VAPID public key. Set window.__FOCUSFLOW_CONFIG.vapidPublicKey or the vapid-public-key meta tag.');
+            return null;
+        }
+
+        if (pushSubscriptionPromise && !forceRefresh) {
+            return pushSubscriptionPromise;
+        }
+
+        pushSubscriptionPromise = (async () => {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                let subscription = await registration.pushManager.getSubscription();
+
+                if (subscription && forceRefresh) {
+                    try {
+                        await subscription.unsubscribe();
+                    } catch (unsubscribeError) {
+                        console.warn('Failed to unsubscribe from push notifications before refreshing.', unsubscribeError);
+                    }
+                    subscription = null;
+                }
+
+                if (!subscription) {
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+                    });
+                }
+
+                const subscriptionJSON = subscription.toJSON();
+                const storedSubscription = normalizePushSubscription(currentUserData?.push_subscription);
+                if (!areSubscriptionsEqual(storedSubscription, subscriptionJSON)) {
+                    const { error } = await supabase
+                        .from('profiles')
+                        .update({ push_subscription: subscriptionJSON })
+                        .eq('id', currentUser.id);
+
+                    if (error) {
+                        console.error('Failed to save push subscription to Supabase:', error);
+                    } else {
+                        currentUserData = {
+                            ...(currentUserData || {}),
+                            push_subscription: subscriptionJSON
+                        };
+                    }
+                }
+
+                return subscriptionJSON;
+            } catch (error) {
+                console.error('Failed to ensure push subscription:', error);
+                return null;
+            } finally {
+                pushSubscriptionPromise = null;
+            }
+        })();
+
+        return pushSubscriptionPromise;
+    }
+
     /**
      * Compresses an image file using a canvas.
      * @param {File} file The image file to compress.
@@ -3347,6 +3504,12 @@
             // Ensure daily totals persist across refreshes
             await loadDailyTotal();
             showPage('page-timer');
+
+            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                ensurePushSubscription().catch(error => {
+                    console.warn('Failed to restore push subscription after auth:', error);
+                });
+            }
         }
     }
         const ACHIEVEMENTS = {
@@ -3525,18 +3688,42 @@
         // --- FIX START: Add the function to handle Pomodoro phase transitions ---
         async function handlePomodoroPhaseEnd(data) {
             const { newState, oldState } = data;
-        
+
             // Play the appropriate sound for the end of the phase
             playSound(oldState === 'work' ? pomodoroSounds.break : pomodoroSounds.focus, pomodoroSounds.volume);
-        
+
             // Save the session that just ended
-            const sessionDuration = oldState === 'work' 
+            const sessionDuration = oldState === 'work'
                 ? pomodoroSettings.work * 60
                 : (oldState === 'short_break' ? pomodoroSettings.short_break * 60 : pomodoroSettings.long_break * 60);
-        
+
             const sessionType = oldState === 'work' ? 'study' : 'break';
             const subject = oldState === 'work' ? activeSubject : oldState.replace('_', ' ');
             await saveSession(subject, sessionDuration, sessionType);
+
+            const transitionMessage = oldState === 'work'
+                ? {
+                    title: 'Focus complete!',
+                    options: { body: `Time for a ${newState.replace('_', ' ')}.`, tag: 'pomodoro-transition' }
+                }
+                : {
+                    title: 'Break is over!',
+                    options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' }
+                };
+
+            const serverHandled = await triggerServerNotification({
+                ...transitionMessage,
+                newState,
+                oldState
+            });
+
+            if (!serverHandled && Notification.permission === 'granted') {
+                scheduleTransitionNotification(0, transitionMessage.title, transitionMessage.options, {
+                    type: 'TIMER_ENDED',
+                    newState,
+                    oldState
+                });
+            }
 
             // If a work session just ended, increment the pomodoro count for the active task
             if (oldState === 'work' && activeTaskId) {
@@ -3596,24 +3783,47 @@ async function triggerServerNotification(messageData) {
     if (!currentUser) {
         console.error('User not authenticated, cannot send server notification.');
         showToast('Please sign in to enable server notifications.', 'error');
-        return;
+        return false;
     }
+
+    if (!messageData || !messageData.newState || !messageData.oldState) {
+        console.warn('triggerServerNotification called without required state information.', messageData);
+        return false;
+    }
+
+    const options = messageData.options ? { ...messageData.options } : {};
+    if (options && !options.tag) {
+        options.tag = 'pomodoro-transition';
+    }
+    const bodyText = typeof messageData.body === 'string'
+        ? messageData.body
+        : (typeof options.body === 'string' ? options.body : '');
+    options.body = bodyText;
+
+    try {
+        await ensurePushSubscription();
+    } catch (subscriptionError) {
+        console.warn('Unable to confirm push subscription before sending notification:', subscriptionError);
+    }
+
     try {
         const { data, error } = await supabase.functions.invoke('send-pomodoro-notification', {
             body: {
                 userId: currentUser.id,
                 appId,
                 title: messageData.title,
-                body: messageData.options.body,
+                body: options.body,
                 newState: messageData.newState,
                 oldState: messageData.oldState
             }
         });
         if (error) throw error;
         console.log('Server notification triggered:', data);
+        return true;
     } catch (error) {
         console.error('Error triggering server notification:', error);
         showToast('Failed to schedule notification.', 'error');
+        return false;
     }
 }
 
@@ -4030,7 +4240,7 @@ let pauseStartTime = 0;
          * @param {string} title - The title of the notification.
          * @param {object} options - The options for the notification (e.g., body, icon, tag).
          */
-        function scheduleTransitionNotification(delayInMs, title, options) {
+        function scheduleTransitionNotification(delayInMs, title, options, transitionPayload = {}) {
             // First, make sure Service Workers and Notifications are supported.
             if (!('serviceWorker' in navigator) || !('Notification' in window)) {
                 console.warn('Service Workers or Notifications are not supported in this browser.');
@@ -4052,12 +4262,25 @@ let pauseStartTime = 0;
             
             function scheduleNow(delay, title, opts) {
                 navigator.serviceWorker.ready.then(registration => {
-                    registration.active.postMessage({
+                    const target = registration.active || registration.waiting || registration.installing;
+                    if (!target) {
+                        console.warn('No active service worker available to schedule a notification.');
+                        return;
+                    }
+                    const transitionMessage = {
+                        type: transitionPayload.type || 'TIMER_ENDED',
+                        newState: transitionPayload.newState,
+                        oldState: transitionPayload.oldState,
+                        title,
+                        options: opts
+                    };
+                    target.postMessage({
                         type: 'SCHEDULE_NOTIFICATION',
                         payload: {
                             delay: delay,
                             title: title,
-                            options: opts
+                            options: opts,
+                            transitionMessage
                         }
                     });
                 });
@@ -4936,15 +5159,8 @@ let pauseStartTime = 0;
                 playSound(pomodoroSounds.start, pomodoroSounds.volume);
 
                 const workDurationSeconds = pomodoroSettings.work * 60;
+                await ensurePushSubscription();
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
-
-                // Use the new reliable SW alarm
-                await triggerServerNotification({
-        title: 'Focus complete!',
-        options: { body: `Time for a short break.`, tag: 'pomodoro-transition' }, // Options for the FCM notification
-        newState: 'short_break',
-        oldState: 'work',
-    });
 
                 pomodoroStatusDisplay.textContent = `Work (1/${pomodoroSettings.long_break_interval})`;
                 pomodoroStatusDisplay.style.color = '#3b82f6';
@@ -5078,39 +5294,22 @@ let pauseStartTime = 0;
 
             let durationSeconds = 0;
             let statusText = '';
-            let transitionMessage = {};
 
             const currentCycle = Math.floor((currentUserData.pomodoroCycle || 0) / 2);
-            
+
             if (state === 'work') {
                 durationSeconds = pomodoroSettings.work * 60;
                 const nextState = ((currentCycle + 1) % pomodoroSettings.long_break_interval === 0) ? 'long_break' : 'short_break';
                 statusText = `Work (${currentCycle + 1}/${pomodoroSettings.long_break_interval})`;
-                transitionMessage = {
-                    type: 'TIMER_ENDED',
-                    newState: nextState,
-                    oldState: 'work',
-                    title: 'Focus complete!',
-                    options: { body: `Time for a ${nextState.replace('_', ' ')}.`, tag: 'pomodoro-transition' }
-                };
             } else { // It's a break
                 durationSeconds = state === 'short_break' ? pomodoroSettings.short_break * 60 : pomodoroSettings.long_break * 60;
                 statusText = state.replace('_', ' ');
-                transitionMessage = {
-                    type: 'TIMER_ENDED',
-                    newState: 'work',
-                    oldState: state,
-                    title: 'Break is over!',
-                    options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' }
-                };
             }
-            
+
             // Start the UI timer
             pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds });
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e0b' : '#3b82f6';
-
-            await triggerServerNotification(transitionMessage);
 
             // Update cycle in Supabase only after a break is completed (meaning a work session is starting)
             if (state === 'work') {
@@ -12217,7 +12416,7 @@ if (achievementsGrid) {
                 // if your app is hosted in a subfolder like /Focus-Clock/
                 // './service-worker.js' is generally preferred for relative paths.
                 navigator.serviceWorker
-                    .register('./service-worker.js', { scope: './' }) // Updated path and added scope
+                    .register('./service_worker.js', { scope: './' }) // Updated path and added scope
                     .then(registration => {
                         console.log('Service Worker registered successfully with scope:', registration.scope);
                         // --- START NEW CODE FOR SERVICE WORKER UPDATES ---
