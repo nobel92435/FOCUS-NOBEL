@@ -3223,6 +3223,20 @@
                 }
 
                 const subscriptionJSON = subscription.toJSON();
+
+                // --- FIX START: Add client-side validation before saving ---
+                // This prevents malformed subscription objects from ever being sent to the database.
+                if (!subscriptionJSON || !subscriptionJSON.keys || !subscriptionJSON.keys.auth || !subscriptionJSON.keys.p256dh) {
+                    console.error("Generated an invalid push subscription object, not saving to DB:", subscriptionJSON);
+                    showToast('Could not create a valid notification subscription.', 'error');
+                    // We try to recover by forcing a refresh on the next attempt.
+                    if (!forceRefresh) {
+                        return ensurePushSubscription({ forceRefresh: true });
+                    }
+                    return null; // Stop if even a forced refresh fails.
+                }
+                // --- FIX END ---
+
                 const storedSubscription = normalizePushSubscription(currentUserData?.push_subscription);
                 if (!areSubscriptionsEqual(storedSubscription, subscriptionJSON)) {
                     const { error } = await supabase
