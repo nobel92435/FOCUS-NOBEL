@@ -163,11 +163,23 @@ self.addEventListener('push', (event) => {
     }
 
     const title = payload.title || 'FocusFlow';
-    const options = payload.options || {};
-    if (payload.body && !options.body) {
-        options.body = payload.body;
+    const options = { ...(payload.options || {}) };
+    const fallbackBody = typeof payload.body === 'string' ? payload.body : undefined;
+    if (fallbackBody && !options.body) {
+        options.body = fallbackBody;
     }
+
+    const defaultIcon = 'https://placehold.co/192x192/0a0a0a/e0e0e0?text=Flow+192';
+    options.icon = options.icon || payload.icon || defaultIcon;
+    options.badge = options.badge || payload.badge;
+    options.vibrate = options.vibrate || payload.vibrate || [100, 50, 100];
     options.tag = options.tag || notificationTag;
-    
+    options.data = {
+        ...(options.data || {}),
+        dateOfArrival: Date.now(),
+        primaryKey: 1,
+        payload
+    };
+
     event.waitUntil(self.registration.showNotification(title, options));
 });

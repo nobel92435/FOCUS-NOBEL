@@ -3143,8 +3143,19 @@
         const { endpoint, keys = {}, expirationTime = null } = parsed;
         if (!endpoint) return null;
 
-        const authKey = typeof keys.auth === 'string' && keys.auth.trim() ? keys.auth.trim() : null;
-        const p256dhKey = typeof keys.p256dh === 'string' && keys.p256dh.trim() ? keys.p256dh.trim() : null;
+        const extractKey = (keyValue) => {
+            if (!keyValue) return null;
+            if (typeof keyValue === 'string') {
+                return keyValue.trim() || null;
+            }
+            if (typeof keyValue === 'object' && typeof keyValue.data === 'string') {
+                return keyValue.data.trim() || null;
+            }
+            return null;
+        };
+
+        const authKey = extractKey(keys.auth);
+        const p256dhKey = extractKey(keys.p256dh);
 
         if (!authKey || !p256dhKey) return null;
 
@@ -3154,6 +3165,25 @@
             keys: {
                 auth: authKey,
                 p256dh: p256dhKey
+            }
+        };
+    }
+
+    function preparePushSubscriptionForServer(value) {
+        const normalized = normalizePushSubscription(value);
+        if (!normalized) return null;
+
+        const toKeyObject = (key) => ({
+            encoding: 'base64url',
+            data: key
+        });
+
+        return {
+            endpoint: normalized.endpoint,
+            expirationTime: normalized.expirationTime ?? null,
+            keys: {
+                auth: toKeyObject(normalized.keys.auth),
+                p256dh: toKeyObject(normalized.keys.p256dh)
             }
         };
     }
@@ -3229,9 +3259,10 @@
                 }
 
                 const subscriptionJSON = subscription.toJSON();
-                const normalizedSubscription = normalizePushSubscription(subscriptionJSON);
+                const serverReadySubscription = preparePushSubscriptionForServer(subscriptionJSON);
+                const normalizedSubscription = normalizePushSubscription(serverReadySubscription);
 
-                if (!normalizedSubscription) {
+                if (!serverReadySubscription || !normalizedSubscription) {
                     console.error('Generated an invalid push subscription object, not saving to DB:', subscriptionJSON);
                     showToast('Could not create a valid notification subscription.', 'error');
                     if (!forceRefresh) {
@@ -3240,11 +3271,11 @@
                     return null;
                 }
 
-                const storedSubscription = normalizePushSubscription(currentUserData?.push_subscription);
-                if (!areSubscriptionsEqual(storedSubscription, normalizedSubscription)) {
+                const storedSubscription = currentUserData?.push_subscription;
+                if (!areSubscriptionsEqual(storedSubscription, serverReadySubscription)) {
                     const { error } = await supabase
                         .from('profiles')
-                        .update({ push_subscription: normalizedSubscription })
+                        .update({ push_subscription: serverReadySubscription })
                         .eq('id', currentUser.id);
 
                     if (error) {
@@ -3252,7 +3283,7 @@
                     } else {
                         currentUserData = {
                             ...(currentUserData || {}),
-                            push_subscription: normalizedSubscription
+                            push_subscription: serverReadySubscription
                         };
                     }
                 }
