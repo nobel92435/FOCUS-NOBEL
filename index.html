@@ -3138,16 +3138,22 @@
             }
         }
 
-        if (typeof parsed !== 'object') return null;
+        if (!parsed || typeof parsed !== 'object') return null;
+
         const { endpoint, keys = {}, expirationTime = null } = parsed;
         if (!endpoint) return null;
+
+        const authKey = typeof keys.auth === 'string' && keys.auth.trim() ? keys.auth.trim() : null;
+        const p256dhKey = typeof keys.p256dh === 'string' && keys.p256dh.trim() ? keys.p256dh.trim() : null;
+
+        if (!authKey || !p256dhKey) return null;
 
         return {
             endpoint,
             expirationTime,
             keys: {
-                auth: keys.auth,
-                p256dh: keys.p256dh
+                auth: authKey,
+                p256dh: p256dhKey
             }
         };
     }
@@ -3223,25 +3229,22 @@
                 }
 
                 const subscriptionJSON = subscription.toJSON();
+                const normalizedSubscription = normalizePushSubscription(subscriptionJSON);
 
-                // --- FIX START: Add client-side validation before saving ---
-                // This prevents malformed subscription objects from ever being sent to the database.
-                if (!subscriptionJSON || !subscriptionJSON.keys || !subscriptionJSON.keys.auth || !subscriptionJSON.keys.p256dh) {
-                    console.error("Generated an invalid push subscription object, not saving to DB:", subscriptionJSON);
+                if (!normalizedSubscription) {
+                    console.error('Generated an invalid push subscription object, not saving to DB:', subscriptionJSON);
                     showToast('Could not create a valid notification subscription.', 'error');
-                    // We try to recover by forcing a refresh on the next attempt.
                     if (!forceRefresh) {
                         return ensurePushSubscription({ forceRefresh: true });
                     }
-                    return null; // Stop if even a forced refresh fails.
+                    return null;
                 }
-                // --- FIX END ---
 
                 const storedSubscription = normalizePushSubscription(currentUserData?.push_subscription);
-                if (!areSubscriptionsEqual(storedSubscription, subscriptionJSON)) {
+                if (!areSubscriptionsEqual(storedSubscription, normalizedSubscription)) {
                     const { error } = await supabase
                         .from('profiles')
-                        .update({ push_subscription: subscriptionJSON })
+                        .update({ push_subscription: normalizedSubscription })
                         .eq('id', currentUser.id);
 
                     if (error) {
@@ -3249,12 +3252,12 @@
                     } else {
                         currentUserData = {
                             ...(currentUserData || {}),
-                            push_subscription: subscriptionJSON
+                            push_subscription: normalizedSubscription
                         };
                     }
                 }
 
-                return subscriptionJSON;
+                return normalizedSubscription;
             } catch (error) {
                 console.error('Failed to ensure push subscription:', error);
                 return null;
@@ -3817,10 +3820,20 @@ async function triggerServerNotification(messageData) {
         : (typeof options.body === 'string' ? options.body : '');
     options.body = bodyText;
 
+    let activeSubscription = null;
     try {
-        await ensurePushSubscription();
+        activeSubscription = await ensurePushSubscription();
     } catch (subscriptionError) {
         console.warn('Unable to confirm push subscription before sending notification:', subscriptionError);
+    }
+
+    if (!activeSubscription) {
+        activeSubscription = normalizePushSubscription(currentUserData?.push_subscription);
+    }
+
+    if (!activeSubscription) {
+        console.warn('No valid push subscription available. Skipping server notification request.');
+        return false;
     }
 
     try {
@@ -3836,6 +3849,10 @@ async function triggerServerNotification(messageData) {
         });
         if (error) throw error;
         if (!data?.success) {
+            if (data?.error && /auth/i.test(data.error)) {
+                console.warn('Server reported invalid push subscription. Forcing resubscribe.');
+                await ensurePushSubscription({ forceRefresh: true });
+            }
             console.warn('Server notification did not confirm delivery:', data);
             return false;
         }
