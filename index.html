@@ -3173,18 +3173,14 @@
         const normalized = normalizePushSubscription(value);
         if (!normalized) return null;
 
-        const toKeyObject = (key) => ({
-            encoding: 'base64url',
-            data: key
-        });
-
         return {
             endpoint: normalized.endpoint,
             expirationTime: normalized.expirationTime ?? null,
             keys: {
-                auth: toKeyObject(normalized.keys.auth),
-                p256dh: toKeyObject(normalized.keys.p256dh)
-            }
+                auth: normalized.keys.auth,
+                p256dh: normalized.keys.p256dh
+            },
+            encoding: 'base64url'
         };
     }
 
