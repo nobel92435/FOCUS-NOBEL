@@ -4311,7 +4311,7 @@ let pauseStartTime = 0;
          * @param {string} title - The title of the notification.
          * @param {object} options - The options for the notification (e.g., body, icon, tag).
          */
-        function scheduleTransitionNotification(delayInMs, title, options, transitionPayload = {}) {
+        function scheduleTransitionNotification(delayInMs, title, options, transitionPayload = {}, scheduleOptions = {}) {
             // First, make sure Service Workers and Notifications are supported.
             if (!('serviceWorker' in navigator) || !('Notification' in window)) {
                 console.warn('Service Workers or Notifications are not supported in this browser.');
@@ -4351,7 +4351,8 @@ let pauseStartTime = 0;
                             delay: delay,
                             title: title,
                             options: opts,
-                            transitionMessage
+                            transitionMessage,
+                            timerId: scheduleOptions.timerId
                         }
                     });
                 });
@@ -5147,6 +5148,9 @@ let pauseStartTime = 0;
             }
             unlockAudio();
 
+            // Clear any pending heads-up notifications from previous timers
+            cancelSWAlarm('pomodoro-pre-end');
+
             // Stop and save any active break session before starting a new study session
             if (breakTimerInterval) {
                 clearInterval(breakTimerInterval);
@@ -5241,9 +5245,31 @@ let pauseStartTime = 0;
                 const cycleForDisplay = (currentUserData.pomodoroCycle || 0) % pomodoroSettings.long_break_interval + 1;
                 pomodoroStatusDisplay.textContent = `Work (${cycleForDisplay}/${pomodoroSettings.long_break_interval})`;
                 pomodoroStatusDisplay.style.color = '#3b82f6';
-                
+
                 const workDurationSeconds = pomodoroSettings.work * 60;
                 await ensurePushSubscription();
+
+                const headsUpDelayMs = Math.max((workDurationSeconds - 5) * 1000, 0);
+                if (headsUpDelayMs > 0) {
+                    scheduleTransitionNotification(
+                        headsUpDelayMs,
+                        'Almost time for a break!',
+                        {
+                            body: 'Your focus session wraps up in 5 seconds.',
+                            tag: 'pomodoro-pre-end',
+                            requireInteraction: false
+                        },
+                        {
+                            type: 'TIMER_HEADS_UP',
+                            oldState: 'work',
+                            newState: 'work-ending'
+                        },
+                        {
+                            timerId: 'pomodoro-pre-end'
+                        }
+                    );
+                }
+
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
             }
 
@@ -5265,6 +5291,9 @@ let pauseStartTime = 0;
         async function stopTimer() {
             // Stop the UI timer in the web worker
             pomodoroWorker.postMessage({ command: 'stop' });
+
+            // Cancel any pending heads-up notifications
+            cancelSWAlarm('pomodoro-pre-end');
 
             // --- ADD THIS BLOCK TO RESET PAUSE STATE ---
             isPaused = false;
