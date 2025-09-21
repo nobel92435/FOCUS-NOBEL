@@ -3222,19 +3222,32 @@
                 const subscriptionJSON = subscription.toJSON();
                 const storedSubscription = normalizePushSubscription(currentUserData?.push_subscription);
                 if (!areSubscriptionsEqual(storedSubscription, subscriptionJSON)) {
-                    const { error } = await supabase
+                    let savedValue = subscriptionJSON;
+                    let { error } = await supabase
                         .from('profiles')
                         .update({ push_subscription: subscriptionJSON })
                         .eq('id', currentUser.id);
 
                     if (error) {
-                        console.error('Failed to save push subscription to Supabase:', error);
-                    } else {
-                        currentUserData = {
-                            ...(currentUserData || {}),
-                            push_subscription: subscriptionJSON
-                        };
+                        console.warn('Failed to persist push subscription as JSON, retrying as string:', error.message || error);
+                        const serialized = JSON.stringify(subscriptionJSON);
+                        const { error: fallbackError } = await supabase
+                            .from('profiles')
+                            .update({ push_subscription: serialized })
+                            .eq('id', currentUser.id);
+
+                        if (fallbackError) {
+                            console.error('Failed to save push subscription to Supabase:', fallbackError);
+                            throw fallbackError;
+                        }
+
+                        savedValue = serialized;
                     }
+
+                    currentUserData = {
+                        ...(currentUserData || {}),
+                        push_subscription: savedValue
+                    };
                 }
 
                 return subscriptionJSON;
@@ -3800,10 +3813,17 @@ async function triggerServerNotification(messageData) {
         : (typeof options.body === 'string' ? options.body : '');
     options.body = bodyText;
 
+    let subscription = null;
     try {
-        await ensurePushSubscription();
+        subscription = await ensurePushSubscription();
     } catch (subscriptionError) {
         console.warn('Unable to confirm push subscription before sending notification:', subscriptionError);
+    }
+
+    if (!subscription) {
+        console.warn('No push subscription is available; skipping server-triggered notification.');
+        showToast('Enable browser notifications to receive push alerts.', 'warning');
+        return false;
     }
 
     try {
