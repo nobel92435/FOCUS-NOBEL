@@ -3670,6 +3670,10 @@
         const blob = new Blob([workerCode], { type: 'application/javascript' });
         const pomodoroWorker = new Worker(URL.createObjectURL(blob));
 
+        const POMODORO_NOTIFICATION_ICON = 'https://placehold.co/192x192/0a0a0a/e0e0e0?text=Flow+192';
+        const POMODORO_NOTIFICATION_BADGE = 'https://placehold.co/96x96/0a0a0a/e0e0e0?text=Flow';
+        const POMODORO_NOTIFICATION_VIBRATE = [200, 100, 200, 100, 200];
+
         // --- FIX START: Listen for messages from the Pomodoro Web Worker ---
         pomodoroWorker.onmessage = (e) => {
             const { type, timeLeft } = e.data;
@@ -3746,25 +3750,31 @@
 
             const sessionType = oldState === 'work' ? 'study' : 'break';
             const subject = oldState === 'work' ? activeSubject : oldState.replace('_', ' ');
-            await saveSession(subject, sessionDuration, sessionType);
 
             const transitionMessage = oldState === 'work'
                 ? {
                     title: 'Focus complete!',
-                    options: { body: `Time for a ${newState.replace('_', ' ')}.`, tag: 'pomodoro-transition' }
+                    options: buildPomodoroNotificationOptions({ body: `Time for a ${newState.replace('_', ' ')}.` }, { newState, oldState })
                 }
                 : {
                     title: 'Break is over!',
-                    options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' }
+                    options: buildPomodoroNotificationOptions({ body: 'Time to get back to focus.' }, { newState, oldState })
                 };
 
-            const serverHandled = await triggerServerNotification({
+            const serverResult = await triggerServerNotification({
                 ...transitionMessage,
                 newState,
                 oldState
             });
 
-            if (!serverHandled && Notification.permission === 'granted') {
+            const recordedByServer = Boolean(serverResult && serverResult.recorded && serverResult.profile);
+
+            await saveSession(subject, sessionDuration, sessionType, {
+                skipSessionInsert: recordedByServer,
+                serverProfile: recordedByServer ? serverResult.profile : null
+            });
+
+            if ((!serverResult || !serverResult.delivered) && Notification.permission === 'granted') {
                 scheduleTransitionNotification(0, transitionMessage.title, transitionMessage.options, {
                     type: 'TIMER_ENDED',
                     newState,
@@ -3830,22 +3840,23 @@ async function triggerServerNotification(messageData) {
     if (!currentUser) {
         console.error('User not authenticated, cannot send server notification.');
         showToast('Please sign in to enable server notifications.', 'error');
-        return false;
+        return { ok: false, delivered: false, recorded: false, profile: null, session: null, error: 'unauthenticated' };
     }
 
     if (!messageData || !messageData.newState || !messageData.oldState) {
         console.warn('triggerServerNotification called without required state information.', messageData);
-        return false;
+        return { ok: false, delivered: false, recorded: false, profile: null, session: null, error: 'missing-state' };
     }
 
-    const options = messageData.options ? { ...messageData.options } : {};
-    if (options && !options.tag) {
-        options.tag = 'pomodoro-transition';
-    }
+    let options = messageData.options ? { ...messageData.options } : {};
     const bodyText = typeof messageData.body === 'string'
         ? messageData.body
         : (typeof options.body === 'string' ? options.body : '');
     options.body = bodyText;
+    options = buildPomodoroNotificationOptions(options, {
+        newState: messageData.newState,
+        oldState: messageData.oldState
+    });
 
     let activeSubscription = null;
     try {
@@ -3860,7 +3871,7 @@ async function triggerServerNotification(messageData) {
 
     if (!activeSubscription) {
         console.warn('No valid push subscription available. Skipping server notification request.');
-        return false;
+        return { ok: false, delivered: false, recorded: false, profile: null, session: null, error: 'no-subscription' };
     }
 
     try {
@@ -3871,24 +3882,47 @@ async function triggerServerNotification(messageData) {
                 title: messageData.title,
                 body: options.body,
                 newState: messageData.newState,
-                oldState: messageData.oldState
+                oldState: messageData.oldState,
+                options
             }
         });
         if (error) throw error;
-        if (!data?.success) {
-            if (data?.error && /auth/i.test(data.error)) {
-                console.warn('Server reported invalid push subscription. Forcing resubscribe.');
-                await ensurePushSubscription({ forceRefresh: true });
-            }
-            console.warn('Server notification did not confirm delivery:', data);
-            return false;
+
+        if (data?.error && /auth/i.test(data.error)) {
+            console.warn('Server reported invalid push subscription. Forcing resubscribe.');
+            await ensurePushSubscription({ forceRefresh: true });
         }
-        console.log('Server notification triggered:', data);
-        return true;
+
+        if (!data) {
+            console.warn('Server notification returned no data response.');
+            return { ok: false, delivered: false, recorded: false, profile: null, session: null, error: 'empty-response' };
+        }
+
+        if (!data.success) {
+            console.warn('Server notification did not confirm delivery:', data);
+        } else {
+            console.log('Server notification triggered:', data);
+        }
+
+        return {
+            ok: true,
+            delivered: Boolean(data.delivered),
+            recorded: Boolean(data.recorded),
+            profile: data.profile || null,
+            session: data.session || null,
+            error: data.error || null
+        };
     } catch (error) {
         console.error('Error triggering server notification:', error);
         showToast('Failed to schedule notification.', 'error');
-        return false;
+        return {
+            ok: false,
+            delivered: false,
+            recorded: false,
+            profile: null,
+            session: null,
+            error: error instanceof Error ? error.message : String(error)
+        };
     }
 }
 
@@ -4298,6 +4332,30 @@ let pauseStartTime = 0;
             return undefined;
         }
 
+        function buildPomodoroNotificationOptions(baseOptions = {}, transitionMeta = {}) {
+            const opts = { ...(baseOptions || {}) };
+            opts.tag = opts.tag || 'pomodoro-transition';
+            opts.renotify = opts.renotify ?? true;
+            opts.requireInteraction = opts.requireInteraction ?? true;
+            opts.icon = opts.icon || POMODORO_NOTIFICATION_ICON;
+            opts.badge = opts.badge || POMODORO_NOTIFICATION_BADGE;
+            opts.vibrate = opts.vibrate || POMODORO_NOTIFICATION_VIBRATE;
+            opts.timestamp = opts.timestamp || Date.now();
+
+            const data = typeof opts.data === 'object' && opts.data !== null
+                ? { ...opts.data }
+                : {};
+
+            data.transition = {
+                ...(data.transition || {}),
+                ...transitionMeta,
+                triggeredAt: Date.now(),
+            };
+
+            opts.data = data;
+            return opts;
+        }
+
         /**
          * Sends a message to the Service Worker to schedule a notification.
          * This is the key to reliable background timers on mobile.
@@ -4324,7 +4382,7 @@ let pauseStartTime = 0;
             } else if (Notification.permission === 'granted') {
                 scheduleNow(delayInMs, title, options);
             }
-            
+
             function scheduleNow(delay, title, opts) {
                 navigator.serviceWorker.ready.then(registration => {
                     const target = registration.active || registration.waiting || registration.installing;
@@ -4332,19 +4390,20 @@ let pauseStartTime = 0;
                         console.warn('No active service worker available to schedule a notification.');
                         return;
                     }
+                    const enrichedOptions = buildPomodoroNotificationOptions(opts, transitionPayload);
                     const transitionMessage = {
                         type: transitionPayload.type || 'TIMER_ENDED',
                         newState: transitionPayload.newState,
                         oldState: transitionPayload.oldState,
                         title,
-                        options: opts
+                        options: enrichedOptions
                     };
                     target.postMessage({
                         type: 'SCHEDULE_NOTIFICATION',
                         payload: {
                             delay: delay,
                             title: title,
-                            options: opts,
+                            options: enrichedOptions,
                             transitionMessage
                         }
                     });
@@ -5399,7 +5458,7 @@ let pauseStartTime = 0;
             totalBreakTimeDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
         }
 
-        async function saveSession(subject, durationSeconds, sessionType = 'study') { // Default to 'study'
+        async function saveSession(subject, durationSeconds, sessionType = 'study', opts = {}) { // Default to 'study'
             if (!currentUser || durationSeconds <= 0) {
                 return;
             }
@@ -5420,17 +5479,40 @@ let pauseStartTime = 0;
 
             const MAX_BREAK_SECONDS = 3 * 3600; // 3 hours in seconds
             const cappedDuration = (sessionType === 'break' && durationSeconds > MAX_BREAK_SECONDS) ? MAX_BREAK_SECONDS : durationSeconds;
+            const { skipSessionInsert = false, serverProfile = null } = opts || {};
 
             try {
-                // Fetch current profile
-                const { data: userData, error: fetchErr } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', currentUser.id)
-                    .single();
-                if (fetchErr) throw fetchErr;
+                if (serverProfile) {
+                    applyServerProfileSnapshot(serverProfile, sessionType);
+                    showToast(`Session of ${formatTime(cappedDuration, false)} saved!`, "success");
+                    if (sessionType === 'study') {
+                        await checkAndAwardAchievements(cappedDuration);
+                    }
+                    return;
+                }
 
                 const todayStr = new Date().toISOString().split('T')[0];
+                let userData = currentUserData || {};
+
+                if (!userData || !userData.id || skipSessionInsert) {
+                    const { data: fetchedProfile, error: fetchErr } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', currentUser.id)
+                        .single();
+                    if (fetchErr) throw fetchErr;
+                    userData = fetchedProfile;
+                }
+
+                if (skipSessionInsert) {
+                    applyServerProfileSnapshot(userData, sessionType);
+                    showToast(`Session of ${formatTime(cappedDuration, false)} saved!`, "success");
+                    if (sessionType === 'study') {
+                        await checkAndAwardAchievements(cappedDuration);
+                    }
+                    return;
+                }
+
                 const profileUpdate = {};
 
                 if (sessionType === 'study') {
@@ -5454,22 +5536,31 @@ let pauseStartTime = 0;
                     totalBreakTimeTodayInSeconds = currentDailyBreak + cappedDuration;
                 }
 
-                // Update profile totals
-                await supabase
-                    .from('profiles')
-                    .update(profileUpdate)
-                    .eq('id', currentUser.id);
+                if (!skipSessionInsert) {
+                    await supabase
+                        .from('profiles')
+                        .update(profileUpdate)
+                        .eq('id', currentUser.id);
 
-                // Log session
-                await supabase.from('sessions').insert({
-                    profile_id: currentUser.id,
-                    subject: subject,
-                    durationSeconds: cappedDuration,
-                    endedAt: new Date().toISOString(),
-                    type: sessionType
-                });
+                    await supabase.from('sessions').insert({
+                        profile_id: currentUser.id,
+                        subject: subject,
+                        durationSeconds: cappedDuration,
+                        endedAt: new Date().toISOString(),
+                        type: sessionType
+                    });
+                }
 
-                // Update UI and check for achievements
+                currentUserData = currentUserData || {};
+                Object.assign(currentUserData, profileUpdate);
+
+                if (profileUpdate.total_time_today) {
+                    currentUserData.total_time_today = profileUpdate.total_time_today;
+                }
+                if (profileUpdate.total_break_time_today) {
+                    currentUserData.total_break_time_today = profileUpdate.total_break_time_today;
+                }
+
                 updateTotalTimeDisplay();
                 showToast(`Session of ${formatTime(cappedDuration, false)} saved!`, "success");
                 if (sessionType === 'study') {
@@ -5479,6 +5570,57 @@ let pauseStartTime = 0;
             } catch (error) {
                 console.error("Error saving session: ", error);
                 showToast("Error saving session.", "error");
+            }
+        }
+
+        function applyServerProfileSnapshot(profile, sessionType) {
+            if (!profile || typeof profile !== 'object') return;
+
+            currentUserData = currentUserData || {};
+
+            const newTotalStudySeconds = pick(profile.total_study_seconds, currentUserData.total_study_seconds);
+            if (newTotalStudySeconds !== undefined) {
+                currentUserData.total_study_seconds = newTotalStudySeconds;
+            }
+
+            const newTotalBreakSeconds = pick(profile.total_break_seconds, currentUserData.total_break_seconds);
+            if (newTotalBreakSeconds !== undefined) {
+                currentUserData.total_break_seconds = newTotalBreakSeconds;
+            }
+
+            if (profile.total_time_today && typeof profile.total_time_today.seconds === 'number') {
+                totalTimeTodayInSeconds = profile.total_time_today.seconds;
+                currentUserData.total_time_today = profile.total_time_today;
+            }
+
+            if (profile.total_break_time_today && typeof profile.total_break_time_today.seconds === 'number') {
+                totalBreakTimeTodayInSeconds = profile.total_break_time_today.seconds;
+                currentUserData.total_break_time_today = profile.total_break_time_today;
+            }
+
+            if (profile.current_streak !== undefined && profile.current_streak !== null) {
+                currentUserData.current_streak = profile.current_streak;
+            }
+
+            if (profile.pomodoroCycle !== undefined && profile.pomodoroCycle !== null) {
+                currentUserData.pomodoroCycle = profile.pomodoroCycle;
+            }
+
+            if (profile.last_study_day) {
+                currentUserData.last_study_day = profile.last_study_day;
+            }
+
+            if ('studying' in profile) {
+                currentUserData.studying = profile.studying;
+            }
+
+            updateTotalTimeDisplay();
+
+            if (sessionType === 'study' && !profile.total_time_today) {
+                totalTimeTodayInSeconds += 0;
+            }
+            if (sessionType === 'break' && !profile.total_break_time_today) {
+                totalBreakTimeTodayInSeconds += 0;
             }
         }
         async function checkAndAwardAchievements(completedSessionDuration) {
