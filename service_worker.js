@@ -106,12 +106,14 @@ let notificationTag = 'pomodoro-timer'; // A tag for notifications to group them
 self.addEventListener('message', (event) => {
     const { type, payload } = event.data || {};
 
+    let taskPromise = null;
+
     switch (type) {
         case 'SCHEDULE_ALARM':
-            scheduleNotification(payload);
+            taskPromise = scheduleNotification(payload);
             break;
         case 'SCHEDULE_NOTIFICATION':
-            scheduleNotification({
+            taskPromise = scheduleNotification({
                 delay: payload?.delay,
                 timerId: payload?.timerId,
                 transitionMessage: payload?.transitionMessage || {
@@ -127,12 +129,18 @@ self.addEventListener('message', (event) => {
             cancelAlarm(payload?.timerId);
             break;
     }
+
+    if (taskPromise && typeof event.waitUntil === 'function') {
+        event.waitUntil(taskPromise);
+    }
 });
 
 // --- Notification Scheduling ---
+const scheduledTimers = new Map();
+
 function scheduleNotification(payload = {}) {
     const delay = typeof payload.delay === 'number' ? payload.delay : 0;
-    const timerId = payload.timerId || 'pomodoro-transition';
+    const timerId = payload?.timerId || 'pomodoro-transition';
     const transitionMessage = payload.transitionMessage || {
         type: payload.type || 'TIMER_ENDED',
         newState: payload.newState,
@@ -143,7 +151,7 @@ function scheduleNotification(payload = {}) {
 
     if (!transitionMessage || !transitionMessage.title) {
         console.warn('[Service Worker] Missing notification title, skipping schedule.');
-        return;
+        return Promise.resolve();
     }
 
     const { title, options = {} } = transitionMessage;
@@ -160,30 +168,55 @@ function scheduleNotification(payload = {}) {
         ];
     }
 
-    self.registration.getNotifications({ tag: notificationOptions.tag }).then(notifications => {
-        notifications.forEach(notification => notification.close());
-    });
+    // Clear any existing timer with the same ID before scheduling a new one
+    const existingTimer = scheduledTimers.get(timerId);
+    if (existingTimer) {
+        clearTimeout(existingTimer.timeoutId);
+        scheduledTimers.delete(timerId);
+    }
 
-    setTimeout(() => {
-        self.registration.showNotification(title, notificationOptions)
-            .then(() => {
-                console.log(`[Service Worker]: Notification "${title}" shown for timerId ${timerId}.`);
-                self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+    const promise = (async () => {
+        const notificationList = await self.registration.getNotifications({ tag: notificationOptions.tag });
+        notificationList.forEach(notification => notification.close());
+
+        await new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(async () => {
+                try {
+                    await self.registration.showNotification(title, notificationOptions);
+                    console.log(`[Service Worker]: Notification "${title}" shown for timerId ${timerId}.`);
+
+                    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
                     const visibleClients = clients.filter(client => client.visibilityState === 'visible');
+
                     if (visibleClients.length > 0) {
                         visibleClients.forEach(client => client.postMessage(transitionMessage));
                     } else if (clients.length > 0) {
-                        clients[0].focus().then(client => client.postMessage(transitionMessage));
+                        const [client] = clients;
+                        try {
+                            await client.focus();
+                            client.postMessage(transitionMessage);
+                        } catch (focusError) {
+                            console.warn('[Service Worker] Could not focus client:', focusError);
+                            client.postMessage(transitionMessage);
+                        }
                     } else {
                         console.log('[Service Worker] No clients to send TIMER_ENDED message to.');
                     }
-                });
-            })
-            .catch(error => {
-                console.error('[Service Worker] Error showing notification:', error);
-            });
 
-    }, delay);
+                    resolve();
+                } catch (error) {
+                    console.error('[Service Worker] Error showing notification:', error);
+                    reject(error);
+                } finally {
+                    scheduledTimers.delete(timerId);
+                }
+            }, Math.max(0, delay));
+
+            scheduledTimers.set(timerId, { timeoutId, transitionMessage });
+        });
+    })();
+
+    return promise;
 }
 
 function cancelAlarm(timerId) {
@@ -191,6 +224,11 @@ function cancelAlarm(timerId) {
         self.registration.getNotifications({ tag: notificationTag }).then(notifications => {
             notifications.forEach(notification => notification.close());
         });
+    }
+    const scheduled = scheduledTimers.get(timerId);
+    if (scheduled) {
+        clearTimeout(scheduled.timeoutId);
+        scheduledTimers.delete(timerId);
     }
     // Add logic for other timerIds if needed in the future
 }
