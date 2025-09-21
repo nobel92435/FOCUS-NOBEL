@@ -3710,6 +3710,8 @@
             }
         }
 
+        const POMODORO_HEADS_UP_TAG = 'pomodoro-heads-up';
+
 
         // --- Application Setup ---
         const getCurrentDate = () => new Date();
@@ -4356,6 +4358,29 @@ let pauseStartTime = 0;
                     });
                 });
             }
+        }
+
+        function schedulePomodoroHeadsUpNotification(durationSeconds) {
+            if (!Number.isFinite(durationSeconds)) {
+                return;
+            }
+
+            const headsUpDelayMs = Math.max((durationSeconds - 5) * 1000, 0);
+            if (headsUpDelayMs <= 0) {
+                return;
+            }
+
+            const title = 'Heads up!';
+            const options = {
+                body: 'Your focus session ends in 5 seconds.',
+                tag: POMODORO_HEADS_UP_TAG
+            };
+
+            scheduleTransitionNotification(headsUpDelayMs, title, options, {
+                type: 'TIMER_HEADS_UP',
+                oldState: 'work',
+                newState: 'work'
+            });
         }
 
 
@@ -5241,9 +5266,11 @@ let pauseStartTime = 0;
                 const cycleForDisplay = (currentUserData.pomodoroCycle || 0) % pomodoroSettings.long_break_interval + 1;
                 pomodoroStatusDisplay.textContent = `Work (${cycleForDisplay}/${pomodoroSettings.long_break_interval})`;
                 pomodoroStatusDisplay.style.color = '#3b82f6';
-                
+
                 const workDurationSeconds = pomodoroSettings.work * 60;
                 await ensurePushSubscription();
+                cancelSWAlarm(POMODORO_HEADS_UP_TAG);
+                schedulePomodoroHeadsUpNotification(workDurationSeconds);
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
             }
 
@@ -5265,6 +5292,7 @@ let pauseStartTime = 0;
         async function stopTimer() {
             // Stop the UI timer in the web worker
             pomodoroWorker.postMessage({ command: 'stop' });
+            cancelSWAlarm(POMODORO_HEADS_UP_TAG);
 
             // --- ADD THIS BLOCK TO RESET PAUSE STATE ---
             isPaused = false;
@@ -5365,6 +5393,7 @@ let pauseStartTime = 0;
 
         // --- NEW: Helper to start the next Pomodoro phase ---
         async function startNextPomodoroPhase(state) {
+            cancelSWAlarm(POMODORO_HEADS_UP_TAG);
             if (state === 'work' && activeTaskRemainingPomodoros !== null && activeTaskRemainingPomodoros <= 0) {
                 suppressTimerSave = true;
                 await stopTimer();
@@ -5393,6 +5422,9 @@ let pauseStartTime = 0;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
 
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
+            if (state === 'work') {
+                schedulePomodoroHeadsUpNotification(durationSeconds);
+            }
         }
 
         function updateBreakTimerDisplay() {
