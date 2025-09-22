@@ -198,7 +198,9 @@ function cancelAlarm(timerId) {
         pendingNotifications.delete(key);
     }
 
-    if (timerId === 'pomodoro-transition' || !timerId) {
+    if (timerId) {
+        closeExistingNotifications(timerId);
+    } else {
         closeExistingNotifications(notificationTag);
     }
 }

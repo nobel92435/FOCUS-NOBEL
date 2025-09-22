@@ -3710,7 +3710,202 @@
             }
         }
 
-        const POMODORO_HEADS_UP_TAG = 'pomodoro-heads-up';
+        const POMODORO_HEADS_UP_TAGS = {
+            break: 'pomodoro-heads-up-break',
+            focus: 'pomodoro-heads-up-focus'
+        };
+        const POMODORO_NOTIFICATION_TABLE = 'pomodoro_notification_jobs';
+        const POMODORO_HEADS_UP_LEAD_SECONDS = 5;
+        let pomodoroServerRunId = null;
+
+        function generatePomodoroRunToken() {
+            if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                return crypto.randomUUID();
+            }
+            return `pomodoro-run-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+
+        function cancelLocalHeadsUpNotifications() {
+            cancelSWAlarm(POMODORO_HEADS_UP_TAGS.break);
+            cancelSWAlarm(POMODORO_HEADS_UP_TAGS.focus);
+        }
+
+        function getHeadsUpCopy(fromState, toState) {
+            if (fromState === 'work') {
+                const breakLabel = toState === 'long_break' ? 'long break' : 'break';
+                return {
+                    title: 'Break starts in 5s',
+                    body: `Your ${breakLabel} begins soon.`
+                };
+            }
+
+            return {
+                title: 'Focus starts in 5s',
+                body: 'Prepare to get back to focusing.'
+            };
+        }
+
+        function getHeadsUpTagForTransition(toState) {
+            return toState === 'work'
+                ? POMODORO_HEADS_UP_TAGS.focus
+                : POMODORO_HEADS_UP_TAGS.break;
+        }
+
+        function getUpcomingBreakState() {
+            const cycleCount = currentUserData.pomodoroCycle || 0;
+            const interval = Number(pomodoroSettings.long_break_interval) || 0;
+            if (interval > 0 && ((cycleCount + 1) % interval === 0)) {
+                return 'long_break';
+            }
+            return 'short_break';
+        }
+
+        function canScheduleServerHeadsUp() {
+            return Boolean(currentUser && !currentUser.isAnonymous);
+        }
+
+        async function cancelServerHeadsUpJobs() {
+            if (!canScheduleServerHeadsUp() || !pomodoroServerRunId) {
+                pomodoroServerRunId = null;
+                return;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from(POMODORO_NOTIFICATION_TABLE)
+                    .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+                    .eq('user_id', currentUser.id)
+                    .eq('client_reference', pomodoroServerRunId)
+                    .in('status', ['pending', 'queued']);
+                if (error) throw error;
+            } catch (updateError) {
+                console.warn('Unable to mark pomodoro heads-up jobs as cancelled, deleting instead.', updateError);
+                try {
+                    const { error: deleteError } = await supabase
+                        .from(POMODORO_NOTIFICATION_TABLE)
+                        .delete()
+                        .eq('user_id', currentUser.id)
+                        .eq('client_reference', pomodoroServerRunId);
+                    if (deleteError) throw deleteError;
+                } catch (finalError) {
+                    console.error('Failed to cancel queued pomodoro heads-up jobs:', finalError);
+                }
+            } finally {
+                pomodoroServerRunId = null;
+            }
+        }
+
+        async function ensurePomodoroServerRunId() {
+            if (!canScheduleServerHeadsUp()) return false;
+            if (!pomodoroServerRunId) {
+                pomodoroServerRunId = generatePomodoroRunToken();
+            }
+            return true;
+        }
+
+        async function enqueueServerHeadsUpNotification({ fromState, toState, durationSeconds, startTime = new Date() }) {
+            if (!canScheduleServerHeadsUp()) {
+                return false;
+            }
+
+            const runReady = await ensurePomodoroServerRunId();
+            if (!runReady) return false;
+
+            const leadSeconds = Math.max(Number(POMODORO_HEADS_UP_LEAD_SECONDS) || 0, 0);
+            const secondsUntilSend = Math.max(durationSeconds - leadSeconds, 0);
+            if (secondsUntilSend <= 0) {
+                return false;
+            }
+
+            const scheduledTime = new Date(startTime.getTime() + (secondsUntilSend * 1000));
+            if (Number.isNaN(scheduledTime.getTime()) || scheduledTime.getTime() <= Date.now()) {
+                return false;
+            }
+
+            const copy = getHeadsUpCopy(fromState, toState);
+            const tag = getHeadsUpTagForTransition(toState);
+            const payload = {
+                title: copy.title,
+                body: copy.body,
+                options: {
+                    tag,
+                    body: copy.body,
+                    data: {
+                        transition: { oldState: fromState, newState: toState },
+                        headsUp: true
+                    }
+                },
+                newState: toState,
+                oldState: fromState,
+                appId
+            };
+
+            const baseRecord = {
+                user_id: currentUser.id,
+                send_at: scheduledTime.toISOString(),
+                payload,
+                client_reference: pomodoroServerRunId
+            };
+
+            try {
+                const { error } = await supabase
+                    .from(POMODORO_NOTIFICATION_TABLE)
+                    .insert({ ...baseRecord, type: 'pomodoro_heads_up', status: 'pending' });
+                if (error) throw error;
+                return true;
+            } catch (primaryError) {
+                console.warn('Falling back to minimal pomodoro heads-up insert', primaryError);
+                try {
+                    const { error: fallbackError } = await supabase
+                        .from(POMODORO_NOTIFICATION_TABLE)
+                        .insert(baseRecord);
+                    if (fallbackError) throw fallbackError;
+                    return true;
+                } catch (secondaryError) {
+                    console.warn('Minimal insert still failed, retrying without client reference.', secondaryError);
+                    try {
+                        const minimalRecord = {
+                            user_id: currentUser.id,
+                            send_at: scheduledTime.toISOString(),
+                            payload
+                        };
+                        const { error: minimalError } = await supabase
+                            .from(POMODORO_NOTIFICATION_TABLE)
+                            .insert(minimalRecord);
+                        if (minimalError) throw minimalError;
+                        return true;
+                    } catch (finalError) {
+                        console.error('Failed to enqueue pomodoro heads-up notification:', finalError);
+                        return false;
+                    }
+                }
+            }
+        }
+
+        function schedulePomodoroHeadsUpNotification(durationSeconds, fromState, toState) {
+            if (!Number.isFinite(durationSeconds)) {
+                return;
+            }
+
+            const leadSeconds = Math.max(Number(POMODORO_HEADS_UP_LEAD_SECONDS) || 0, 0);
+            const delaySeconds = Math.max(durationSeconds - leadSeconds, 0);
+            if (delaySeconds <= 0) {
+                return;
+            }
+
+            const copy = getHeadsUpCopy(fromState, toState);
+            const tag = getHeadsUpTagForTransition(toState);
+            const options = {
+                body: copy.body,
+                tag
+            };
+
+            scheduleTransitionNotification(delaySeconds * 1000, copy.title, options, {
+                type: 'TIMER_HEADS_UP',
+                oldState: fromState,
+                newState: toState
+            });
+        }
 
 
         // --- Application Setup ---
@@ -4359,30 +4554,6 @@ let pauseStartTime = 0;
                 });
             }
         }
-
-        function schedulePomodoroHeadsUpNotification(durationSeconds) {
-            if (!Number.isFinite(durationSeconds)) {
-                return;
-            }
-
-            const headsUpDelayMs = Math.max((durationSeconds - 5) * 1000, 0);
-            if (headsUpDelayMs <= 0) {
-                return;
-            }
-
-            const title = 'Heads up!';
-            const options = {
-                body: 'Your focus session ends in 5 seconds.',
-                tag: POMODORO_HEADS_UP_TAG
-            };
-
-            scheduleTransitionNotification(headsUpDelayMs, title, options, {
-                type: 'TIMER_HEADS_UP',
-                oldState: 'work',
-                newState: 'work'
-            });
-        }
-
 
         async function playSound(soundId, volume) {
             if (!soundId || soundId.trim() === '') return;
@@ -5269,8 +5440,17 @@ let pauseStartTime = 0;
 
                 const workDurationSeconds = pomodoroSettings.work * 60;
                 await ensurePushSubscription();
-                cancelSWAlarm(POMODORO_HEADS_UP_TAG);
-                schedulePomodoroHeadsUpNotification(workDurationSeconds);
+                await cancelServerHeadsUpJobs();
+                cancelLocalHeadsUpNotifications();
+                const upcomingBreakState = getUpcomingBreakState();
+                const phaseStartedAt = new Date();
+                schedulePomodoroHeadsUpNotification(workDurationSeconds, 'work', upcomingBreakState);
+                await enqueueServerHeadsUpNotification({
+                    fromState: 'work',
+                    toState: upcomingBreakState,
+                    durationSeconds: workDurationSeconds,
+                    startTime: phaseStartedAt
+                });
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
             }
 
@@ -5292,7 +5472,8 @@ let pauseStartTime = 0;
         async function stopTimer() {
             // Stop the UI timer in the web worker
             pomodoroWorker.postMessage({ command: 'stop' });
-            cancelSWAlarm(POMODORO_HEADS_UP_TAG);
+            cancelLocalHeadsUpNotifications();
+            await cancelServerHeadsUpJobs();
 
             // --- ADD THIS BLOCK TO RESET PAUSE STATE ---
             isPaused = false;
@@ -5393,7 +5574,7 @@ let pauseStartTime = 0;
 
         // --- NEW: Helper to start the next Pomodoro phase ---
         async function startNextPomodoroPhase(state) {
-            cancelSWAlarm(POMODORO_HEADS_UP_TAG);
+            cancelLocalHeadsUpNotifications();
             if (state === 'work' && activeTaskRemainingPomodoros !== null && activeTaskRemainingPomodoros <= 0) {
                 suppressTimerSave = true;
                 await stopTimer();
@@ -5419,11 +5600,27 @@ let pauseStartTime = 0;
             // Start the UI timer
             pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds });
             pomodoroStatusDisplay.textContent = statusText;
-            pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
+            pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e0b' : '#3b82f6';
 
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
+            const phaseStartedAt = new Date();
             if (state === 'work') {
-                schedulePomodoroHeadsUpNotification(durationSeconds);
+                const upcomingBreakState = getUpcomingBreakState();
+                schedulePomodoroHeadsUpNotification(durationSeconds, 'work', upcomingBreakState);
+                await enqueueServerHeadsUpNotification({
+                    fromState: 'work',
+                    toState: upcomingBreakState,
+                    durationSeconds,
+                    startTime: phaseStartedAt
+                });
+            } else if (state === 'short_break' || state === 'long_break') {
+                schedulePomodoroHeadsUpNotification(durationSeconds, state, 'work');
+                await enqueueServerHeadsUpNotification({
+                    fromState: state,
+                    toState: 'work',
+                    durationSeconds,
+                    startTime: phaseStartedAt
+                });
             }
         }
 
