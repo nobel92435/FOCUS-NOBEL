@@ -3711,6 +3711,11 @@
         }
 
         const POMODORO_HEADS_UP_TAG = 'pomodoro-heads-up';
+        const HEADS_UP_LEAD_TIME_SECONDS = 5;
+        let pomodoroPhaseStartTime = 0;
+        let pomodoroPhaseEndTime = 0;
+        let pomodoroPhaseRemainingSeconds = 0;
+        let pomodoroHeadsUpSchedulerAvailable = true;
 
 
         // --- Application Setup ---
@@ -3728,6 +3733,11 @@
         async function handlePomodoroPhaseEnd(data) {
             const { oldState } = data;
             let newState;
+
+            await clearPomodoroHeadsUpSchedules();
+            pomodoroPhaseStartTime = 0;
+            pomodoroPhaseEndTime = 0;
+            pomodoroPhaseRemainingSeconds = 0;
 
             // Determine the next state and update cycle count
             if (oldState === 'work') {
@@ -4360,26 +4370,141 @@ let pauseStartTime = 0;
             }
         }
 
-        function schedulePomodoroHeadsUpNotification(durationSeconds) {
-            if (!Number.isFinite(durationSeconds)) {
+        function getPomodoroHeadsUpTransition(phase) {
+            if (phase === 'work') {
+                const completedCycles = currentUserData.pomodoroCycle || 0;
+                const upcomingCycle = completedCycles + 1;
+                const useLongBreak = upcomingCycle > 0 && (upcomingCycle % pomodoroSettings.long_break_interval === 0);
+                return {
+                    oldState: 'work',
+                    newState: useLongBreak ? 'long_break' : 'short_break'
+                };
+            }
+
+            if (phase === 'short_break' || phase === 'long_break') {
+                return {
+                    oldState: phase,
+                    newState: 'work'
+                };
+            }
+
+            return null;
+        }
+
+        function buildPomodoroHeadsUpContent(phase) {
+            if (phase === 'work') {
+                return {
+                    title: 'Break starts soon',
+                    body: 'Break starts in 5s'
+                };
+            }
+
+            return {
+                title: 'Focus starts soon',
+                body: 'Focus starts in 5s'
+            };
+        }
+
+        async function tryInvokePomodoroHeadsUpFunction(payload) {
+            if (!supabase || !pomodoroHeadsUpSchedulerAvailable) {
+                return null;
+            }
+
+            try {
+                const { data, error } = await supabase.functions.invoke('schedule-pomodoro-headsup', {
+                    body: payload
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                return data || null;
+            } catch (error) {
+                const notFound = (typeof error?.status === 'number' && error.status === 404)
+                    || (error && typeof error.message === 'string' && /not\s+found/i.test(error.message));
+                if (notFound) {
+                    pomodoroHeadsUpSchedulerAvailable = false;
+                }
+
+                console.warn('Failed to invoke schedule-pomodoro-headsup function:', error);
+                return null;
+            }
+        }
+
+        async function clearPomodoroHeadsUpSchedules() {
+            cancelSWAlarm(POMODORO_HEADS_UP_TAG);
+
+            if (!currentUser || currentUser.isAnonymous) {
                 return;
             }
 
-            const headsUpDelayMs = Math.max((durationSeconds - 5) * 1000, 0);
-            if (headsUpDelayMs <= 0) {
+            await tryInvokePomodoroHeadsUpFunction({
+                userId: currentUser.id,
+                appId,
+                cancelExisting: true,
+                jobs: []
+            });
+        }
+
+        async function schedulePomodoroHeadsUpNotification(durationSeconds, phase = 'work') {
+            if (!Number.isFinite(durationSeconds) || durationSeconds <= HEADS_UP_LEAD_TIME_SECONDS) {
                 return;
             }
 
-            const title = 'Heads up!';
+            const transition = getPomodoroHeadsUpTransition(phase);
+            if (!transition) {
+                return;
+            }
+
+            const { title, body } = buildPomodoroHeadsUpContent(phase);
+            const transitionPayload = {
+                type: 'TIMER_HEADS_UP',
+                oldState: transition.oldState,
+                newState: transition.newState
+            };
             const options = {
-                body: 'Your focus session ends in 5 seconds.',
-                tag: POMODORO_HEADS_UP_TAG
+                body,
+                tag: POMODORO_HEADS_UP_TAG,
+                renotify: true,
+                requireInteraction: true,
+                data: {
+                    transition: transitionPayload,
+                    transitionMessage: {
+                        ...transitionPayload,
+                        title,
+                        options: { body, tag: POMODORO_HEADS_UP_TAG }
+                    }
+                }
             };
 
-            scheduleTransitionNotification(headsUpDelayMs, title, options, {
-                type: 'TIMER_HEADS_UP',
-                oldState: 'work',
-                newState: 'work'
+            const headsUpDelayMs = Math.max((durationSeconds - HEADS_UP_LEAD_TIME_SECONDS) * 1000, 0);
+            scheduleTransitionNotification(headsUpDelayMs, title, options, transitionPayload);
+
+            if (!currentUser || currentUser.isAnonymous) {
+                return;
+            }
+
+            const effectiveEndTime = pomodoroPhaseEndTime || (Date.now() + (durationSeconds * 1000));
+            const sendTimeMs = effectiveEndTime - (HEADS_UP_LEAD_TIME_SECONDS * 1000);
+            if (!Number.isFinite(sendTimeMs) || sendTimeMs <= Date.now()) {
+                return;
+            }
+
+            await tryInvokePomodoroHeadsUpFunction({
+                userId: currentUser.id,
+                appId,
+                cancelExisting: false,
+                jobs: [
+                    {
+                        sendAt: new Date(sendTimeMs).toISOString(),
+                        title,
+                        body,
+                        oldState: transition.oldState,
+                        newState: transition.newState,
+                        options
+                    }
+                ]
             });
         }
 
@@ -5269,8 +5394,12 @@ let pauseStartTime = 0;
 
                 const workDurationSeconds = pomodoroSettings.work * 60;
                 await ensurePushSubscription();
-                cancelSWAlarm(POMODORO_HEADS_UP_TAG);
-                schedulePomodoroHeadsUpNotification(workDurationSeconds);
+                await clearPomodoroHeadsUpSchedules();
+                pomodoroPhaseRemainingSeconds = workDurationSeconds;
+                const phaseStart = Date.now();
+                pomodoroPhaseStartTime = phaseStart;
+                pomodoroPhaseEndTime = phaseStart + (workDurationSeconds * 1000);
+                await schedulePomodoroHeadsUpNotification(workDurationSeconds, 'work');
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
             }
 
@@ -5292,7 +5421,10 @@ let pauseStartTime = 0;
         async function stopTimer() {
             // Stop the UI timer in the web worker
             pomodoroWorker.postMessage({ command: 'stop' });
-            cancelSWAlarm(POMODORO_HEADS_UP_TAG);
+            await clearPomodoroHeadsUpSchedules();
+            pomodoroPhaseStartTime = 0;
+            pomodoroPhaseEndTime = 0;
+            pomodoroPhaseRemainingSeconds = 0;
 
             // --- ADD THIS BLOCK TO RESET PAUSE STATE ---
             isPaused = false;
@@ -5356,7 +5488,7 @@ let pauseStartTime = 0;
             }
         }
         
-        function pauseTimer() {
+        async function pauseTimer() {
             if (timerMode === 'normal' && timerInterval) {
                 clearInterval(timerInterval);
                 isPaused = true;
@@ -5366,12 +5498,20 @@ let pauseStartTime = 0;
             } else if (timerMode === 'pomodoro' && !isPaused) {
                 pomodoroWorker.postMessage({ command: 'pause' });
                 isPaused = true;
+                const now = Date.now();
+                const remaining = pomodoroPhaseEndTime > 0
+                    ? Math.max(0, Math.round((pomodoroPhaseEndTime - now) / 1000))
+                    : pomodoroPhaseRemainingSeconds;
+                pomodoroPhaseRemainingSeconds = Math.max(0, remaining);
+                pomodoroPhaseStartTime = 0;
+                pomodoroPhaseEndTime = 0;
+                await clearPomodoroHeadsUpSchedules();
                 document.getElementById('pause-btn').classList.add('hidden');
                 document.getElementById('resume-btn').classList.remove('hidden');
             }
         }
-        
-        function resumeTimer() {
+
+        async function resumeTimer() {
             if (timerMode === 'normal' && isPaused) {
                 const pauseDuration = Date.now() - pauseStartTime;
                 sessionStartTime += pauseDuration;
@@ -5386,6 +5526,16 @@ let pauseStartTime = 0;
             } else if (timerMode === 'pomodoro' && isPaused) {
                 pomodoroWorker.postMessage({ command: 'resume' });
                 isPaused = false;
+                const remaining = pomodoroPhaseRemainingSeconds > 0
+                    ? pomodoroPhaseRemainingSeconds
+                    : Math.max(0, Math.round((pomodoroPhaseEndTime - Date.now()) / 1000));
+                if (remaining > 0) {
+                    pomodoroPhaseRemainingSeconds = remaining;
+                    const restart = Date.now();
+                    pomodoroPhaseStartTime = restart;
+                    pomodoroPhaseEndTime = restart + (remaining * 1000);
+                    await schedulePomodoroHeadsUpNotification(remaining, pomodoroState);
+                }
                 document.getElementById('pause-btn').classList.remove('hidden');
                 document.getElementById('resume-btn').classList.add('hidden');
             }
@@ -5393,7 +5543,7 @@ let pauseStartTime = 0;
 
         // --- NEW: Helper to start the next Pomodoro phase ---
         async function startNextPomodoroPhase(state) {
-            cancelSWAlarm(POMODORO_HEADS_UP_TAG);
+            await clearPomodoroHeadsUpSchedules();
             if (state === 'work' && activeTaskRemainingPomodoros !== null && activeTaskRemainingPomodoros <= 0) {
                 suppressTimerSave = true;
                 await stopTimer();
@@ -5421,9 +5571,14 @@ let pauseStartTime = 0;
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
 
+            pomodoroPhaseRemainingSeconds = durationSeconds;
+            const nextPhaseStart = Date.now();
+            pomodoroPhaseStartTime = nextPhaseStart;
+            pomodoroPhaseEndTime = nextPhaseStart + (durationSeconds * 1000);
+
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
-            if (state === 'work') {
-                schedulePomodoroHeadsUpNotification(durationSeconds);
+            if (state === 'work' || state === 'short_break' || state === 'long_break') {
+                await schedulePomodoroHeadsUpNotification(durationSeconds, state);
             }
         }
 
@@ -10230,7 +10385,18 @@ if (achievementsGrid) {
         // --- Event Listeners ---
         const ael = (id, event, callback) => {
             const el = document.getElementById(id);
-            if (el) el.addEventListener(event, callback);
+            if (!el) return;
+
+            el.addEventListener(event, (...args) => {
+                try {
+                    const result = callback(...args);
+                    if (result && typeof result.then === 'function') {
+                        result.catch(error => console.error(`Async handler error for ${id}:${event}`, error));
+                    }
+                } catch (error) {
+                    console.error(`Handler error for ${id}:${event}`, error);
+                }
+            });
         };
 
         const pomodoroPickerConfig = {
