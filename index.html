@@ -3716,13 +3716,33 @@
         };
         const POMODORO_NOTIFICATION_TABLE = 'pomodoro_notification_jobs';
         const POMODORO_HEADS_UP_LEAD_SECONDS = 5;
-        let pomodoroServerRunId = null;
+        const POMODORO_HEADS_UP_CLIENT_SUFFIX = {
+            break: ':break',
+            focus: ':focus'
+        };
+        let pomodoroServerClientRefBase = null;
 
         function generatePomodoroRunToken() {
             if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
                 return crypto.randomUUID();
             }
             return `pomodoro-run-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+
+        function getPomodoroHeadsUpClientReference(baseRef, toState) {
+            if (!baseRef) return null;
+            const suffix = toState === 'work'
+                ? POMODORO_HEADS_UP_CLIENT_SUFFIX.focus
+                : POMODORO_HEADS_UP_CLIENT_SUFFIX.break;
+            return `${baseRef}${suffix}`;
+        }
+
+        function getAllPomodoroHeadsUpClientReferences(baseRef) {
+            if (!baseRef) return [];
+            return [
+                `${baseRef}${POMODORO_HEADS_UP_CLIENT_SUFFIX.break}`,
+                `${baseRef}${POMODORO_HEADS_UP_CLIENT_SUFFIX.focus}`
+            ];
         }
 
         function cancelLocalHeadsUpNotifications() {
@@ -3764,41 +3784,53 @@
             return Boolean(currentUser && !currentUser.isAnonymous);
         }
 
+        async function cancelFuturePomodoroHeadsUpJobs() {
+            if (!canScheduleServerHeadsUp()) {
+                return;
+            }
+            try {
+                const { error } = await supabase.rpc('cancel_future_pomodoro_jobs', {
+                    p_user: currentUser.id,
+                    p_after: new Date().toISOString()
+                });
+                if (error) throw error;
+            } catch (futureError) {
+                console.error('Failed to cancel future pomodoro heads-up jobs:', futureError);
+            }
+        }
+
         async function cancelServerHeadsUpJobs() {
-            if (!canScheduleServerHeadsUp() || !pomodoroServerRunId) {
-                pomodoroServerRunId = null;
+            if (!canScheduleServerHeadsUp()) {
+                pomodoroServerClientRefBase = null;
+                return;
+            }
+
+            const clientRefs = getAllPomodoroHeadsUpClientReferences(pomodoroServerClientRefBase);
+
+            if (clientRefs.length === 0) {
+                await cancelFuturePomodoroHeadsUpJobs();
+                pomodoroServerClientRefBase = null;
                 return;
             }
 
             try {
-                const { error } = await supabase
-                    .from(POMODORO_NOTIFICATION_TABLE)
-                    .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
-                    .eq('user_id', currentUser.id)
-                    .eq('client_reference', pomodoroServerRunId)
-                    .in('status', ['pending', 'queued']);
+                const { error } = await supabase.rpc('cancel_jobs_by_client_ref', {
+                    p_user: currentUser.id,
+                    p_refs: clientRefs
+                });
                 if (error) throw error;
-            } catch (updateError) {
-                console.warn('Unable to mark pomodoro heads-up jobs as cancelled, deleting instead.', updateError);
-                try {
-                    const { error: deleteError } = await supabase
-                        .from(POMODORO_NOTIFICATION_TABLE)
-                        .delete()
-                        .eq('user_id', currentUser.id)
-                        .eq('client_reference', pomodoroServerRunId);
-                    if (deleteError) throw deleteError;
-                } catch (finalError) {
-                    console.error('Failed to cancel queued pomodoro heads-up jobs:', finalError);
-                }
+            } catch (rpcError) {
+                console.warn('Failed to cancel queued pomodoro heads-up jobs via client reference.', rpcError);
+                await cancelFuturePomodoroHeadsUpJobs();
             } finally {
-                pomodoroServerRunId = null;
+                pomodoroServerClientRefBase = null;
             }
         }
 
-        async function ensurePomodoroServerRunId() {
+        async function ensurePomodoroServerClientRefBase() {
             if (!canScheduleServerHeadsUp()) return false;
-            if (!pomodoroServerRunId) {
-                pomodoroServerRunId = generatePomodoroRunToken();
+            if (!pomodoroServerClientRefBase) {
+                pomodoroServerClientRefBase = generatePomodoroRunToken();
             }
             return true;
         }
@@ -3808,7 +3840,7 @@
                 return false;
             }
 
-            const runReady = await ensurePomodoroServerRunId();
+            const runReady = await ensurePomodoroServerClientRefBase();
             if (!runReady) return false;
 
             const leadSeconds = Math.max(Number(POMODORO_HEADS_UP_LEAD_SECONDS) || 0, 0);
@@ -3824,6 +3856,11 @@
 
             const copy = getHeadsUpCopy(fromState, toState);
             const tag = getHeadsUpTagForTransition(toState);
+            const clientReference = getPomodoroHeadsUpClientReference(pomodoroServerClientRefBase, toState);
+            if (!clientReference) {
+                return false;
+            }
+
             const payload = {
                 title: copy.title,
                 body: copy.body,
@@ -3844,7 +3881,7 @@
                 user_id: currentUser.id,
                 send_at: scheduledTime.toISOString(),
                 payload,
-                client_reference: pomodoroServerRunId
+                client_reference: clientReference
             };
 
             try {
@@ -3867,7 +3904,8 @@
                         const minimalRecord = {
                             user_id: currentUser.id,
                             send_at: scheduledTime.toISOString(),
-                            payload
+                            payload,
+                            client_reference: clientReference
                         };
                         const { error: minimalError } = await supabase
                             .from(POMODORO_NOTIFICATION_TABLE)
@@ -5575,6 +5613,9 @@ let pauseStartTime = 0;
         // --- NEW: Helper to start the next Pomodoro phase ---
         async function startNextPomodoroPhase(state) {
             cancelLocalHeadsUpNotifications();
+            if (state === 'work') {
+                await cancelServerHeadsUpJobs();
+            }
             if (state === 'work' && activeTaskRemainingPomodoros !== null && activeTaskRemainingPomodoros <= 0) {
                 suppressTimerSave = true;
                 await stopTimer();
