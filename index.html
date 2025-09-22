@@ -3711,6 +3711,12 @@
         }
 
         const POMODORO_HEADS_UP_TAG = 'pomodoro-heads-up';
+        const POMODORO_HEADS_UP_WORK_TIMER_ID = 'pomodoro-heads-up-work';
+        const POMODORO_HEADS_UP_FOCUS_TIMER_ID = 'pomodoro-heads-up-focus';
+        const HEADS_UP_JOB_KEYS = {
+            break: 'pomodoro-heads-up-break',
+            focus: 'pomodoro-heads-up-focus'
+        };
 
 
         // --- Application Setup ---
@@ -3723,6 +3729,7 @@
         let userSessions = [];
         let isAudioUnlocked = false;
         let isAddingSubjectFromStartSession = false; // Flag to track modal origin
+        let activeHeadsUpSessionId = null;
 
         // --- FIX START: Add the function to handle Pomodoro phase transitions ---
         async function handlePomodoroPhaseEnd(data) {
@@ -4313,7 +4320,7 @@ let pauseStartTime = 0;
          * @param {string} title - The title of the notification.
          * @param {object} options - The options for the notification (e.g., body, icon, tag).
          */
-        function scheduleTransitionNotification(delayInMs, title, options, transitionPayload = {}) {
+        function scheduleTransitionNotification(delayInMs, title, options, transitionPayload = {}, timerId) {
             // First, make sure Service Workers and Notifications are supported.
             if (!('serviceWorker' in navigator) || !('Notification' in window)) {
                 console.warn('Service Workers or Notifications are not supported in this browser.');
@@ -4351,6 +4358,7 @@ let pauseStartTime = 0;
                         type: 'SCHEDULE_NOTIFICATION',
                         payload: {
                             delay: delay,
+                            timerId,
                             title: title,
                             options: opts,
                             transitionMessage
@@ -4360,27 +4368,214 @@ let pauseStartTime = 0;
             }
         }
 
-        function schedulePomodoroHeadsUpNotification(durationSeconds) {
-            if (!Number.isFinite(durationSeconds)) {
-                return;
+        function cancelLocalHeadsUpNotifications() {
+            cancelSWAlarm(POMODORO_HEADS_UP_WORK_TIMER_ID);
+            cancelSWAlarm(POMODORO_HEADS_UP_FOCUS_TIMER_ID);
+        }
+
+        function generateClientUuid() {
+            if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                return crypto.randomUUID();
             }
-
-            const headsUpDelayMs = Math.max((durationSeconds - 5) * 1000, 0);
-            if (headsUpDelayMs <= 0) {
-                return;
-            }
-
-            const title = 'Heads up!';
-            const options = {
-                body: 'Your focus session ends in 5 seconds.',
-                tag: POMODORO_HEADS_UP_TAG
-            };
-
-            scheduleTransitionNotification(headsUpDelayMs, title, options, {
-                type: 'TIMER_HEADS_UP',
-                oldState: 'work',
-                newState: 'work'
+            const template = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
+            return template.replace(/[xy]/g, (char) => {
+                const rand = Math.random() * 16 | 0;
+                const value = char === 'x' ? rand : (rand & 0x3) | 0x8;
+                return value.toString(16);
             });
+        }
+
+        async function cancelServerHeadsUpJobs(sessionId = activeHeadsUpSessionId) {
+            if (!currentUser || currentUser.isAnonymous || !sessionId) {
+                return;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('pomodoro_notification_jobs')
+                    .delete()
+                    .eq('user_id', currentUser.id)
+                    .eq('session_id', sessionId);
+                if (error) throw error;
+            } catch (error) {
+                console.warn('Failed to cancel server heads-up jobs:', error);
+            }
+        }
+
+        async function deleteServerHeadsUpJob(jobKey, sessionId) {
+            if (!currentUser || currentUser.isAnonymous || !jobKey) {
+                return;
+            }
+
+            try {
+                let query = supabase
+                    .from('pomodoro_notification_jobs')
+                    .delete()
+                    .eq('user_id', currentUser.id)
+                    .eq('job_key', jobKey);
+                if (sessionId) {
+                    query = query.eq('session_id', sessionId);
+                }
+                const { error } = await query;
+                if (error) throw error;
+            } catch (error) {
+                console.warn('Failed to delete existing heads-up job:', error);
+            }
+        }
+
+        async function scheduleServerHeadsUpEvents(sessionId, events) {
+            if (!currentUser || currentUser.isAnonymous) {
+                return false;
+            }
+
+            if (!Array.isArray(events) || events.length === 0) {
+                return false;
+            }
+
+            const inserts = [];
+            for (const event of events) {
+                if (!event.sendAtIso || !event.jobKey) continue;
+
+                await deleteServerHeadsUpJob(event.jobKey, sessionId);
+
+                const options = {
+                    tag: POMODORO_HEADS_UP_TAG,
+                    requireInteraction: true,
+                    renotify: true,
+                    ...(event.options || {})
+                };
+                options.body = event.body;
+
+                inserts.push({
+                    user_id: currentUser.id,
+                    session_id: sessionId,
+                    job_key: event.jobKey,
+                    send_at: event.sendAtIso,
+                    type: event.type || 'heads_up',
+                    payload: {
+                        userId: currentUser.id,
+                        title: event.title,
+                        body: event.body,
+                        newState: event.newState,
+                        oldState: event.oldState,
+                        options
+                    }
+                });
+            }
+
+            if (inserts.length === 0) {
+                return false;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('pomodoro_notification_jobs')
+                    .insert(inserts);
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error('Failed to schedule server heads-up notifications:', error);
+                return false;
+            }
+        }
+
+        async function schedulePomodoroHeadsUpNotification(config = {}) {
+            const {
+                phase,
+                durationSeconds,
+                nextState,
+                startedAt = Date.now(),
+                sessionId: providedSessionId,
+                breakDurationSeconds
+            } = config;
+
+            if (!Number.isFinite(durationSeconds) || durationSeconds <= 5) {
+                return;
+            }
+
+            const sessionId = providedSessionId || activeHeadsUpSessionId || (activeHeadsUpSessionId = generateClientUuid());
+            activeHeadsUpSessionId = sessionId;
+
+            const events = [];
+            if (phase === 'work') {
+                const breakState = nextState || 'short_break';
+                const headsUpDelayMs = Math.max((durationSeconds - 5) * 1000, 0);
+                events.push({
+                    timerId: POMODORO_HEADS_UP_WORK_TIMER_ID,
+                    jobKey: HEADS_UP_JOB_KEYS.break,
+                    delayMs: headsUpDelayMs,
+                    sendAtIso: new Date(startedAt + headsUpDelayMs).toISOString(),
+                    title: 'Break starts in 5s',
+                    body: `Prepare for your ${breakState.replace('_', ' ')}.`,
+                    oldState: 'work',
+                    newState: breakState
+                });
+
+                if (Number.isFinite(breakDurationSeconds) && breakDurationSeconds > 5) {
+                    const focusDelayMs = Math.max((durationSeconds + breakDurationSeconds - 5) * 1000, 0);
+                    events.push({
+                        timerId: POMODORO_HEADS_UP_FOCUS_TIMER_ID,
+                        jobKey: HEADS_UP_JOB_KEYS.focus,
+                        delayMs: focusDelayMs,
+                        sendAtIso: new Date(startedAt + focusDelayMs).toISOString(),
+                        title: 'Focus starts in 5s',
+                        body: 'Break wraps up soon. Get ready to focus.',
+                        oldState: breakState,
+                        newState: 'work'
+                    });
+                }
+            } else if (typeof phase === 'string' && phase.includes('break')) {
+                const focusDelayMs = Math.max((durationSeconds - 5) * 1000, 0);
+                events.push({
+                    timerId: POMODORO_HEADS_UP_FOCUS_TIMER_ID,
+                    jobKey: HEADS_UP_JOB_KEYS.focus,
+                    delayMs: focusDelayMs,
+                    sendAtIso: new Date(startedAt + focusDelayMs).toISOString(),
+                    title: 'Focus starts in 5s',
+                    body: 'Break wraps up soon. Get ready to focus.',
+                    oldState: phase,
+                    newState: 'work'
+                });
+            }
+
+            if (events.length === 0) {
+                return;
+            }
+
+            for (const event of events) {
+                const options = {
+                    body: event.body,
+                    tag: POMODORO_HEADS_UP_TAG
+                };
+                scheduleTransitionNotification(event.delayMs, event.title, options, {
+                    type: 'TIMER_HEADS_UP',
+                    oldState: event.oldState,
+                    newState: event.newState
+                }, event.timerId);
+            }
+
+            await scheduleServerHeadsUpEvents(sessionId, events);
+        }
+
+        function determineUpcomingBreakState() {
+            const completedCycles = currentUserData?.pomodoroCycle || 0;
+            const nextCycle = completedCycles + 1;
+            const interval = Math.max(pomodoroSettings.long_break_interval || 4, 1);
+            return nextCycle > 0 && nextCycle % interval === 0 ? 'long_break' : 'short_break';
+        }
+
+        function getPomodoroDurationForState(state) {
+            if (!pomodoroSettings) return 0;
+            switch (state) {
+                case 'work':
+                    return (pomodoroSettings.work || 0) * 60;
+                case 'long_break':
+                    return (pomodoroSettings.long_break || 0) * 60;
+                case 'short_break':
+                    return (pomodoroSettings.short_break || 0) * 60;
+                default:
+                    return 0;
+            }
         }
 
 
@@ -5269,9 +5464,21 @@ let pauseStartTime = 0;
 
                 const workDurationSeconds = pomodoroSettings.work * 60;
                 await ensurePushSubscription();
-                cancelSWAlarm(POMODORO_HEADS_UP_TAG);
-                schedulePomodoroHeadsUpNotification(workDurationSeconds);
+                cancelLocalHeadsUpNotifications();
+                await cancelServerHeadsUpJobs();
+                activeHeadsUpSessionId = generateClientUuid();
+                const phaseStartedAt = Date.now();
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
+                const breakState = determineUpcomingBreakState();
+                const breakDurationSeconds = getPomodoroDurationForState(breakState);
+                await schedulePomodoroHeadsUpNotification({
+                    phase: 'work',
+                    durationSeconds: workDurationSeconds,
+                    nextState: breakState,
+                    breakDurationSeconds,
+                    startedAt: phaseStartedAt,
+                    sessionId: activeHeadsUpSessionId
+                });
             }
 
             document.getElementById('start-studying-btn').classList.add('hidden');
@@ -5292,7 +5499,9 @@ let pauseStartTime = 0;
         async function stopTimer() {
             // Stop the UI timer in the web worker
             pomodoroWorker.postMessage({ command: 'stop' });
-            cancelSWAlarm(POMODORO_HEADS_UP_TAG);
+            cancelLocalHeadsUpNotifications();
+            await cancelServerHeadsUpJobs();
+            activeHeadsUpSessionId = null;
 
             // --- ADD THIS BLOCK TO RESET PAUSE STATE ---
             isPaused = false;
@@ -5393,7 +5602,7 @@ let pauseStartTime = 0;
 
         // --- NEW: Helper to start the next Pomodoro phase ---
         async function startNextPomodoroPhase(state) {
-            cancelSWAlarm(POMODORO_HEADS_UP_TAG);
+            cancelLocalHeadsUpNotifications();
             if (state === 'work' && activeTaskRemainingPomodoros !== null && activeTaskRemainingPomodoros <= 0) {
                 suppressTimerSave = true;
                 await stopTimer();
@@ -5417,13 +5626,34 @@ let pauseStartTime = 0;
             }
 
             // Start the UI timer
+            const phaseStartedAt = Date.now();
             pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds });
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
 
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
             if (state === 'work') {
-                schedulePomodoroHeadsUpNotification(durationSeconds);
+                await cancelServerHeadsUpJobs();
+                activeHeadsUpSessionId = generateClientUuid();
+                const breakState = determineUpcomingBreakState();
+                const breakDurationSeconds = getPomodoroDurationForState(breakState);
+                await schedulePomodoroHeadsUpNotification({
+                    phase: 'work',
+                    durationSeconds,
+                    nextState: breakState,
+                    breakDurationSeconds,
+                    startedAt: phaseStartedAt,
+                    sessionId: activeHeadsUpSessionId
+                });
+            } else if (state.includes('break')) {
+                const sessionId = activeHeadsUpSessionId || (activeHeadsUpSessionId = generateClientUuid());
+                await schedulePomodoroHeadsUpNotification({
+                    phase: state,
+                    durationSeconds,
+                    nextState: 'work',
+                    startedAt: phaseStartedAt,
+                    sessionId
+                });
             }
         }
 

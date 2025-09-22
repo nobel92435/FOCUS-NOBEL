@@ -88,6 +88,7 @@ self.addEventListener('fetch', (event) => {
 // --- Service Worker Timer/Notification Logic ---
 
 let notificationTag = 'pomodoro-timer';
+const POMODORO_HEADS_UP_TAG = 'pomodoro-heads-up';
 
 const pendingNotifications = new Map();
 
@@ -200,6 +201,8 @@ function cancelAlarm(timerId) {
 
     if (timerId === 'pomodoro-transition' || !timerId) {
         closeExistingNotifications(notificationTag);
+    } else if (typeof timerId === 'string' && timerId.startsWith(POMODORO_HEADS_UP_TAG)) {
+        closeExistingNotifications(POMODORO_HEADS_UP_TAG);
     }
 }
 
