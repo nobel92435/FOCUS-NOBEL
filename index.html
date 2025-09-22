@@ -3359,6 +3359,18 @@
 
     const nowIso = () => new Date().toISOString();
 
+    const HEADS_UP_BUFFER_SECONDS = 5;
+    const HEADS_UP_BUFFER_MS = HEADS_UP_BUFFER_SECONDS * 1000;
+    const HEADS_UP_JOB_TABLE = 'pomodoro_notification_jobs';
+    const SERVER_HEADS_UP_GROUP_KEYS = Object.freeze({
+        WORK_TO_BREAK: 'workToBreak',
+        BREAK_TO_WORK: 'breakToWork'
+    });
+    let serverHeadsUpSchedules = {
+        [SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK]: null,
+        [SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK]: null
+    };
+
     async function fetchProfile(userId, columns = '*') {
         if (!userId) return null;
         const { data, error } = await supabase
@@ -3454,12 +3466,16 @@
         const { data: { user } } = await auth.getUser();
         currentUser = user ?? null;
     }
-    auth.onAuthStateChange((event, session) => {
+    auth.onAuthStateChange(async (event, session) => {
+        const previousUserId = currentUser?.id;
         currentUser = session?.user ?? null;
         // This is a more robust way to handle auth state changes.
         // We only want to re-route the user on sign-in or sign-out events.
         // For user updates (like changing a profile picture), we just want to refresh
         // the profile data without navigating them away from their current page.
+        if (event === 'SIGNED_OUT' && previousUserId) {
+            await cancelAllServerHeadsUpSchedules('signed_out', { userIdOverride: previousUserId });
+        }
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
             routeAfterAuth();
         } else if (event === 'USER_UPDATED' && currentUser) {
@@ -4360,25 +4376,210 @@ let pauseStartTime = 0;
             }
         }
 
-        function schedulePomodoroHeadsUpNotification(durationSeconds) {
+        function describeBreakLabel(breakState) {
+            return breakState === 'long_break' ? 'long break' : 'break';
+        }
+
+        function generateHeadsUpGroupId() {
+            if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                return crypto.randomUUID();
+            }
+            return `heads-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+        }
+
+        function resetServerHeadsUpSchedules() {
+            serverHeadsUpSchedules = {
+                [SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK]: null,
+                [SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK]: null
+            };
+        }
+
+        async function cancelServerHeadsUpGroup(groupKey, { silent = false } = {}) {
+            if (!groupKey) return;
+            if (!(groupKey in serverHeadsUpSchedules)) {
+                serverHeadsUpSchedules[groupKey] = null;
+            }
+            const scheduled = serverHeadsUpSchedules[groupKey];
+            const userId = currentUser?.id;
+            if (!scheduled?.groupId || !userId || !supabase || typeof supabase.from !== 'function') {
+                serverHeadsUpSchedules[groupKey] = null;
+                return;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from(HEADS_UP_JOB_TABLE)
+                    .delete()
+                    .eq('user_id', userId)
+                    .eq('client_group_id', scheduled.groupId);
+                if (error) throw error;
+            } catch (error) {
+                if (!silent) {
+                    console.warn('Failed to cancel scheduled heads-up notification:', error);
+                }
+            } finally {
+                serverHeadsUpSchedules[groupKey] = null;
+            }
+        }
+
+        async function cancelAllServerHeadsUpSchedules(reason = 'unknown', options = {}) {
+            const userId = options.userIdOverride || currentUser?.id;
+            if (!userId || !supabase || typeof supabase.from !== 'function') {
+                resetServerHeadsUpSchedules();
+                return;
+            }
+
+            const activeGroupIds = Object.values(serverHeadsUpSchedules)
+                .map(entry => entry?.groupId)
+                .filter(Boolean);
+
+            if (activeGroupIds.length === 0) {
+                resetServerHeadsUpSchedules();
+                return;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from(HEADS_UP_JOB_TABLE)
+                    .delete()
+                    .eq('user_id', userId)
+                    .in('client_group_id', activeGroupIds);
+                if (error) throw error;
+            } catch (error) {
+                console.warn('Failed to cancel pomodoro heads-up schedules:', error, reason ? `(${reason})` : '');
+            } finally {
+                resetServerHeadsUpSchedules();
+            }
+        }
+
+        function getUpcomingBreakConfig() {
+            const interval = Math.max(Number(pomodoroSettings.long_break_interval) || 0, 1);
+            const completedCycles = currentUserData?.pomodoroCycle || 0;
+            const willTriggerLongBreak = interval > 0 && ((completedCycles + 1) % interval === 0);
+            const breakState = willTriggerLongBreak ? 'long_break' : 'short_break';
+            const minutes = willTriggerLongBreak
+                ? Number(pomodoroSettings.long_break) || 0
+                : Number(pomodoroSettings.short_break) || 0;
+            const durationSeconds = Math.max(Math.round(minutes * 60), 0);
+            return { state: breakState, durationSeconds };
+        }
+
+        async function scheduleServerPomodoroHeadsUp({
+            groupKey,
+            startTimestampMs,
+            durationSeconds,
+            oldState,
+            newState,
+            title,
+            body
+        }) {
+            if (!groupKey) return;
+            if (!(groupKey in serverHeadsUpSchedules)) {
+                serverHeadsUpSchedules[groupKey] = null;
+            }
+            if (!currentUser || currentUser.isAnonymous) {
+                return;
+            }
+            if (!Number.isFinite(durationSeconds) || durationSeconds <= HEADS_UP_BUFFER_SECONDS) {
+                return;
+            }
+
+            const sendAtMs = startTimestampMs + (durationSeconds * 1000) - HEADS_UP_BUFFER_MS;
+            if (!Number.isFinite(sendAtMs) || sendAtMs <= Date.now()) {
+                return;
+            }
+
+            if (!supabase || typeof supabase.from !== 'function') {
+                return;
+            }
+
+            const sendAtIso = new Date(sendAtMs).toISOString();
+            const clientGroupId = generateHeadsUpGroupId();
+            const options = {
+                tag: POMODORO_HEADS_UP_TAG,
+                renotify: false,
+                requireInteraction: false,
+                data: {
+                    type: 'HEADS_UP',
+                    transition: { oldState, newState }
+                }
+            };
+
+            try {
+                await cancelServerHeadsUpGroup(groupKey, { silent: true });
+                const { error } = await supabase
+                    .from(HEADS_UP_JOB_TABLE)
+                    .insert([{
+                        user_id: currentUser.id,
+                        send_at: sendAtIso,
+                        payload: {
+                            title,
+                            body,
+                            options,
+                            newState,
+                            oldState,
+                            transition: { oldState, newState },
+                            type: 'pomodoro_heads_up',
+                            appId
+                        },
+                        client_group_id: clientGroupId
+                    }]);
+                if (error) throw error;
+                serverHeadsUpSchedules[groupKey] = {
+                    groupId: clientGroupId,
+                    sendAt: sendAtIso,
+                    oldState,
+                    newState
+                };
+            } catch (error) {
+                console.error('Failed to schedule server heads-up notification:', error);
+            }
+        }
+
+        function schedulePomodoroHeadsUpNotification(durationSeconds, upcomingBreakState = 'short_break') {
             if (!Number.isFinite(durationSeconds)) {
                 return;
             }
 
-            const headsUpDelayMs = Math.max((durationSeconds - 5) * 1000, 0);
+            const headsUpDelayMs = Math.max((durationSeconds - HEADS_UP_BUFFER_SECONDS) * 1000, 0);
             if (headsUpDelayMs <= 0) {
                 return;
             }
 
-            const title = 'Heads up!';
+            const breakLabel = describeBreakLabel(upcomingBreakState);
+            const title = 'Break starts in 5s';
             const options = {
-                body: 'Your focus session ends in 5 seconds.',
+                body: `Your ${breakLabel} begins in 5 seconds.`,
                 tag: POMODORO_HEADS_UP_TAG
             };
 
             scheduleTransitionNotification(headsUpDelayMs, title, options, {
                 type: 'TIMER_HEADS_UP',
                 oldState: 'work',
+                newState: upcomingBreakState
+            });
+        }
+
+        function scheduleBreakHeadsUpNotification(durationSeconds, breakState) {
+            if (!Number.isFinite(durationSeconds)) {
+                return;
+            }
+
+            const headsUpDelayMs = Math.max((durationSeconds - HEADS_UP_BUFFER_SECONDS) * 1000, 0);
+            if (headsUpDelayMs <= 0) {
+                return;
+            }
+
+            const breakLabel = describeBreakLabel(breakState);
+            const title = 'Focus starts in 5s';
+            const options = {
+                body: `Your ${breakLabel} ends in 5 seconds.`,
+                tag: POMODORO_HEADS_UP_TAG
+            };
+
+            scheduleTransitionNotification(headsUpDelayMs, title, options, {
+                type: 'TIMER_HEADS_UP',
+                oldState: breakState,
                 newState: 'work'
             });
         }
@@ -5270,7 +5471,19 @@ let pauseStartTime = 0;
                 const workDurationSeconds = pomodoroSettings.work * 60;
                 await ensurePushSubscription();
                 cancelSWAlarm(POMODORO_HEADS_UP_TAG);
-                schedulePomodoroHeadsUpNotification(workDurationSeconds);
+                const workPhaseStartMs = Date.now();
+                const upcomingBreak = getUpcomingBreakConfig();
+                schedulePomodoroHeadsUpNotification(workDurationSeconds, upcomingBreak.state);
+                await cancelServerHeadsUpGroup(SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK, { silent: true });
+                await scheduleServerPomodoroHeadsUp({
+                    groupKey: SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK,
+                    startTimestampMs: workPhaseStartMs,
+                    durationSeconds: workDurationSeconds,
+                    oldState: 'work',
+                    newState: upcomingBreak.state,
+                    title: 'Break starts in 5s',
+                    body: `Your ${describeBreakLabel(upcomingBreak.state)} begins in 5 seconds.`
+                });
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
             }
 
@@ -5293,6 +5506,7 @@ let pauseStartTime = 0;
             // Stop the UI timer in the web worker
             pomodoroWorker.postMessage({ command: 'stop' });
             cancelSWAlarm(POMODORO_HEADS_UP_TAG);
+            await cancelAllServerHeadsUpSchedules('timer_stop');
 
             // --- ADD THIS BLOCK TO RESET PAUSE STATE ---
             isPaused = false;
@@ -5416,6 +5630,8 @@ let pauseStartTime = 0;
                 statusText = state.replace('_', ' ');
             }
 
+            const phaseStartMs = Date.now();
+
             // Start the UI timer
             pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds });
             pomodoroStatusDisplay.textContent = statusText;
@@ -5423,7 +5639,30 @@ let pauseStartTime = 0;
 
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
             if (state === 'work') {
-                schedulePomodoroHeadsUpNotification(durationSeconds);
+                const upcomingBreak = getUpcomingBreakConfig();
+                schedulePomodoroHeadsUpNotification(durationSeconds, upcomingBreak.state);
+                await cancelServerHeadsUpGroup(SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK, { silent: true });
+                await scheduleServerPomodoroHeadsUp({
+                    groupKey: SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK,
+                    startTimestampMs: phaseStartMs,
+                    durationSeconds,
+                    oldState: 'work',
+                    newState: upcomingBreak.state,
+                    title: 'Break starts in 5s',
+                    body: `Your ${describeBreakLabel(upcomingBreak.state)} begins in 5 seconds.`
+                });
+            } else {
+                scheduleBreakHeadsUpNotification(durationSeconds, state);
+                await cancelServerHeadsUpGroup(SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK, { silent: true });
+                await scheduleServerPomodoroHeadsUp({
+                    groupKey: SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK,
+                    startTimestampMs: phaseStartMs,
+                    durationSeconds,
+                    oldState: state,
+                    newState: 'work',
+                    title: 'Focus starts in 5s',
+                    body: `Your ${describeBreakLabel(state)} ends in 5 seconds.`
+                });
             }
         }
 
