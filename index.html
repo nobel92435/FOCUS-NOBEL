@@ -3887,7 +3887,7 @@
             try {
                 const { error } = await supabase
                     .from(POMODORO_NOTIFICATION_TABLE)
-                    .insert({ ...baseRecord, type: 'pomodoro_heads_up', status: 'pending' });
+                    .insert({ ...baseRecord, kind: 'pomodoro_heads_up', status: 'pending' });
                 if (error) throw error;
                 return true;
             } catch (primaryError) {
