@@ -3885,6 +3885,7 @@
             };
 
             try {
+                // Attempt 1: Full insert with status
                 const { error } = await supabase
                     .from(POMODORO_NOTIFICATION_TABLE)
                     .insert({ ...baseRecord, kind: 'pomodoro_heads_up', status: 'pending' });
@@ -3893,19 +3894,21 @@
             } catch (primaryError) {
                 console.warn('Falling back to minimal pomodoro heads-up insert', primaryError);
                 try {
+                    // Attempt 2 (FIXED): Insert without status, but WITH kind
                     const { error: fallbackError } = await supabase
                         .from(POMODORO_NOTIFICATION_TABLE)
-                        .insert(baseRecord);
+                        .insert({ ...baseRecord, kind: 'pomodoro_heads_up' });
                     if (fallbackError) throw fallbackError;
                     return true;
                 } catch (secondaryError) {
                     console.warn('Minimal insert still failed, retrying without client reference.', secondaryError);
                     try {
+                        // Attempt 3 (FIXED): Insert without client reference, but WITH kind
                         const minimalRecord = {
                             user_id: currentUser.id,
                             send_at: scheduledTime.toISOString(),
                             payload,
-                            client_reference: clientReference
+                            kind: 'pomodoro_heads_up'
                         };
                         const { error: minimalError } = await supabase
                             .from(POMODORO_NOTIFICATION_TABLE)
@@ -12951,3 +12954,4 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
