@@ -4265,6 +4265,11 @@ async function triggerServerNotification(messageData, { silent = false } = {}) {
         : (typeof notificationOptions.body === 'string' ? notificationOptions.body : '');
     notificationOptions.body = bodyText;
 
+    const rawType = typeof messageData.type === 'string'
+        ? messageData.type
+        : (typeof notificationOptions?.data?.type === 'string' ? notificationOptions.data.type : undefined);
+    const normalizedType = rawType ? rawType.trim() : undefined;
+
     let activeSubscription = null;
     try {
         activeSubscription = await ensurePushSubscription();
@@ -4289,7 +4294,9 @@ async function triggerServerNotification(messageData, { silent = false } = {}) {
                 title: messageData.title,
                 body: notificationOptions.body,
                 newState: messageData.newState,
-                oldState: messageData.oldState
+                oldState: messageData.oldState,
+                options: notificationOptions,
+                type: normalizedType
             }
         });
         if (error) throw error;
@@ -5186,7 +5193,8 @@ let pauseStartTime = 0;
                 body,
                 newState,
                 oldState,
-                options: { ...options }
+                options: { ...options },
+                type: 'pomodoro_heads_up'
             };
 
             serverHeadsUpSchedules[groupKey] = scheduleContext;
