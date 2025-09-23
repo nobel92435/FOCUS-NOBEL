@@ -4509,9 +4509,9 @@ let pauseStartTime = 0;
                 await cancelServerHeadsUpGroup(groupKey, { silent: true });
                 const { error } = await supabase
                     .from(HEADS_UP_JOB_TABLE)
-                    .insert([{ 
+                    .insert([{
                         user_id: currentUser.id,
-                        kind: 'pomodoro_heads_up',
+                        kind: 'heads_up',
                         send_at: sendAtIso,
                         payload: {
                             title,
