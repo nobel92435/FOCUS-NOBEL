@@ -3407,6 +3407,23 @@
         return state.trim().toLowerCase();
     }
 
+    function normalizeHeadsUpStateGroup(state) {
+        const normalized = normalizeTimerState(state);
+        if (!normalized) {
+            return '';
+        }
+
+        if (normalized === 'focus') {
+            return 'work';
+        }
+
+        if (normalized.includes('break')) {
+            return 'break';
+        }
+
+        return normalized;
+    }
+
     function deriveHeadsUpKindsForState(state) {
         const normalized = normalizeTimerState(state);
         if (!normalized) {
@@ -3426,6 +3443,43 @@
         return derived;
     }
 
+    function deriveTransitionKindAliases(oldState, newState) {
+        const normalizedOld = normalizeTimerState(oldState);
+        const normalizedNew = normalizeTimerState(newState);
+        const stateGroupOld = normalizeHeadsUpStateGroup(oldState);
+        const stateGroupNew = normalizeHeadsUpStateGroup(newState);
+
+        const aliases = [];
+
+        if (normalizedOld && normalizedNew) {
+            aliases.push(`pomodoro_${normalizedOld}_to_${normalizedNew}_heads_up`);
+        }
+
+        if (stateGroupOld && stateGroupNew && (stateGroupOld !== normalizedOld || stateGroupNew !== normalizedNew)) {
+            aliases.push(`pomodoro_${stateGroupOld}_to_${stateGroupNew}_heads_up`);
+        }
+
+        const groupAlias = `${stateGroupOld || ''}->${stateGroupNew || ''}`;
+        switch (groupAlias) {
+            case 'work->break':
+                aliases.push('pomodoro_work_to_break_heads_up');
+                break;
+            case 'work->work':
+                aliases.push('pomodoro_work_heads_up');
+                break;
+            case 'break->work':
+                aliases.push('pomodoro_break_to_work_heads_up');
+                break;
+            case 'break->break':
+                aliases.push('pomodoro_break_heads_up');
+                break;
+            default:
+                break;
+        }
+
+        return aliases.filter(isNonEmptyString);
+    }
+
     function buildServerHeadsUpKindCandidates({ oldState, newState, hints = [] }) {
         const normalizedOldState = normalizeTimerState(oldState);
         const normalizedNewState = normalizeTimerState(newState);
@@ -3433,11 +3487,7 @@
             ...deriveHeadsUpKindsForState(oldState),
             ...deriveHeadsUpKindsForState(newState)
         ];
-        const transitionKinds = [];
-
-        if (normalizedOldState && normalizedNewState) {
-            transitionKinds.push(`pomodoro_${normalizedOldState}_to_${normalizedNewState}_heads_up`);
-        }
+        const transitionKinds = deriveTransitionKindAliases(oldState, newState);
 
         const baseKinds = Array.from(DEFAULT_HEADS_UP_JOB_KINDS);
 
