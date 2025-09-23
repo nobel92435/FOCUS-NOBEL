@@ -4106,6 +4106,7 @@
             let remainingTimeOnPause = 0;
             let isPaused = false;
             let currentPhaseDuration = 0;
+            let phaseStartedAt = 0;
 
             function tick() {
                 if (isPaused) return;
@@ -4123,14 +4124,30 @@
                 }
             }
 
+            function resolveStartTimestamp(value) {
+                if (typeof value === 'number' && Number.isFinite(value)) {
+                    return value;
+                }
+                if (typeof value === 'string') {
+                    const asNumber = Number(value);
+                    if (Number.isFinite(asNumber)) {
+                        return asNumber;
+                    }
+                }
+                return Date.now();
+            }
+
             self.onmessage = function(e) {
-                const { command, duration } = e.data;
+                const { command, duration, startedAt } = e.data;
                 switch(command) {
                     case 'start':
                         isPaused = false;
                         if (timerInterval) clearInterval(timerInterval);
-                        currentPhaseDuration = duration;
-                        endTime = Date.now() + duration * 1000;
+                        const numericDuration = typeof duration === 'number' && Number.isFinite(duration) ? duration : 0;
+                        currentPhaseDuration = numericDuration;
+                        phaseStartedAt = resolveStartTimestamp(startedAt);
+                        const durationMs = Math.max(numericDuration, 0) * 1000;
+                        endTime = phaseStartedAt + durationMs;
                         timerInterval = setInterval(tick, 1000);
                         tick();
                         break;
@@ -4157,24 +4174,35 @@
                         endTime = 0;
                         remainingTimeOnPause = 0;
                         isPaused = false;
+                        phaseStartedAt = 0;
                         break;
                 }
             };
         `;
         const blob = new Blob([workerCode], { type: 'application/javascript' });
         const pomodoroWorker = new Worker(URL.createObjectURL(blob));
+        const CLIENT_MESSAGE_TYPES = Object.freeze({
+            POMODORO_PUSH: 'POMODORO_PUSH'
+        });
+        let skipNextLocalPhaseEnd = false;
+        let skipLocalPhaseTimeoutId = null;
+        let lastServerFinalSessionId = null;
 
         // --- FIX START: Listen for messages from the Pomodoro Web Worker ---
         pomodoroWorker.onmessage = (e) => {
             const { type, timeLeft } = e.data;
             if (type === 'tick' && sessionTimerDisplay) {
-                const safeTimeLeft = Number.isFinite(timeLeft) ? timeLeft : 0;
-                sessionTimerDisplay.textContent = formatPomodoroTime(safeTimeLeft);
-                if (!isPaused) {
-                    updatePomodoroExpectedEnd(safeTimeLeft);
-                }
+                // Update the timer display on every tick from the worker
+                sessionTimerDisplay.textContent = formatPomodoroTime(timeLeft);
             } else if (type === 'phase_ended') {
-                pomodoroPhaseExpectedEnd = null;
+                if (skipNextLocalPhaseEnd) {
+                    skipNextLocalPhaseEnd = false;
+                    if (skipLocalPhaseTimeoutId) {
+                        clearTimeout(skipLocalPhaseTimeoutId);
+                        skipLocalPhaseTimeoutId = null;
+                    }
+                    return;
+                }
                 // This is a local trigger from the worker when a phase ends.
                 // It's the primary way the UI transitions when the app is in the foreground.
                 console.log('Worker signaled phase end. Handling transition locally.');
@@ -4254,6 +4282,14 @@
             const subject = oldState === 'work' ? activeSubject : oldState.replace('_', ' ');
             await saveSession(subject, sessionDuration, sessionType);
 
+            const incomingSession = data?.session && typeof data.session === 'object' ? { ...data.session } : null;
+            const sessionEndMs = coerceEpochMilliseconds(
+                incomingSession?.endTimestamp ??
+                incomingSession?.end_at ??
+                incomingSession?.endAt
+            ) ?? Date.now();
+            const sessionEndIso = new Date(sessionEndMs).toISOString();
+
             const transitionMessage = oldState === 'work'
                 ? {
                     title: 'Focus complete!',
@@ -4264,14 +4300,13 @@
                     options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' }
                 };
 
-            const sessionMeta = {
-                id: `local-${Date.now()}`,
-                endTimestamp: Date.now(),
-                endAt: new Date().toISOString(),
-                headsUpSeconds: HEADS_UP_BUFFER_SECONDS,
-                oldState,
-                newState
-            };
+            const sessionMeta = incomingSession || {};
+            sessionMeta.id = typeof sessionMeta.id === 'string' && sessionMeta.id.trim() ? sessionMeta.id : `local-${sessionEndMs}`;
+            sessionMeta.endTimestamp = sessionEndMs;
+            sessionMeta.endAt = sessionMeta.endAt || sessionMeta.end_at || sessionEndIso;
+            sessionMeta.headsUpSeconds = Number.isFinite(sessionMeta.headsUpSeconds) ? sessionMeta.headsUpSeconds : HEADS_UP_BUFFER_SECONDS;
+            sessionMeta.oldState = sessionMeta.oldState || oldState;
+            sessionMeta.newState = sessionMeta.newState || newState;
 
             transitionMessage.options = {
                 ...(transitionMessage.options || {}),
@@ -4332,14 +4367,18 @@
             }
 
             // Check auto-start settings to decide what to do next
-            const shouldAutoStart = (newState === 'work' && pomodoroSettings.autoStartFocus) || 
+            const shouldAutoStart = (newState === 'work' && pomodoroSettings.autoStartFocus) ||
                                     (newState.includes('break') && pomodoroSettings.autoStartBreak);
-        
+
             if (shouldAutoStart) {
-                await startNextPomodoroPhase(newState);
+                await startNextPomodoroPhase(newState, {
+                    session: sessionMeta,
+                    phaseStartMs: sessionEndMs,
+                    trigger: data?.source || 'local'
+                });
             } else {
                 // If not auto-starting, show the manual start button
-                pomodoroState = 'idle'; 
+                pomodoroState = 'idle';
                 nextPomodoroPhase = newState;
                 document.getElementById('manual-start-btn').classList.remove('hidden');
                 document.getElementById('stop-studying-btn').classList.add('hidden');
@@ -4506,12 +4545,168 @@ function scheduleServerHeadsUpTrigger({ groupKey, sendAtMs, notificationPayload 
     );
 }
 
+        function normalizePushPayloadType(value) {
+            if (typeof value !== 'string') {
+                return '';
+            }
+            const normalized = value.trim().toUpperCase();
+            if (normalized.includes('HEADS')) {
+                return 'HEADS_UP';
+            }
+            if (normalized.includes('FINAL') || normalized.includes('TIMER_ENDED')) {
+                return 'FINAL';
+            }
+            return normalized;
+        }
+
+        function extractTransitionFromPushPayload(payload = {}, options = {}) {
+            const candidates = [
+                payload.transition,
+                payload.options?.data?.transition,
+                options?.data?.transition
+            ];
+            for (const candidate of candidates) {
+                if (candidate && typeof candidate === 'object') {
+                    const oldState = candidate.oldState ?? candidate.old_state ?? null;
+                    const newState = candidate.newState ?? candidate.new_state ?? null;
+                    if (oldState || newState) {
+                        return { oldState, newState };
+                    }
+                }
+            }
+            return { oldState: null, newState: null };
+        }
+
+        function extractSessionFromPushPayload(payload = {}, options = {}) {
+            const candidates = [
+                options?.data?.session,
+                payload.session,
+                payload.options?.data?.session
+            ];
+            for (const candidate of candidates) {
+                if (candidate && typeof candidate === 'object') {
+                    return candidate;
+                }
+            }
+            return null;
+        }
+
+        function findServerGroupKeyForClientId(clientGroupId) {
+            if (!clientGroupId) {
+                return null;
+            }
+            for (const [key, entry] of Object.entries(serverHeadsUpSchedules)) {
+                if (entry && entry.groupId === clientGroupId) {
+                    return key;
+                }
+            }
+            return null;
+        }
+
+        function settleServerHeadsUpByClientId(clientGroupId, deliveryType = 'heads_up') {
+            const groupKey = findServerGroupKeyForClientId(clientGroupId);
+            if (!groupKey) {
+                return;
+            }
+            const scheduleInfo = serverHeadsUpSchedules[groupKey];
+            clearServerHeadsUpTimeout(scheduleInfo);
+            if (deliveryType === 'final') {
+                serverHeadsUpSchedules[groupKey] = null;
+            } else if (scheduleInfo) {
+                scheduleInfo.headsUpDeliveredAt = Date.now();
+            }
+        }
+
+        function coerceEpochMilliseconds(value) {
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                return value;
+            }
+            if (typeof value === 'string') {
+                const numeric = Number(value);
+                if (Number.isFinite(numeric)) {
+                    return numeric;
+                }
+                const parsed = Date.parse(value);
+                if (!Number.isNaN(parsed)) {
+                    return parsed;
+                }
+            }
+            return null;
+        }
+
+        function handleServiceWorkerPushMessage(message) {
+            if (!message || message.type !== CLIENT_MESSAGE_TYPES.POMODORO_PUSH) {
+                return;
+            }
+
+            const payload = message.payload || {};
+            const options = message.options || {};
+            const pushType = normalizePushPayloadType(payload.type || options?.data?.type);
+            const transition = extractTransitionFromPushPayload(payload, options);
+            const oldState = transition.oldState || payload.oldState || null;
+            const newState = transition.newState || payload.newState || null;
+            const session = extractSessionFromPushPayload(payload, options);
+            const clientGroupId = session?.clientGroupId || session?.client_group_id || payload.client_group_id || null;
+
+            const sessionEndMs = coerceEpochMilliseconds(
+                session?.endTimestamp ??
+                session?.end_at ??
+                session?.endAt
+            );
+            if (session && sessionEndMs !== null) {
+                session.endTimestamp = sessionEndMs;
+            }
+
+            if (clientGroupId) {
+                settleServerHeadsUpByClientId(clientGroupId, pushType === 'FINAL' ? 'final' : 'heads_up');
+            }
+
+            if (pushType === 'HEADS_UP') {
+                console.log('[FocusFlow] Heads-up push received from server.', { session, transition });
+                return;
+            }
+
+            if (pushType !== 'FINAL' || !oldState) {
+                return;
+            }
+
+            if (!session || !session.id) {
+                console.log('[FocusFlow] Final push missing session id. Handling once.', { session, transition });
+            } else if (session.id === lastServerFinalSessionId) {
+                return;
+            } else {
+                lastServerFinalSessionId = session.id;
+            }
+
+            if (pomodoroState === 'idle') {
+                return;
+            }
+
+            if (skipLocalPhaseTimeoutId) {
+                clearTimeout(skipLocalPhaseTimeoutId);
+                skipLocalPhaseTimeoutId = null;
+            }
+            skipNextLocalPhaseEnd = true;
+            skipLocalPhaseTimeoutId = setTimeout(() => {
+                skipNextLocalPhaseEnd = false;
+                skipLocalPhaseTimeoutId = null;
+            }, 8000);
+
+            pomodoroWorker.postMessage({ command: 'stop' });
+            pomodoroState = oldState;
+
+            if (sessionTimerDisplay) {
+                sessionTimerDisplay.textContent = formatPomodoroTime(0);
+            }
+
+            handlePomodoroPhaseEnd({ oldState, newState, source: 'push', session });
+        }
+
         // Timer State
         // Add these lines
 let isPaused = false;
 let pauseStartTime = 0;
         let timerInterval = null;
-        let pomodoroPhaseExpectedEnd = null;
         let sessionStartTime = 0;
         let totalTimeTodayInSeconds = 0;
         let totalBreakTimeTodayInSeconds = 0; // New: Track total break time today
@@ -5188,6 +5383,7 @@ let pauseStartTime = 0;
             const sessionStartIso = new Date(startTimestampMs).toISOString();
             const clientGroupId = generateHeadsUpGroupId();
             const resolvedSessionId = sessionId || clientGroupId;
+            lastServerFinalSessionId = null;
             const transitionLabel = oldState === 'work'
                 ? describeBreakLabel(newState)
                 : describeBreakLabel(oldState);
@@ -5206,6 +5402,7 @@ let pauseStartTime = 0;
                 endAt: sessionEndIso,
                 endTimestamp: sessionEndMs,
                 headsUpSeconds: HEADS_UP_BUFFER_SECONDS,
+                clientGroupId,
                 oldState,
                 newState
             };
@@ -5401,12 +5598,14 @@ let pauseStartTime = 0;
             });
         }
 
-        function schedulePomodoroHeadsUpNotification(durationSeconds, upcomingBreakState = 'short_break') {
+        function schedulePomodoroHeadsUpNotification({ phaseStartMs = Date.now(), durationSeconds, upcomingBreakState = 'short_break' }) {
             if (!Number.isFinite(durationSeconds)) {
                 return;
             }
 
-            const headsUpDelayMs = Math.max((durationSeconds - HEADS_UP_BUFFER_SECONDS) * 1000, 0);
+            const phaseStart = Number.isFinite(phaseStartMs) ? phaseStartMs : Date.now();
+            const headsUpAtMs = (phaseStart + (durationSeconds * 1000)) - HEADS_UP_BUFFER_MS;
+            const headsUpDelayMs = headsUpAtMs - Date.now();
             if (headsUpDelayMs <= 0) {
                 return;
             }
@@ -5426,12 +5625,14 @@ let pauseStartTime = 0;
             });
         }
 
-        function scheduleBreakHeadsUpNotification(durationSeconds, breakState) {
+        function scheduleBreakHeadsUpNotification({ phaseStartMs = Date.now(), durationSeconds, breakState }) {
             if (!Number.isFinite(durationSeconds)) {
                 return;
             }
 
-            const headsUpDelayMs = Math.max((durationSeconds - HEADS_UP_BUFFER_SECONDS) * 1000, 0);
+            const phaseStart = Number.isFinite(phaseStartMs) ? phaseStartMs : Date.now();
+            const headsUpAtMs = (phaseStart + (durationSeconds * 1000)) - HEADS_UP_BUFFER_MS;
+            const headsUpDelayMs = headsUpAtMs - Date.now();
             if (headsUpDelayMs <= 0) {
                 return;
             }
@@ -6205,54 +6406,6 @@ let pauseStartTime = 0;
             return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
-        function parsePomodoroDisplayToSeconds(displayText) {
-            if (typeof displayText !== 'string' || displayText.trim() === '') {
-                return 0;
-            }
-
-            const parts = displayText.split(':').map(part => parseInt(part, 10));
-            if (parts.some(num => Number.isNaN(num))) {
-                return 0;
-            }
-
-            if (parts.length === 3) {
-                const [hours, minutes, seconds] = parts;
-                return (hours * 3600) + (minutes * 60) + seconds;
-            }
-
-            if (parts.length === 2) {
-                const [minutes, seconds] = parts;
-                return (minutes * 60) + seconds;
-            }
-
-            return parts[0] || 0;
-        }
-
-        function updatePomodoroExpectedEnd(durationSeconds) {
-            if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
-                pomodoroPhaseExpectedEnd = null;
-                return;
-            }
-
-            pomodoroPhaseExpectedEnd = Date.now() + (durationSeconds * 1000);
-        }
-
-        function syncPomodoroDisplayWithExpectedEnd() {
-            if (!sessionTimerDisplay || pomodoroPhaseExpectedEnd === null) {
-                return;
-            }
-
-            const remainingMs = pomodoroPhaseExpectedEnd - Date.now();
-            const remainingSeconds = Math.max(Math.ceil(remainingMs / 1000), 0);
-            sessionTimerDisplay.textContent = formatPomodoroTime(remainingSeconds);
-
-            if (remainingSeconds <= 0 && pomodoroState !== 'idle') {
-                handlePomodoroPhaseEnd({ oldState: pomodoroState }).catch(error => {
-                    console.error('Failed to handle Pomodoro transition after visibility sync:', error);
-                });
-            }
-        }
-
         function formatMinutesFriendly(minutes) {
             if (!Number.isFinite(minutes) || minutes < 0) return '0m';
             const hours = Math.floor(minutes / 60);
@@ -6388,7 +6541,11 @@ let pauseStartTime = 0;
                 cancelSWAlarm(POMODORO_HEADS_UP_TAG);
                 const workPhaseStartMs = Date.now();
                 const upcomingBreak = getUpcomingBreakConfig();
-                schedulePomodoroHeadsUpNotification(workDurationSeconds, upcomingBreak.state);
+                schedulePomodoroHeadsUpNotification({
+                    phaseStartMs: workPhaseStartMs,
+                    durationSeconds: workDurationSeconds,
+                    upcomingBreakState: upcomingBreak.state
+                });
                 await cancelServerHeadsUpGroup(SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK, { silent: true });
                 const upcomingBreakLabel = describeBreakLabel(upcomingBreak.state);
                 const breakHeadsUpCopy = buildHeadsUpCopy({ direction: 'toBreak', label: upcomingBreakLabel });
@@ -6406,8 +6563,7 @@ let pauseStartTime = 0;
                     headsUpCopy: breakHeadsUpCopy,
                     finalCopy: breakFinalCopy
                 });
-                updatePomodoroExpectedEnd(workDurationSeconds);
-                pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
+                pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds, startedAt: workPhaseStartMs });
             }
 
             document.getElementById('start-studying-btn').classList.add('hidden');
@@ -6428,7 +6584,6 @@ let pauseStartTime = 0;
         async function stopTimer() {
             // Stop the UI timer in the web worker
             pomodoroWorker.postMessage({ command: 'stop' });
-            pomodoroPhaseExpectedEnd = null;
             cancelSWAlarm(POMODORO_HEADS_UP_TAG);
             await cancelAllServerHeadsUpSchedules('timer_stop');
 
@@ -6503,7 +6658,6 @@ let pauseStartTime = 0;
                 document.getElementById('resume-btn').classList.remove('hidden');
             } else if (timerMode === 'pomodoro' && !isPaused) {
                 pomodoroWorker.postMessage({ command: 'pause' });
-                pomodoroPhaseExpectedEnd = null;
                 isPaused = true;
                 document.getElementById('pause-btn').classList.add('hidden');
                 document.getElementById('resume-btn').classList.remove('hidden');
@@ -6523,8 +6677,6 @@ let pauseStartTime = 0;
                 document.getElementById('pause-btn').classList.remove('hidden');
                 document.getElementById('resume-btn').classList.add('hidden');
             } else if (timerMode === 'pomodoro' && isPaused) {
-                const remainingSeconds = parsePomodoroDisplayToSeconds(sessionTimerDisplay?.textContent || '');
-                updatePomodoroExpectedEnd(remainingSeconds);
                 pomodoroWorker.postMessage({ command: 'resume' });
                 isPaused = false;
                 document.getElementById('pause-btn').classList.remove('hidden');
@@ -6533,7 +6685,7 @@ let pauseStartTime = 0;
         }
 
         // --- NEW: Helper to start the next Pomodoro phase ---
-        async function startNextPomodoroPhase(state) {
+        async function startNextPomodoroPhase(state, options = {}) {
             cancelSWAlarm(POMODORO_HEADS_UP_TAG);
             if (state === 'work' && activeTaskRemainingPomodoros !== null && activeTaskRemainingPomodoros <= 0) {
                 suppressTimerSave = true;
@@ -6557,18 +6709,34 @@ let pauseStartTime = 0;
                 statusText = state.replace('_', ' ');
             }
 
-            const phaseStartMs = Date.now();
+            const providedSession = options.session && typeof options.session === 'object' ? options.session : null;
+            const providedStartMs = coerceEpochMilliseconds(
+                options.phaseStartMs ??
+                providedSession?.endTimestamp ??
+                providedSession?.end_at ??
+                providedSession?.endAt
+            );
+            const phaseStartMs = Number.isFinite(providedStartMs) ? providedStartMs : Date.now();
+            const nowMs = Date.now();
+            const targetEndMs = phaseStartMs + (durationSeconds * 1000);
+            const initialTimeLeftSeconds = Math.max(Math.ceil((targetEndMs - nowMs) / 1000), 0);
 
             // Start the UI timer
-            updatePomodoroExpectedEnd(durationSeconds);
-            pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds });
+            pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds, startedAt: phaseStartMs });
+            if (sessionTimerDisplay) {
+                sessionTimerDisplay.textContent = formatPomodoroTime(initialTimeLeftSeconds);
+            }
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
 
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
             if (state === 'work') {
                 const upcomingBreak = getUpcomingBreakConfig();
-                schedulePomodoroHeadsUpNotification(durationSeconds, upcomingBreak.state);
+                schedulePomodoroHeadsUpNotification({
+                    phaseStartMs,
+                    durationSeconds,
+                    upcomingBreakState: upcomingBreak.state
+                });
                 await cancelServerHeadsUpGroup(SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK, { silent: true });
                 const workUpcomingLabel = describeBreakLabel(upcomingBreak.state);
                 await scheduleServerPomodoroHeadsUp({
@@ -6581,7 +6749,11 @@ let pauseStartTime = 0;
                     finalCopy: buildFinalTransitionCopy({ oldState: 'work', newState: upcomingBreak.state, label: workUpcomingLabel })
                 });
             } else {
-                scheduleBreakHeadsUpNotification(durationSeconds, state);
+                scheduleBreakHeadsUpNotification({
+                    phaseStartMs,
+                    durationSeconds,
+                    breakState: state
+                });
                 await cancelServerHeadsUpGroup(SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK, { silent: true });
                 const breakLabel = describeBreakLabel(state);
                 await scheduleServerPomodoroHeadsUp({
@@ -6608,18 +6780,6 @@ let pauseStartTime = 0;
             totalTimeDisplay.textContent = `Total Today: ${formatTime(totalTimeTodayInSeconds)}`;
             totalBreakTimeDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
         }
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState !== 'visible') {
-                return;
-            }
-
-            if (timerMode === 'pomodoro' && pomodoroState !== 'idle') {
-                if (pomodoroPhaseExpectedEnd !== null) {
-                    syncPomodoroDisplayWithExpectedEnd();
-                }
-            }
-        });
 
         async function saveSession(subject, durationSeconds, sessionType = 'study') { // Default to 'study'
             if (!currentUser || durationSeconds <= 0) {
@@ -13705,38 +13865,12 @@ if (achievementsGrid) {
             // --- Service Worker Registration (Robust Version) ---
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.addEventListener('message', (event) => {
-                const data = event.data;
-                if (!data || data.source !== 'focusflow-sw') {
-                    return;
-                }
-
-                const transition = data.payload || {};
-                const eventType = transition.type || transition.options?.data?.type;
-
-                if (!eventType) {
-                    return;
-                }
-
-                const sessionMeta = transition.session || transition.options?.data?.session || transition.transition?.session;
-
-                if (timerMode === 'pomodoro' && pomodoroState !== 'idle' && sessionMeta && typeof sessionMeta.endTimestamp === 'number') {
-                    const remainingSeconds = Math.max(Math.ceil((sessionMeta.endTimestamp - Date.now()) / 1000), 0);
-                    updatePomodoroExpectedEnd(remainingSeconds);
-                    if (sessionTimerDisplay) {
-                        sessionTimerDisplay.textContent = formatPomodoroTime(remainingSeconds);
-                    }
-                }
-
-                if (eventType === 'TIMER_ENDED') {
-                    const oldState = transition.oldState || transition.options?.data?.transition?.oldState || transition.transition?.oldState;
-                    if (timerMode === 'pomodoro' && pomodoroState === oldState && oldState) {
-                        handlePomodoroPhaseEnd({ oldState }).catch(error => {
-                            console.error('Failed to handle Pomodoro transition from Service Worker message:', error);
-                        });
-                    }
+                try {
+                    handleServiceWorkerPushMessage(event.data);
+                } catch (error) {
+                    console.error('Failed to handle service worker message:', error);
                 }
             });
-
             // Service Workers require a secure context (HTTPS or localhost) to register.
             // This check prevents the registration error in unsupported environments (like 'blob:').
             if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
