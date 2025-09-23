@@ -309,42 +309,53 @@ function buildTimingAwareCopy({
     originalTitle,
     originalBody,
     diffSeconds,
+    remainingSeconds,
     direction,
-    label,
+    endingLabel,
+    startingLabel,
     type
 }) {
-    let title = originalTitle;
-    let body = originalBody;
-    const secondsLabel = formatSecondsShort(diffSeconds);
-    const suffix = diffSeconds < 0
-        ? `${formatSecondsShort(diffSeconds)} ago`
-        : `in ${secondsLabel}`;
+    let title = originalTitle || '';
+    let body = originalBody || '';
+    const endingPhaseLabel = direction === 'toBreak' ? 'Focus' : 'Break';
+    const startingPhaseLabel = direction === 'toBreak' ? 'Break' : 'Focus';
+    const conciseCountdown = remainingSeconds <= 10 ? '~5s' : formatSecondsShort(remainingSeconds);
+    const elapsedSuffix = diffSeconds < 0 ? `${formatSecondsShort(Math.abs(diffSeconds))} ago` : `in ${formatSecondsShort(diffSeconds)}`;
 
     if (type === 'HEADS_UP') {
-        if (diffSeconds > 1) {
-            title = `${direction === 'toFocus' ? 'Focus' : 'Break'} starts in ${secondsLabel}`;
-            body = `Your ${label} ${direction === 'toFocus' ? 'ends' : 'begins'} in ${secondsLabel}.`;
-        } else if (diffSeconds >= -1) {
-            title = `${direction === 'toFocus' ? 'Focus' : 'Break'} starting now`;
-            body = `Your ${label} ${direction === 'toFocus' ? 'is ending now.' : 'is starting now.'}`;
-        } else {
-            title = `${direction === 'toFocus' ? 'Focus' : 'Break'} started`;
-            body = `Your ${label} ${direction === 'toFocus' ? 'ended' : 'began'} ${suffix}.`;
+        if (!title) {
+            title = `${endingPhaseLabel} ends in ${conciseCountdown}`;
+        }
+        if (!body) {
+            body = remainingSeconds <= 10
+                ? `Your ${endingLabel} is wrapping up now.`
+                : `Get ready—your ${endingLabel} ends in ${formatSecondsShort(remainingSeconds)}.`;
         }
     } else if (type === 'FINAL') {
-        if (diffSeconds > 1) {
-            title = originalTitle || `${direction === 'toFocus' ? 'Focus' : 'Break'} time`;
-            body = originalBody || `Your ${label} starts in ${secondsLabel}.`;
-        } else if (diffSeconds >= -1) {
-            title = originalTitle || `${direction === 'toFocus' ? 'Focus' : 'Break'} time`;
-            body = originalBody || `Your ${label} is starting now.`;
-        } else {
-            title = originalTitle || `${direction === 'toFocus' ? 'Focus' : 'Break'} time`;
-            body = originalBody || `Your ${label} ${direction === 'toFocus' ? 'started' : 'began'} ${suffix}.`;
+        if (!title) {
+            if (remainingSeconds > 0) {
+                title = `${startingPhaseLabel} starts in ${formatSecondsShort(remainingSeconds)}`;
+            } else if (diffSeconds >= -5) {
+                title = `${startingPhaseLabel} starting now`;
+            } else {
+                title = `${startingPhaseLabel} started`;
+            }
+        }
+        if (!body) {
+            if (remainingSeconds > 0) {
+                body = `Your ${startingLabel} begins in ${formatSecondsShort(remainingSeconds)}.`;
+            } else if (diffSeconds >= -5) {
+                body = `Your ${startingLabel} is starting now.`;
+            } else {
+                body = `Your ${startingLabel} started ${elapsedSuffix}.`;
+            }
         }
     }
 
-    return { title, body };
+    return {
+        title: title || originalTitle || 'FocusFlow',
+        body: body || originalBody || ''
+    };
 }
 
 function resolveSessionEndTimestamp(session = {}) {
@@ -390,15 +401,21 @@ function applyTimingToNotification(payload, options) {
         return { title: baseTitle, body: options.body || baseBody };
     }
 
-    const diffSeconds = Math.round((endTimestamp - Date.now()) / 1000);
+    const now = Date.now();
+    const diffMs = endTimestamp - now;
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const remainingSeconds = Math.max(0, diffSeconds);
     const direction = determineTransitionDirection(transition);
-    const label = labelForStateName(direction === 'toBreak' ? transition.newState : transition.oldState);
+    const endingLabel = labelForStateName(transition.oldState);
+    const startingLabel = labelForStateName(transition.newState);
     const { title, body } = buildTimingAwareCopy({
         originalTitle: baseTitle,
         originalBody: baseBody,
         diffSeconds,
+        remainingSeconds,
         direction,
-        label,
+        endingLabel,
+        startingLabel,
         type
     });
 
@@ -408,6 +425,7 @@ function applyTimingToNotification(payload, options) {
         session: {
             ...session,
             computedDiffSeconds: diffSeconds,
+            computedSecondsRemaining: remainingSeconds,
             computedAt: Date.now()
         }
     };

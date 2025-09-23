@@ -279,9 +279,7 @@ Deno.serve(async (req) => {
       await webpush.sendNotification(subscription, JSON.stringify(finalPayload), {
         TTL: 30,
         urgency: "high",
-        headers: {
-          Topic: topic
-        }
+        topic
       });
     } catch (pushError) {
       console.error("Failed to send push notification:", pushError);

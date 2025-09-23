@@ -174,9 +174,7 @@ async function sendNotification(
   await webpush.sendNotification(subscription, JSON.stringify(payload), {
     TTL: 30,
     urgency: "high",
-    headers: {
-      Topic: topic
-    }
+    topic
   });
 }
 
