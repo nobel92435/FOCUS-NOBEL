@@ -4511,7 +4511,7 @@ let pauseStartTime = 0;
                     .from(HEADS_UP_JOB_TABLE)
                     .insert([{
                         user_id: currentUser.id,
-                        kind: 'heads_up',
+                        kind: 'pomodoro_heads_up',
                         send_at: sendAtIso,
                         payload: {
                             title,
