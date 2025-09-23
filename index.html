@@ -3389,6 +3389,18 @@
         [SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK]: null,
         [SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK]: null
     };
+
+    function clearServerHeadsUpTimeout(entry) {
+        if (entry && typeof entry === 'object') {
+            if (entry.timeoutId) {
+                clearTimeout(entry.timeoutId);
+                entry.timeoutId = null;
+            }
+            if ('notificationPayload' in entry) {
+                entry.notificationPayload = null;
+            }
+        }
+    }
     let serverHeadsUpSchedulingDisabled = false;
     let serverHeadsUpDisableInfo = null;
     let serverHeadsUpKindHints = [];
@@ -4159,11 +4171,14 @@
                     options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' }
                 };
 
-            const serverHandled = await triggerServerNotification({
-                ...transitionMessage,
-                newState,
-                oldState
-            });
+            let serverHandled = false;
+            if (serverHeadsUpSchedulingDisabled) {
+                serverHandled = await triggerServerNotification({
+                    ...transitionMessage,
+                    newState,
+                    oldState
+                });
+            }
 
             if (!serverHandled && Notification.permission === 'granted') {
                 scheduleTransitionNotification(0, transitionMessage.title, transitionMessage.options, {
@@ -4227,10 +4242,12 @@
  * Sends a notification request to the Supabase Edge Function.
  * @param {object} messageData - Includes title, options.body, newState and oldState.
  */
-async function triggerServerNotification(messageData) {
+async function triggerServerNotification(messageData, { silent = false } = {}) {
     if (!currentUser) {
         console.error('User not authenticated, cannot send server notification.');
-        showToast('Please sign in to enable server notifications.', 'error');
+        if (!silent) {
+            showToast('Please sign in to enable server notifications.', 'error');
+        }
         return false;
     }
 
@@ -4239,14 +4256,14 @@ async function triggerServerNotification(messageData) {
         return false;
     }
 
-    const options = messageData.options ? { ...messageData.options } : {};
-    if (options && !options.tag) {
-        options.tag = 'pomodoro-transition';
+    const notificationOptions = messageData.options ? { ...messageData.options } : {};
+    if (notificationOptions && !notificationOptions.tag) {
+        notificationOptions.tag = 'pomodoro-transition';
     }
     const bodyText = typeof messageData.body === 'string'
         ? messageData.body
-        : (typeof options.body === 'string' ? options.body : '');
-    options.body = bodyText;
+        : (typeof notificationOptions.body === 'string' ? notificationOptions.body : '');
+    notificationOptions.body = bodyText;
 
     let activeSubscription = null;
     try {
@@ -4270,7 +4287,7 @@ async function triggerServerNotification(messageData) {
                 userId: currentUser.id,
                 appId,
                 title: messageData.title,
-                body: options.body,
+                body: notificationOptions.body,
                 newState: messageData.newState,
                 oldState: messageData.oldState
             }
@@ -4288,9 +4305,69 @@ async function triggerServerNotification(messageData) {
         return true;
     } catch (error) {
         console.error('Error triggering server notification:', error);
-        showToast('Failed to schedule notification.', 'error');
+        if (!silent) {
+            showToast('Failed to schedule notification.', 'error');
+        }
         return false;
     }
+}
+
+function scheduleServerHeadsUpTrigger({ groupKey, sendAtMs, notificationPayload }) {
+    if (!groupKey || !(groupKey in serverHeadsUpSchedules)) {
+        return;
+    }
+
+    const scheduleInfo = serverHeadsUpSchedules[groupKey];
+    if (!scheduleInfo) {
+        return;
+    }
+
+    clearServerHeadsUpTimeout(scheduleInfo);
+
+    const delayMs = Math.max(Math.round(sendAtMs - Date.now()), 0);
+    let timeoutId = null;
+
+    const logContext = { groupKey, sendAt: scheduleInfo.sendAt };
+
+    const runTrigger = async () => {
+        try {
+            const handled = await triggerServerNotification(notificationPayload, { silent: true });
+            if (handled) {
+                console.log(
+                    '%c[SUCCESS]%c Server heads-up push requested from Edge Function.',
+                    'color: #0ea5e9; font-weight: bold; background-color: #0f172a; padding: 2px 6px; border-radius: 4px;',
+                    'color: inherit;',
+                    logContext
+                );
+            } else {
+                console.warn('Server heads-up notification did not confirm delivery.', logContext);
+            }
+        } catch (error) {
+            console.error('Failed to trigger server heads-up notification:', error);
+        } finally {
+            const latest = serverHeadsUpSchedules[groupKey];
+            if (latest && latest.timeoutId === timeoutId) {
+                latest.timeoutId = null;
+            }
+        }
+    };
+
+    if (delayMs <= 0) {
+        scheduleInfo.notificationPayload = notificationPayload;
+        runTrigger();
+        return;
+    }
+
+    timeoutId = setTimeout(runTrigger, delayMs);
+    scheduleInfo.timeoutId = timeoutId;
+    scheduleInfo.notificationPayload = notificationPayload;
+    console.log(
+        '%c[INFO]%c Server heads-up push will be requested in',
+        'color: #38bdf8; font-weight: bold;',
+        'color: inherit;',
+        `${(delayMs / 1000).toFixed(1)}s`,
+        logContext
+    );
 }
 
         // Timer State
@@ -4790,6 +4867,7 @@ let pauseStartTime = 0;
         }
 
         function resetServerHeadsUpSchedules() {
+            Object.values(serverHeadsUpSchedules).forEach(clearServerHeadsUpTimeout);
             serverHeadsUpSchedules = {
                 [SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK]: null,
                 [SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK]: null
@@ -4853,8 +4931,14 @@ let pauseStartTime = 0;
                 serverHeadsUpSchedules[groupKey] = null;
             }
             const scheduled = serverHeadsUpSchedules[groupKey];
+            if (!scheduled) {
+                return;
+            }
+
+            clearServerHeadsUpTimeout(scheduled);
+
             const userId = currentUser?.id;
-            if (!scheduled?.groupId || !userId || !supabase || typeof supabase.from !== 'function') {
+            if (!scheduled.groupId || !userId || !supabase || typeof supabase.from !== 'function') {
                 serverHeadsUpSchedules[groupKey] = null;
                 return;
             }
@@ -4882,7 +4966,10 @@ let pauseStartTime = 0;
                 return;
             }
 
-            const activeGroupIds = Object.values(serverHeadsUpSchedules)
+            const activeEntries = Object.values(serverHeadsUpSchedules).filter(Boolean);
+            activeEntries.forEach(clearServerHeadsUpTimeout);
+
+            const activeGroupIds = activeEntries
                 .map(entry => entry?.groupId)
                 .filter(Boolean);
 
@@ -4962,6 +5049,7 @@ let pauseStartTime = 0;
                     transition: { oldState, newState }
                 }
             };
+            options.body = body;
             const basePayload = {
                 title,
                 body,
@@ -4984,14 +5072,12 @@ let pauseStartTime = 0;
                 configuredKinds
             });
 
+            let scheduledKind = null;
+            let lastKindError = null;
+            let foreignKeyError = null;
+
             try {
                 await cancelServerHeadsUpGroup(groupKey, { silent: true });
-
-                let scheduledKind = null;
-                let lastKindError = null;
-
-                // FIX: Add a new variable to specifically catch foreign key errors
-                let foreignKeyError = null; 
 
                 for (const kind of candidateKinds) {
                     // FIX: Get the full subscription object from the DB, which now includes the all-important ID.
@@ -5067,13 +5153,6 @@ let pauseStartTime = 0;
                 );
                 // --- END FIX ---
 
-                serverHeadsUpSchedules[groupKey] = {
-                    groupId: clientGroupId,
-                    sendAt: sendAtIso,
-                    oldState,
-                    newState,
-                    kind: scheduledKind
-                };
             } catch (error) {
                 if (isHeadsUpKindConstraintError(error)) {
                     resetServerHeadsUpKindHints();
@@ -5087,6 +5166,37 @@ let pauseStartTime = 0;
                     console.error('Failed to schedule server heads-up notification:', error);
                 }
             }
+
+            if (serverHeadsUpSchedulingDisabled) {
+                return;
+            }
+
+            const scheduleContext = {
+                groupId: clientGroupId,
+                sendAt: sendAtIso,
+                oldState,
+                newState,
+                kind: scheduledKind || 'heads_up_local_fallback',
+                timeoutId: null,
+                notificationPayload: null
+            };
+
+            const notificationPayload = {
+                title,
+                body,
+                newState,
+                oldState,
+                options: { ...options }
+            };
+
+            serverHeadsUpSchedules[groupKey] = scheduleContext;
+            scheduleContext.notificationPayload = notificationPayload;
+
+            scheduleServerHeadsUpTrigger({
+                groupKey,
+                sendAtMs,
+                notificationPayload
+            });
         }
 
         function schedulePomodoroHeadsUpNotification(durationSeconds, upcomingBreakState = 'short_break') {
