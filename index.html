@@ -4727,29 +4727,54 @@ let pauseStartTime = 0;
             }
             
             function scheduleNow(delay, title, opts) {
-                navigator.serviceWorker.ready.then(registration => {
-                    const target = registration.active || registration.waiting || registration.installing;
-                    if (!target) {
-                        console.warn('No active service worker available to schedule a notification.');
-                        return;
+                const transitionMessage = {
+                    type: transitionPayload.type || 'TIMER_ENDED',
+                    newState: transitionPayload.newState,
+                    oldState: transitionPayload.oldState,
+                    title,
+                    options: opts
+                };
+
+                const message = {
+                    type: 'SCHEDULE_NOTIFICATION',
+                    payload: {
+                        delay: delay,
+                        title: title,
+                        options: opts,
+                        transitionMessage
                     }
-                    const transitionMessage = {
-                        type: transitionPayload.type || 'TIMER_ENDED',
-                        newState: transitionPayload.newState,
-                        oldState: transitionPayload.oldState,
-                        title,
-                        options: opts
-                    };
-                    target.postMessage({
-                        type: 'SCHEDULE_NOTIFICATION',
-                        payload: {
-                            delay: delay,
-                            title: title,
-                            options: opts,
-                            transitionMessage
+                };
+
+                let delivered = false;
+
+                if (navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage(message);
+                    delivered = true;
+                }
+
+                if (!delivered) {
+                    navigator.serviceWorker.ready.then(registration => {
+                        const target = registration.active || registration.waiting || registration.installing;
+                        if (!target) {
+                            console.warn('No active service worker available to schedule a notification.');
+                            return;
                         }
+                        target.postMessage(message);
+                        console.log(
+                            '%c[SUCCESS]%c Heads-up notification handed to Service Worker.',
+                            'color: #22d3ee; font-weight: bold; background-color: #0f172a; padding: 2px 6px; border-radius: 4px;',
+                            'color: default;',
+                            { delay }
+                        );
                     });
-                });
+                } else {
+                    console.log(
+                        '%c[SUCCESS]%c Heads-up notification handed to Service Worker.',
+                        'color: #22d3ee; font-weight: bold; background-color: #0f172a; padding: 2px 6px; border-radius: 4px;',
+                        'color: default;',
+                        { delay }
+                    );
+                }
             }
         }
 
