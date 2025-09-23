@@ -3169,28 +3169,6 @@
         };
     }
 
-    function preparePushSubscriptionForServer(value) {
-        const normalized = normalizePushSubscription(value);
-        if (!normalized) return null;
-
-        return {
-            endpoint: normalized.endpoint,
-            expirationTime: normalized.expirationTime ?? null,
-            keys: {
-                auth: normalized.keys.auth,
-                p256dh: normalized.keys.p256dh
-            },
-            encoding: 'base64url'
-        };
-    }
-
-    function areSubscriptionsEqual(a, b) {
-        const left = normalizePushSubscription(a);
-        const right = normalizePushSubscription(b);
-        if (!left || !right) return false;
-        return left.endpoint === right.endpoint && JSON.stringify(left.keys || {}) === JSON.stringify(right.keys || {});
-    }
-
     let pushSubscriptionPromise = null;
 
     async function ensurePushSubscription({ forceRefresh = false } = {}) {
@@ -3256,9 +3234,8 @@
 
                 const subscriptionJSON = subscription.toJSON();
                 const serverReadySubscription = preparePushSubscriptionForServer(subscriptionJSON);
-                const normalizedSubscription = normalizePushSubscription(serverReadySubscription);
 
-                if (!serverReadySubscription || !normalizedSubscription) {
+                if (!serverReadySubscription) {
                     console.error('Generated an invalid push subscription object, not saving to DB:', subscriptionJSON);
                     showToast('Could not create a valid notification subscription.', 'error');
                     if (!forceRefresh) {
@@ -3266,25 +3243,56 @@
                     }
                     return null;
                 }
+                
+                // --- START FIX: Save to the correct `push_subscriptions` table ---
+                const { data: existingSub, error: findError } = await supabase
+                    .from('push_subscriptions')
+                    .select('id, endpoint, p256dh, auth')
+                    .eq('user_id', currentUser.id)
+                    .eq('endpoint', serverReadySubscription.endpoint)
+                    .maybeSingle();
 
-                const storedSubscription = currentUserData?.push_subscription;
-                if (!areSubscriptionsEqual(storedSubscription, serverReadySubscription)) {
-                    const { error } = await supabase
-                        .from('profiles')
-                        .update({ push_subscription: serverReadySubscription })
-                        .eq('id', currentUser.id);
-
-                    if (error) {
-                        console.error('Failed to save push subscription to Supabase:', error);
-                    } else {
-                        currentUserData = {
-                            ...(currentUserData || {}),
-                            push_subscription: serverReadySubscription
-                        };
-                    }
+                if (findError) {
+                    console.error('Error finding existing push subscription:', findError);
+                    return null;
                 }
 
-                return normalizedSubscription;
+                const subscriptionPayload = {
+                    user_id: currentUser.id,
+                    endpoint: serverReadySubscription.endpoint,
+                    p256dh: serverReadySubscription.keys.p256dh,
+                    auth: serverReadySubscription.keys.auth,
+                };
+                
+                let dbSubscription;
+                
+                // If a subscription exists but its keys have changed, update it.
+                if (existingSub && (existingSub.p256dh !== subscriptionPayload.p256dh || existingSub.auth !== subscriptionPayload.auth)) {
+                    const { data, error } = await supabase
+                        .from('push_subscriptions')
+                        .update(subscriptionPayload)
+                        .eq('id', existingSub.id)
+                        .select()
+                        .single();
+                    if (error) { console.error('Error updating push subscription:', error); return null; }
+                    dbSubscription = data;
+                } else if (existingSub) {
+                    // If it exists and is identical, just use it.
+                    dbSubscription = existingSub;
+                } else {
+                    // If it doesn't exist, insert a new one.
+                    const { data, error } = await supabase
+                        .from('push_subscriptions')
+                        .insert(subscriptionPayload)
+                        .select()
+                        .single();
+                    if (error) { console.error('Error inserting new push subscription:', error); return null; }
+                    dbSubscription = data;
+                }
+                // --- END FIX ---
+
+                // This now returns the full row from the `push_subscriptions` table, including its ID.
+                return dbSubscription; 
             } catch (error) {
                 console.error('Failed to ensure push subscription:', error);
                 return null;
@@ -3294,60 +3302,6 @@
         })();
 
         return pushSubscriptionPromise;
-    }
-
-    async function getServerPushSubscriptionId(subscription, options = {}) {
-        if (!subscription) {
-            subscription = await ensurePushSubscription();
-        }
-
-        const normalized = normalizePushSubscription(subscription);
-        const maxAttempts = Math.max(Number(options.maxAttempts) || 0, 1);
-        const attempts = Math.min(maxAttempts, 3);
-
-        if (!normalized?.endpoint || !currentUser?.id) {
-            return null;
-        }
-        if (!supabase || typeof supabase.from !== 'function') {
-            return null;
-        }
-
-        let lastError = null;
-        let endpoint = normalized.endpoint;
-
-        for (let attempt = 0; attempt < attempts; attempt += 1) {
-            const { data, error } = await supabase
-                .from('push_subscriptions')
-                .select('id')
-                .eq('user_id', currentUser.id)
-                .eq('endpoint', endpoint)
-                .maybeSingle();
-
-            if (error) {
-                lastError = error;
-            } else if (data?.id) {
-                return { id: data.id, error: null };
-            }
-
-            if (attempt < attempts - 1) {
-                try {
-                    const refreshed = await ensurePushSubscription({ forceRefresh: true });
-                    if (refreshed?.endpoint && refreshed.endpoint !== endpoint) {
-                        endpoint = refreshed.endpoint;
-                    }
-                } catch (refreshError) {
-                    lastError = refreshError;
-                }
-
-                await new Promise(resolve => setTimeout(resolve, 250 * (attempt + 1)));
-            }
-        }
-
-        if (lastError) {
-            console.warn('Failed to resolve push subscription record for server scheduling.', lastError);
-        }
-
-        return { id: null, error: lastError };
     }
 
     /**
@@ -5003,27 +4957,22 @@ let pauseStartTime = 0;
                 // FIX: Add a new variable to specifically catch foreign key errors
                 let foreignKeyError = null; 
 
-                const activeSubscription = await ensurePushSubscription();
-                const { id: subscriptionId, error: subscriptionError } = await getServerPushSubscriptionId(activeSubscription);
-
-                if (!subscriptionId) {
-                    disableServerHeadsUpScheduling('missing_subscription_id', {
-                        error: subscriptionError,
-                        hints,
-                        configuredKinds
-                    });
-                    return;
-                }
-
                 for (const kind of candidateKinds) {
-                    // FIX: The subscription_id was missing from the insert payload.
-                    // We need to fetch the current subscription's ID from your database.
+                    // FIX: Get the full subscription object from the DB, which now includes the all-important ID.
+                    const dbSubscription = await ensurePushSubscription();
+
+                    if (!dbSubscription || !dbSubscription.id) {
+                        console.warn('Could not find or create a valid subscription ID to schedule a notification.');
+                        disableServerHeadsUpScheduling('missing_subscription_id', { error: null });
+                        ensurePushSubscription({ forceRefresh: true }); // Attempt to fix for next time
+                        return;
+                    }
 
                     const { error: insertError } = await supabase
                         .from(HEADS_UP_JOB_TABLE)
                         .insert([{
                             user_id: currentUser.id,
-                            subscription_id, // FIX: Added the subscription_id
+                            subscription_id: dbSubscription.id, // FIX: Use the ID from the DB subscription object
                             kind,
                             send_at: sendAtIso,
                             payload: { ...basePayload, kind },
@@ -13510,3 +13459,6 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
+
+
