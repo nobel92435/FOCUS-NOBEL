@@ -229,6 +229,46 @@ function firstNonEmptyString(...values) {
     return undefined;
 }
 
+function firstDefinedValue(...values) {
+    for (const value of values) {
+        if (value !== undefined && value !== null) {
+            return value;
+        }
+    }
+    return undefined;
+}
+
+function collectNotificationSources(...candidates) {
+    const queue = candidates.filter(candidate => candidate && typeof candidate === 'object');
+    const seen = new Set();
+    const sources = [];
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+        if (!current || typeof current !== 'object' || seen.has(current)) {
+            continue;
+        }
+
+        seen.add(current);
+        sources.push(current);
+
+        const nestedCandidates = [];
+        if (current.notification && typeof current.notification === 'object') {
+            nestedCandidates.push(current.notification);
+        }
+        if (Array.isArray(current.notifications)) {
+            nestedCandidates.push(...current.notifications.filter(item => item && typeof item === 'object'));
+        }
+        if (current.data && typeof current.data === 'object' && current.data.notification && typeof current.data.notification === 'object') {
+            nestedCandidates.push(current.data.notification);
+        }
+
+        queue.push(...nestedCandidates);
+    }
+
+    return sources;
+}
+
 function normalizePushPayload(incoming) {
     if (typeof incoming === 'string') {
         return {
@@ -276,34 +316,75 @@ function normalizePushPayload(incoming) {
 
     const baseObject = base && typeof base === 'object' ? base : {};
 
+    const notificationSources = collectNotificationSources(incoming, baseObject);
+
     const optionsSources = [incoming.options, baseObject.options];
+    for (const source of notificationSources) {
+        if (source && typeof source.options === 'object') {
+            optionsSources.push(source.options);
+        }
+    }
     const mergedOptions = Object.assign({}, ...optionsSources.filter(opt => opt && typeof opt === 'object'));
 
     const title = firstNonEmptyString(
-        baseObject.title,
+        ...notificationSources.map(source => source.title),
         incoming.title,
         'FocusFlow'
     );
 
     const body = firstNonEmptyString(
         mergedOptions.body,
-        baseObject.body,
+        ...notificationSources.map(source => source.body),
         incoming.body
     );
     if (body) {
         mergedOptions.body = body;
     }
 
-    mergedOptions.icon = mergedOptions.icon || baseObject.icon || incoming.icon || DEFAULT_NOTIFICATION_ICON;
-    mergedOptions.badge = mergedOptions.badge || baseObject.badge || incoming.badge || DEFAULT_NOTIFICATION_BADGE;
-    mergedOptions.vibrate = mergedOptions.vibrate || baseObject.vibrate || incoming.vibrate || DEFAULT_NOTIFICATION_VIBRATE;
-    mergedOptions.requireInteraction = mergedOptions.requireInteraction ?? baseObject.requireInteraction ?? incoming.requireInteraction ?? true;
-    mergedOptions.renotify = mergedOptions.renotify ?? baseObject.renotify ?? incoming.renotify ?? true;
-    mergedOptions.timestamp = mergedOptions.timestamp || baseObject.timestamp || incoming.timestamp || Date.now();
-    mergedOptions.tag = mergedOptions.tag || baseObject.tag || incoming.tag || notificationTag;
+    mergedOptions.icon = firstNonEmptyString(
+        mergedOptions.icon,
+        ...notificationSources.map(source => source.icon),
+        incoming.icon,
+        DEFAULT_NOTIFICATION_ICON
+    );
+    mergedOptions.badge = firstNonEmptyString(
+        mergedOptions.badge,
+        ...notificationSources.map(source => source.badge),
+        incoming.badge,
+        DEFAULT_NOTIFICATION_BADGE
+    );
+    mergedOptions.vibrate = firstDefinedValue(
+        mergedOptions.vibrate,
+        ...notificationSources.map(source => source.vibrate),
+        incoming.vibrate,
+        DEFAULT_NOTIFICATION_VIBRATE
+    );
+    mergedOptions.requireInteraction = mergedOptions.requireInteraction ?? firstDefinedValue(
+        ...notificationSources.map(source => source.requireInteraction),
+        incoming.requireInteraction,
+        true
+    );
+    mergedOptions.renotify = mergedOptions.renotify ?? firstDefinedValue(
+        ...notificationSources.map(source => source.renotify),
+        incoming.renotify,
+        true
+    );
+    mergedOptions.timestamp = firstDefinedValue(
+        mergedOptions.timestamp,
+        ...notificationSources.map(source => source.timestamp),
+        incoming.timestamp,
+        Date.now()
+    );
+    mergedOptions.tag = firstNonEmptyString(
+        mergedOptions.tag,
+        ...notificationSources.map(source => source.tag),
+        incoming.tag,
+        notificationTag
+    );
 
     const dataSources = [
         typeof mergedOptions.data === 'object' ? mergedOptions.data : null,
+        ...notificationSources.map(source => (typeof source.data === 'object' ? source.data : null)),
         typeof baseObject.data === 'object' ? baseObject.data : null,
         typeof incoming.data === 'object' ? incoming.data : null
     ].filter(Boolean);
@@ -313,7 +394,8 @@ function normalizePushPayload(incoming) {
     mergedOptions.data = {
         ...mergedData,
         rawPayload: incoming,
-        payload: baseObject
+        payload: baseObject,
+        notification: notificationSources.find(source => source === baseObject || source === incoming)?.notification || mergedData.notification
     };
 
     return {
