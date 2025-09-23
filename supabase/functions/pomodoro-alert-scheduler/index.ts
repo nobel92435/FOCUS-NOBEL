@@ -95,6 +95,44 @@ function normalizeSession(job: SchedulerJob, transition: { oldState: string; new
   return base;
 }
 
+function parseTimestamp(value: unknown) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function resolveSessionEndTimestamp(job: SchedulerJob, session: Record<string, unknown>) {
+  const candidates = [
+    session.endTimestamp,
+    session.end_at,
+    session.endAt,
+    job.session_end_at
+  ];
+
+  for (const candidate of candidates) {
+    const parsed = parseTimestamp(candidate);
+    if (parsed !== null) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
 function ensureActions(options: Record<string, unknown>) {
   const actions = Array.isArray(options.actions) ? options.actions : [];
   if (actions.length === 0) {
@@ -334,7 +372,11 @@ Deno.serve(async (req) => {
 
       const nowMs = now.getTime();
       const sendAtMs = job.send_at ? Date.parse(job.send_at) : NaN;
-      const sessionEndMs = session.endTimestamp as number;
+      const sessionEndMs = resolveSessionEndTimestamp(job, session);
+
+      if (sessionEndMs !== null && typeof session.endTimestamp !== "number") {
+        session.endTimestamp = sessionEndMs;
+      }
 
       let headsUpSentAt = job.heads_up_sent ? String(job.heads_up_sent) : null;
       let finalSentAt = job.final_sent ? String(job.final_sent) : null;
@@ -365,7 +407,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (!finalSentAt && Number.isFinite(sessionEndMs) && sessionEndMs <= nowMs) {
+      if (!finalSentAt && sessionEndMs !== null && sessionEndMs <= nowMs) {
         const options = buildNotificationOptions(finalTemplate.options, transition, session, false);
         const payload = buildNotificationPayload(
           finalTemplate.title || (transition.newState.includes("break") ? "Break time" : "Focus time!"),
