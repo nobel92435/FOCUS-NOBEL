@@ -3582,6 +3582,9 @@
         const baseKinds = Array.from(DEFAULT_HEADS_UP_JOB_KINDS);
 
         return dedupeList([
+            'pomodoro_heads_up',
+            'timer_heads_up',
+            'heads_up',
             ...collectCandidateKinds([configuredKinds]),
             ...collectCandidateKinds([hints || []]),
             ...stateDerivedKinds,
@@ -4951,7 +4954,7 @@ let pauseStartTime = 0;
                             user_id: currentUser.id,
                             kind,
                             send_at: sendAtIso,
-                            payload: { ...basePayload, kind },
+                            payload: basePayload,
                             client_group_id: clientGroupId
                         }]);
 
