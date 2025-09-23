@@ -61,6 +61,7 @@ function normalizeSession(job: SchedulerJob, transition: { oldState: string; new
     startAt: job.session_start_at ?? undefined,
     endAt: job.session_end_at ?? undefined,
     headsUpSeconds: job.heads_up_offset_seconds ?? 60,
+    clientGroupId: job.client_group_id ?? undefined,
     oldState: transition.oldState,
     newState: transition.newState
   };

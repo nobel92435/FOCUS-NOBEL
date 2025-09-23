@@ -90,6 +90,23 @@ self.addEventListener('fetch', (event) => {
 let notificationTag = 'pomodoro-timer';
 
 const pendingNotifications = new Map();
+const CLIENT_MESSAGE_TYPES = Object.freeze({
+    POMODORO_PUSH: 'POMODORO_PUSH'
+});
+
+async function broadcastClientMessage(message) {
+    try {
+        const clients = await self.clients.matchAll({
+            type: 'window',
+            includeUncontrolled: true
+        });
+        for (const client of clients) {
+            client.postMessage(message);
+        }
+    } catch (error) {
+        console.error('[Service Worker] Failed to broadcast message to clients:', error);
+    }
+}
 
 self.addEventListener('message', (event) => {
     const { type, payload } = event.data || {};
@@ -424,19 +441,7 @@ function handleSnoozeAction(notification) {
     }).then(() => focusClientWindow(notification.data?.transitionMessage));
 }
 
-self.addEventListener('push', (event) => {
-    if (!event.data) {
-        console.warn('[Service Worker] Push event received without data.');
-        return;
-    }
-
-    let payload = {};
-    try {
-        payload = event.data.json();
-    } catch (error) {
-        payload = { body: event.data.text() };
-    }
-
+async function handleIncomingPush(payload) {
     const options = { ...(payload.options || {}) };
     const fallbackBody = typeof payload.body === 'string' ? payload.body : undefined;
     if (fallbackBody && !options.body) {
@@ -461,5 +466,27 @@ self.addEventListener('push', (event) => {
 
     const { title } = applyTimingToNotification(payload, options);
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    await self.registration.showNotification(title, options);
+    await broadcastClientMessage({
+        type: CLIENT_MESSAGE_TYPES.POMODORO_PUSH,
+        payload,
+        options,
+        title
+    });
+}
+
+self.addEventListener('push', (event) => {
+    if (!event.data) {
+        console.warn('[Service Worker] Push event received without data.');
+        return;
+    }
+
+    let payload = {};
+    try {
+        payload = event.data.json();
+    } catch (error) {
+        payload = { body: event.data.text() };
+    }
+
+    event.waitUntil(handleIncomingPush(payload));
 });
