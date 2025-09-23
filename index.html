@@ -4106,6 +4106,7 @@
             let remainingTimeOnPause = 0;
             let isPaused = false;
             let currentPhaseDuration = 0;
+            let phaseStartedAt = 0;
 
             function tick() {
                 if (isPaused) return;
@@ -4123,14 +4124,30 @@
                 }
             }
 
+            function resolveStartTimestamp(value) {
+                if (typeof value === 'number' && Number.isFinite(value)) {
+                    return value;
+                }
+                if (typeof value === 'string') {
+                    const asNumber = Number(value);
+                    if (Number.isFinite(asNumber)) {
+                        return asNumber;
+                    }
+                }
+                return Date.now();
+            }
+
             self.onmessage = function(e) {
-                const { command, duration } = e.data;
+                const { command, duration, startedAt } = e.data;
                 switch(command) {
                     case 'start':
                         isPaused = false;
                         if (timerInterval) clearInterval(timerInterval);
-                        currentPhaseDuration = duration;
-                        endTime = Date.now() + duration * 1000;
+                        const numericDuration = typeof duration === 'number' && Number.isFinite(duration) ? duration : 0;
+                        currentPhaseDuration = numericDuration;
+                        phaseStartedAt = resolveStartTimestamp(startedAt);
+                        const durationMs = Math.max(numericDuration, 0) * 1000;
+                        endTime = phaseStartedAt + durationMs;
                         timerInterval = setInterval(tick, 1000);
                         tick();
                         break;
@@ -4157,6 +4174,7 @@
                         endTime = 0;
                         remainingTimeOnPause = 0;
                         isPaused = false;
+                        phaseStartedAt = 0;
                         break;
                 }
             };
@@ -4264,6 +4282,14 @@
             const subject = oldState === 'work' ? activeSubject : oldState.replace('_', ' ');
             await saveSession(subject, sessionDuration, sessionType);
 
+            const incomingSession = data?.session && typeof data.session === 'object' ? { ...data.session } : null;
+            const sessionEndMs = coerceEpochMilliseconds(
+                incomingSession?.endTimestamp ??
+                incomingSession?.end_at ??
+                incomingSession?.endAt
+            ) ?? Date.now();
+            const sessionEndIso = new Date(sessionEndMs).toISOString();
+
             const transitionMessage = oldState === 'work'
                 ? {
                     title: 'Focus complete!',
@@ -4274,14 +4300,13 @@
                     options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' }
                 };
 
-            const sessionMeta = {
-                id: `local-${Date.now()}`,
-                endTimestamp: Date.now(),
-                endAt: new Date().toISOString(),
-                headsUpSeconds: HEADS_UP_BUFFER_SECONDS,
-                oldState,
-                newState
-            };
+            const sessionMeta = incomingSession || {};
+            sessionMeta.id = typeof sessionMeta.id === 'string' && sessionMeta.id.trim() ? sessionMeta.id : `local-${sessionEndMs}`;
+            sessionMeta.endTimestamp = sessionEndMs;
+            sessionMeta.endAt = sessionMeta.endAt || sessionMeta.end_at || sessionEndIso;
+            sessionMeta.headsUpSeconds = Number.isFinite(sessionMeta.headsUpSeconds) ? sessionMeta.headsUpSeconds : HEADS_UP_BUFFER_SECONDS;
+            sessionMeta.oldState = sessionMeta.oldState || oldState;
+            sessionMeta.newState = sessionMeta.newState || newState;
 
             transitionMessage.options = {
                 ...(transitionMessage.options || {}),
@@ -4342,14 +4367,18 @@
             }
 
             // Check auto-start settings to decide what to do next
-            const shouldAutoStart = (newState === 'work' && pomodoroSettings.autoStartFocus) || 
+            const shouldAutoStart = (newState === 'work' && pomodoroSettings.autoStartFocus) ||
                                     (newState.includes('break') && pomodoroSettings.autoStartBreak);
-        
+
             if (shouldAutoStart) {
-                await startNextPomodoroPhase(newState);
+                await startNextPomodoroPhase(newState, {
+                    session: sessionMeta,
+                    phaseStartMs: sessionEndMs,
+                    trigger: data?.source || 'local'
+                });
             } else {
                 // If not auto-starting, show the manual start button
-                pomodoroState = 'idle'; 
+                pomodoroState = 'idle';
                 nextPomodoroPhase = newState;
                 document.getElementById('manual-start-btn').classList.remove('hidden');
                 document.getElementById('stop-studying-btn').classList.add('hidden');
@@ -4588,6 +4617,23 @@ function scheduleServerHeadsUpTrigger({ groupKey, sendAtMs, notificationPayload 
             }
         }
 
+        function coerceEpochMilliseconds(value) {
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                return value;
+            }
+            if (typeof value === 'string') {
+                const numeric = Number(value);
+                if (Number.isFinite(numeric)) {
+                    return numeric;
+                }
+                const parsed = Date.parse(value);
+                if (!Number.isNaN(parsed)) {
+                    return parsed;
+                }
+            }
+            return null;
+        }
+
         function handleServiceWorkerPushMessage(message) {
             if (!message || message.type !== CLIENT_MESSAGE_TYPES.POMODORO_PUSH) {
                 return;
@@ -4601,6 +4647,15 @@ function scheduleServerHeadsUpTrigger({ groupKey, sendAtMs, notificationPayload 
             const newState = transition.newState || payload.newState || null;
             const session = extractSessionFromPushPayload(payload, options);
             const clientGroupId = session?.clientGroupId || session?.client_group_id || payload.client_group_id || null;
+
+            const sessionEndMs = coerceEpochMilliseconds(
+                session?.endTimestamp ??
+                session?.end_at ??
+                session?.endAt
+            );
+            if (session && sessionEndMs !== null) {
+                session.endTimestamp = sessionEndMs;
+            }
 
             if (clientGroupId) {
                 settleServerHeadsUpByClientId(clientGroupId, pushType === 'FINAL' ? 'final' : 'heads_up');
@@ -5543,12 +5598,14 @@ let pauseStartTime = 0;
             });
         }
 
-        function schedulePomodoroHeadsUpNotification(durationSeconds, upcomingBreakState = 'short_break') {
+        function schedulePomodoroHeadsUpNotification({ phaseStartMs = Date.now(), durationSeconds, upcomingBreakState = 'short_break' }) {
             if (!Number.isFinite(durationSeconds)) {
                 return;
             }
 
-            const headsUpDelayMs = Math.max((durationSeconds - HEADS_UP_BUFFER_SECONDS) * 1000, 0);
+            const phaseStart = Number.isFinite(phaseStartMs) ? phaseStartMs : Date.now();
+            const headsUpAtMs = (phaseStart + (durationSeconds * 1000)) - HEADS_UP_BUFFER_MS;
+            const headsUpDelayMs = headsUpAtMs - Date.now();
             if (headsUpDelayMs <= 0) {
                 return;
             }
@@ -5568,12 +5625,14 @@ let pauseStartTime = 0;
             });
         }
 
-        function scheduleBreakHeadsUpNotification(durationSeconds, breakState) {
+        function scheduleBreakHeadsUpNotification({ phaseStartMs = Date.now(), durationSeconds, breakState }) {
             if (!Number.isFinite(durationSeconds)) {
                 return;
             }
 
-            const headsUpDelayMs = Math.max((durationSeconds - HEADS_UP_BUFFER_SECONDS) * 1000, 0);
+            const phaseStart = Number.isFinite(phaseStartMs) ? phaseStartMs : Date.now();
+            const headsUpAtMs = (phaseStart + (durationSeconds * 1000)) - HEADS_UP_BUFFER_MS;
+            const headsUpDelayMs = headsUpAtMs - Date.now();
             if (headsUpDelayMs <= 0) {
                 return;
             }
@@ -6482,7 +6541,11 @@ let pauseStartTime = 0;
                 cancelSWAlarm(POMODORO_HEADS_UP_TAG);
                 const workPhaseStartMs = Date.now();
                 const upcomingBreak = getUpcomingBreakConfig();
-                schedulePomodoroHeadsUpNotification(workDurationSeconds, upcomingBreak.state);
+                schedulePomodoroHeadsUpNotification({
+                    phaseStartMs: workPhaseStartMs,
+                    durationSeconds: workDurationSeconds,
+                    upcomingBreakState: upcomingBreak.state
+                });
                 await cancelServerHeadsUpGroup(SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK, { silent: true });
                 const upcomingBreakLabel = describeBreakLabel(upcomingBreak.state);
                 const breakHeadsUpCopy = buildHeadsUpCopy({ direction: 'toBreak', label: upcomingBreakLabel });
@@ -6500,7 +6563,7 @@ let pauseStartTime = 0;
                     headsUpCopy: breakHeadsUpCopy,
                     finalCopy: breakFinalCopy
                 });
-                pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
+                pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds, startedAt: workPhaseStartMs });
             }
 
             document.getElementById('start-studying-btn').classList.add('hidden');
@@ -6622,7 +6685,7 @@ let pauseStartTime = 0;
         }
 
         // --- NEW: Helper to start the next Pomodoro phase ---
-        async function startNextPomodoroPhase(state) {
+        async function startNextPomodoroPhase(state, options = {}) {
             cancelSWAlarm(POMODORO_HEADS_UP_TAG);
             if (state === 'work' && activeTaskRemainingPomodoros !== null && activeTaskRemainingPomodoros <= 0) {
                 suppressTimerSave = true;
@@ -6646,17 +6709,34 @@ let pauseStartTime = 0;
                 statusText = state.replace('_', ' ');
             }
 
-            const phaseStartMs = Date.now();
+            const providedSession = options.session && typeof options.session === 'object' ? options.session : null;
+            const providedStartMs = coerceEpochMilliseconds(
+                options.phaseStartMs ??
+                providedSession?.endTimestamp ??
+                providedSession?.end_at ??
+                providedSession?.endAt
+            );
+            const phaseStartMs = Number.isFinite(providedStartMs) ? providedStartMs : Date.now();
+            const nowMs = Date.now();
+            const targetEndMs = phaseStartMs + (durationSeconds * 1000);
+            const initialTimeLeftSeconds = Math.max(Math.ceil((targetEndMs - nowMs) / 1000), 0);
 
             // Start the UI timer
-            pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds });
+            pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds, startedAt: phaseStartMs });
+            if (sessionTimerDisplay) {
+                sessionTimerDisplay.textContent = formatPomodoroTime(initialTimeLeftSeconds);
+            }
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
 
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
             if (state === 'work') {
                 const upcomingBreak = getUpcomingBreakConfig();
-                schedulePomodoroHeadsUpNotification(durationSeconds, upcomingBreak.state);
+                schedulePomodoroHeadsUpNotification({
+                    phaseStartMs,
+                    durationSeconds,
+                    upcomingBreakState: upcomingBreak.state
+                });
                 await cancelServerHeadsUpGroup(SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK, { silent: true });
                 const workUpcomingLabel = describeBreakLabel(upcomingBreak.state);
                 await scheduleServerPomodoroHeadsUp({
@@ -6669,7 +6749,11 @@ let pauseStartTime = 0;
                     finalCopy: buildFinalTransitionCopy({ oldState: 'work', newState: upcomingBreak.state, label: workUpcomingLabel })
                 });
             } else {
-                scheduleBreakHeadsUpNotification(durationSeconds, state);
+                scheduleBreakHeadsUpNotification({
+                    phaseStartMs,
+                    durationSeconds,
+                    breakState: state
+                });
                 await cancelServerHeadsUpGroup(SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK, { silent: true });
                 const breakLabel = describeBreakLabel(state);
                 await scheduleServerPomodoroHeadsUp({
