@@ -207,18 +207,222 @@ function cancelAlarm(timerId) {
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
+    const action = event.action;
     const transitionMessage = event.notification?.data?.transitionMessage;
 
-    event.waitUntil(
-        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-            const client = clients.find(c => c.visibilityState === 'visible') || clients[0];
-            if (client) {
-                client.postMessage(transitionMessage);
-                return client.focus();
-            }
-        })
-    );
+    if (action === 'snooze-5m') {
+        event.waitUntil(handleSnoozeAction(event.notification));
+        return;
+    }
+
+    event.waitUntil(focusClientWindow(transitionMessage));
 });
+
+function focusClientWindow(transitionMessage) {
+    return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+        const client = clients.find(c => c.visibilityState === 'visible') || clients[0];
+        if (client) {
+            if (transitionMessage) {
+                client.postMessage(transitionMessage);
+            }
+            return client.focus();
+        }
+    });
+}
+
+function cloneNotificationOptions(source = {}) {
+    const cloned = { ...source };
+    if (source.data && typeof source.data === 'object') {
+        cloned.data = { ...source.data };
+    }
+    if (Array.isArray(source.actions)) {
+        cloned.actions = source.actions.map(action => ({ ...action }));
+    }
+    return cloned;
+}
+
+function ensureDefaultActions(options) {
+    if (!Array.isArray(options.actions) || options.actions.length === 0) {
+        options.actions = [
+            { action: 'open', title: 'Open' },
+            { action: 'snooze-5m', title: 'Snooze 5m' }
+        ];
+    }
+    return options.actions;
+}
+
+function labelForStateName(state) {
+    if (typeof state !== 'string') {
+        return 'session';
+    }
+    if (state.includes('long')) {
+        return 'long break';
+    }
+    if (state.includes('short')) {
+        return 'short break';
+    }
+    if (state.includes('break')) {
+        return 'break';
+    }
+    return 'focus';
+}
+
+function determineTransitionDirection(transition = {}) {
+    const newState = transition.newState || transition.new_state;
+    if (typeof newState === 'string' && newState.includes('break')) {
+        return 'toBreak';
+    }
+    return 'toFocus';
+}
+
+function formatSecondsShort(value) {
+    const seconds = Math.abs(Number(value) || 0);
+    if (seconds >= 60) {
+        const minutes = Math.floor(seconds / 60);
+        const remaining = seconds % 60;
+        if (remaining === 0) {
+            return `${minutes}m`;
+        }
+        return `${minutes}m ${remaining}s`;
+    }
+    return `${seconds}s`;
+}
+
+function buildTimingAwareCopy({
+    originalTitle,
+    originalBody,
+    diffSeconds,
+    direction,
+    label,
+    type
+}) {
+    let title = originalTitle;
+    let body = originalBody;
+    const secondsLabel = formatSecondsShort(diffSeconds);
+    const suffix = diffSeconds < 0
+        ? `${formatSecondsShort(diffSeconds)} ago`
+        : `in ${secondsLabel}`;
+
+    if (type === 'HEADS_UP') {
+        if (diffSeconds > 1) {
+            title = `${direction === 'toFocus' ? 'Focus' : 'Break'} starts in ${secondsLabel}`;
+            body = `Your ${label} ${direction === 'toFocus' ? 'ends' : 'begins'} in ${secondsLabel}.`;
+        } else if (diffSeconds >= -1) {
+            title = `${direction === 'toFocus' ? 'Focus' : 'Break'} starting now`;
+            body = `Your ${label} ${direction === 'toFocus' ? 'is ending now.' : 'is starting now.'}`;
+        } else {
+            title = `${direction === 'toFocus' ? 'Focus' : 'Break'} started`;
+            body = `Your ${label} ${direction === 'toFocus' ? 'ended' : 'began'} ${suffix}.`;
+        }
+    } else if (type === 'FINAL') {
+        if (diffSeconds > 1) {
+            title = originalTitle || `${direction === 'toFocus' ? 'Focus' : 'Break'} time`;
+            body = originalBody || `Your ${label} starts in ${secondsLabel}.`;
+        } else if (diffSeconds >= -1) {
+            title = originalTitle || `${direction === 'toFocus' ? 'Focus' : 'Break'} time`;
+            body = originalBody || `Your ${label} is starting now.`;
+        } else {
+            title = originalTitle || `${direction === 'toFocus' ? 'Focus' : 'Break'} time`;
+            body = originalBody || `Your ${label} ${direction === 'toFocus' ? 'started' : 'began'} ${suffix}.`;
+        }
+    }
+
+    return { title, body };
+}
+
+function resolveSessionEndTimestamp(session = {}) {
+    if (typeof session.endTimestamp === 'number') {
+        return session.endTimestamp;
+    }
+    if (typeof session.endAt === 'string') {
+        const parsed = Date.parse(session.endAt);
+        if (!Number.isNaN(parsed)) {
+            return parsed;
+        }
+    }
+    return null;
+}
+
+function normalizePushType(value) {
+    if (typeof value !== 'string') {
+        return '';
+    }
+    const normalized = value.trim().toUpperCase();
+    if (normalized.includes('HEADS')) {
+        return 'HEADS_UP';
+    }
+    if (normalized.includes('TIMER_ENDED') || normalized.includes('FINAL')) {
+        return 'FINAL';
+    }
+    return normalized;
+}
+
+function applyTimingToNotification(payload, options) {
+    const baseTitle = payload.title || 'FocusFlow';
+    const baseBody = options.body || payload.body || '';
+    const data = options.data || {};
+    const session = payload.session || data.session || {};
+    const transition = data.transition || payload.transition || {};
+    const type = normalizePushType(payload.type || data.type);
+    const endTimestamp = resolveSessionEndTimestamp(session);
+
+    if (!endTimestamp) {
+        if (!options.body && payload.body) {
+            options.body = payload.body;
+        }
+        return { title: baseTitle, body: options.body || baseBody };
+    }
+
+    const diffSeconds = Math.round((endTimestamp - Date.now()) / 1000);
+    const direction = determineTransitionDirection(transition);
+    const label = labelForStateName(direction === 'toBreak' ? transition.newState : transition.oldState);
+    const { title, body } = buildTimingAwareCopy({
+        originalTitle: baseTitle,
+        originalBody: baseBody,
+        diffSeconds,
+        direction,
+        label,
+        type
+    });
+
+    options.body = body;
+    options.data = {
+        ...data,
+        session: {
+            ...session,
+            computedDiffSeconds: diffSeconds,
+            computedAt: Date.now()
+        }
+    };
+
+    return { title, body };
+}
+
+function handleSnoozeAction(notification) {
+    const snoozeMs = 5 * 60 * 1000;
+    const payload = notification.data?.payload || {};
+    const baseOptions = payload.options || {};
+    const clonedOptions = cloneNotificationOptions(baseOptions);
+    clonedOptions.tag = clonedOptions.tag || notification.tag || notificationTag;
+    clonedOptions.renotify = true;
+    clonedOptions.requireInteraction = clonedOptions.requireInteraction ?? true;
+    clonedOptions.body = clonedOptions.body || payload.body || notification.body;
+    clonedOptions.data = {
+        ...(clonedOptions.data || {}),
+        snoozed: true,
+        snoozedAt: Date.now(),
+        originalPayload: payload
+    };
+    ensureDefaultActions(clonedOptions);
+
+    const title = payload.title || notification.title || 'FocusFlow';
+
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            self.registration.showNotification(title, clonedOptions).finally(resolve);
+        }, snoozeMs);
+    }).then(() => focusClientWindow(notification.data?.transitionMessage));
+}
 
 self.addEventListener('push', (event) => {
     if (!event.data) {
@@ -233,7 +437,6 @@ self.addEventListener('push', (event) => {
         payload = { body: event.data.text() };
     }
 
-    const title = payload.title || 'FocusFlow';
     const options = { ...(payload.options || {}) };
     const fallbackBody = typeof payload.body === 'string' ? payload.body : undefined;
     if (fallbackBody && !options.body) {
@@ -253,6 +456,10 @@ self.addEventListener('push', (event) => {
         primaryKey: 1,
         payload
     };
+
+    ensureDefaultActions(options);
+
+    const { title } = applyTimingToNotification(payload, options);
 
     event.waitUntil(self.registration.showNotification(title, options));
 });

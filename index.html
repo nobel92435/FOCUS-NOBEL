@@ -3378,8 +3378,97 @@
 
     const nowIso = () => new Date().toISOString();
 
-    const HEADS_UP_BUFFER_SECONDS = 5;
+    const HEADS_UP_BUFFER_SECONDS_DEFAULT = 60;
+    const HEADS_UP_BUFFER_SECONDS_MIN = 30;
+
+    function clampHeadsUpSeconds(value) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return null;
+        }
+        return Math.max(HEADS_UP_BUFFER_SECONDS_MIN, Math.round(numeric));
+    }
+
+    function resolveHeadsUpBufferSeconds() {
+        const sources = [];
+        if (typeof focusflowConfig?.pomodoroHeadsUpSeconds !== 'undefined') {
+            sources.push(focusflowConfig.pomodoroHeadsUpSeconds);
+        }
+        if (typeof window !== 'undefined' && typeof window.__FOCUSFLOW_HEADS_UP_SECONDS !== 'undefined') {
+            sources.push(window.__FOCUSFLOW_HEADS_UP_SECONDS);
+        }
+        if (typeof localStorage !== 'undefined') {
+            const stored = localStorage.getItem('focusflow.headsUpSeconds');
+            if (stored !== null) {
+                sources.push(stored);
+            }
+        }
+
+        for (const candidate of sources) {
+            const clamped = clampHeadsUpSeconds(candidate);
+            if (clamped !== null) {
+                return clamped;
+            }
+        }
+
+        return HEADS_UP_BUFFER_SECONDS_DEFAULT;
+    }
+
+    const HEADS_UP_BUFFER_SECONDS = resolveHeadsUpBufferSeconds();
     const HEADS_UP_BUFFER_MS = HEADS_UP_BUFFER_SECONDS * 1000;
+
+    function formatHeadsUpCountdown(seconds) {
+        if (!Number.isFinite(seconds) || seconds <= 0) {
+            return 'moments';
+        }
+        if (seconds >= 60) {
+            const minutes = Math.round(seconds / 60);
+            return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+        }
+        return `${seconds} second${seconds === 1 ? '' : 's'}`;
+    }
+
+    function buildHeadsUpCopy({
+        direction,
+        label
+    } = {}) {
+        const countdown = formatHeadsUpCountdown(HEADS_UP_BUFFER_SECONDS);
+        const countdownSuffix = countdown === 'moments' ? 'soon' : `in ${countdown}`;
+        const normalizedLabel = label || 'break';
+        const toBreak = direction === 'toBreak';
+        const titlePrefix = toBreak ? 'Break starts' : 'Focus starts';
+        const bodySubject = toBreak ? `Your ${normalizedLabel}` : `Your ${normalizedLabel}`;
+        const bodyAction = toBreak ? 'begins' : 'ends';
+
+        return {
+            title: `${titlePrefix} ${countdownSuffix}`,
+            body: `${bodySubject} ${bodyAction} ${countdownSuffix}.`,
+            countdown
+        };
+    }
+
+    function capitalizeLabel(value) {
+        if (typeof value !== 'string' || value.length === 0) {
+            return '';
+        }
+        return value.charAt(0).toUpperCase() + value.slice(1);
+    }
+
+    function buildFinalTransitionCopy({ oldState, newState, label } = {}) {
+        const enteringBreak = typeof newState === 'string' && newState.includes('break');
+        if (enteringBreak) {
+            const normalizedLabel = label || 'break';
+            return {
+                title: `${capitalizeLabel(normalizedLabel)} time`,
+                body: `Enjoy your ${normalizedLabel}.`
+            };
+        }
+
+        return {
+            title: 'Focus time!',
+            body: 'Break is over. Let\'s get back to it.'
+        };
+    }
     const HEADS_UP_JOB_TABLE = 'pomodoro_notification_jobs';
     const SERVER_HEADS_UP_GROUP_KEYS = Object.freeze({
         WORK_TO_BREAK: 'workToBreak',
@@ -4171,12 +4260,30 @@
                     options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' }
                 };
 
+            const sessionMeta = {
+                id: `local-${Date.now()}`,
+                endTimestamp: Date.now(),
+                endAt: new Date().toISOString(),
+                headsUpSeconds: HEADS_UP_BUFFER_SECONDS,
+                oldState,
+                newState
+            };
+
+            transitionMessage.options = {
+                ...(transitionMessage.options || {}),
+                data: {
+                    ...(transitionMessage.options?.data || {}),
+                    session: sessionMeta
+                }
+            };
+
             let serverHandled = false;
             if (serverHeadsUpSchedulingDisabled) {
                 serverHandled = await triggerServerNotification({
                     ...transitionMessage,
                     newState,
-                    oldState
+                    oldState,
+                    session: sessionMeta
                 });
             }
 
@@ -4257,9 +4364,26 @@ async function triggerServerNotification(messageData, { silent = false } = {}) {
     }
 
     const notificationOptions = messageData.options ? { ...messageData.options } : {};
-    if (notificationOptions && !notificationOptions.tag) {
+    if (!notificationOptions.tag) {
         notificationOptions.tag = 'pomodoro-transition';
     }
+    notificationOptions.renotify = notificationOptions.renotify ?? true;
+    notificationOptions.requireInteraction = notificationOptions.requireInteraction ?? true;
+    if (!Array.isArray(notificationOptions.actions) || notificationOptions.actions.length === 0) {
+        notificationOptions.actions = [
+            { action: 'open', title: 'Open' },
+            { action: 'snooze-5m', title: 'Snooze 5m' }
+        ];
+    }
+    const sessionMetadata = messageData.session || notificationOptions?.data?.session || null;
+    notificationOptions.data = {
+        ...(notificationOptions.data || {}),
+        transition: {
+            oldState: messageData.oldState,
+            newState: messageData.newState
+        },
+        session: sessionMetadata || undefined
+    };
     const bodyText = typeof messageData.body === 'string'
         ? messageData.body
         : (typeof notificationOptions.body === 'string' ? notificationOptions.body : '');
@@ -4296,7 +4420,8 @@ async function triggerServerNotification(messageData, { silent = false } = {}) {
                 newState: messageData.newState,
                 oldState: messageData.oldState,
                 options: notificationOptions,
-                type: normalizedType
+                type: normalizedType,
+                session: sessionMetadata
             }
         });
         if (error) throw error;
@@ -4863,7 +4988,13 @@ let pauseStartTime = 0;
         }
 
         function describeBreakLabel(breakState) {
-            return breakState === 'long_break' ? 'long break' : 'break';
+            if (breakState === 'long_break') {
+                return 'long break';
+            }
+            if (breakState === 'short_break') {
+                return 'short break';
+            }
+            return 'break';
         }
 
         function generateHeadsUpGroupId() {
@@ -5017,8 +5148,9 @@ let pauseStartTime = 0;
             durationSeconds,
             oldState,
             newState,
-            title,
-            body
+            headsUpCopy,
+            finalCopy,
+            sessionId
         }) {
             if (!groupKey) return;
             if (!(groupKey in serverHeadsUpSchedules)) {
@@ -5036,7 +5168,8 @@ let pauseStartTime = 0;
                 return;
             }
 
-            const sendAtMs = startTimestampMs + (durationSeconds * 1000) - HEADS_UP_BUFFER_MS;
+            const sessionEndMs = startTimestampMs + (durationSeconds * 1000);
+            const sendAtMs = sessionEndMs - HEADS_UP_BUFFER_MS;
             if (!Number.isFinite(sendAtMs) || sendAtMs <= Date.now()) {
                 return;
             }
@@ -5046,26 +5179,73 @@ let pauseStartTime = 0;
             }
 
             const sendAtIso = new Date(sendAtMs).toISOString();
+            const sessionEndIso = new Date(sessionEndMs).toISOString();
+            const sessionStartIso = new Date(startTimestampMs).toISOString();
             const clientGroupId = generateHeadsUpGroupId();
-            const options = {
+            const resolvedSessionId = sessionId || clientGroupId;
+            const transitionLabel = oldState === 'work'
+                ? describeBreakLabel(newState)
+                : describeBreakLabel(oldState);
+            const resolvedHeadsUpCopy = headsUpCopy || buildHeadsUpCopy({
+                direction: oldState === 'work' ? 'toBreak' : 'toFocus',
+                label: transitionLabel
+            });
+            const resolvedFinalCopy = finalCopy || buildFinalTransitionCopy({
+                oldState,
+                newState,
+                label: transitionLabel
+            });
+            const sessionMetadata = {
+                id: resolvedSessionId,
+                startAt: sessionStartIso,
+                endAt: sessionEndIso,
+                endTimestamp: sessionEndMs,
+                headsUpSeconds: HEADS_UP_BUFFER_SECONDS,
+                oldState,
+                newState
+            };
+            const sharedActions = [
+                { action: 'open', title: 'Open' },
+                { action: 'snooze-5m', title: 'Snooze 5m' }
+            ];
+            const headsUpOptions = {
                 tag: POMODORO_HEADS_UP_TAG,
-                renotify: false,
+                renotify: true,
                 requireInteraction: false,
                 data: {
                     type: 'HEADS_UP',
-                    transition: { oldState, newState }
-                }
+                    transition: { oldState, newState },
+                    session: sessionMetadata
+                },
+                actions: sharedActions
             };
-            options.body = body;
+            headsUpOptions.body = resolvedHeadsUpCopy.body;
+            const finalOptions = {
+                tag: 'pomodoro-transition',
+                renotify: true,
+                requireInteraction: true,
+                data: {
+                    type: 'TIMER_ENDED',
+                    transition: { oldState, newState },
+                    session: sessionMetadata
+                },
+                actions: sharedActions
+            };
+            finalOptions.body = resolvedFinalCopy.body;
             const basePayload = {
-                title,
-                body,
-                options,
-                newState,
-                oldState,
-                transition: { oldState, newState },
-                type: 'pomodoro_heads_up',
-                appId
+                appId,
+                type: 'pomodoro_session',
+                session: sessionMetadata,
+                headsUp: {
+                    title: resolvedHeadsUpCopy.title,
+                    body: resolvedHeadsUpCopy.body,
+                    options: headsUpOptions
+                },
+                final: {
+                    title: resolvedFinalCopy.title,
+                    body: resolvedFinalCopy.body,
+                    options: finalOptions
+                }
             };
             const hints = await getServerHeadsUpKindHints();
             maybeRestoreServerHeadsUpSchedulingFromCandidates([configuredKinds, hints]);
@@ -5106,7 +5286,13 @@ let pauseStartTime = 0;
                             kind,
                             send_at: sendAtIso,
                             payload: { ...basePayload, kind },
-                            client_group_id: clientGroupId
+                            client_group_id: clientGroupId,
+                            session_id: resolvedSessionId,
+                            session_start_at: sessionStartIso,
+                            session_end_at: sessionEndIso,
+                            heads_up_offset_seconds: HEADS_UP_BUFFER_SECONDS,
+                            heads_up_sent: false,
+                            final_sent: false
                         }]);
 
                     if (!insertError) {
@@ -5184,16 +5370,19 @@ let pauseStartTime = 0;
                 oldState,
                 newState,
                 kind: scheduledKind || 'heads_up_local_fallback',
+                sessionId: resolvedSessionId,
+                sessionEndMs,
                 timeoutId: null,
                 notificationPayload: null
             };
 
             const notificationPayload = {
-                title,
-                body,
+                title: resolvedHeadsUpCopy.title,
+                body: resolvedHeadsUpCopy.body,
                 newState,
                 oldState,
-                options: { ...options },
+                session: sessionMetadata,
+                options: { ...headsUpOptions },
                 type: 'pomodoro_heads_up'
             };
 
@@ -5218,13 +5407,14 @@ let pauseStartTime = 0;
             }
 
             const breakLabel = describeBreakLabel(upcomingBreakState);
-            const title = 'Break starts in 5s';
+            const headsUp = buildHeadsUpCopy({ direction: 'toBreak', label: breakLabel });
             const options = {
-                body: `Your ${breakLabel} begins in 5 seconds.`,
-                tag: POMODORO_HEADS_UP_TAG
+                body: headsUp.body,
+                tag: POMODORO_HEADS_UP_TAG,
+                renotify: true
             };
 
-            scheduleTransitionNotification(headsUpDelayMs, title, options, {
+            scheduleTransitionNotification(headsUpDelayMs, headsUp.title, options, {
                 type: 'TIMER_HEADS_UP',
                 oldState: 'work',
                 newState: upcomingBreakState
@@ -5242,13 +5432,14 @@ let pauseStartTime = 0;
             }
 
             const breakLabel = describeBreakLabel(breakState);
-            const title = 'Focus starts in 5s';
+            const headsUp = buildHeadsUpCopy({ direction: 'toFocus', label: breakLabel });
             const options = {
-                body: `Your ${breakLabel} ends in 5 seconds.`,
-                tag: POMODORO_HEADS_UP_TAG
+                body: headsUp.body,
+                tag: POMODORO_HEADS_UP_TAG,
+                renotify: true
             };
 
-            scheduleTransitionNotification(headsUpDelayMs, title, options, {
+            scheduleTransitionNotification(headsUpDelayMs, headsUp.title, options, {
                 type: 'TIMER_HEADS_UP',
                 oldState: breakState,
                 newState: 'work'
@@ -6146,14 +6337,21 @@ let pauseStartTime = 0;
                 const upcomingBreak = getUpcomingBreakConfig();
                 schedulePomodoroHeadsUpNotification(workDurationSeconds, upcomingBreak.state);
                 await cancelServerHeadsUpGroup(SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK, { silent: true });
+                const upcomingBreakLabel = describeBreakLabel(upcomingBreak.state);
+                const breakHeadsUpCopy = buildHeadsUpCopy({ direction: 'toBreak', label: upcomingBreakLabel });
+                const breakFinalCopy = buildFinalTransitionCopy({
+                    oldState: 'work',
+                    newState: upcomingBreak.state,
+                    label: upcomingBreakLabel
+                });
                 await scheduleServerPomodoroHeadsUp({
                     groupKey: SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK,
                     startTimestampMs: workPhaseStartMs,
                     durationSeconds: workDurationSeconds,
                     oldState: 'work',
                     newState: upcomingBreak.state,
-                    title: 'Break starts in 5s',
-                    body: `Your ${describeBreakLabel(upcomingBreak.state)} begins in 5 seconds.`
+                    headsUpCopy: breakHeadsUpCopy,
+                    finalCopy: breakFinalCopy
                 });
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
             }
@@ -6313,26 +6511,28 @@ let pauseStartTime = 0;
                 const upcomingBreak = getUpcomingBreakConfig();
                 schedulePomodoroHeadsUpNotification(durationSeconds, upcomingBreak.state);
                 await cancelServerHeadsUpGroup(SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK, { silent: true });
+                const workUpcomingLabel = describeBreakLabel(upcomingBreak.state);
                 await scheduleServerPomodoroHeadsUp({
                     groupKey: SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK,
                     startTimestampMs: phaseStartMs,
                     durationSeconds,
                     oldState: 'work',
                     newState: upcomingBreak.state,
-                    title: 'Break starts in 5s',
-                    body: `Your ${describeBreakLabel(upcomingBreak.state)} begins in 5 seconds.`
+                    headsUpCopy: buildHeadsUpCopy({ direction: 'toBreak', label: workUpcomingLabel }),
+                    finalCopy: buildFinalTransitionCopy({ oldState: 'work', newState: upcomingBreak.state, label: workUpcomingLabel })
                 });
             } else {
                 scheduleBreakHeadsUpNotification(durationSeconds, state);
                 await cancelServerHeadsUpGroup(SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK, { silent: true });
+                const breakLabel = describeBreakLabel(state);
                 await scheduleServerPomodoroHeadsUp({
                     groupKey: SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK,
                     startTimestampMs: phaseStartMs,
                     durationSeconds,
                     oldState: state,
                     newState: 'work',
-                    title: 'Focus starts in 5s',
-                    body: `Your ${describeBreakLabel(state)} ends in 5 seconds.`
+                    headsUpCopy: buildHeadsUpCopy({ direction: 'toFocus', label: breakLabel }),
+                    finalCopy: buildFinalTransitionCopy({ oldState: state, newState: 'work', label: breakLabel })
                 });
             }
         }
