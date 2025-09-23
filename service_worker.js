@@ -3,6 +3,7 @@
 
 const CACHE_NAME = 'focusflow-cache-v2'; // Increment cache version for updates
 const OFFLINE_URL = './offline.html'; // Path to your dedicated offline page
+const DEFAULT_NOTIFICATION_ICON = 'https://placehold.co/192x192/0a0a0a/e0e0e0?text=Flow+192';
 
 // These paths should be relative to the root of the Service Worker's scope.
 const urlsToCache = [
@@ -255,4 +256,43 @@ self.addEventListener('push', (event) => {
     };
 
     event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('push', (event) => {
+    let payload = {};
+    if (event.data) {
+        try {
+            payload = event.data.json();
+        } catch (error) {
+            console.warn('[Service Worker] Failed to parse push payload as JSON. Falling back to text.', error);
+            payload.body = event.data.text();
+        }
+    }
+
+    const title = payload.title || 'FocusFlow';
+    const options = {
+        body: payload.body || '',
+        icon: payload.icon || DEFAULT_NOTIFICATION_ICON,
+        badge: payload.badge || DEFAULT_NOTIFICATION_ICON,
+        data: payload.data || {},
+        tag: payload.tag || 'focusflow-push',
+        renotify: payload.renotify !== undefined ? payload.renotify : true
+    };
+
+    event.waitUntil((async () => {
+        await self.registration.showNotification(title, options);
+        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        clients.forEach(client => {
+            client.postMessage({ type: 'PUSH_NOTIFICATION', payload });
+        });
+    })());
+});
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+    console.log('[Service Worker] Push subscription change detected. Notifying clients to resubscribe.');
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+            clients.forEach(client => client.postMessage({ type: 'PUSH_SUBSCRIPTION_CHANGED' }));
+        })
+    );
 });
