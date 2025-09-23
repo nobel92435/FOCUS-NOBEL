@@ -91,6 +91,30 @@ let notificationTag = 'pomodoro-timer';
 
 const pendingNotifications = new Map();
 
+async function broadcastTransitionMessage(transitionMessage = {}) {
+    try {
+        if (!transitionMessage || typeof transitionMessage !== 'object') {
+            return;
+        }
+
+        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        if (!clients || clients.length === 0) {
+            return;
+        }
+
+        const payload = {
+            source: 'focusflow-sw',
+            payload: transitionMessage
+        };
+
+        for (const client of clients) {
+            client.postMessage(payload);
+        }
+    } catch (error) {
+        console.warn('[Service Worker] Failed to broadcast transition message:', error);
+    }
+}
+
 self.addEventListener('message', (event) => {
     const { type, payload } = event.data || {};
 
@@ -154,6 +178,16 @@ function scheduleNotification(payload = {}) {
             }
 
             await self.registration.showNotification(title, options);
+
+            if (transitionMessage && typeof transitionMessage === 'object') {
+                await broadcastTransitionMessage({
+                    ...transitionMessage,
+                    options: options ? {
+                        tag: options.tag,
+                        data: options.data
+                    } : undefined
+                });
+            }
         } catch (err) {
             if (err.name !== 'AbortError') {
                 console.error('Error showing scheduled notification:', err);
@@ -461,5 +495,19 @@ self.addEventListener('push', (event) => {
 
     const { title } = applyTimingToNotification(payload, options);
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    event.waitUntil((async () => {
+        await self.registration.showNotification(title, options);
+
+        if (payload && typeof payload === 'object') {
+            const transitionMessage = {
+                type: payload.type || options?.data?.type,
+                newState: payload.newState || payload.transition?.newState,
+                oldState: payload.oldState || payload.transition?.oldState,
+                session: payload.session || options?.data?.session,
+                transition: payload.transition
+            };
+
+            await broadcastTransitionMessage(transitionMessage);
+        }
+    })());
 });

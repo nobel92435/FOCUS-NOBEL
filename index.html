@@ -4168,13 +4168,17 @@
         pomodoroWorker.onmessage = (e) => {
             const { type, timeLeft } = e.data;
             if (type === 'tick' && sessionTimerDisplay) {
-                // Update the timer display on every tick from the worker
-                sessionTimerDisplay.textContent = formatPomodoroTime(timeLeft);
+                const safeTimeLeft = Number.isFinite(timeLeft) ? timeLeft : 0;
+                sessionTimerDisplay.textContent = formatPomodoroTime(safeTimeLeft);
+                if (!isPaused) {
+                    updatePomodoroExpectedEnd(safeTimeLeft);
+                }
             } else if (type === 'phase_ended') {
+                pomodoroPhaseExpectedEnd = null;
                 // This is a local trigger from the worker when a phase ends.
                 // It's the primary way the UI transitions when the app is in the foreground.
                 console.log('Worker signaled phase end. Handling transition locally.');
-                
+
                 const oldState = pomodoroState;
                 if (oldState === 'idle') return; // Safety check, don't transition if already stopped
 
@@ -4507,6 +4511,7 @@ function scheduleServerHeadsUpTrigger({ groupKey, sendAtMs, notificationPayload 
 let isPaused = false;
 let pauseStartTime = 0;
         let timerInterval = null;
+        let pomodoroPhaseExpectedEnd = null;
         let sessionStartTime = 0;
         let totalTimeTodayInSeconds = 0;
         let totalBreakTimeTodayInSeconds = 0; // New: Track total break time today
@@ -6200,6 +6205,54 @@ let pauseStartTime = 0;
             return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
+        function parsePomodoroDisplayToSeconds(displayText) {
+            if (typeof displayText !== 'string' || displayText.trim() === '') {
+                return 0;
+            }
+
+            const parts = displayText.split(':').map(part => parseInt(part, 10));
+            if (parts.some(num => Number.isNaN(num))) {
+                return 0;
+            }
+
+            if (parts.length === 3) {
+                const [hours, minutes, seconds] = parts;
+                return (hours * 3600) + (minutes * 60) + seconds;
+            }
+
+            if (parts.length === 2) {
+                const [minutes, seconds] = parts;
+                return (minutes * 60) + seconds;
+            }
+
+            return parts[0] || 0;
+        }
+
+        function updatePomodoroExpectedEnd(durationSeconds) {
+            if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+                pomodoroPhaseExpectedEnd = null;
+                return;
+            }
+
+            pomodoroPhaseExpectedEnd = Date.now() + (durationSeconds * 1000);
+        }
+
+        function syncPomodoroDisplayWithExpectedEnd() {
+            if (!sessionTimerDisplay || pomodoroPhaseExpectedEnd === null) {
+                return;
+            }
+
+            const remainingMs = pomodoroPhaseExpectedEnd - Date.now();
+            const remainingSeconds = Math.max(Math.ceil(remainingMs / 1000), 0);
+            sessionTimerDisplay.textContent = formatPomodoroTime(remainingSeconds);
+
+            if (remainingSeconds <= 0 && pomodoroState !== 'idle') {
+                handlePomodoroPhaseEnd({ oldState: pomodoroState }).catch(error => {
+                    console.error('Failed to handle Pomodoro transition after visibility sync:', error);
+                });
+            }
+        }
+
         function formatMinutesFriendly(minutes) {
             if (!Number.isFinite(minutes) || minutes < 0) return '0m';
             const hours = Math.floor(minutes / 60);
@@ -6353,6 +6406,7 @@ let pauseStartTime = 0;
                     headsUpCopy: breakHeadsUpCopy,
                     finalCopy: breakFinalCopy
                 });
+                updatePomodoroExpectedEnd(workDurationSeconds);
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds });
             }
 
@@ -6374,6 +6428,7 @@ let pauseStartTime = 0;
         async function stopTimer() {
             // Stop the UI timer in the web worker
             pomodoroWorker.postMessage({ command: 'stop' });
+            pomodoroPhaseExpectedEnd = null;
             cancelSWAlarm(POMODORO_HEADS_UP_TAG);
             await cancelAllServerHeadsUpSchedules('timer_stop');
 
@@ -6448,6 +6503,7 @@ let pauseStartTime = 0;
                 document.getElementById('resume-btn').classList.remove('hidden');
             } else if (timerMode === 'pomodoro' && !isPaused) {
                 pomodoroWorker.postMessage({ command: 'pause' });
+                pomodoroPhaseExpectedEnd = null;
                 isPaused = true;
                 document.getElementById('pause-btn').classList.add('hidden');
                 document.getElementById('resume-btn').classList.remove('hidden');
@@ -6467,6 +6523,8 @@ let pauseStartTime = 0;
                 document.getElementById('pause-btn').classList.remove('hidden');
                 document.getElementById('resume-btn').classList.add('hidden');
             } else if (timerMode === 'pomodoro' && isPaused) {
+                const remainingSeconds = parsePomodoroDisplayToSeconds(sessionTimerDisplay?.textContent || '');
+                updatePomodoroExpectedEnd(remainingSeconds);
                 pomodoroWorker.postMessage({ command: 'resume' });
                 isPaused = false;
                 document.getElementById('pause-btn').classList.remove('hidden');
@@ -6502,6 +6560,7 @@ let pauseStartTime = 0;
             const phaseStartMs = Date.now();
 
             // Start the UI timer
+            updatePomodoroExpectedEnd(durationSeconds);
             pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds });
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
@@ -6549,6 +6608,18 @@ let pauseStartTime = 0;
             totalTimeDisplay.textContent = `Total Today: ${formatTime(totalTimeTodayInSeconds)}`;
             totalBreakTimeDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
         }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') {
+                return;
+            }
+
+            if (timerMode === 'pomodoro' && pomodoroState !== 'idle') {
+                if (pomodoroPhaseExpectedEnd !== null) {
+                    syncPomodoroDisplayWithExpectedEnd();
+                }
+            }
+        });
 
         async function saveSession(subject, durationSeconds, sessionType = 'study') { // Default to 'study'
             if (!currentUser || durationSeconds <= 0) {
@@ -13633,6 +13704,39 @@ if (achievementsGrid) {
 
             // --- Service Worker Registration (Robust Version) ---
         if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                const data = event.data;
+                if (!data || data.source !== 'focusflow-sw') {
+                    return;
+                }
+
+                const transition = data.payload || {};
+                const eventType = transition.type || transition.options?.data?.type;
+
+                if (!eventType) {
+                    return;
+                }
+
+                const sessionMeta = transition.session || transition.options?.data?.session || transition.transition?.session;
+
+                if (timerMode === 'pomodoro' && pomodoroState !== 'idle' && sessionMeta && typeof sessionMeta.endTimestamp === 'number') {
+                    const remainingSeconds = Math.max(Math.ceil((sessionMeta.endTimestamp - Date.now()) / 1000), 0);
+                    updatePomodoroExpectedEnd(remainingSeconds);
+                    if (sessionTimerDisplay) {
+                        sessionTimerDisplay.textContent = formatPomodoroTime(remainingSeconds);
+                    }
+                }
+
+                if (eventType === 'TIMER_ENDED') {
+                    const oldState = transition.oldState || transition.options?.data?.transition?.oldState || transition.transition?.oldState;
+                    if (timerMode === 'pomodoro' && pomodoroState === oldState && oldState) {
+                        handlePomodoroPhaseEnd({ oldState }).catch(error => {
+                            console.error('Failed to handle Pomodoro transition from Service Worker message:', error);
+                        });
+                    }
+                }
+            });
+
             // Service Workers require a secure context (HTTPS or localhost) to register.
             // This check prevents the registration error in unsupported environments (like 'blob:').
             if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
