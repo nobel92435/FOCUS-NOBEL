@@ -4163,6 +4163,12 @@
         `;
         const blob = new Blob([workerCode], { type: 'application/javascript' });
         const pomodoroWorker = new Worker(URL.createObjectURL(blob));
+        const CLIENT_MESSAGE_TYPES = Object.freeze({
+            POMODORO_PUSH: 'POMODORO_PUSH'
+        });
+        let skipNextLocalPhaseEnd = false;
+        let skipLocalPhaseTimeoutId = null;
+        let lastServerFinalSessionId = null;
 
         // --- FIX START: Listen for messages from the Pomodoro Web Worker ---
         pomodoroWorker.onmessage = (e) => {
@@ -4171,10 +4177,18 @@
                 // Update the timer display on every tick from the worker
                 sessionTimerDisplay.textContent = formatPomodoroTime(timeLeft);
             } else if (type === 'phase_ended') {
+                if (skipNextLocalPhaseEnd) {
+                    skipNextLocalPhaseEnd = false;
+                    if (skipLocalPhaseTimeoutId) {
+                        clearTimeout(skipLocalPhaseTimeoutId);
+                        skipLocalPhaseTimeoutId = null;
+                    }
+                    return;
+                }
                 // This is a local trigger from the worker when a phase ends.
                 // It's the primary way the UI transitions when the app is in the foreground.
                 console.log('Worker signaled phase end. Handling transition locally.');
-                
+
                 const oldState = pomodoroState;
                 if (oldState === 'idle') return; // Safety check, don't transition if already stopped
 
@@ -4501,6 +4515,137 @@ function scheduleServerHeadsUpTrigger({ groupKey, sendAtMs, notificationPayload 
         logContext
     );
 }
+
+        function normalizePushPayloadType(value) {
+            if (typeof value !== 'string') {
+                return '';
+            }
+            const normalized = value.trim().toUpperCase();
+            if (normalized.includes('HEADS')) {
+                return 'HEADS_UP';
+            }
+            if (normalized.includes('FINAL') || normalized.includes('TIMER_ENDED')) {
+                return 'FINAL';
+            }
+            return normalized;
+        }
+
+        function extractTransitionFromPushPayload(payload = {}, options = {}) {
+            const candidates = [
+                payload.transition,
+                payload.options?.data?.transition,
+                options?.data?.transition
+            ];
+            for (const candidate of candidates) {
+                if (candidate && typeof candidate === 'object') {
+                    const oldState = candidate.oldState ?? candidate.old_state ?? null;
+                    const newState = candidate.newState ?? candidate.new_state ?? null;
+                    if (oldState || newState) {
+                        return { oldState, newState };
+                    }
+                }
+            }
+            return { oldState: null, newState: null };
+        }
+
+        function extractSessionFromPushPayload(payload = {}, options = {}) {
+            const candidates = [
+                options?.data?.session,
+                payload.session,
+                payload.options?.data?.session
+            ];
+            for (const candidate of candidates) {
+                if (candidate && typeof candidate === 'object') {
+                    return candidate;
+                }
+            }
+            return null;
+        }
+
+        function findServerGroupKeyForClientId(clientGroupId) {
+            if (!clientGroupId) {
+                return null;
+            }
+            for (const [key, entry] of Object.entries(serverHeadsUpSchedules)) {
+                if (entry && entry.groupId === clientGroupId) {
+                    return key;
+                }
+            }
+            return null;
+        }
+
+        function settleServerHeadsUpByClientId(clientGroupId, deliveryType = 'heads_up') {
+            const groupKey = findServerGroupKeyForClientId(clientGroupId);
+            if (!groupKey) {
+                return;
+            }
+            const scheduleInfo = serverHeadsUpSchedules[groupKey];
+            clearServerHeadsUpTimeout(scheduleInfo);
+            if (deliveryType === 'final') {
+                serverHeadsUpSchedules[groupKey] = null;
+            } else if (scheduleInfo) {
+                scheduleInfo.headsUpDeliveredAt = Date.now();
+            }
+        }
+
+        function handleServiceWorkerPushMessage(message) {
+            if (!message || message.type !== CLIENT_MESSAGE_TYPES.POMODORO_PUSH) {
+                return;
+            }
+
+            const payload = message.payload || {};
+            const options = message.options || {};
+            const pushType = normalizePushPayloadType(payload.type || options?.data?.type);
+            const transition = extractTransitionFromPushPayload(payload, options);
+            const oldState = transition.oldState || payload.oldState || null;
+            const newState = transition.newState || payload.newState || null;
+            const session = extractSessionFromPushPayload(payload, options);
+            const clientGroupId = session?.clientGroupId || session?.client_group_id || payload.client_group_id || null;
+
+            if (clientGroupId) {
+                settleServerHeadsUpByClientId(clientGroupId, pushType === 'FINAL' ? 'final' : 'heads_up');
+            }
+
+            if (pushType === 'HEADS_UP') {
+                console.log('[FocusFlow] Heads-up push received from server.', { session, transition });
+                return;
+            }
+
+            if (pushType !== 'FINAL' || !oldState) {
+                return;
+            }
+
+            if (!session || !session.id) {
+                console.log('[FocusFlow] Final push missing session id. Handling once.', { session, transition });
+            } else if (session.id === lastServerFinalSessionId) {
+                return;
+            } else {
+                lastServerFinalSessionId = session.id;
+            }
+
+            if (pomodoroState === 'idle') {
+                return;
+            }
+
+            if (skipLocalPhaseTimeoutId) {
+                clearTimeout(skipLocalPhaseTimeoutId);
+                skipLocalPhaseTimeoutId = null;
+            }
+            skipNextLocalPhaseEnd = true;
+            skipLocalPhaseTimeoutId = setTimeout(() => {
+                skipNextLocalPhaseEnd = false;
+                skipLocalPhaseTimeoutId = null;
+            }, 8000);
+
+            pomodoroWorker.postMessage({ command: 'stop' });
+            pomodoroState = oldState;
+
+            if (sessionTimerDisplay) {
+                sessionTimerDisplay.textContent = formatPomodoroTime(0);
+            }
+
+            handlePomodoroPhaseEnd({ oldState, newState, source: 'push', session });
+        }
 
         // Timer State
         // Add these lines
@@ -5183,6 +5328,7 @@ let pauseStartTime = 0;
             const sessionStartIso = new Date(startTimestampMs).toISOString();
             const clientGroupId = generateHeadsUpGroupId();
             const resolvedSessionId = sessionId || clientGroupId;
+            lastServerFinalSessionId = null;
             const transitionLabel = oldState === 'work'
                 ? describeBreakLabel(newState)
                 : describeBreakLabel(oldState);
@@ -5201,6 +5347,7 @@ let pauseStartTime = 0;
                 endAt: sessionEndIso,
                 endTimestamp: sessionEndMs,
                 headsUpSeconds: HEADS_UP_BUFFER_SECONDS,
+                clientGroupId,
                 oldState,
                 newState
             };
@@ -13633,6 +13780,13 @@ if (achievementsGrid) {
 
             // --- Service Worker Registration (Robust Version) ---
         if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                try {
+                    handleServiceWorkerPushMessage(event.data);
+                } catch (error) {
+                    console.error('Failed to handle service worker message:', error);
+                }
+            });
             // Service Workers require a secure context (HTTPS or localhost) to register.
             // This check prevents the registration error in unsupported environments (like 'blob:').
             if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
