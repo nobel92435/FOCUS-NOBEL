@@ -220,39 +220,203 @@ self.addEventListener('notificationclick', (event) => {
     );
 });
 
+function firstNonEmptyString(...values) {
+    for (const value of values) {
+        if (typeof value === 'string' && value.trim() !== '') {
+            return value;
+        }
+    }
+    return undefined;
+}
+
+function firstDefinedValue(...values) {
+    for (const value of values) {
+        if (value !== undefined && value !== null) {
+            return value;
+        }
+    }
+    return undefined;
+}
+
+function collectNotificationSources(...candidates) {
+    const queue = candidates.filter(candidate => candidate && typeof candidate === 'object');
+    const seen = new Set();
+    const sources = [];
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+        if (!current || typeof current !== 'object' || seen.has(current)) {
+            continue;
+        }
+
+        seen.add(current);
+        sources.push(current);
+
+        const nestedCandidates = [];
+        if (current.notification && typeof current.notification === 'object') {
+            nestedCandidates.push(current.notification);
+        }
+        if (Array.isArray(current.notifications)) {
+            nestedCandidates.push(...current.notifications.filter(item => item && typeof item === 'object'));
+        }
+        if (current.data && typeof current.data === 'object' && current.data.notification && typeof current.data.notification === 'object') {
+            nestedCandidates.push(current.data.notification);
+        }
+
+        queue.push(...nestedCandidates);
+    }
+
+    return sources;
+}
+
+function normalizePushPayload(incoming) {
+    if (typeof incoming === 'string') {
+        return {
+            title: 'FocusFlow',
+            options: {
+                body: incoming,
+                icon: DEFAULT_NOTIFICATION_ICON,
+                badge: DEFAULT_NOTIFICATION_BADGE,
+                vibrate: DEFAULT_NOTIFICATION_VIBRATE,
+                requireInteraction: true,
+                renotify: true,
+                timestamp: Date.now(),
+                tag: notificationTag,
+                data: {
+                    rawPayload: incoming
+                }
+            }
+        };
+    }
+
+    if (!incoming || typeof incoming !== 'object') {
+        return {
+            title: 'FocusFlow',
+            options: {
+                icon: DEFAULT_NOTIFICATION_ICON,
+                badge: DEFAULT_NOTIFICATION_BADGE,
+                vibrate: DEFAULT_NOTIFICATION_VIBRATE,
+                requireInteraction: true,
+                renotify: true,
+                timestamp: Date.now(),
+                tag: notificationTag,
+                data: {
+                    rawPayload: incoming
+                }
+            }
+        };
+    }
+
+    const visited = new Set();
+    let base = incoming;
+    while (base && typeof base === 'object' && base.payload && typeof base.payload === 'object' && !visited.has(base.payload)) {
+        visited.add(base);
+        base = base.payload;
+    }
+
+    const baseObject = base && typeof base === 'object' ? base : {};
+
+    const notificationSources = collectNotificationSources(incoming, baseObject);
+
+    const optionsSources = [incoming.options, baseObject.options];
+    for (const source of notificationSources) {
+        if (source && typeof source.options === 'object') {
+            optionsSources.push(source.options);
+        }
+    }
+    const mergedOptions = Object.assign({}, ...optionsSources.filter(opt => opt && typeof opt === 'object'));
+
+    const title = firstNonEmptyString(
+        ...notificationSources.map(source => source.title),
+        incoming.title,
+        'FocusFlow'
+    );
+
+    const body = firstNonEmptyString(
+        mergedOptions.body,
+        ...notificationSources.map(source => source.body),
+        incoming.body
+    );
+    if (body) {
+        mergedOptions.body = body;
+    }
+
+    mergedOptions.icon = firstNonEmptyString(
+        mergedOptions.icon,
+        ...notificationSources.map(source => source.icon),
+        incoming.icon,
+        DEFAULT_NOTIFICATION_ICON
+    );
+    mergedOptions.badge = firstNonEmptyString(
+        mergedOptions.badge,
+        ...notificationSources.map(source => source.badge),
+        incoming.badge,
+        DEFAULT_NOTIFICATION_BADGE
+    );
+    mergedOptions.vibrate = firstDefinedValue(
+        mergedOptions.vibrate,
+        ...notificationSources.map(source => source.vibrate),
+        incoming.vibrate,
+        DEFAULT_NOTIFICATION_VIBRATE
+    );
+    mergedOptions.requireInteraction = mergedOptions.requireInteraction ?? firstDefinedValue(
+        ...notificationSources.map(source => source.requireInteraction),
+        incoming.requireInteraction,
+        true
+    );
+    mergedOptions.renotify = mergedOptions.renotify ?? firstDefinedValue(
+        ...notificationSources.map(source => source.renotify),
+        incoming.renotify,
+        true
+    );
+    mergedOptions.timestamp = firstDefinedValue(
+        mergedOptions.timestamp,
+        ...notificationSources.map(source => source.timestamp),
+        incoming.timestamp,
+        Date.now()
+    );
+    mergedOptions.tag = firstNonEmptyString(
+        mergedOptions.tag,
+        ...notificationSources.map(source => source.tag),
+        incoming.tag,
+        notificationTag
+    );
+
+    const dataSources = [
+        typeof mergedOptions.data === 'object' ? mergedOptions.data : null,
+        ...notificationSources.map(source => (typeof source.data === 'object' ? source.data : null)),
+        typeof baseObject.data === 'object' ? baseObject.data : null,
+        typeof incoming.data === 'object' ? incoming.data : null
+    ].filter(Boolean);
+
+    const mergedData = Object.assign({}, ...dataSources);
+
+    mergedOptions.data = {
+        ...mergedData,
+        rawPayload: incoming,
+        payload: baseObject,
+        notification: notificationSources.find(source => source === baseObject || source === incoming)?.notification || mergedData.notification
+    };
+
+    return {
+        title,
+        options: mergedOptions
+    };
+}
+
 self.addEventListener('push', (event) => {
     if (!event.data) {
         console.warn('[Service Worker] Push event received without data.');
         return;
     }
 
-    let payload = {};
+    let parsedPayload;
     try {
-        payload = event.data.json();
+        parsedPayload = event.data.json();
     } catch (error) {
-        payload = { body: event.data.text() };
+        parsedPayload = event.data.text();
     }
 
-    const title = payload.title || 'FocusFlow';
-    const options = { ...(payload.options || {}) };
-    const fallbackBody = typeof payload.body === 'string' ? payload.body : undefined;
-    if (fallbackBody && !options.body) {
-        options.body = fallbackBody;
-    }
-
-    options.icon = options.icon || payload.icon || DEFAULT_NOTIFICATION_ICON;
-    options.badge = options.badge || payload.badge || DEFAULT_NOTIFICATION_BADGE;
-    options.vibrate = options.vibrate || payload.vibrate || DEFAULT_NOTIFICATION_VIBRATE;
-    options.requireInteraction = options.requireInteraction ?? true;
-    options.renotify = options.renotify ?? true;
-    options.timestamp = options.timestamp || Date.now();
-    options.tag = options.tag || notificationTag;
-    options.data = {
-        ...(options.data || {}),
-        dateOfArrival: Date.now(),
-        primaryKey: 1,
-        payload
-    };
-
+    const { title, options } = normalizePushPayload(parsedPayload);
     event.waitUntil(self.registration.showNotification(title, options));
 });
