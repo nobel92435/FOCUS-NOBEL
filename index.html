@@ -4507,30 +4507,65 @@ let pauseStartTime = 0;
 
             try {
                 await cancelServerHeadsUpGroup(groupKey, { silent: true });
-                const { error } = await supabase
-                    .from(HEADS_UP_JOB_TABLE)
-                    .insert([{
-                        user_id: currentUser.id,
-                        kind: 'pomodoro_heads_up',
-                        send_at: sendAtIso,
-                        payload: {
-                            title,
-                            body,
-                            options,
-                            newState,
-                            oldState,
-                            transition: { oldState, newState },
-                            type: 'pomodoro_heads_up',
-                            appId
-                        },
-                        client_group_id: clientGroupId
-                    }]);
-                if (error) throw error;
+
+                const basePayload = {
+                    title,
+                    body,
+                    options,
+                    newState,
+                    oldState,
+                    transition: { oldState, newState },
+                    type: 'pomodoro_heads_up',
+                    appId
+                };
+
+                const candidateKinds = Array.from(new Set([
+                    'pomodoro_heads_up',
+                    newState === 'work' ? 'pomodoro_focus_heads_up' : 'pomodoro_break_heads_up',
+                    'heads_up',
+                    'timer_heads_up'
+                ].filter(Boolean)));
+
+                let scheduledKind = null;
+                let lastKindError = null;
+
+                for (const kind of candidateKinds) {
+                    const { error: insertError } = await supabase
+                        .from(HEADS_UP_JOB_TABLE)
+                        .insert([{
+                            user_id: currentUser.id,
+                            kind,
+                            send_at: sendAtIso,
+                            payload: { ...basePayload, kind },
+                            client_group_id: clientGroupId
+                        }]);
+
+                    if (!insertError) {
+                        scheduledKind = kind;
+                        break;
+                    }
+
+                    if (insertError?.code === '23514') {
+                        lastKindError = insertError;
+                        continue;
+                    }
+
+                    throw insertError;
+                }
+
+                if (!scheduledKind) {
+                    const fallbackError = new Error('Failed to schedule heads-up notification with any supported kind');
+                    fallbackError.cause = lastKindError;
+                    fallbackError.attemptedKinds = candidateKinds;
+                    throw fallbackError;
+                }
+
                 serverHeadsUpSchedules[groupKey] = {
                     groupId: clientGroupId,
                     sendAt: sendAtIso,
                     oldState,
-                    newState
+                    newState,
+                    kind: scheduledKind
                 };
             } catch (error) {
                 console.error('Failed to schedule server heads-up notification:', error);
