@@ -178,6 +178,27 @@ async function sendNotification(
   });
 }
 
+function buildTopic(session: Record<string, unknown>) {
+  const sessionId = typeof session.id === "string" && session.id.trim() !== ""
+    ? session.id.trim()
+    : crypto.randomUUID();
+
+  const prefix = "session_";
+  const maxLength = 32;
+  const allowedSuffixLength = Math.max(0, maxLength - prefix.length);
+  const sanitized = sessionId.replace(/[^A-Za-z0-9_-]/g, "");
+  let suffix = sanitized.slice(0, allowedSuffixLength);
+
+  if (!suffix) {
+    const fallback = crypto.randomUUID().replace(/[^A-Za-z0-9_-]/g, "");
+    suffix = fallback.slice(0, allowedSuffixLength) || fallback;
+  }
+
+  const topic = `${prefix}${suffix}`.slice(0, maxLength);
+
+  return { topic, sessionId };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", {
@@ -218,7 +239,7 @@ Deno.serve(async (req) => {
 
     const transition = extractTransition(job);
     const session = normalizeSession(job, transition);
-    const topic = `session_${String(session.id)}`;
+    const { topic } = buildTopic(session);
     const payloadRecord = typeof job.payload === "object" && job.payload !== null ? job.payload as Record<string, unknown> : {};
     const headsUpTemplate = parseTemplate(payloadRecord, "headsUp");
     const finalTemplate = parseTemplate(payloadRecord, "final");
