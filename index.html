@@ -3389,6 +3389,14 @@
         [SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK]: null,
         [SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK]: null
     };
+    let serverHeadsUpLocalTimers = {
+        [SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK]: null,
+        [SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK]: null
+    };
+    let serverHeadsUpTriggeredTransitions = {
+        [SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK]: null,
+        [SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK]: null
+    };
     let serverHeadsUpSchedulingDisabled = false;
     let serverHeadsUpDisableInfo = null;
     let serverHeadsUpKindHints = [];
@@ -4159,11 +4167,24 @@
                     options: { body: 'Time to get back to focus.', tag: 'pomodoro-transition' }
                 };
 
-            const serverHandled = await triggerServerNotification({
-                ...transitionMessage,
-                newState,
-                oldState
-            });
+            const transitionKey = `${oldState}->${newState}`;
+            const transitionGroupKey = oldState === 'work'
+                ? SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK
+                : SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK;
+
+            let serverHandled = false;
+            const headsUpTriggered = serverHeadsUpTriggeredTransitions[transitionGroupKey] === transitionKey;
+            serverHeadsUpTriggeredTransitions[transitionGroupKey] = null;
+
+            if (!headsUpTriggered) {
+                serverHandled = await triggerServerNotification({
+                    ...transitionMessage,
+                    newState,
+                    oldState
+                });
+            } else {
+                serverHandled = true;
+            }
 
             if (!serverHandled && Notification.permission === 'granted') {
                 scheduleTransitionNotification(0, transitionMessage.title, transitionMessage.options, {
@@ -4789,7 +4810,22 @@ let pauseStartTime = 0;
             return `heads-${Math.random().toString(36).slice(2)}-${Date.now()}`;
         }
 
+        function clearLocalServerHeadsUpTimer(groupKey) {
+            if (!groupKey || !(groupKey in serverHeadsUpLocalTimers)) {
+                return;
+            }
+
+            const timerId = serverHeadsUpLocalTimers[groupKey];
+            if (timerId) {
+                clearTimeout(timerId);
+            }
+
+            serverHeadsUpLocalTimers[groupKey] = null;
+            serverHeadsUpTriggeredTransitions[groupKey] = null;
+        }
+
         function resetServerHeadsUpSchedules() {
+            Object.keys(serverHeadsUpSchedules).forEach(clearLocalServerHeadsUpTimer);
             serverHeadsUpSchedules = {
                 [SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK]: null,
                 [SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK]: null
@@ -4852,6 +4888,7 @@ let pauseStartTime = 0;
             if (!(groupKey in serverHeadsUpSchedules)) {
                 serverHeadsUpSchedules[groupKey] = null;
             }
+            clearLocalServerHeadsUpTimer(groupKey);
             const scheduled = serverHeadsUpSchedules[groupKey];
             const userId = currentUser?.id;
             if (!scheduled?.groupId || !userId || !supabase || typeof supabase.from !== 'function') {
@@ -4905,6 +4942,40 @@ let pauseStartTime = 0;
             }
         }
 
+        function scheduleLocalServerHeadsUpTrigger(groupKey, delayMs, { title, body, oldState, newState }) {
+            if (!groupKey || !Number.isFinite(delayMs) || delayMs <= 0) {
+                clearLocalServerHeadsUpTimer(groupKey);
+                return;
+            }
+
+            clearLocalServerHeadsUpTimer(groupKey);
+
+            const safeDelay = Math.max(0, delayMs);
+            serverHeadsUpLocalTimers[groupKey] = setTimeout(async () => {
+                serverHeadsUpLocalTimers[groupKey] = null;
+
+                const transitionKey = `${oldState}->${newState}`;
+                try {
+                    if (!currentUser || currentUser.isAnonymous) {
+                        serverHeadsUpTriggeredTransitions[groupKey] = null;
+                        return;
+                    }
+                    const handled = await triggerServerNotification({
+                        title,
+                        options: { body, tag: 'pomodoro-transition' },
+                        body,
+                        newState,
+                        oldState
+                    });
+
+                    serverHeadsUpTriggeredTransitions[groupKey] = handled ? transitionKey : null;
+                } catch (error) {
+                    console.error('Failed to trigger server heads-up notification:', error);
+                    serverHeadsUpTriggeredTransitions[groupKey] = null;
+                }
+            }, safeDelay);
+        }
+
         function getUpcomingBreakConfig() {
             const interval = Math.max(Number(pomodoroSettings.long_break_interval) || 0, 1);
             const completedCycles = currentUserData?.pomodoroCycle || 0;
@@ -4930,23 +5001,33 @@ let pauseStartTime = 0;
             if (!(groupKey in serverHeadsUpSchedules)) {
                 serverHeadsUpSchedules[groupKey] = null;
             }
-            const configuredKinds = getConfiguredHeadsUpJobKinds();
-            maybeRestoreServerHeadsUpSchedulingFromCandidates([configuredKinds, serverHeadsUpKindHints]);
-            if (serverHeadsUpSchedulingDisabled) {
-                return;
-            }
             if (!currentUser || currentUser.isAnonymous) {
+                clearLocalServerHeadsUpTimer(groupKey);
                 return;
             }
             if (!Number.isFinite(durationSeconds) || durationSeconds <= HEADS_UP_BUFFER_SECONDS) {
+                clearLocalServerHeadsUpTimer(groupKey);
                 return;
             }
 
             const sendAtMs = startTimestampMs + (durationSeconds * 1000) - HEADS_UP_BUFFER_MS;
             if (!Number.isFinite(sendAtMs) || sendAtMs <= Date.now()) {
+                clearLocalServerHeadsUpTimer(groupKey);
                 return;
             }
 
+            scheduleLocalServerHeadsUpTrigger(groupKey, sendAtMs - Date.now(), {
+                title,
+                body,
+                oldState,
+                newState
+            });
+
+            const configuredKinds = getConfiguredHeadsUpJobKinds();
+            maybeRestoreServerHeadsUpSchedulingFromCandidates([configuredKinds, serverHeadsUpKindHints]);
+            if (serverHeadsUpSchedulingDisabled) {
+                return;
+            }
             if (!supabase || typeof supabase.from !== 'function') {
                 return;
             }
