@@ -3372,8 +3372,154 @@
     };
     let serverHeadsUpSchedulingDisabled = false;
     let serverHeadsUpDisableInfo = null;
+    let serverHeadsUpKindHints = [];
+    let serverHeadsUpKindHintsPromise = null;
 
     const SUPABASE_CHECK_CONSTRAINT_CODE = '23514';
+    const HEADS_UP_STATE_KIND_ALIASES = Object.freeze({
+        work: ['pomodoro_work_heads_up', 'pomodoro_focus_heads_up'],
+        focus: ['pomodoro_focus_heads_up', 'pomodoro_work_heads_up'],
+        short_break: ['pomodoro_short_break_heads_up', 'pomodoro_break_heads_up'],
+        long_break: ['pomodoro_long_break_heads_up', 'pomodoro_break_heads_up'],
+        break: ['pomodoro_break_heads_up']
+    });
+    const DEFAULT_HEADS_UP_JOB_KINDS = Object.freeze([
+        'pomodoro_heads_up',
+        'pomodoro_timer_heads_up',
+        'pomodoro_focus_heads_up',
+        'pomodoro_break_heads_up',
+        'pomodoro_work_heads_up',
+        'pomodoro_short_break_heads_up',
+        'pomodoro_long_break_heads_up',
+        'heads_up',
+        'timer_heads_up',
+        'pomodoro_heads_up_server'
+    ]);
+
+    function isNonEmptyString(value) {
+        return typeof value === 'string' && value.trim() !== '';
+    }
+
+    function normalizeTimerState(state) {
+        if (!isNonEmptyString(state)) {
+            return '';
+        }
+        return state.trim().toLowerCase();
+    }
+
+    function deriveHeadsUpKindsForState(state) {
+        const normalized = normalizeTimerState(state);
+        if (!normalized) {
+            return [];
+        }
+
+        const derived = [`pomodoro_${normalized}_heads_up`];
+        if (normalized.includes('break')) {
+            derived.push('pomodoro_break_heads_up');
+        }
+
+        const alias = HEADS_UP_STATE_KIND_ALIASES[normalized];
+        if (Array.isArray(alias)) {
+            derived.push(...alias);
+        }
+
+        return derived;
+    }
+
+    function buildServerHeadsUpKindCandidates({ oldState, newState, hints = [] }) {
+        const normalizedOldState = normalizeTimerState(oldState);
+        const normalizedNewState = normalizeTimerState(newState);
+        const stateDerivedKinds = [
+            ...deriveHeadsUpKindsForState(oldState),
+            ...deriveHeadsUpKindsForState(newState)
+        ];
+        const transitionKinds = [];
+
+        if (normalizedOldState && normalizedNewState) {
+            transitionKinds.push(`pomodoro_${normalizedOldState}_to_${normalizedNewState}_heads_up`);
+        }
+
+        const baseKinds = Array.from(DEFAULT_HEADS_UP_JOB_KINDS);
+
+        return Array.from(new Set([
+            ...[].concat(hints || []).filter(isNonEmptyString),
+            ...stateDerivedKinds,
+            ...transitionKinds,
+            ...baseKinds
+        ].filter(isNonEmptyString)));
+    }
+
+    function rememberServerHeadsUpKindHint(kind) {
+        if (!isNonEmptyString(kind)) {
+            return;
+        }
+
+        if (!Array.isArray(serverHeadsUpKindHints)) {
+            serverHeadsUpKindHints = [];
+        }
+
+        if (!serverHeadsUpKindHints.includes(kind)) {
+            serverHeadsUpKindHints.push(kind);
+        }
+    }
+
+    function resetServerHeadsUpKindHints() {
+        serverHeadsUpKindHints = [];
+        serverHeadsUpKindHintsPromise = null;
+    }
+
+    async function getServerHeadsUpKindHints() {
+        if (Array.isArray(serverHeadsUpKindHints) && serverHeadsUpKindHints.length > 0) {
+            return serverHeadsUpKindHints;
+        }
+
+        if (!currentUser || currentUser.isAnonymous) {
+            return [];
+        }
+
+        if (!supabase || typeof supabase.from !== 'function') {
+            return [];
+        }
+
+        if (!serverHeadsUpKindHintsPromise) {
+            serverHeadsUpKindHintsPromise = (async () => {
+                try {
+                    const { data, error } = await supabase
+                        .from(HEADS_UP_JOB_TABLE)
+                        .select('kind')
+                        .eq('user_id', currentUser.id)
+                        .order('created_at', { ascending: false })
+                        .limit(50);
+
+                    if (error) {
+                        throw error;
+                    }
+
+                    const fetched = Array.isArray(data)
+                        ? data
+                            .map(row => row?.kind)
+                            .filter(isNonEmptyString)
+                        : [];
+
+                    serverHeadsUpKindHints = Array.from(new Set(fetched));
+                    return serverHeadsUpKindHints;
+                } catch (error) {
+                    console.warn('Unable to load heads-up job kinds from server:', error);
+                    serverHeadsUpKindHints = [];
+                    return [];
+                } finally {
+                    serverHeadsUpKindHintsPromise = null;
+                }
+            })();
+        }
+
+        try {
+            return await serverHeadsUpKindHintsPromise;
+        } catch (error) {
+            console.warn('Heads-up job kind hint lookup failed:', error);
+            return [];
+        }
+    }
 
     function getSupabaseErrorCode(error) {
         if (!error || typeof error !== 'object') {
@@ -3531,6 +3677,10 @@
     auth.onAuthStateChange(async (event, session) => {
         const previousUserId = currentUser?.id;
         currentUser = session?.user ?? null;
+
+        if ((previousUserId || currentUser?.id) && previousUserId !== currentUser?.id) {
+            resetServerHeadsUpKindHints();
+        }
         // This is a more robust way to handle auth state changes.
         // We only want to re-route the user on sign-in or sign-out events.
         // For user updates (like changing a profile picture), we just want to refresh
@@ -4607,12 +4757,12 @@ let pauseStartTime = 0;
                 type: 'pomodoro_heads_up',
                 appId
             };
-            const candidateKinds = Array.from(new Set([
-                'pomodoro_heads_up',
-                newState === 'work' ? 'pomodoro_focus_heads_up' : 'pomodoro_break_heads_up',
-                'heads_up',
-                'timer_heads_up'
-            ].filter(Boolean)));
+            const hints = await getServerHeadsUpKindHints();
+            const candidateKinds = buildServerHeadsUpKindCandidates({
+                oldState,
+                newState,
+                hints
+            });
 
             try {
                 await cancelServerHeadsUpGroup(groupKey, { silent: true });
@@ -4633,6 +4783,7 @@ let pauseStartTime = 0;
 
                     if (!insertError) {
                         scheduledKind = kind;
+                        rememberServerHeadsUpKindHint(kind);
                         break;
                     }
 
@@ -4648,6 +4799,7 @@ let pauseStartTime = 0;
                     const fallbackError = new Error('Failed to schedule heads-up notification with any supported kind');
                     fallbackError.cause = lastKindError;
                     fallbackError.attemptedKinds = candidateKinds;
+                    fallbackError.hints = hints;
                     throw fallbackError;
                 }
 
@@ -4660,9 +4812,11 @@ let pauseStartTime = 0;
                 };
             } catch (error) {
                 if (isHeadsUpKindConstraintError(error)) {
+                    resetServerHeadsUpKindHints();
                     disableServerHeadsUpScheduling('unsupported_job_kind', {
                         error,
-                        attemptedKinds: candidateKinds
+                        attemptedKinds: candidateKinds,
+                        hints
                     });
                 } else {
                     console.error('Failed to schedule server heads-up notification:', error);
