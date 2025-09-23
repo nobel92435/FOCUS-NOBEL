@@ -35,8 +35,8 @@ interface SchedulerJob {
   session_start_at?: string | null;
   session_end_at?: string | null;
   heads_up_offset_seconds?: number | null;
-  heads_up_sent: boolean;
-  final_sent: boolean;
+  heads_up_sent: string | null;
+  final_sent: string | null;
   payload: Record<string, unknown> | null;
   send_at?: string | null;
   client_group_id?: string | null;
@@ -50,8 +50,8 @@ interface SchedulerJob {
 
 interface SchedulerResult {
   jobId: string;
-  headsUpSent: boolean;
-  finalSent: boolean;
+  headsUpSentAt: string | null;
+  finalSentAt: string | null;
   errors: string[];
 }
 
@@ -276,7 +276,7 @@ async function fetchDueJobs(nowIso: string) {
       subscription:push_subscriptions!inner(id, endpoint, p256dh, auth)
     `)
     .or(
-      `and(heads_up_sent.eq.false,send_at.lte.${nowIso}),and(final_sent.eq.false,session_end_at.lte.${nowIso})`
+      `and(heads_up_sent.is.null,send_at.lte.${nowIso}),and(final_sent.is.null,session_end_at.lte.${nowIso})`
     )
     .order("session_end_at", { ascending: true });
 
@@ -336,10 +336,10 @@ Deno.serve(async (req) => {
       const sendAtMs = job.send_at ? Date.parse(job.send_at) : NaN;
       const sessionEndMs = session.endTimestamp as number;
 
-      let headsUpSent = job.heads_up_sent;
-      let finalSent = job.final_sent;
+      let headsUpSentAt = job.heads_up_sent ? String(job.heads_up_sent) : null;
+      let finalSentAt = job.final_sent ? String(job.final_sent) : null;
 
-      if (!headsUpSent && Number.isFinite(sendAtMs) && sendAtMs <= nowMs) {
+      if (!headsUpSentAt && Number.isFinite(sendAtMs) && sendAtMs <= nowMs) {
         const options = buildNotificationOptions(headsUpTemplate.options, transition, session, true);
         const payload = buildNotificationPayload(
           headsUpTemplate.title || "Break is starting soon",
@@ -352,19 +352,20 @@ Deno.serve(async (req) => {
 
         try {
           await sendNotification(subscription, payload, topic);
-          headsUpSent = true;
+          headsUpSentAt = new Date().toISOString();
         } catch (error) {
           console.error("Failed to deliver heads-up notification:", error);
           errors.push(error instanceof Error ? error.message : String(error));
           if (error && typeof error === "object" && "statusCode" in error && error.statusCode === 410) {
             await removeSubscription(subscriptionRecord.id);
-            headsUpSent = true;
-            finalSent = true;
+            const failureTimestamp = new Date().toISOString();
+            headsUpSentAt = headsUpSentAt ?? failureTimestamp;
+            finalSentAt = finalSentAt ?? failureTimestamp;
           }
         }
       }
 
-      if (!finalSent && Number.isFinite(sessionEndMs) && sessionEndMs <= nowMs) {
+      if (!finalSentAt && Number.isFinite(sessionEndMs) && sessionEndMs <= nowMs) {
         const options = buildNotificationOptions(finalTemplate.options, transition, session, false);
         const payload = buildNotificationPayload(
           finalTemplate.title || (transition.newState.includes("break") ? "Break time" : "Focus time!"),
@@ -379,31 +380,32 @@ Deno.serve(async (req) => {
 
         try {
           await sendNotification(subscription, payload, topic);
-          finalSent = true;
+          finalSentAt = new Date().toISOString();
         } catch (error) {
           console.error("Failed to deliver final notification:", error);
           errors.push(error instanceof Error ? error.message : String(error));
           if (error && typeof error === "object" && "statusCode" in error && error.statusCode === 410) {
             await removeSubscription(subscriptionRecord.id);
-            headsUpSent = true;
-            finalSent = true;
+            const failureTimestamp = new Date().toISOString();
+            headsUpSentAt = headsUpSentAt ?? failureTimestamp;
+            finalSentAt = finalSentAt ?? failureTimestamp;
           }
         }
       }
 
       const update: Record<string, unknown> = {};
-      if (headsUpSent !== job.heads_up_sent) {
-        update.heads_up_sent = headsUpSent;
+      if (headsUpSentAt !== job.heads_up_sent) {
+        update.heads_up_sent = headsUpSentAt;
       }
-      if (finalSent !== job.final_sent) {
-        update.final_sent = finalSent;
+      if (finalSentAt !== job.final_sent) {
+        update.final_sent = finalSentAt;
       }
 
       if (Object.keys(update).length > 0) {
         await markJob(job.id, update);
       }
 
-      if (headsUpSent && finalSent) {
+      if (headsUpSentAt && finalSentAt) {
         const endMs = Number(session.endTimestamp);
         if (Number.isFinite(endMs) && endMs + 15 * 60 * 1000 < nowMs) {
           await deleteJob(job.id);
@@ -412,8 +414,8 @@ Deno.serve(async (req) => {
 
       results.push({
         jobId: job.id,
-        headsUpSent,
-        finalSent,
+        headsUpSentAt,
+        finalSentAt,
         errors
       });
     }

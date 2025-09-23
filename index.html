@@ -5291,8 +5291,8 @@ let pauseStartTime = 0;
                             session_start_at: sessionStartIso,
                             session_end_at: sessionEndIso,
                             heads_up_offset_seconds: HEADS_UP_BUFFER_SECONDS,
-                            heads_up_sent: false,
-                            final_sent: false
+                            heads_up_sent: null,
+                            final_sent: null
                         }]);
 
                     if (!insertError) {
