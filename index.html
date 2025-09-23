@@ -3172,6 +3172,7 @@
     let pushSubscriptionPromise = null;
 
     async function ensurePushSubscription({ forceRefresh = false } = {}) {
+        console.log('[Debug] ensurePushSubscription: Starting process. Permission:', Notification.permission);
         if (typeof window === 'undefined') return null;
         if (!currentUser || currentUser.isAnonymous) return null;
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -3215,6 +3216,7 @@
             try {
                 const registration = await navigator.serviceWorker.ready;
                 let subscription = await registration.pushManager.getSubscription();
+                console.log('[Debug] ensurePushSubscription: Fetched browser subscription:', subscription);
 
                 if (subscription && forceRefresh) {
                     try {
@@ -3226,14 +3228,17 @@
                 }
 
                 if (!subscription) {
+                    console.log('[Debug] ensurePushSubscription: No existing subscription found, creating a new one.');
                     subscription = await registration.pushManager.subscribe({
                         userVisibleOnly: true,
                         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
                     });
+                     console.log('[Debug] ensurePushSubscription: New browser subscription created:', subscription);
                 }
 
                 const subscriptionJSON = subscription.toJSON();
                 const serverReadySubscription = preparePushSubscriptionForServer(subscriptionJSON);
+                console.log('[Debug] ensurePushSubscription: Prepared subscription for server:', serverReadySubscription);
 
                 if (!serverReadySubscription) {
                     console.error('Generated an invalid push subscription object, not saving to DB:', subscriptionJSON);
@@ -3252,6 +3257,8 @@
                     .eq('endpoint', serverReadySubscription.endpoint)
                     .maybeSingle();
 
+                console.log('[Debug] ensurePushSubscription: Checked for existing DB subscription. Result:', existingSub, 'Error:', findError);
+
                 if (findError) {
                     console.error('Error finding existing push subscription:', findError);
                     return null;
@@ -3268,6 +3275,7 @@
                 
                 // If a subscription exists but its keys have changed, update it.
                 if (existingSub && (existingSub.p256dh !== subscriptionPayload.p256dh || existingSub.auth !== subscriptionPayload.auth)) {
+                    console.log('[Debug] ensurePushSubscription: Subscription exists but keys differ. Updating...');
                     const { data, error } = await supabase
                         .from('push_subscriptions')
                         .update(subscriptionPayload)
@@ -3278,9 +3286,11 @@
                     dbSubscription = data;
                 } else if (existingSub) {
                     // If it exists and is identical, just use it.
+                    console.log('[Debug] ensurePushSubscription: Identical subscription exists. Using it.');
                     dbSubscription = existingSub;
                 } else {
                     // If it doesn't exist, insert a new one.
+                    console.log('[Debug] ensurePushSubscription: No subscription found in DB. Inserting new one...');
                     const { data, error } = await supabase
                         .from('push_subscriptions')
                         .insert(subscriptionPayload)
@@ -3292,9 +3302,10 @@
                 // --- END FIX ---
 
                 // This now returns the full row from the `push_subscriptions` table, including its ID.
+                console.log('[Debug] ensurePushSubscription: Process complete. Returning DB subscription:', dbSubscription);
                 return dbSubscription; 
             } catch (error) {
-                console.error('Failed to ensure push subscription:', error);
+                console.error('[Debug] ensurePushSubscription: An unhandled error occurred in the main try/catch block:', error);
                 return null;
             } finally {
                 pushSubscriptionPromise = null;
@@ -4960,6 +4971,7 @@ let pauseStartTime = 0;
                 for (const kind of candidateKinds) {
                     // FIX: Get the full subscription object from the DB, which now includes the all-important ID.
                     const dbSubscription = await ensurePushSubscription();
+                    console.log('[Debug] scheduleServerPomodoroHeadsUp: Received this from ensurePushSubscription:', dbSubscription);
 
                     if (!dbSubscription || !dbSubscription.id) {
                         console.warn('Could not find or create a valid subscription ID to schedule a notification.');
@@ -13459,6 +13471,7 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
 
 
 
