@@ -4673,18 +4673,18 @@ let pauseStartTime = 0;
                     .limit(limit);
 
                 if (error) throw error;
-
-                // TODO: render in your UI
-                // leaderboardEl.innerHTML = data.map((u, i) => `
-                //   <li>
-                //     <img src="${u.photo_url || '/assets/default-avatar.png'}" />
-                //     <span>#${i+1}</span>
-                //     <span>${u.username || 'Anon'}</span>
-                //     <span>${u.total_study_sessions} sessions</span>
-                //   </li>`).join('');
-            } catch (e) {
-                console.error('loadLeaderboard error', e);
-                showToast('Could not load leaderboard. Check RLS (select on profiles).', 'error');
+                if (!data?.success) {
+                    console.warn('Server heads-up notification did not confirm delivery:', data);
+                } else {
+                    // --- START FIX: Added the missing detailed log message ---
+                    console.log('Heads-up notification server response:', data); 
+                    // --- END FIX ---
+                    console.log('%c[SUCCESS]%c Heads-up notification sent successfully via Edge Function.', 
+                        'color: #2dd4bf; font-weight: bold;', 
+                        'color: default;');
+                }
+            } catch (error) {
+                console.error('Error sending server heads-up notification:', error);
             }
         }
 
@@ -13480,9 +13480,3 @@ async function updateUsername(newName) {
 
 </body>
 </html>
-
-
-
-
-
-
