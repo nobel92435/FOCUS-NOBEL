@@ -3096,6 +3096,175 @@
 
     const focusflowConfig = window.__FOCUSFLOW_CONFIG || {};
 
+    const ANDROID_SCHEDULER_DEFAULT_PATH = '/focusflow/schedule';
+    const ANDROID_SESSION_SEED_KEYS = [
+        'sessionId',
+        'session_id',
+        'id',
+        'clientSessionId',
+        'client_session_id',
+        'groupKey',
+        'group_key',
+        'taskId',
+        'task_id'
+    ];
+
+    function isAndroidDevice() {
+        if (typeof navigator === 'undefined') return false;
+        const ua = navigator.userAgent || '';
+        return /Android/i.test(ua);
+    }
+
+    function shouldUseNativeScheduler() {
+        if (focusflowConfig?.androidSchedulerEnabled === false) {
+            return false;
+        }
+        return isAndroidDevice();
+    }
+
+    function resolveAndroidSchedulerBaseUrl() {
+        const configured = focusflowConfig?.androidSchedulerBaseUrl;
+        if (typeof configured === 'string' && configured.trim()) {
+            return configured.trim();
+        }
+        if (typeof window !== 'undefined' && window.location) {
+            const origin = window.location.origin ? window.location.origin.replace(/\/$/, '') : '';
+            if (origin) {
+                return `${origin}${ANDROID_SCHEDULER_DEFAULT_PATH}`;
+            }
+        }
+        return null;
+    }
+
+    function extractSchedulerSeed(meta) {
+        if (!meta || typeof meta !== 'object') {
+            return null;
+        }
+        for (const key of ANDROID_SESSION_SEED_KEYS) {
+            if (!Object.prototype.hasOwnProperty.call(meta, key)) continue;
+            const raw = meta[key];
+            if (raw === null || typeof raw === 'undefined') continue;
+            const text = String(raw).trim();
+            if (text) {
+                return text;
+            }
+        }
+        return null;
+    }
+
+    function resolveNativeSchedulerSessionId({ state, phaseStartMs, sessionMeta } = {}) {
+        const parts = [];
+        const seed = extractSchedulerSeed(sessionMeta);
+        if (seed) {
+            parts.push(seed);
+        }
+        const normalizedState = state || 'phase';
+        parts.push(normalizedState);
+        const timestamp = Number.isFinite(phaseStartMs) ? Math.round(phaseStartMs) : Date.now();
+        parts.push(String(timestamp));
+        return parts.filter(Boolean).join('-');
+    }
+
+    function isUserInitiatedTrigger(trigger) {
+        if (typeof trigger !== 'string') return false;
+        const normalized = trigger.toLowerCase();
+        return ['user', 'manual', 'tap', 'click', 'gesture'].includes(normalized);
+    }
+
+    function openSchedulerDeepLink(url, { requireUserActivation = false } = {}) {
+        if (typeof window === 'undefined' || !url) {
+            return false;
+        }
+        try {
+            if (requireUserActivation && !(navigator?.userActivation?.isActive)) {
+                console.warn('Native scheduler deep link requires an active user gesture.');
+                return false;
+            }
+
+            const allowNewTab = focusflowConfig?.androidSchedulerOpenInNewTab !== false;
+            if (allowNewTab && typeof window.open === 'function') {
+                const popup = window.open(url, '_blank', 'noopener,noreferrer');
+                if (popup) {
+                    return true;
+                }
+            }
+
+            window.location.href = url;
+            return true;
+        } catch (error) {
+            console.warn('Failed to open native scheduler deep link:', error);
+            return false;
+        }
+    }
+
+    function scheduleNativeAlarms({ sessionId, endTs, mode = 'focus' } = {}, options = {}) {
+        if (!shouldUseNativeScheduler()) {
+            return false;
+        }
+
+        const baseUrl = resolveAndroidSchedulerBaseUrl();
+        if (!baseUrl) {
+            return false;
+        }
+
+        const numericEnd = Number(endTs);
+        if (!Number.isFinite(numericEnd) || numericEnd <= Date.now()) {
+            return false;
+        }
+
+        let normalizedSessionId = (typeof sessionId === 'string' && sessionId.trim()) ? sessionId.trim() : null;
+        if (!normalizedSessionId) {
+            if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                normalizedSessionId = crypto.randomUUID();
+            } else {
+                normalizedSessionId = `pomodoro-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            }
+        }
+
+        const normalizedMode = mode === 'break' ? 'break' : 'focus';
+        const url = `${baseUrl}?sessionId=${encodeURIComponent(normalizedSessionId)}&endTs=${Math.round(numericEnd)}&mode=${encodeURIComponent(normalizedMode)}`;
+
+        return openSchedulerDeepLink(url, { requireUserActivation: !!options.requireUserActivation });
+    }
+
+    function maybeScheduleNativeAlarmForPhase({ state, phaseStartMs, durationSeconds, sessionMeta, trigger } = {}) {
+        if (!shouldUseNativeScheduler()) {
+            return false;
+        }
+
+        const numericDuration = Number(durationSeconds);
+        if (!Number.isFinite(numericDuration) || numericDuration <= 0) {
+            return false;
+        }
+
+        const startMsCandidate = Number.isFinite(phaseStartMs) ? phaseStartMs : coerceEpochMilliseconds?.(phaseStartMs);
+        const startMs = Number.isFinite(startMsCandidate) ? startMsCandidate : Date.now();
+        const endTs = startMs + (numericDuration * 1000);
+        if (!Number.isFinite(endTs) || endTs <= Date.now()) {
+            return false;
+        }
+
+        const userInitiated = isUserInitiatedTrigger(trigger);
+        if (!userInitiated && focusflowConfig?.androidSchedulerAllowAuto !== true) {
+            return false;
+        }
+
+        const sessionId = resolveNativeSchedulerSessionId({
+            state,
+            phaseStartMs: startMs,
+            sessionMeta
+        });
+
+        return scheduleNativeAlarms(
+            { sessionId, endTs, mode: state === 'work' ? 'focus' : 'break' },
+            { requireUserActivation: userInitiated }
+        );
+    }
+
+    if (typeof window !== 'undefined') {
+        window.scheduleNativeAlarms = scheduleNativeAlarms;
+    }
+
     function normalizeVapidKey(value) {
         return typeof value === 'string' ? value.replace(/\s+/g, '') : '';
     }
@@ -6429,6 +6598,7 @@ let pauseStartTime = 0;
 
         async function startTimer(subject, options = {}) {
             const { taskId = null } = options;
+            const triggerSource = typeof options.trigger === 'string' ? options.trigger : 'user';
             const tasks = Array.isArray(plannerState?.tasks) ? plannerState.tasks : [];
             const task = taskId ? tasks.find(t => t.id === taskId) : null;
             let resolvedSubject = subject;
@@ -6562,6 +6732,13 @@ let pauseStartTime = 0;
                     newState: upcomingBreak.state,
                     headsUpCopy: breakHeadsUpCopy,
                     finalCopy: breakFinalCopy
+                });
+                maybeScheduleNativeAlarmForPhase({
+                    state: 'work',
+                    phaseStartMs: workPhaseStartMs,
+                    durationSeconds: workDurationSeconds,
+                    sessionMeta: { taskId: task ? task.id : null },
+                    trigger: triggerSource
                 });
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds, startedAt: workPhaseStartMs });
             }
@@ -6700,6 +6877,8 @@ let pauseStartTime = 0;
 
             const currentCycle = currentUserData.pomodoroCycle || 0;
 
+            const triggerSource = typeof options.trigger === 'string' ? options.trigger : 'auto';
+
             if (state === 'work') {
                 durationSeconds = pomodoroSettings.work * 60;
                 const displayCycle = (currentCycle % pomodoroSettings.long_break_interval) + 1;
@@ -6766,6 +6945,14 @@ let pauseStartTime = 0;
                     finalCopy: buildFinalTransitionCopy({ oldState: state, newState: 'work', label: breakLabel })
                 });
             }
+
+            maybeScheduleNativeAlarmForPhase({
+                state,
+                phaseStartMs,
+                durationSeconds,
+                sessionMeta: providedSession,
+                trigger: triggerSource
+            });
         }
 
         function updateBreakTimerDisplay() {
@@ -12003,8 +12190,25 @@ if (achievementsGrid) {
                 switchTimerMode('pomodoro');
             }
 
+            options.trigger = 'user';
+
             startTimer(subject, options);
             document.getElementById('start-session-modal').classList.remove('active');
+        });
+
+        ael('manual-start-btn', 'click', async () => {
+            if (!nextPomodoroPhase) {
+                showToast('No upcoming Pomodoro phase is queued yet.', 'info');
+                return;
+            }
+
+            try {
+                document.getElementById('manual-start-btn').classList.add('hidden');
+                await startNextPomodoroPhase(nextPomodoroPhase, { trigger: 'manual' });
+            } catch (error) {
+                console.error('Failed to manually start the next Pomodoro phase:', error);
+                showToast('Unable to start the next phase. Please try again.', 'error');
+            }
         });
 
         // This listener replaces the original 'subject-selection-list' click listener
@@ -12479,7 +12683,7 @@ if (achievementsGrid) {
                             // Both buttons will now start a Pomodoro session for the task.
                             switchTimerMode('pomodoro');
                             
-                            startTimer(subjectName, { taskId: task.id });
+                            startTimer(subjectName, { taskId: task.id, trigger: 'user' });
                         }
                         return;
                     }
