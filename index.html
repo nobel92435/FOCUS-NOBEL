@@ -3125,7 +3125,7 @@
         return outputArray;
     }
 
-    function normalizePushSubscription(value) {
+    function preparePushSubscriptionForServer(value) { // FIX: Renamed this function
         if (!value) return null;
         let parsed = value;
 
@@ -13459,6 +13459,7 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
 
 
 
