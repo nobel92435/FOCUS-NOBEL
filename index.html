@@ -5033,6 +5033,15 @@ let pauseStartTime = 0;
                     throw fallbackError;
                 }
 
+                // --- START FIX: Add a clear success message to the browser console ---
+                console.log(
+                    '%c[SUCCESS]%c Successfully scheduled server heads-up notification with kind:',
+                    'color: #10B981; font-weight: bold; background-color: #161b22; padding: 2px 6px; border-radius: 4px;',
+                    'color: default;',
+                    `"${scheduledKind}"`
+                );
+                // --- END FIX ---
+
                 serverHeadsUpSchedules[groupKey] = {
                     groupId: clientGroupId,
                     sendAt: sendAtIso,
@@ -13471,6 +13480,7 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
 
 
 
