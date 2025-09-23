@@ -3370,6 +3370,68 @@
         [SERVER_HEADS_UP_GROUP_KEYS.WORK_TO_BREAK]: null,
         [SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK]: null
     };
+    let serverHeadsUpSchedulingDisabled = false;
+    let serverHeadsUpDisableInfo = null;
+
+    const SUPABASE_CHECK_CONSTRAINT_CODE = '23514';
+
+    function getSupabaseErrorCode(error) {
+        if (!error || typeof error !== 'object') {
+            return null;
+        }
+        if (typeof error.code === 'string' && error.code.trim() !== '') {
+            return error.code;
+        }
+        if (error.cause) {
+            const causeCode = getSupabaseErrorCode(error.cause);
+            if (causeCode) {
+                return causeCode;
+            }
+        }
+        return null;
+    }
+
+    function sanitizeSupabaseError(error) {
+        if (!error) return null;
+        if (typeof error === 'string') {
+            return error;
+        }
+        const sanitized = {};
+        if (typeof error.message === 'string') {
+            sanitized.message = error.message;
+        }
+        if (typeof error.code === 'string') {
+            sanitized.code = error.code;
+        }
+        if (typeof error.details === 'string') {
+            sanitized.details = error.details;
+        }
+        if (typeof error.hint === 'string') {
+            sanitized.hint = error.hint;
+        }
+        if (error.cause) {
+            const cause = sanitizeSupabaseError(error.cause);
+            if (cause) {
+                sanitized.cause = cause;
+            }
+        }
+        return Object.keys(sanitized).length > 0 ? sanitized : null;
+    }
+
+    function isHeadsUpKindConstraintError(error) {
+        if (!error) return false;
+        const code = getSupabaseErrorCode(error);
+        if (code && code === SUPABASE_CHECK_CONSTRAINT_CODE) {
+            return true;
+        }
+        if (typeof error.message === 'string' && error.message.includes('pomodoro_notification_jobs_kind_check')) {
+            return true;
+        }
+        if (error.cause) {
+            return isHeadsUpKindConstraintError(error.cause);
+        }
+        return false;
+    }
 
     async function fetchProfile(userId, columns = '*') {
         if (!userId) return null;
@@ -4394,6 +4456,34 @@ let pauseStartTime = 0;
             };
         }
 
+        function disableServerHeadsUpScheduling(reason = 'unknown', context = {}) {
+            if (serverHeadsUpSchedulingDisabled) {
+                return;
+            }
+
+            serverHeadsUpSchedulingDisabled = true;
+            const sanitizedContext = {
+                ...context,
+                error: sanitizeSupabaseError(context.error),
+                timestamp: new Date().toISOString(),
+                code: context.code || getSupabaseErrorCode(context.error) || null
+            };
+
+            serverHeadsUpDisableInfo = {
+                reason,
+                ...sanitizedContext
+            };
+
+            resetServerHeadsUpSchedules();
+
+            if (typeof window !== 'undefined') {
+                window.__serverHeadsUpSchedulingDisabled = serverHeadsUpSchedulingDisabled;
+                window.__serverHeadsUpDisableInfo = serverHeadsUpDisableInfo;
+            }
+
+            console.warn('Server heads-up scheduling disabled. Falling back to client notifications only.', serverHeadsUpDisableInfo);
+        }
+
         async function cancelServerHeadsUpGroup(groupKey, { silent = false } = {}) {
             if (!groupKey) return;
             if (!(groupKey in serverHeadsUpSchedules)) {
@@ -4477,6 +4567,9 @@ let pauseStartTime = 0;
             if (!(groupKey in serverHeadsUpSchedules)) {
                 serverHeadsUpSchedules[groupKey] = null;
             }
+            if (serverHeadsUpSchedulingDisabled) {
+                return;
+            }
             if (!currentUser || currentUser.isAnonymous) {
                 return;
             }
@@ -4504,27 +4597,25 @@ let pauseStartTime = 0;
                     transition: { oldState, newState }
                 }
             };
+            const basePayload = {
+                title,
+                body,
+                options,
+                newState,
+                oldState,
+                transition: { oldState, newState },
+                type: 'pomodoro_heads_up',
+                appId
+            };
+            const candidateKinds = Array.from(new Set([
+                'pomodoro_heads_up',
+                newState === 'work' ? 'pomodoro_focus_heads_up' : 'pomodoro_break_heads_up',
+                'heads_up',
+                'timer_heads_up'
+            ].filter(Boolean)));
 
             try {
                 await cancelServerHeadsUpGroup(groupKey, { silent: true });
-
-                const basePayload = {
-                    title,
-                    body,
-                    options,
-                    newState,
-                    oldState,
-                    transition: { oldState, newState },
-                    type: 'pomodoro_heads_up',
-                    appId
-                };
-
-                const candidateKinds = Array.from(new Set([
-                    'pomodoro_heads_up',
-                    newState === 'work' ? 'pomodoro_focus_heads_up' : 'pomodoro_break_heads_up',
-                    'heads_up',
-                    'timer_heads_up'
-                ].filter(Boolean)));
 
                 let scheduledKind = null;
                 let lastKindError = null;
@@ -4545,7 +4636,7 @@ let pauseStartTime = 0;
                         break;
                     }
 
-                    if (insertError?.code === '23514') {
+                    if (insertError?.code === SUPABASE_CHECK_CONSTRAINT_CODE) {
                         lastKindError = insertError;
                         continue;
                     }
@@ -4568,7 +4659,14 @@ let pauseStartTime = 0;
                     kind: scheduledKind
                 };
             } catch (error) {
-                console.error('Failed to schedule server heads-up notification:', error);
+                if (isHeadsUpKindConstraintError(error)) {
+                    disableServerHeadsUpScheduling('unsupported_job_kind', {
+                        error,
+                        attemptedKinds: candidateKinds
+                    });
+                } else {
+                    console.error('Failed to schedule server heads-up notification:', error);
+                }
             }
         }
 
