@@ -3296,6 +3296,60 @@
         return pushSubscriptionPromise;
     }
 
+    async function getServerPushSubscriptionId(subscription, options = {}) {
+        if (!subscription) {
+            subscription = await ensurePushSubscription();
+        }
+
+        const normalized = normalizePushSubscription(subscription);
+        const maxAttempts = Math.max(Number(options.maxAttempts) || 0, 1);
+        const attempts = Math.min(maxAttempts, 3);
+
+        if (!normalized?.endpoint || !currentUser?.id) {
+            return null;
+        }
+        if (!supabase || typeof supabase.from !== 'function') {
+            return null;
+        }
+
+        let lastError = null;
+        let endpoint = normalized.endpoint;
+
+        for (let attempt = 0; attempt < attempts; attempt += 1) {
+            const { data, error } = await supabase
+                .from('push_subscriptions')
+                .select('id')
+                .eq('user_id', currentUser.id)
+                .eq('endpoint', endpoint)
+                .maybeSingle();
+
+            if (error) {
+                lastError = error;
+            } else if (data?.id) {
+                return { id: data.id, error: null };
+            }
+
+            if (attempt < attempts - 1) {
+                try {
+                    const refreshed = await ensurePushSubscription({ forceRefresh: true });
+                    if (refreshed?.endpoint && refreshed.endpoint !== endpoint) {
+                        endpoint = refreshed.endpoint;
+                    }
+                } catch (refreshError) {
+                    lastError = refreshError;
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 250 * (attempt + 1)));
+            }
+        }
+
+        if (lastError) {
+            console.warn('Failed to resolve push subscription record for server scheduling.', lastError);
+        }
+
+        return { id: null, error: lastError };
+    }
+
     /**
      * Compresses an image file using a canvas.
      * @param {File} file The image file to compress.
@@ -4949,27 +5003,27 @@ let pauseStartTime = 0;
                 // FIX: Add a new variable to specifically catch foreign key errors
                 let foreignKeyError = null; 
 
+                const activeSubscription = await ensurePushSubscription();
+                const { id: subscriptionId, error: subscriptionError } = await getServerPushSubscriptionId(activeSubscription);
+
+                if (!subscriptionId) {
+                    disableServerHeadsUpScheduling('missing_subscription_id', {
+                        error: subscriptionError,
+                        hints,
+                        configuredKinds
+                    });
+                    return;
+                }
+
                 for (const kind of candidateKinds) {
                     // FIX: The subscription_id was missing from the insert payload.
                     // We need to fetch the current subscription's ID from your database.
-                    const { data: subData, error: subErr } = await supabase
-                        .from('push_subscriptions')
-                        .select('id')
-                        .eq('endpoint', (await ensurePushSubscription())?.endpoint)
-                        .maybeSingle();
-
-                    if (subErr || !subData?.id) {
-                        console.warn('Could not find a valid subscription ID to schedule a notification.', subErr);
-                        disableServerHeadsUpScheduling('missing_subscription_id', { error: subErr });
-                        ensurePushSubscription({ forceRefresh: true }); // Attempt to fix for next time
-                        return;
-                    }
 
                     const { error: insertError } = await supabase
                         .from(HEADS_UP_JOB_TABLE)
                         .insert([{
                             user_id: currentUser.id,
-                            subscription_id: subData.id, // FIX: Added the subscription_id
+                            subscription_id, // FIX: Added the subscription_id
                             kind,
                             send_at: sendAtIso,
                             payload: { ...basePayload, kind },
