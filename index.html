@@ -4370,50 +4370,6 @@ function scheduleServerHeadsUpTrigger({ groupKey, sendAtMs, notificationPayload 
     );
 }
 
-function scheduleLocalServerHeadsUpFallback({
-    groupKey,
-    sendAtMs,
-    sendAtIso,
-    notificationPayload,
-    oldState,
-    newState,
-    reason
-}) {
-    if (!groupKey) {
-        return;
-    }
-
-    const fallbackContext = {
-        groupId: null,
-        sendAt: sendAtIso,
-        oldState,
-        newState,
-        kind: 'edge_function_timer_fallback',
-        timeoutId: null,
-        notificationPayload: null,
-        fallbackReason: reason || null
-    };
-
-    serverHeadsUpSchedules[groupKey] = fallbackContext;
-
-    console.log(
-        '%c[INFO]%c Using local timer to trigger Edge Function heads-up push.',
-        'color: #f97316; font-weight: bold;',
-        'color: inherit;',
-        {
-            groupKey,
-            reason: reason || null,
-            sendAt: sendAtIso
-        }
-    );
-
-    scheduleServerHeadsUpTrigger({
-        groupKey,
-        sendAtMs,
-        notificationPayload
-    });
-}
-
         // Timer State
         // Add these lines
 let isPaused = false;
@@ -5061,13 +5017,24 @@ let pauseStartTime = 0;
             if (!(groupKey in serverHeadsUpSchedules)) {
                 serverHeadsUpSchedules[groupKey] = null;
             }
-
+            const configuredKinds = getConfiguredHeadsUpJobKinds();
+            maybeRestoreServerHeadsUpSchedulingFromCandidates([configuredKinds, serverHeadsUpKindHints]);
+            if (serverHeadsUpSchedulingDisabled) {
+                return;
+            }
+            if (!currentUser || currentUser.isAnonymous) {
+                return;
+            }
             if (!Number.isFinite(durationSeconds) || durationSeconds <= HEADS_UP_BUFFER_SECONDS) {
                 return;
             }
 
             const sendAtMs = startTimestampMs + (durationSeconds * 1000) - HEADS_UP_BUFFER_MS;
             if (!Number.isFinite(sendAtMs) || sendAtMs <= Date.now()) {
+                return;
+            }
+
+            if (!supabase || typeof supabase.from !== 'function') {
                 return;
             }
 
@@ -5080,62 +5047,9 @@ let pauseStartTime = 0;
                 data: {
                     type: 'HEADS_UP',
                     transition: { oldState, newState }
-                },
-                body
+                }
             };
-
-            const notificationPayload = {
-                title,
-                body,
-                newState,
-                oldState,
-                options: { ...options }
-            };
-
-            await cancelServerHeadsUpGroup(groupKey, { silent: true });
-
-            const configuredKinds = getConfiguredHeadsUpJobKinds();
-            maybeRestoreServerHeadsUpSchedulingFromCandidates([configuredKinds, serverHeadsUpKindHints]);
-
-            if (!currentUser || currentUser.isAnonymous) {
-                scheduleLocalServerHeadsUpFallback({
-                    groupKey,
-                    sendAtMs,
-                    sendAtIso,
-                    notificationPayload,
-                    oldState,
-                    newState,
-                    reason: 'anonymous_user'
-                });
-                return;
-            }
-
-            if (!supabase || typeof supabase.from !== 'function') {
-                scheduleLocalServerHeadsUpFallback({
-                    groupKey,
-                    sendAtMs,
-                    sendAtIso,
-                    notificationPayload,
-                    oldState,
-                    newState,
-                    reason: 'missing_supabase_client'
-                });
-                return;
-            }
-
-            if (serverHeadsUpSchedulingDisabled) {
-                scheduleLocalServerHeadsUpFallback({
-                    groupKey,
-                    sendAtMs,
-                    sendAtIso,
-                    notificationPayload,
-                    oldState,
-                    newState,
-                    reason: serverHeadsUpDisableInfo?.reason || 'disabled'
-                });
-                return;
-            }
-
+            options.body = body;
             const basePayload = {
                 title,
                 body,
@@ -5146,23 +5060,11 @@ let pauseStartTime = 0;
                 type: 'pomodoro_heads_up',
                 appId
             };
-
             const hints = await getServerHeadsUpKindHints();
             maybeRestoreServerHeadsUpSchedulingFromCandidates([configuredKinds, hints]);
-
             if (serverHeadsUpSchedulingDisabled) {
-                scheduleLocalServerHeadsUpFallback({
-                    groupKey,
-                    sendAtMs,
-                    sendAtIso,
-                    notificationPayload,
-                    oldState,
-                    newState,
-                    reason: serverHeadsUpDisableInfo?.reason || 'disabled_after_hint'
-                });
                 return;
             }
-
             const candidateKinds = buildServerHeadsUpKindCandidates({
                 oldState,
                 newState,
@@ -5175,23 +5077,17 @@ let pauseStartTime = 0;
             let foreignKeyError = null;
 
             try {
+                await cancelServerHeadsUpGroup(groupKey, { silent: true });
+
                 for (const kind of candidateKinds) {
+                    // FIX: Get the full subscription object from the DB, which now includes the all-important ID.
                     const dbSubscription = await ensurePushSubscription();
                     console.log('[Debug] scheduleServerPomodoroHeadsUp: Received this from ensurePushSubscription:', dbSubscription);
 
                     if (!dbSubscription || !dbSubscription.id) {
                         console.warn('Could not find or create a valid subscription ID to schedule a notification.');
                         disableServerHeadsUpScheduling('missing_subscription_id', { error: null });
-                        ensurePushSubscription({ forceRefresh: true });
-                        scheduleLocalServerHeadsUpFallback({
-                            groupKey,
-                            sendAtMs,
-                            sendAtIso,
-                            notificationPayload,
-                            oldState,
-                            newState,
-                            reason: 'missing_subscription_id'
-                        });
+                        ensurePushSubscription({ forceRefresh: true }); // Attempt to fix for next time
                         return;
                     }
 
@@ -5199,7 +5095,7 @@ let pauseStartTime = 0;
                         .from(HEADS_UP_JOB_TABLE)
                         .insert([{
                             user_id: currentUser.id,
-                            subscription_id: dbSubscription.id,
+                            subscription_id: dbSubscription.id, // FIX: Use the ID from the DB subscription object
                             kind,
                             send_at: sendAtIso,
                             payload: { ...basePayload, kind },
@@ -5211,10 +5107,13 @@ let pauseStartTime = 0;
                         rememberServerHeadsUpKindHint(kind);
                         break;
                     }
-
+                    
+                    // FIX: Check for the foreign key violation error (stale subscription).
                     if (insertError.code === '23503') {
                         foreignKeyError = insertError;
-                        break;
+                        // Don't 'continue'; a different 'kind' won't fix a bad subscription_id.
+                        // Break the loop and handle this specific error below.
+                        break; 
                     }
 
                     if (isHeadsUpKindConstraintError(insertError)) {
@@ -5225,22 +5124,15 @@ let pauseStartTime = 0;
                     throw insertError;
                 }
 
+                // FIX: Handle the stale subscription error outside the loop.
                 if (foreignKeyError) {
                     console.warn('Stale push subscription detected. Disabling server heads-up and refreshing subscription.', { error: foreignKeyError });
                     disableServerHeadsUpScheduling('stale_subscription', { error: foreignKeyError });
+                    // Attempt to fix it in the background for the next session.
                     ensurePushSubscription({ forceRefresh: true }).catch(err => {
                         console.error('Background push subscription refresh failed:', err);
                     });
-                    scheduleLocalServerHeadsUpFallback({
-                        groupKey,
-                        sendAtMs,
-                        sendAtIso,
-                        notificationPayload,
-                        oldState,
-                        newState,
-                        reason: 'stale_subscription'
-                    });
-                    return;
+                    return; // Exit the function.
                 }
 
                 if (!scheduledKind) {
@@ -5252,12 +5144,14 @@ let pauseStartTime = 0;
                     throw fallbackError;
                 }
 
+                // --- START FIX: Add a clear success message to the browser console ---
                 console.log(
                     '%c[SUCCESS]%c Successfully scheduled server heads-up notification with kind:',
                     'color: #10B981; font-weight: bold; background-color: #161b22; padding: 2px 6px; border-radius: 4px;',
                     'color: default;',
                     `"${scheduledKind}"`
                 );
+                // --- END FIX ---
 
             } catch (error) {
                 if (isHeadsUpKindConstraintError(error)) {
@@ -5271,29 +5165,9 @@ let pauseStartTime = 0;
                 } else {
                     console.error('Failed to schedule server heads-up notification:', error);
                 }
-
-                scheduleLocalServerHeadsUpFallback({
-                    groupKey,
-                    sendAtMs,
-                    sendAtIso,
-                    notificationPayload,
-                    oldState,
-                    newState,
-                    reason: 'insert_failed'
-                });
-                return;
             }
 
             if (serverHeadsUpSchedulingDisabled) {
-                scheduleLocalServerHeadsUpFallback({
-                    groupKey,
-                    sendAtMs,
-                    sendAtIso,
-                    notificationPayload,
-                    oldState,
-                    newState,
-                    reason: serverHeadsUpDisableInfo?.reason || 'disabled_after_schedule'
-                });
                 return;
             }
 
@@ -5305,6 +5179,14 @@ let pauseStartTime = 0;
                 kind: scheduledKind || 'heads_up_local_fallback',
                 timeoutId: null,
                 notificationPayload: null
+            };
+
+            const notificationPayload = {
+                title,
+                body,
+                newState,
+                oldState,
+                options: { ...options }
             };
 
             serverHeadsUpSchedules[groupKey] = scheduleContext;
