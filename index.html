@@ -2953,6 +2953,18 @@
         </div>
     </div>
     <div id="group-settings-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Group Settings</div><button class="close-modal">&times;</button></div><div class="space-y-2"><div class="group-settings-item" data-action="edit-info"><i class="fas fa-edit"></i><span>Edit Group Info</span></div><div class="group-settings-item" data-action="group-rules"><i class="fas fa-gavel"></i><span>Group Rules</span></div><div class="group-settings-item" data-action="wake-up-group"><i class="fas fa-bullhorn"></i><span>Wake Up Group</span></div><div class="group-settings-item" data-action="kick-member"><i class="fas fa-user-minus"></i><span>Kick Member</span></div><div class="group-settings-item" data-action="promote-member"><i class="fas fa-crown"></i><span>Promote Member</span></div><div class="group-settings-item" data-action="member-logs"><i class="fas fa-history"></i><span>Member Logs</span></div><div class="group-settings-item text-red-400" data-action="leave-group"><i class="fas fa-sign-out-alt"></i><span>Leave Group</span></div></div></div></div>
+
+    <div id="kick-member-modal" class="modal">
+        <div class="modal-content max-w-md w-[90%]">
+            <div class="modal-header">
+                <div class="modal-title">Kick Member</div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div id="kick-member-list" class="space-y-3">
+                <p class="text-gray-400 text-sm">Select a member to remove from the group.</p>
+            </div>
+        </div>
+    </div>
     <div id="studicon-store-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Choose Your Studicon</div><button class="close-modal">&times;</button></div><div><div id="studicon-category-tabs" class="flex space-x-1 border-b border-gray-700 mb-4"></div><div id="studicon-picker" class="avatar-picker max-h-60 overflow-y-auto"></div><button id="save-studicon-btn" class="w-full mt-4 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save</button></div></div></div>
     <div id="edit-group-info-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Group Information</div><button class="close-modal">&times;</button></div><form id="edit-group-info-form" class="space-y-4"><input type="hidden" id="edit-group-id-input"><div><label class="block text-sm font-medium text-gray-300">Group Name</label><input id="edit-group-name" type="text" class="w-full bg-gray-700 rounded-lg p-2 mt-1" required></div><div><label class="block text-sm font-medium text-gray-300">Description</label><textarea id="edit-group-description" class="w-full bg-gray-700 rounded-lg p-2 mt-1 h-24" required></textarea></div><div><label class="block text-sm font-medium text-gray-300">Category</label><select id="edit-group-category" class="w-full bg-gray-700 rounded-lg p-2 mt-1"><option>General study</option><option>Language study</option><option>Secondary School</option><option>University</option></select></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-300">Time Goal (h)</label><input id="edit-group-goal" type="number" min="1" max="10" class="w-full bg-gray-700 rounded-lg p-2 mt-1"></div><div><label class="block text-sm font-medium text-gray-300">Capacity</label><input id="edit-group-capacity" type="number" min="2" max="100" class="w-full bg-gray-700 rounded-lg p-2 mt-1"></div></div><div><label class="block text-sm font-medium text-gray-300">Password (optional)</label><input id="edit-group-password" type="text" class="w-full bg-gray-700 rounded-lg p-2 mt-1" placeholder="Leave blank for public"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
     <div id="group-rules-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Group Rules</div><div id="group-rules-controls"></div><button class="close-modal">&times;</button></div><div id="group-rules-display" class="text-gray-300 whitespace-pre-wrap"></div><div id="group-rules-edit-container" class="hidden"><textarea id="group-rules-textarea" class="w-full bg-gray-700 rounded-lg p-3 h-48"></textarea><button id="save-group-rules-btn" class="w-full mt-2 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg">Save Rules</button></div></div></div>
@@ -4816,6 +4828,7 @@ let pauseStartTime = 0;
         let groupDetailUnsubscribers = [];
         let memberTimerIntervals = [];
         let currentGroupId = null;
+        let currentGroupLeaderId = null;
         let groupRealtimeData = {
             members: {},
             sessions: {}
@@ -11012,7 +11025,13 @@ if (achievementsGrid) {
 
             // Load group data once (no real-time needed for this)
             const { data: group, error } = await supabase.from('groups').select('*').eq('id', groupId).single();
-            if (error || !group) { showPage('page-my-groups'); return; }
+            if (error || !group) {
+                currentGroupLeaderId = null;
+                showPage('page-my-groups');
+                return;
+            }
+
+            currentGroupLeaderId = group.leaderId || null;
 
             // Settings icons (no change here)
             const settingsBtnContainer = document.getElementById('group-settings-btn-container');
@@ -11680,13 +11699,140 @@ if (achievementsGrid) {
 
             let lastMessageTimestamp = new Date(0).toISOString();
             let chatPollInterval = null;
+            const loadedMessageIds = new Set();
 
             // Stop any existing polling for other groups
             groupDetailUnsubscribers.forEach(unsub => unsub());
             groupDetailUnsubscribers = [];
 
-            async function loadMessages(isInitialLoad = false) {
-                // Fetch only messages created after the last one we saw
+            const canDeleteMessage = (msg) => {
+                if (!currentUser) return false;
+                return msg.sender_id === currentUser.id || (currentGroupLeaderId && currentUser.id === currentGroupLeaderId);
+            };
+
+            const getStoragePathFromImageUrl = (url) => {
+                if (!url) return null;
+                const marker = '/group-images/';
+                const idx = url.indexOf(marker);
+                if (idx === -1) return null;
+                return url.slice(idx + marker.length);
+            };
+
+            async function deleteMessage(msg) {
+                try {
+                    const { error: deleteErr } = await supabase
+                        .from('group_messages')
+                        .delete()
+                        .eq('id', msg.id);
+
+                    if (deleteErr) throw deleteErr;
+
+                    if (msg.image_url) {
+                        const storagePath = getStoragePathFromImageUrl(msg.image_url);
+                        if (storagePath) {
+                            const { error: removeErr } = await storage
+                                .from('group-images')
+                                .remove([storagePath]);
+                            if (removeErr) {
+                                console.warn('Failed to delete chat image from storage:', removeErr);
+                            }
+                        }
+                    }
+
+                    showToast('Message deleted.', 'success');
+                    await refreshAllMessages();
+                } catch (error) {
+                    console.error('Failed to delete message:', error);
+                    showToast('Failed to delete message.', 'error');
+                }
+            }
+
+            function showDeleteConfirmation(msg) {
+                if (!canDeleteMessage(msg)) return;
+                showConfirmationModal(
+                    'Delete message?',
+                    'This will remove the message for everyone.',
+                    () => deleteMessage(msg)
+                );
+            }
+
+            function attachDeletionHandlers(element, msg) {
+                if (!canDeleteMessage(msg)) return;
+
+                let pressTimer = null;
+                let longPressTriggered = false;
+
+                const startPress = (event) => {
+                    if (event.type === 'mousedown' && event.button !== 0) return;
+                    longPressTriggered = false;
+                    if (pressTimer) clearTimeout(pressTimer);
+                    pressTimer = setTimeout(() => {
+                        pressTimer = null;
+                        longPressTriggered = true;
+                        showDeleteConfirmation(msg);
+                    }, 600);
+                };
+
+                const cancelPress = () => {
+                    if (pressTimer) {
+                        clearTimeout(pressTimer);
+                    }
+                    pressTimer = null;
+                };
+
+                element.addEventListener('mousedown', startPress);
+                element.addEventListener('touchstart', startPress, { passive: true });
+                ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => element.addEventListener(evt, cancelPress));
+
+                element.addEventListener('contextmenu', (event) => {
+                    event.preventDefault();
+                    showDeleteConfirmation(msg);
+                });
+
+                element.addEventListener('click', (event) => {
+                    if (longPressTriggered) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        longPressTriggered = false;
+                    }
+                }, true);
+            }
+
+            function renderMessage(msg) {
+                const isSent = msg.sender_id === currentUser?.id;
+                const el = document.createElement('div');
+                el.classList.add('chat-message', isSent ? 'sent' : 'received');
+                el.dataset.messageId = msg.id;
+                el.dataset.senderId = msg.sender_id;
+
+                const placeholder = chatMessagesContainer.querySelector('.chat-empty-placeholder');
+                if (placeholder) {
+                    placeholder.remove();
+                }
+
+                const content = msg.text
+                    ? `<div>${msg.text}</div>`
+                    : `<img src="${msg.image_url}" class="rounded-lg max-w-full h-auto cursor-pointer" style="max-height: 300px;" onclick="viewImage(this.src)">`;
+                const timeText = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                el.innerHTML = `
+                  <div class="chat-bubble ${isSent ? 'sent' : 'received'}">
+                    ${!isSent ? `<div class="chat-sender">${msg.sender_name || ''}</div>` : ''}
+                    ${content}
+                    <div class="text-xs ${isSent ? 'text-blue-200' : 'text-gray-400'} text-right mt-1">${timeText}</div>
+                  </div>`;
+
+                attachDeletionHandlers(el, msg);
+                chatMessagesContainer.appendChild(el);
+            }
+
+            async function loadMessages({ reset = false } = {}) {
+                if (reset) {
+                    chatMessagesContainer.innerHTML = '';
+                    loadedMessageIds.clear();
+                    lastMessageTimestamp = new Date(0).toISOString();
+                }
+
                 const { data: msgs, error } = await supabase
                     .from('group_messages')
                     .select('*')
@@ -11698,38 +11844,34 @@ if (achievementsGrid) {
                     console.error('Failed to load chat messages:', error);
                     return;
                 }
-                
-                if (isInitialLoad) {
-                    chatMessagesContainer.innerHTML = '';
+
+                if (reset && (!msgs || msgs.length === 0)) {
+                    chatMessagesContainer.innerHTML = '<p class="chat-empty-placeholder text-center text-gray-500">No messages yet. Say hello!</p>';
+                    return;
                 }
 
-                if (msgs && msgs.length > 0) {
-                    // Update the timestamp of the last message
-                    lastMessageTimestamp = msgs[msgs.length - 1].created_at;
-
-                    msgs.forEach(msg => {
-                        const isSent = msg.sender_id === currentUser.id;
-                        const el = document.createElement('div');
-                        el.classList.add('chat-message', isSent ? 'sent' : 'received');
-                        
-                        let content = msg.text ? `<div>${msg.text}</div>` : `<img src="${msg.image_url}" class="rounded-lg max-w-full h-auto cursor-pointer" style="max-height: 300px;" onclick="viewImage(this.src)">`;
-                        const timeText = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                        el.innerHTML = `
-                          <div class="chat-bubble ${isSent ? 'sent' : 'received'}">
-                            ${!isSent ? `<div class="chat-sender">${msg.sender_name || ''}</div>` : ''}
-                            ${content}
-                            <div class="text-xs ${isSent ? 'text-blue-200' : 'text-gray-400'} text-right mt-1">${timeText}</div>
-                          </div>`;
-                        chatMessagesContainer.appendChild(el);
-                    });
-                    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+                if (!msgs || msgs.length === 0) {
+                    return;
                 }
+
+                lastMessageTimestamp = msgs[msgs.length - 1].created_at;
+
+                msgs.forEach(msg => {
+                    if (loadedMessageIds.has(msg.id)) return;
+                    loadedMessageIds.add(msg.id);
+                    renderMessage(msg);
+                });
+
+                chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+            }
+
+            async function refreshAllMessages() {
+                await loadMessages({ reset: true });
             }
 
             // Initial load, then start polling
-            loadMessages(true);
-            chatPollInterval = setInterval(() => loadMessages(false), 5000); // Poll every 5 seconds
+            loadMessages({ reset: true });
+            chatPollInterval = setInterval(() => loadMessages(), 5000); // Poll every 5 seconds
 
             // Store the interval clear function to be called when leaving the page
             groupDetailUnsubscribers.push(() => {
@@ -11740,14 +11882,14 @@ if (achievementsGrid) {
                 e.preventDefault();
                 const text = chatInput.value.trim();
                 if (!text || !currentUser) return;
-                
+
                 chatInput.value = ''; // Optimistic UI update
                 const senderName = currentUserData?.username || 'Anonymous';
-                
+
                 const { error } = await supabase
                     .from('group_messages')
                     .insert([{ group_id: groupId, sender_id: currentUser.id, sender_name: senderName, text }]);
-                
+
                 if (error) {
                     console.error('send msg failed', error);
                     chatInput.value = text; // Revert on failure
@@ -13326,8 +13468,168 @@ if (achievementsGrid) {
                     item.dataset.disabled = 'false';
                 }
             });
-            
+
             modal.classList.add('active');
+        }
+
+        async function populateKickMemberList() {
+            const listEl = document.getElementById('kick-member-list');
+            if (!listEl) return;
+
+            const buildMemberEntry = (member) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'kick-member-btn w-full flex items-center gap-3 bg-gray-800 hover:bg-gray-700 p-3 rounded-lg transition';
+                button.dataset.memberId = member.id;
+                button.dataset.memberName = member.username || 'Anonymous';
+
+                const avatar = document.createElement('div');
+                avatar.className = 'w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-sm font-semibold overflow-hidden';
+                if (member.photo_url) {
+                    const img = document.createElement('img');
+                    img.src = member.photo_url;
+                    img.alt = member.username || 'Member avatar';
+                    img.className = 'w-full h-full object-cover';
+                    avatar.appendChild(img);
+                } else {
+                    avatar.textContent = (member.username || 'U').charAt(0).toUpperCase();
+                }
+
+                const info = document.createElement('div');
+                info.className = 'flex flex-col text-left';
+
+                const nameEl = document.createElement('div');
+                nameEl.className = 'text-white font-semibold';
+                nameEl.textContent = member.username || 'Anonymous';
+
+                const hintEl = document.createElement('div');
+                hintEl.className = 'text-xs text-gray-400';
+                hintEl.textContent = 'Tap to remove this member';
+
+                info.appendChild(nameEl);
+                info.appendChild(hintEl);
+
+                button.appendChild(avatar);
+                button.appendChild(info);
+
+                return button;
+            };
+
+            const sortMembers = (members) => members.sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+
+            let members = Object.values(groupRealtimeData.members || {})
+                .filter(member => member && member.id !== currentUser.id)
+                .map(member => ({ id: member.id, username: member.username, photo_url: member.photo_url }));
+
+            if (!members.length) {
+                const { data: fallbackRows, error: fallbackErr } = await supabase
+                    .from('group_members')
+                    .select('profile_id')
+                    .eq('group_id', currentGroupId);
+
+                if (!fallbackErr && Array.isArray(fallbackRows)) {
+                    const memberIds = fallbackRows
+                        .map(row => row.profile_id)
+                        .filter(id => id && id !== currentUser.id);
+
+                    if (memberIds.length) {
+                        const { data: profileRows, error: profileErr } = await supabase
+                            .from('profiles')
+                            .select('id, username, photo_url')
+                            .in('id', memberIds);
+
+                        if (!profileErr && Array.isArray(profileRows)) {
+                            members = profileRows.map(profile => ({
+                                id: profile.id,
+                                username: profile.username,
+                                photo_url: profile.photo_url
+                            }));
+                        }
+                    }
+                }
+            }
+
+            members = sortMembers(members);
+
+            if (!members.length) {
+                listEl.innerHTML = '<p class="text-gray-400 text-sm">No other members are available to remove.</p>';
+                return;
+            }
+
+            listEl.innerHTML = '';
+            members.forEach(member => listEl.appendChild(buildMemberEntry(member)));
+        }
+
+        async function openKickMemberModal() {
+            const modal = document.getElementById('kick-member-modal');
+            if (!modal || !currentGroupId) return;
+
+            if (!currentUser || currentUser.id !== currentGroupLeaderId) {
+                showToast('Only the group leader can kick members.', 'error');
+                return;
+            }
+
+            await populateKickMemberList();
+            modal.classList.add('active');
+        }
+
+        async function kickMemberFromGroup(memberId, memberName) {
+            if (!currentGroupId || !memberId) return;
+
+            try {
+                const { error: deleteErr } = await supabase
+                    .from('group_members')
+                    .delete()
+                    .eq('group_id', currentGroupId)
+                    .eq('profile_id', memberId);
+
+                if (deleteErr) throw deleteErr;
+
+                const { data: memberProfile, error: memberProfileErr } = await supabase
+                    .from('profiles')
+                    .select('joined_groups')
+                    .eq('id', memberId)
+                    .maybeSingle();
+
+                if (!memberProfileErr && memberProfile) {
+                    const updated = (memberProfile.joined_groups || []).filter(id => id !== currentGroupId);
+                    const { error: updateJoinedErr } = await supabase
+                        .from('profiles')
+                        .update({ joined_groups: updated })
+                        .eq('id', memberId);
+                    if (updateJoinedErr) {
+                        console.warn('Failed to update kicked member profile:', updateJoinedErr);
+                    }
+                }
+
+                if (groupRealtimeData.members) {
+                    delete groupRealtimeData.members[memberId];
+                }
+
+                const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
+                if (activeSubPage === 'home') {
+                    const isStudiconView = document.getElementById('studicon-view-btn')?.classList.contains('active');
+                    if (isStudiconView) {
+                        renderGroupStudiconView();
+                    } else {
+                        renderGroupMembers();
+                    }
+                } else if (activeSubPage === 'attendance') {
+                    renderGroupAttendance();
+                }
+
+                showToast(`${memberName || 'Member'} has been removed from the group.`, 'success');
+
+                await populateKickMemberList();
+
+                const modal = document.getElementById('kick-member-modal');
+                if (modal && !modal.querySelector('.kick-member-btn')) {
+                    modal.classList.remove('active');
+                }
+            } catch (error) {
+                console.error('Error kicking member:', error);
+                showToast('Failed to kick member.', 'error');
+            }
         }
 
         async function openGroupRulesModal() {
@@ -13697,7 +13999,7 @@ if (achievementsGrid) {
 
                             const { data: groupData, error: groupErr } = await supabase
                                 .from('groups')
-                                .select('leaderId, members')
+                                .select('leaderId')
                                 .eq('id', currentGroupId)
                                 .single();
                             if (groupErr) {
@@ -13705,7 +14007,19 @@ if (achievementsGrid) {
                                 showToast('Failed to leave the group.', 'error');
                                 return;
                             }
-                            if (groupData.leaderId === currentUser.id && (groupData.members?.length || 0) > 1) {
+
+                            const { data: memberRows, error: memberErr } = await supabase
+                                .from('group_members')
+                                .select('profile_id')
+                                .eq('group_id', currentGroupId);
+                            if (memberErr) {
+                                console.error('Error checking group members:', memberErr);
+                                showToast('Failed to leave the group.', 'error');
+                                return;
+                            }
+
+                            const memberCount = memberRows?.length || 0;
+                            if (groupData.leaderId === currentUser.id && memberCount > 1) {
                                 showToast('Please transfer leadership or kick all members before leaving.', 'error');
                                 return;
                             }
@@ -13722,22 +14036,30 @@ if (achievementsGrid) {
                             }
 
                             const updatedJoinedGroups = (userData.joined_groups || []).filter(id => id !== currentGroupId);
-                            const updatedMembers = (groupData.members || []).filter(id => id !== currentUser.id);
+
+                            const { error: removeMembershipErr } = await supabase
+                                .from('group_members')
+                                .delete()
+                                .eq('group_id', currentGroupId)
+                                .eq('profile_id', currentUser.id);
+                            if (removeMembershipErr) {
+                                console.error('Error leaving group:', removeMembershipErr);
+                                showToast('Failed to leave the group.', 'error');
+                                return;
+                            }
 
                             const { error: upUserErr } = await supabase
                                 .from('profiles')
                                 .update({ joined_groups: updatedJoinedGroups })
                                 .eq('id', currentUser.id);
-                            const { error: upGroupErr } = await supabase
-                                .from('groups')
-                                .update({ members: updatedMembers })
-                                .eq('id', currentGroupId);
-
-                            if (upUserErr || upGroupErr) {
-                                console.error('Error leaving group:', upUserErr || upGroupErr);
+                            if (upUserErr) {
+                                console.error('Error updating profile after leaving group:', upUserErr);
                                 showToast('Failed to leave the group.', 'error');
                                 return;
                             }
+
+                            currentGroupId = null;
+                            currentGroupLeaderId = null;
 
                             showToast('You have left the group.', 'success');
                             renderJoinedGroups();
@@ -13770,6 +14092,10 @@ if (achievementsGrid) {
                             }
                         }
                     );
+                    break;
+                case 'kick-member':
+                    modal.classList.remove('active');
+                    openKickMemberModal();
                     break;
                 case 'edit-info':
                     openEditGroupInfoModal();
@@ -13806,6 +14132,23 @@ if (achievementsGrid) {
                 btn.addEventListener('click', () => { modal.classList.remove('active'); });
             });
         });
+
+        const kickMemberModal = document.getElementById('kick-member-modal');
+        if (kickMemberModal) {
+            kickMemberModal.addEventListener('click', (e) => {
+                const button = e.target.closest('.kick-member-btn');
+                if (!button) return;
+
+                const memberId = button.dataset.memberId;
+                const memberName = button.dataset.memberName || 'this member';
+
+                showConfirmationModal(
+                    `Remove ${memberName}?`,
+                    'This member will be removed from the group immediately.',
+                    () => kickMemberFromGroup(memberId, memberName)
+                );
+            });
+        }
 
         window.onload = () => {
             restoreUser().then(routeAfterAuth);
