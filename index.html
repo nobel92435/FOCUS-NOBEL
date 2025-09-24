@@ -33,8 +33,109 @@
         .nav-item.active, .group-nav-item.active {
             background: linear-gradient(to top, rgba(20, 184, 166, 0.2), transparent);
         }
-        .nav-item.active svg, .nav-item.active p, .group-nav-item.active i, .group-nav-item.active p { 
+        .nav-item.active svg, .nav-item.active p, .group-nav-item.active i, .group-nav-item.active p {
             color: #14b8a6; /* Teal-500 */
+        }
+
+        .advanced-feature-card {
+            background: linear-gradient(180deg, rgba(20, 184, 166, 0.12) 0%, rgba(37, 99, 235, 0.12) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 18px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            cursor: pointer;
+        }
+        .advanced-feature-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(56, 189, 248, 0.7);
+            box-shadow: 0 20px 40px rgba(14, 165, 233, 0.18);
+        }
+        .advanced-feature-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+        .advanced-feature-card p {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        .advanced-feature-card ul {
+            margin-top: 4px;
+            padding-left: 0;
+            list-style: none;
+            display: grid;
+            gap: 8px;
+        }
+        .advanced-feature-card li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #cbd5f5;
+            font-size: 0.9rem;
+        }
+        .advanced-feature-card li i {
+            color: #38bdf8;
+        }
+
+        #advanced-suite-modal .modal-content {
+            max-width: 720px;
+            width: min(90%, 720px);
+            border-radius: 24px;
+            padding: 32px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        #advanced-suite-modal .modal-header {
+            margin-bottom: 24px;
+        }
+        .advanced-modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .advanced-modal-section {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(15, 23, 42, 0.35) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 18px;
+            padding: 20px;
+            transition: box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        .advanced-modal-section.highlight {
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.7);
+            border-color: rgba(56, 189, 248, 0.7);
+        }
+        .advanced-modal-section h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .advanced-modal-section p {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+        }
+        .advanced-modal-section ul {
+            list-style: none;
+            padding-left: 0;
+            display: grid;
+            gap: 10px;
+        }
+        .advanced-modal-section ul li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            color: #cbd5f5;
+        }
+        .advanced-modal-section ul li i {
+            color: #38bdf8;
+            margin-top: 3px;
         }
 
         /* Page and container visibility */
@@ -2870,9 +2971,9 @@
                         <i class="fas fa-chart-bar"></i>
                         <p class="text-xs mt-1">Rankings</p>
                     </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="invite">
-                        <i class="fas fa-user-plus"></i>
-                        <p class="text-xs mt-1">Invite</p>
+                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="advanced">
+                        <i class="fas fa-bell"></i>
+                        <p class="text-xs mt-1">Advanced</p>
                     </button>
                     <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="chat">
                         <i class="fas fa-comments"></i>
@@ -2899,6 +3000,46 @@
     
     <div id="study-goal-modal" class="modal">
         <div class="modal-content"><div class="modal-header"><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form"><div class="mb-4"><label for="study-goal-input" class="block text-gray-300 mb-2">Daily Study Goal (hours)</label><input type="number" id="study-goal-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required min="1" max="24"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Set Goal</button></form></div></div>
+
+    <div id="advanced-suite-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title flex items-center gap-2">
+                    <i class="fas fa-bell-on text-teal-400"></i>
+                    Advanced Group Suite
+                </div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="advanced-modal-body">
+                <section class="advanced-modal-section" data-section="analytics">
+                    <h3><i class="fas fa-chart-line text-sky-400"></i>Advanced Group Analytics</h3>
+                    <p>Understand exactly when and how your study group performs at its best.</p>
+                    <ul>
+                        <li><i class="fas fa-fire"></i><span><strong>Productivity heatmap</strong> pinpoints when the group studies the most so you can schedule deep work together.</span></li>
+                        <li><i class="fas fa-layer-group"></i><span><strong>Subject mix per group</strong> reveals the topics fueling your streaks.</span></li>
+                        <li><i class="fas fa-circle-notch"></i><span><strong>Completion ratio</strong> compares focus vs. break time to keep balance.</span></li>
+                    </ul>
+                </section>
+                <section class="advanced-modal-section" data-section="goals">
+                    <h3><i class="fas fa-bullseye text-emerald-400"></i>Custom Group Goals</h3>
+                    <p>Keep everyone aligned with ambitious, shared milestones.</p>
+                    <ul>
+                        <li><i class="fas fa-users"></i><span><strong>Shared targets</strong> like “Study 50h this month” keep momentum visible for every member.</span></li>
+                        <li><i class="fas fa-shield-alt"></i><span><strong>Pro badges</strong> unlock automatically when the team hits its goals.</span></li>
+                    </ul>
+                </section>
+                <section class="advanced-modal-section" data-section="rewards">
+                    <h3><i class="fas fa-gift text-pink-400"></i>Group Rewards &amp; Streak Protection</h3>
+                    <p>Gamify accountability so no one loses progress alone.</p>
+                    <ul>
+                        <li><i class="fas fa-bolt"></i><span><strong>Group streak multipliers</strong> increase as the whole team shows up daily.</span></li>
+                        <li><i class="fas fa-link"></i><span><strong>Collective streak protection</strong> keeps the run alive when <em>everyone</em> studies each day.</span></li>
+                        <li><i class="fas fa-skull-crossbones"></i><span><strong>Missed day resets</strong> the streak — a playful nudge that keeps teams motivated.</span></li>
+                    </ul>
+                </section>
+            </div>
+        </div>
+    </div>
 
     <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-4"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-gray-300">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-gray-300">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-gray-300">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-gray-300">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="2" required></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-gray-300">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-gray-300">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-gray-300">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-gray-300">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Automation</h3><div class="space-y-3"> <div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Settings</button></form></div></div>
     <div id="pomodoro-setup-modal" class="modal">
@@ -11363,25 +11504,58 @@ if (achievementsGrid) {
                     });
                     renderGroupLeaderboard('weekly');
                     break;
-                case 'invite':
+                case 'advanced':
                     container.innerHTML = `
-                        <div class="p-4 md:p-6 text-center flex flex-col items-center justify-center h-full">
-                            <div>
-                                <i class="fas fa-share-alt text-5xl text-sky-400 mb-6"></i>
-                                <h2 class="text-2xl font-bold mb-4">Invite Members</h2>
-                                <p class="text-gray-400 mb-6 max-w-md mx-auto">Share the group name with friends and tell them to search for it on the 'Group Rankings' page.</p>
-                                <div class="bg-gray-800 p-4 rounded-lg flex items-center justify-between w-full max-w-sm mx-auto">
-                                    <span id="invite-group-name" class="font-mono text-lg text-white truncate">Loading...</span>
-                                    <button id="copy-group-name-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition flex items-center gap-2">
-                                        <i class="fas fa-copy"></i> Copy
+                        <div class="p-4 md:p-8 flex flex-col items-center">
+                            <div class="w-full max-w-4xl space-y-8">
+                                <div class="text-center space-y-4">
+                                    <div class="mx-auto w-16 h-16 rounded-2xl bg-teal-500/10 text-teal-400 flex items-center justify-center">
+                                        <i class="fas fa-bell-on text-3xl"></i>
+                                    </div>
+                                    <h2 class="text-3xl font-black text-white">Advanced Group Controls</h2>
+                                    <p class="text-gray-400 max-w-2xl mx-auto">Unlock deep insights, collaborative goal setting, and streak-protecting rewards for <span id="advanced-group-name" class="text-white font-semibold">your study group</span>.</p>
+                                    <button id="open-advanced-modal" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-semibold rounded-full shadow-lg hover:shadow-sky-500/30 transition transform hover:-translate-y-1">
+                                        <i class="fas fa-bell-on"></i>
+                                        Explore Advanced Suite
                                     </button>
+                                </div>
+                                <div class="grid gap-4 md:grid-cols-3">
+                                    <div class="advanced-feature-card" data-target-section="analytics">
+                                        <h3>Advanced Group Analytics</h3>
+                                        <p>Visualize when and how your team studies together.</p>
+                                        <ul>
+                                            <li><i class="fas fa-fire"></i><span>Productivity heatmap for peak study times.</span></li>
+                                            <li><i class="fas fa-layer-group"></i><span>Subject mix to balance expertise.</span></li>
+                                            <li><i class="fas fa-circle-notch"></i><span>Completion ratio of focus vs. breaks.</span></li>
+                                        </ul>
+                                    </div>
+                                    <div class="advanced-feature-card" data-target-section="goals">
+                                        <h3>Custom Group Goals</h3>
+                                        <p>Share ambitious targets and celebrate the wins.</p>
+                                        <ul>
+                                            <li><i class="fas fa-users"></i><span>Group targets like “Study 50h this month”.</span></li>
+                                            <li><i class="fas fa-medal"></i><span>Unlock pro badges whenever goals are hit.</span></li>
+                                        </ul>
+                                    </div>
+                                    <div class="advanced-feature-card" data-target-section="rewards">
+                                        <h3>Group Rewards &amp; Protection</h3>
+                                        <p>Keep streaks alive with collective accountability.</p>
+                                        <ul>
+                                            <li><i class="fas fa-bolt"></i><span>Group streak multipliers for daily check-ins.</span></li>
+                                            <li><i class="fas fa-shield-alt"></i><span>All members studying daily keeps streaks safe.</span></li>
+                                            <li><i class="fas fa-skull-crossbones"></i><span>Miss a day and the streak resets – gamified pressure!</span></li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     `;
                     fetchGroup(currentGroupId).then(group => {
                         if (group) {
-                            document.getElementById('invite-group-name').textContent = group.name;
+                            const target = document.getElementById('advanced-group-name');
+                            if (target) {
+                                target.textContent = group.name;
+                            }
                         }
                     });
                     break;
@@ -11415,6 +11589,29 @@ if (achievementsGrid) {
                     `;
                     setupGroupChat(currentGroupId);
                     break;
+            }
+        }
+
+        function openAdvancedSuiteModal(targetSection = null) {
+            const modal = document.getElementById('advanced-suite-modal');
+            if (!modal) return;
+
+            const modalContent = modal.querySelector('.modal-content');
+            modal.classList.add('active');
+
+            if (modalContent) {
+                modalContent.scrollTop = 0;
+            }
+
+            if (targetSection) {
+                requestAnimationFrame(() => {
+                    const section = modal.querySelector(`.advanced-modal-section[data-section="${targetSection}"]`);
+                    if (section) {
+                        section.classList.add('highlight');
+                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        setTimeout(() => section.classList.remove('highlight'), 1200);
+                    }
+                });
             }
         }
 
@@ -13474,16 +13671,16 @@ if (achievementsGrid) {
                 return;
             }
 
-            const copyBtn = e.target.closest('#copy-group-name-btn');
-            if (copyBtn) {
-                const groupName = document.getElementById('invite-group-name').textContent;
-                const tempInput = document.createElement('input');
-                document.body.appendChild(tempInput);
-                tempInput.value = groupName;
-                tempInput.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempInput);
-                showToast('Group name copied!', 'success');
+            const advancedBtn = e.target.closest('#open-advanced-modal');
+            if (advancedBtn) {
+                openAdvancedSuiteModal();
+                return;
+            }
+
+            const advancedCard = e.target.closest('.advanced-feature-card');
+            if (advancedCard) {
+                const targetSection = advancedCard.dataset.targetSection || null;
+                openAdvancedSuiteModal(targetSection);
                 return;
             }
 
