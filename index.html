@@ -11751,13 +11751,25 @@ if (achievementsGrid) {
             memberTimerIntervals = [];
 
             const membersArray = Object.values(groupRealtimeData.members || {});
+            const todayStr = new Date().toISOString().split('T')[0];
+            const getTotalTodaySeconds = (member) => {
+                if (!member || !member.total_time_today) return 0;
+                return member.total_time_today.date === todayStr
+                    ? (member.total_time_today.seconds || 0)
+                    : 0;
+            };
 
             membersArray.sort((a, b) => {
-                const aIsStudying = a.studying && a.studying.type === 'study';
-                const bIsStudying = b.studying && b.studying.type === 'study';
+                const aIsStudying = a?.studying && a.studying.type === 'study';
+                const bIsStudying = b?.studying && b.studying.type === 'study';
                 if (aIsStudying && !bIsStudying) return -1;
                 if (!aIsStudying && bIsStudying) return 1;
-                return (a.username || '').localeCompare(b.username || '');
+
+                const aSeconds = getTotalTodaySeconds(a);
+                const bSeconds = getTotalTodaySeconds(b);
+                if (bSeconds !== aSeconds) return bSeconds - aSeconds;
+
+                return (a?.username || '').localeCompare(b?.username || '');
             });
             
             if (membersArray.length === 0) {
@@ -11777,11 +11789,7 @@ if (achievementsGrid) {
                         const lastSession = (groupRealtimeData.sessions[member.id] || [])[0];
                         const lastActiveDate = lastSession ? lastSession.endedAt : null;
                         
-                        const todayStr = new Date().toISOString().split('T')[0];
-                        let totalTodaySeconds = 0;
-                        if (member.total_time_today && member.total_time_today.date === todayStr) {
-                            totalTodaySeconds = member.total_time_today.seconds || 0;
-                        }
+                        const totalTodaySeconds = getTotalTodaySeconds(member);
                         
                         return `
                             <div class="member-list-card member-profile-link" data-user-id="${member.id}">
@@ -11806,8 +11814,8 @@ if (achievementsGrid) {
                                         <div class="text-xs text-gray-400">Total Today</div>
                                     </div>
                                     ${!isStudying && member.id !== currentUser.id ? `
-                                        <button class="wake-up-btn px-3 py-1.5 bg-sky-500 text-white rounded-full text-xs font-semibold hover:bg-sky-600 transition flex items-center gap-1.5" data-target-user-id="${member.id}" data-target-user-name="${member.username || 'Anonymous'}">
-                                            <i class="fas fa-bell"></i> Wake Up
+                                        <button class="wake-up-btn px-3 py-1.5 bg-sky-500 text-white rounded-full text-xs font-semibold hover:bg-sky-600 transition flex items-center justify-center" data-target-user-id="${member.id}" data-target-user-name="${member.username || 'Anonymous'}" title="Nudge this member">
+                                            <i class="fas fa-bell"></i>
                                         </button>
                                     ` : ''}
                                 </div>
@@ -11865,8 +11873,28 @@ if (achievementsGrid) {
             memberTimerIntervals = [];
 
             const membersArray = Object.values(groupRealtimeData.members || {});
+            const todayStr = new Date().toISOString().split('T')[0];
+            const getTotalTodaySeconds = (member) => {
+                if (!member || !member.total_time_today) return 0;
+                return member.total_time_today.date === todayStr
+                    ? (member.total_time_today.seconds || 0)
+                    : 0;
+            };
             const totalMembers = membersArray.length;
             const studyingCount = membersArray.filter(m => m && m.studying && m.studying.type === 'study').length;
+
+            membersArray.sort((a, b) => {
+                const aIsStudying = a?.studying && a.studying.type === 'study';
+                const bIsStudying = b?.studying && b.studying.type === 'study';
+                if (aIsStudying && !bIsStudying) return -1;
+                if (!aIsStudying && bIsStudying) return 1;
+
+                const aSeconds = getTotalTodaySeconds(a);
+                const bSeconds = getTotalTodaySeconds(b);
+                if (bSeconds !== aSeconds) return bSeconds - aSeconds;
+
+                return (a?.username || '').localeCompare(b?.username || '');
+            });
 
             container.innerHTML = `
                 <div class="p-4">
@@ -11881,11 +11909,7 @@ if (achievementsGrid) {
                             const studiconUrl = member.studicon_url || `https://api.dicebear.com/8.x/miniavs/svg?seed=${encodeURIComponent(member.username || 'user')}`;
                             const subject = isStudying ? member.studying.subject : 'Idle';
                             
-                            const todayStr = new Date().toISOString().split('T')[0];
-                            let totalTodaySeconds = 0;
-                            if (member.total_time_today && member.total_time_today.date === todayStr) {
-                                totalTodaySeconds = member.total_time_today.seconds || 0;
-                            }
+                            const totalTodaySeconds = getTotalTodaySeconds(member);
 
                             return `
                                 <div class="studicon-member-card text-center cursor-pointer member-profile-link" data-user-id="${member.id}">
@@ -14873,7 +14897,8 @@ if (achievementsGrid) {
                             showToast('An error occurred.', 'error');
                         } finally {
                             wakeUpBtn.disabled = false;
-                            wakeUpBtn.innerHTML = '<i class="fas fa-bell"></i> Wake Up';
+                            wakeUpBtn.innerHTML = '<i class="fas fa-bell"></i>';
+                            wakeUpBtn.title = 'Nudge this member';
                         }
                     }
                 );
