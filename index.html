@@ -45,6 +45,54 @@
 
         /* UI element styles */
         .timer-text { font-weight: 900; letter-spacing: -0.05em; }
+
+        .advanced-heatmap-grid {
+            display: grid;
+            gap: 0.35rem;
+        }
+        .advanced-heatmap-cell {
+            position: relative;
+            border-radius: 0.5rem;
+            padding-top: 100%;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .advanced-heatmap-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(56, 189, 248, 0.18);
+        }
+        .advanced-heatmap-cell span {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.78);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            text-align: center;
+            padding: 0 4px;
+            pointer-events: none;
+        }
+        .advanced-heatmap-cell:hover span {
+            opacity: 1;
+        }
+        .advanced-section-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #94a3b8;
+        }
+        .advanced-preview-grid {
+            display: grid;
+            gap: 1rem;
+        }
+        @media (min-width: 768px) {
+            .advanced-preview-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
         
         /* Pomodoro Switch Styles */
         .timer-switch-container {
@@ -2870,9 +2918,9 @@
                         <i class="fas fa-chart-bar"></i>
                         <p class="text-xs mt-1">Rankings</p>
                     </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="invite">
-                        <i class="fas fa-user-plus"></i>
-                        <p class="text-xs mt-1">Invite</p>
+                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="advanced">
+                        <i class="fas fa-bell"></i>
+                        <p class="text-xs mt-1">Advanced</p>
                     </button>
                     <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="chat">
                         <i class="fas fa-comments"></i>
@@ -2899,6 +2947,103 @@
     
     <div id="study-goal-modal" class="modal">
         <div class="modal-content"><div class="modal-header"><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form"><div class="mb-4"><label for="study-goal-input" class="block text-gray-300 mb-2">Daily Study Goal (hours)</label><input type="number" id="study-goal-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required min="1" max="24"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Set Goal</button></form></div></div>
+
+    <div id="advanced-features-modal" class="modal">
+        <div class="modal-content max-w-4xl w-full bg-gray-900/95 border border-sky-500/20 shadow-2xl backdrop-blur-xl">
+            <div class="modal-header items-start">
+                <div class="flex items-start gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-sky-500/20 text-sky-300 flex items-center justify-center text-xl">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">Advanced Group Suite</h2>
+                        <p class="text-sm text-gray-400">Advanced Group Analytics · Custom Group Goals · Group Rewards / Streak Protection</p>
+                    </div>
+                </div>
+                <button class="close-modal text-gray-500 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="space-y-8 max-h-[75vh] overflow-y-auto pr-2">
+                <section class="space-y-4">
+                    <div>
+                        <p class="advanced-section-label">Advanced Group Analytics</p>
+                        <h3 class="text-xl font-semibold text-white mt-1">Deep-dive into your team's rhythm</h3>
+                        <p class="text-sm text-gray-400 mt-2">Visualize when the group studies most, balance subjects, and compare focus vs break time.</p>
+                    </div>
+                    <div class="bg-gray-900 rounded-2xl border border-sky-500/20 p-4 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-lg font-semibold text-sky-100">Productivity Heatmap</h4>
+                            <span id="advanced-modal-heatmap-summary" class="text-xs uppercase tracking-wide text-gray-400">Loading…</span>
+                        </div>
+                        <div id="advanced-modal-heatmap" class="overflow-x-auto">
+                            <div id="advanced-modal-heatmap-grid" class="advanced-heatmap-grid"></div>
+                            <p class="text-xs text-gray-500 mt-3">Based on the last 7 days of group study activity.</p>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 rounded-2xl border border-emerald-500/20 p-4 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-lg font-semibold text-emerald-100">Subject Mix</h4>
+                            <span id="advanced-modal-subject-summary" class="text-xs uppercase tracking-wide text-gray-400">Loading…</span>
+                        </div>
+                        <div id="advanced-modal-subject-mix" class="space-y-3"></div>
+                    </div>
+                    <div class="bg-gray-900 rounded-2xl border border-amber-500/20 p-4 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-lg font-semibold text-amber-100">Completion Ratio</h4>
+                            <span id="advanced-modal-ratio-label" class="text-xs uppercase tracking-wide text-gray-400">Loading…</span>
+                        </div>
+                        <div class="w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+                            <div id="advanced-modal-ratio-focus-bar" class="h-full bg-amber-400" style="width:0%"></div>
+                        </div>
+                        <p id="advanced-modal-ratio-description" class="text-sm text-gray-300">Gathering focus vs break data…</p>
+                    </div>
+                </section>
+                <section class="space-y-4">
+                    <div>
+                        <p class="advanced-section-label">Custom Group Goals</p>
+                        <h3 class="text-xl font-semibold text-white mt-1">Align the squad around shared targets</h3>
+                        <p class="text-sm text-gray-400 mt-2">Set a monthly focus goal. Hitting it unlocks pro badges for the entire team.</p>
+                    </div>
+                    <form id="advanced-goal-form" class="space-y-3 bg-gray-900 rounded-2xl border border-sky-500/20 p-4">
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <div>
+                                <label for="advanced-goal-label-input" class="text-xs uppercase tracking-wide text-gray-400">Goal Label</label>
+                                <input id="advanced-goal-label-input" type="text" class="mt-1 w-full bg-gray-800 rounded-lg border border-gray-700 p-3 text-white" placeholder="Study 50h this month">
+                            </div>
+                            <div>
+                                <label for="advanced-goal-hours-input" class="text-xs uppercase tracking-wide text-gray-400">Target Hours</label>
+                                <input id="advanced-goal-hours-input" type="number" min="1" max="500" step="0.5" class="mt-1 w-full bg-gray-800 rounded-lg border border-gray-700 p-3 text-white" placeholder="50">
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <button type="submit" class="px-4 py-2 bg-sky-500 hover:bg-sky-600 transition rounded-full font-semibold text-sm text-white flex items-center gap-2"><i class="fas fa-rocket"></i> Save Goal</button>
+                            <button type="button" id="advanced-goal-clear-btn" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 transition rounded-full font-semibold text-sm text-gray-300">Clear Goal</button>
+                        </div>
+                        <div>
+                            <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                                <div id="advanced-modal-goal-progress" class="h-full bg-sky-400" style="width:0%"></div>
+                            </div>
+                            <p id="advanced-modal-goal-status" class="text-sm text-gray-300 mt-2">No group goal set yet.</p>
+                        </div>
+                    </form>
+                </section>
+                <section class="space-y-4">
+                    <div>
+                        <p class="advanced-section-label">Group Rewards / Streak Protection</p>
+                        <h3 class="text-xl font-semibold text-white mt-1">Keep streak multipliers alive</h3>
+                        <p class="text-sm text-gray-400 mt-2">If all members study daily → streak protected. Missed day breaks it. Gamify the grind together.</p>
+                    </div>
+                    <div class="bg-gray-900 rounded-2xl border border-purple-500/20 p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-lg font-semibold text-purple-100">Streak Status</span>
+                            <span id="advanced-modal-streak-status" class="text-xs uppercase tracking-wide text-gray-400">Checking…</span>
+                        </div>
+                        <p id="advanced-modal-streak-summary" class="text-sm text-gray-200">Crunching streak multipliers…</p>
+                        <p id="advanced-modal-streak-detail" class="text-xs text-gray-500">Track the daily streak to keep rewards unlocked.</p>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
 
     <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-4"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-gray-300">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-gray-300">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-gray-300">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-gray-300">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="2" required></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-gray-300">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-gray-300">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-gray-300">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-gray-300">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Automation</h3><div class="space-y-3"> <div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Settings</button></form></div></div>
     <div id="pomodoro-setup-modal" class="modal">
@@ -4833,6 +4978,9 @@ let pauseStartTime = 0;
             members: {},
             sessions: {}
         };
+        let currentAdvancedGroupData = null;
+        let advancedGroupCache = { groupId: null, fetchedAt: 0, data: null };
+        const GROUP_GOAL_STORAGE_KEY = 'focusflow.groupGoals';
 
         let currentGroupMemberIds = [];
         
@@ -11279,6 +11427,569 @@ if (achievementsGrid) {
             memberTimerIntervals.push(interval);
         }
 
+        // --- Advanced Group Suite Helpers ---
+        const ADVANCED_CACHE_TTL = 60_000;
+        const ADVANCED_HEATMAP_BUCKETS = [
+            { label: '12a-4a', start: 0, end: 4 },
+            { label: '4a-8a', start: 4, end: 8 },
+            { label: '8a-12p', start: 8, end: 12 },
+            { label: '12p-4p', start: 12, end: 16 },
+            { label: '4p-8p', start: 16, end: 20 },
+            { label: '8p-12a', start: 20, end: 24 }
+        ];
+
+        function startOfDayLocal(date) {
+            const d = new Date(date);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+
+        function formatHoursFromSeconds(seconds) {
+            const value = Number(seconds) || 0;
+            if (value <= 0) return '0m';
+            const hours = value / 3600;
+            if (hours >= 1) {
+                return `${hours >= 10 ? Math.round(hours) : hours.toFixed(1)}h`;
+            }
+            const minutes = Math.max(1, Math.round(value / 60));
+            return `${minutes}m`;
+        }
+
+        function getStoredGroupGoals() {
+            if (typeof localStorage === 'undefined') return {};
+            try {
+                const raw = localStorage.getItem(GROUP_GOAL_STORAGE_KEY);
+                if (!raw) return {};
+                const parsed = JSON.parse(raw);
+                return (parsed && typeof parsed === 'object') ? parsed : {};
+            } catch (error) {
+                console.warn('Failed to read stored group goals', error);
+                return {};
+            }
+        }
+
+        function saveStoredGroupGoals(goals) {
+            if (typeof localStorage === 'undefined') return;
+            try {
+                localStorage.setItem(GROUP_GOAL_STORAGE_KEY, JSON.stringify(goals || {}));
+            } catch (error) {
+                console.warn('Failed to persist group goals', error);
+            }
+        }
+
+        function getGroupGoal(groupId) {
+            if (!groupId) return null;
+            const goals = getStoredGroupGoals();
+            const goal = goals[groupId];
+            if (!goal) return null;
+            return {
+                ...goal,
+                targetHours: Number(goal.targetHours) || (goal.targetSeconds ? goal.targetSeconds / 3600 : 0),
+                targetSeconds: Number(goal.targetSeconds) || (goal.targetHours ? goal.targetHours * 3600 : 0)
+            };
+        }
+
+        function setGroupGoal(groupId, goalData) {
+            if (!groupId) return;
+            const goals = getStoredGroupGoals();
+            if (goalData) {
+                goals[groupId] = {
+                    label: goalData.label || '',
+                    targetHours: Number(goalData.targetHours) || 0,
+                    targetSeconds: Number(goalData.targetSeconds) || 0,
+                    updatedAt: new Date().toISOString()
+                };
+            } else {
+                delete goals[groupId];
+            }
+            saveStoredGroupGoals(goals);
+            if (advancedGroupCache.groupId === groupId && advancedGroupCache.data) {
+                advancedGroupCache.data.goal = goalData ? getGroupGoal(groupId) : null;
+            }
+            if (currentAdvancedGroupData && currentAdvancedGroupData.memberIds) {
+                currentAdvancedGroupData.goal = goalData ? getGroupGoal(groupId) : null;
+            }
+        }
+
+        function populateAdvancedGoalForm(goal) {
+            const labelInput = document.getElementById('advanced-goal-label-input');
+            const hoursInput = document.getElementById('advanced-goal-hours-input');
+            if (!labelInput || !hoursInput) return;
+            if (goal) {
+                labelInput.value = goal.label || '';
+                hoursInput.value = goal.targetHours ? Number(goal.targetHours).toString() : '';
+            } else {
+                labelInput.value = '';
+                hoursInput.value = '';
+            }
+        }
+
+        function setAdvancedLoadingState() {
+            [
+                ['advanced-heatmap-summary', 'Loading…'],
+                ['advanced-modal-heatmap-summary', 'Loading…'],
+                ['advanced-subject-summary', 'Loading…'],
+                ['advanced-modal-subject-summary', 'Loading…'],
+                ['advanced-ratio-label', 'Loading…'],
+                ['advanced-modal-ratio-label', 'Loading…'],
+                ['advanced-goal-progress-label', 'Loading…'],
+                ['advanced-modal-goal-status', 'Loading…'],
+                ['advanced-streak-status', 'Calculating…'],
+                ['advanced-modal-streak-status', 'Checking…'],
+                ['advanced-streak-description', 'Crunching streak multipliers…'],
+                ['advanced-modal-streak-summary', 'Crunching streak multipliers…']
+            ].forEach(([id, text]) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = text;
+            });
+
+            ['advanced-heatmap-grid', 'advanced-modal-heatmap-grid'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '<div class="text-xs text-gray-500">Loading…</div>';
+            });
+            ['advanced-subject-mix', 'advanced-modal-subject-mix'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '<div class="text-xs text-gray-500">Loading…</div>';
+            });
+        }
+
+        function setAdvancedErrorState() {
+            const errorMessage = '<div class="text-sm text-red-400">Unable to load advanced analytics right now.</div>';
+            ['advanced-heatmap-grid', 'advanced-modal-heatmap-grid', 'advanced-subject-mix', 'advanced-modal-subject-mix'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = errorMessage;
+            });
+            ['advanced-ratio-description', 'advanced-modal-ratio-description', 'advanced-streak-description', 'advanced-modal-streak-summary'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = 'Something went wrong. Try again soon.';
+            });
+            ['advanced-heatmap-summary', 'advanced-modal-heatmap-summary', 'advanced-subject-summary', 'advanced-modal-subject-summary', 'advanced-ratio-label', 'advanced-modal-ratio-label', 'advanced-goal-progress-label', 'advanced-modal-goal-status', 'advanced-streak-status', 'advanced-modal-streak-status'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = 'Unavailable';
+            });
+        }
+
+        function buildHeatmapData(sessions) {
+            const today = startOfDayLocal(getCurrentDate());
+            const startDate = new Date(today);
+            startDate.setDate(startDate.getDate() - 6);
+
+            const days = [];
+            const dayLookup = new Map();
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+                dayLookup.set(dateStr, i);
+                days.push({
+                    date,
+                    label: date.toLocaleDateString(undefined, { weekday: 'short' }),
+                    dateStr
+                });
+            }
+
+            const grid = ADVANCED_HEATMAP_BUCKETS.map(() => Array(7).fill(0));
+            let maxValue = 0;
+            let hottest = null;
+
+            (sessions || []).forEach(row => {
+                if (!row || row.type !== 'study') return;
+                const endedAt = row.endedAt ? new Date(row.endedAt) : null;
+                if (!endedAt || Number.isNaN(endedAt.getTime())) return;
+                const dateStr = endedAt.toISOString().split('T')[0];
+                if (!dayLookup.has(dateStr)) return;
+                const dayIndex = dayLookup.get(dateStr);
+                const bucketIndex = Math.min(ADVANCED_HEATMAP_BUCKETS.length - 1, Math.floor((endedAt.getHours() || 0) / 4));
+                const duration = Number(row.durationSeconds) || 0;
+                grid[bucketIndex][dayIndex] += duration;
+                if (grid[bucketIndex][dayIndex] > maxValue) {
+                    maxValue = grid[bucketIndex][dayIndex];
+                    hottest = { dayIndex, bucketIndex, duration: grid[bucketIndex][dayIndex] };
+                }
+            });
+
+            return { days, buckets: ADVANCED_HEATMAP_BUCKETS, grid, maxValue, hottest };
+        }
+
+        function buildSubjectMix(sessions) {
+            const totals = new Map();
+            let totalSeconds = 0;
+            (sessions || []).forEach(row => {
+                if (!row || row.type !== 'study') return;
+                const subject = (row.subject && row.subject.trim()) ? row.subject.trim() : 'Uncategorized';
+                const duration = Number(row.durationSeconds) || 0;
+                totals.set(subject, (totals.get(subject) || 0) + duration);
+                totalSeconds += duration;
+            });
+
+            const items = Array.from(totals.entries()).map(([subject, seconds]) => ({
+                subject,
+                seconds,
+                percent: totalSeconds > 0 ? (seconds / totalSeconds) * 100 : 0
+            })).sort((a, b) => b.seconds - a.seconds);
+
+            const summary = items.length > 0 ? `${items[0].subject} · ${Math.round(items[0].percent)}%` : 'No data';
+            return { items, totalSeconds, summary };
+        }
+
+        function buildCompletionRatio(sessions) {
+            let studySeconds = 0;
+            let breakSeconds = 0;
+            (sessions || []).forEach(row => {
+                if (!row) return;
+                const duration = Number(row.durationSeconds) || 0;
+                if (row.type === 'study') studySeconds += duration;
+                if (row.type === 'break') breakSeconds += duration;
+            });
+            const ratio = breakSeconds > 0 ? (studySeconds / breakSeconds) : null;
+            return { studySeconds, breakSeconds, ratio };
+        }
+
+        function computeMonthlyStudySeconds(sessions) {
+            const now = getCurrentDate();
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            let total = 0;
+            (sessions || []).forEach(row => {
+                if (!row || row.type !== 'study' || !row.endedAt) return;
+                const endedAt = new Date(row.endedAt);
+                if (Number.isNaN(endedAt.getTime())) return;
+                if (endedAt >= monthStart && endedAt < monthEnd) {
+                    total += Number(row.durationSeconds) || 0;
+                }
+            });
+            return total;
+        }
+
+        function buildGroupStreakData(sessions, memberIds) {
+            const memberCount = Array.isArray(memberIds) ? memberIds.length : 0;
+            if (memberCount === 0) {
+                return { memberCount: 0, currentStreak: 0, protectedToday: false, multiplier: 1, missingMembersToday: [] };
+            }
+
+            const today = startOfDayLocal(getCurrentDate());
+            const windowStart = new Date(today);
+            windowStart.setDate(windowStart.getDate() - 29);
+
+            const dayMap = new Map();
+            (sessions || []).forEach(row => {
+                if (!row || row.type !== 'study') return;
+                const endedAt = row.endedAt ? new Date(row.endedAt) : null;
+                if (!endedAt || Number.isNaN(endedAt.getTime())) return;
+                if (endedAt < windowStart) return;
+                const dateStr = endedAt.toISOString().split('T')[0];
+                if (!dayMap.has(dateStr)) dayMap.set(dateStr, new Set());
+                dayMap.get(dateStr).add(row.profile_id);
+            });
+
+            const todayStr = today.toISOString().split('T')[0];
+            const todaySet = dayMap.get(todayStr) || new Set();
+            const missingMembersToday = memberIds.filter(id => !todaySet.has(id));
+
+            let currentStreak = 0;
+            const cursor = new Date(today);
+            for (let i = 0; i < 30; i++) {
+                const dateStr = cursor.toISOString().split('T')[0];
+                const set = dayMap.get(dateStr);
+                if (set && set.size === memberCount) {
+                    currentStreak += 1;
+                    cursor.setDate(cursor.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+
+            const protectedToday = todaySet.size === memberCount && memberCount > 0;
+            const multiplier = Math.max(1, protectedToday ? Math.min(5, 1 + currentStreak) : currentStreak);
+
+            return { memberCount, currentStreak, protectedToday, missingMembersToday, multiplier };
+        }
+
+        function updateAdvancedHeatmapUI(targets, heatmapData) {
+            const { gridId, summaryId } = targets || {};
+            const gridEl = gridId ? document.getElementById(gridId) : null;
+            const summaryEl = summaryId ? document.getElementById(summaryId) : null;
+            if (!gridEl) return;
+
+            if (!heatmapData || !Array.isArray(heatmapData.days) || heatmapData.days.length === 0) {
+                gridEl.innerHTML = '<div class="text-sm text-gray-500">No study activity yet.</div>';
+                gridEl.style.gridTemplateColumns = '';
+                if (summaryEl) summaryEl.textContent = 'No data';
+                return;
+            }
+
+            const columns = heatmapData.days.length + 1;
+            gridEl.classList.add('advanced-heatmap-grid');
+            gridEl.style.gridTemplateColumns = `repeat(${columns}, minmax(56px, 1fr))`;
+
+            let html = '<div class="text-xs text-gray-500"></div>';
+            heatmapData.days.forEach(day => {
+                html += `<div class="text-xs text-gray-300 text-center font-semibold">${day.label}</div>`;
+            });
+
+            heatmapData.buckets.forEach((bucket, rowIndex) => {
+                html += `<div class="text-xs text-gray-500 flex items-center">${bucket.label}</div>`;
+                heatmapData.days.forEach((day, colIndex) => {
+                    const value = heatmapData.grid[rowIndex][colIndex] || 0;
+                    const intensity = heatmapData.maxValue > 0 ? (value / heatmapData.maxValue) : 0;
+                    const baseOpacity = intensity > 0 ? 0.2 : 0.08;
+                    const background = `rgba(56, 189, 248, ${baseOpacity + intensity * 0.6})`;
+                    const label = value > 0 ? formatHoursFromSeconds(value) : '';
+                    html += `<div class="advanced-heatmap-cell" style="background:${background}"><span>${label}</span></div>`;
+                });
+            });
+
+            gridEl.innerHTML = html;
+
+            if (summaryEl) {
+                if (!heatmapData.hottest || heatmapData.maxValue <= 0) {
+                    summaryEl.textContent = 'No focus sessions yet';
+                } else {
+                    const day = heatmapData.days[heatmapData.hottest.dayIndex];
+                    const bucket = heatmapData.buckets[heatmapData.hottest.bucketIndex];
+                    summaryEl.textContent = `Peak: ${day.label} · ${bucket.label} (${formatHoursFromSeconds(heatmapData.hottest.duration)})`;
+                }
+            }
+        }
+
+        function updateSubjectMixUI(targets, mixData) {
+            const { containerId, summaryId } = targets || {};
+            const container = containerId ? document.getElementById(containerId) : null;
+            const summaryEl = summaryId ? document.getElementById(summaryId) : null;
+            if (!container) return;
+
+            if (!mixData || !Array.isArray(mixData.items) || mixData.items.length === 0) {
+                container.innerHTML = '<div class="text-sm text-gray-500">No study sessions logged yet.</div>';
+                if (summaryEl) summaryEl.textContent = 'No data';
+                return;
+            }
+
+            container.innerHTML = mixData.items.slice(0, 5).map(item => {
+                const percent = Math.min(100, Math.round(item.percent));
+                return `
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-semibold text-white truncate">${item.subject}</span>
+                            <span class="text-xs text-gray-400">${formatHoursFromSeconds(item.seconds)} · ${percent}%</span>
+                        </div>
+                        <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                            <div class="h-full bg-emerald-400" style="width:${percent}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (summaryEl) {
+                summaryEl.textContent = mixData.summary || 'Balanced';
+            }
+        }
+
+        function updateCompletionRatioUI(targets, ratioData) {
+            const { barId, labelId, descriptionId } = targets || {};
+            const barEl = barId ? document.getElementById(barId) : null;
+            const labelEl = labelId ? document.getElementById(labelId) : null;
+            const descEl = descriptionId ? document.getElementById(descriptionId) : null;
+            if (!barEl || !labelEl || !descEl) return;
+
+            if (!ratioData) {
+                barEl.style.width = '0%';
+                labelEl.textContent = 'No data';
+                descEl.textContent = 'Log focus and break sessions to build a completion ratio.';
+                return;
+            }
+
+            const total = ratioData.studySeconds + ratioData.breakSeconds;
+            const focusPercent = total > 0 ? Math.round((ratioData.studySeconds / total) * 100) : 0;
+            barEl.style.width = `${focusPercent}%`;
+            labelEl.textContent = `Focus ${formatHoursFromSeconds(ratioData.studySeconds)} · Break ${formatHoursFromSeconds(ratioData.breakSeconds)}`;
+
+            if (ratioData.studySeconds === 0 && ratioData.breakSeconds === 0) {
+                descEl.textContent = 'Log your first study session to unlock analytics.';
+            } else if (ratioData.breakSeconds === 0) {
+                descEl.textContent = 'All focus! Schedule a break to keep energy high.';
+            } else {
+                descEl.textContent = `Completion ratio: ${(ratioData.ratio || 0).toFixed(1)} : 1 (focus:break)`;
+            }
+        }
+
+        function updateGoalUI(targets, goal, monthlySeconds, options = {}) {
+            const { labelId, progressBarId, statusId } = targets || {};
+            const { compact = false, includeLabelInStatus = false } = options;
+            const labelEl = labelId ? document.getElementById(labelId) : null;
+            const progressEl = progressBarId ? document.getElementById(progressBarId) : null;
+            const statusEl = statusId ? document.getElementById(statusId) : null;
+            if (!progressEl || !statusEl) return;
+
+            if (!goal || !goal.targetSeconds) {
+                progressEl.style.width = '0%';
+                if (labelEl) labelEl.textContent = 'No group goal set yet.';
+                statusEl.textContent = compact ? 'No goal active' : 'Set a shared goal to unlock pro badges.';
+                return;
+            }
+
+            const targetHours = goal.targetHours || (goal.targetSeconds / 3600);
+            const completedHours = (Number(monthlySeconds) || 0) / 3600;
+            const percent = goal.targetSeconds > 0 ? Math.min(100, Math.round((monthlySeconds / goal.targetSeconds) * 100)) : 0;
+            progressEl.style.width = `${Math.min(100, percent)}%`;
+
+            const labelText = goal.label || `Group goal: ${targetHours.toFixed(1)}h`;
+            if (labelEl) {
+                labelEl.textContent = labelText;
+            }
+
+            const badgeUnlocked = percent >= 100;
+            let statusText;
+            if (compact) {
+                statusText = `${percent}% complete · ${completedHours.toFixed(1)}/${targetHours.toFixed(1)}h`;
+            } else {
+                const parts = [];
+                if (includeLabelInStatus) parts.push(labelText);
+                parts.push(`${completedHours.toFixed(1)} / ${targetHours.toFixed(1)}h`);
+                parts.push(`${percent}% complete`);
+                statusText = parts.join(' · ');
+            }
+            if (badgeUnlocked) {
+                statusText += compact ? ' · Badge unlocked!' : ' · Pro badge unlocked!';
+            }
+            statusEl.textContent = statusText;
+        }
+
+        function updateStreakSection(targets, streakData) {
+            const { statusId, summaryId, detailId } = targets || {};
+            const statusEl = statusId ? document.getElementById(statusId) : null;
+            const summaryEl = summaryId ? document.getElementById(summaryId) : null;
+            const detailEl = detailId ? document.getElementById(detailId) : null;
+            if (!statusEl || !summaryEl) return;
+
+            const resetStatusClasses = () => {
+                statusEl.classList.remove('text-purple-200', 'text-emerald-300', 'text-rose-400', 'text-gray-400');
+            };
+
+            if (!streakData || streakData.memberCount === 0) {
+                resetStatusClasses();
+                statusEl.classList.add('text-gray-400');
+                statusEl.textContent = 'No data';
+                summaryEl.textContent = 'Add members and log study sessions to activate streak protection.';
+                if (detailEl) detailEl.textContent = 'Group streak multipliers kick in once everyone studies in the same day.';
+                return;
+            }
+
+            resetStatusClasses();
+            if (streakData.protectedToday) {
+                statusEl.classList.add('text-emerald-300');
+                statusEl.textContent = 'Protected';
+            } else {
+                statusEl.classList.add('text-rose-400');
+                statusEl.textContent = 'At Risk';
+            }
+
+            summaryEl.textContent = `Current streak: ${streakData.currentStreak} day${streakData.currentStreak === 1 ? '' : 's'} · Multiplier ×${streakData.multiplier.toFixed(1)}`;
+
+            if (detailEl) {
+                if (streakData.protectedToday) {
+                    detailEl.textContent = `All ${streakData.memberCount} members logged focus today. Keep it up to push to ${streakData.currentStreak + 1} days tomorrow.`;
+                } else if (Array.isArray(streakData.missingMembersToday) && streakData.missingMembersToday.length > 0) {
+                    const missingNames = streakData.missingMembersToday.slice(0, 3).map(id => {
+                        const member = groupRealtimeData.members?.[id];
+                        return member?.username || 'Member';
+                    });
+                    const moreCount = streakData.missingMembersToday.length - missingNames.length;
+                    const nameList = missingNames.join(', ') + (moreCount > 0 ? ` +${moreCount}` : '');
+                    detailEl.textContent = `${nameList} still need${streakData.missingMembersToday.length === 1 ? 's' : ''} a focus session today to protect the streak.`;
+                } else {
+                    detailEl.textContent = 'Log a group session today to restart the multiplier.';
+                }
+            }
+        }
+
+        async function loadAdvancedGroupData(force = false) {
+            if (!currentGroupId) return null;
+            const now = Date.now();
+            if (!force && advancedGroupCache.groupId === currentGroupId && (now - advancedGroupCache.fetchedAt) < ADVANCED_CACHE_TTL) {
+                return advancedGroupCache.data;
+            }
+
+            const memberIds = (Array.isArray(currentGroupMemberIds) && currentGroupMemberIds.length > 0)
+                ? [...currentGroupMemberIds]
+                : Object.keys(groupRealtimeData.members || {});
+
+            const goal = getGroupGoal(currentGroupId);
+
+            if (memberIds.length === 0) {
+                const dataset = {
+                    memberIds: [],
+                    sessions: [],
+                    heatmap: buildHeatmapData([]),
+                    subjectMix: buildSubjectMix([]),
+                    completion: buildCompletionRatio([]),
+                    streak: buildGroupStreakData([], []),
+                    monthlyStudySeconds: 0,
+                    goal
+                };
+                advancedGroupCache = { groupId: currentGroupId, fetchedAt: now, data: dataset };
+                return dataset;
+            }
+
+            const sinceDate = new Date();
+            sinceDate.setDate(sinceDate.getDate() - 30);
+
+            try {
+                const { data, error } = await supabase
+                    .from('sessions')
+                    .select('profile_id, subject, durationSeconds, endedAt, type')
+                    .in('profile_id', memberIds)
+                    .gte('endedAt', sinceDate.toISOString());
+
+                if (error) throw error;
+
+                const sessions = Array.isArray(data) ? data : [];
+                const dataset = {
+                    memberIds,
+                    sessions,
+                    heatmap: buildHeatmapData(sessions),
+                    subjectMix: buildSubjectMix(sessions),
+                    completion: buildCompletionRatio(sessions),
+                    streak: buildGroupStreakData(sessions, memberIds),
+                    monthlyStudySeconds: computeMonthlyStudySeconds(sessions),
+                    goal
+                };
+                advancedGroupCache = { groupId: currentGroupId, fetchedAt: now, data: dataset };
+                return dataset;
+            } catch (error) {
+                console.error('Failed to load advanced group analytics:', error);
+                return null;
+            }
+        }
+
+        async function renderAdvancedGroupFeatures(options = {}) {
+            const force = Boolean(options?.force);
+            setAdvancedLoadingState();
+            const data = await loadAdvancedGroupData(force);
+            if (!data) {
+                setAdvancedErrorState();
+                return;
+            }
+
+            currentAdvancedGroupData = data;
+
+            updateAdvancedHeatmapUI({ gridId: 'advanced-heatmap-grid', summaryId: 'advanced-heatmap-summary' }, data.heatmap);
+            updateAdvancedHeatmapUI({ gridId: 'advanced-modal-heatmap-grid', summaryId: 'advanced-modal-heatmap-summary' }, data.heatmap);
+
+            updateSubjectMixUI({ containerId: 'advanced-subject-mix', summaryId: 'advanced-subject-summary' }, data.subjectMix);
+            updateSubjectMixUI({ containerId: 'advanced-modal-subject-mix', summaryId: 'advanced-modal-subject-summary' }, data.subjectMix);
+
+            updateCompletionRatioUI({ barId: 'advanced-ratio-focus-bar', labelId: 'advanced-ratio-label', descriptionId: 'advanced-ratio-description' }, data.completion);
+            updateCompletionRatioUI({ barId: 'advanced-modal-ratio-focus-bar', labelId: 'advanced-modal-ratio-label', descriptionId: 'advanced-modal-ratio-description' }, data.completion);
+
+            updateGoalUI({ labelId: 'advanced-goal-label', progressBarId: 'advanced-goal-progress', statusId: 'advanced-goal-progress-label' }, data.goal, data.monthlyStudySeconds, { compact: true });
+            updateGoalUI({ labelId: null, progressBarId: 'advanced-modal-goal-progress', statusId: 'advanced-modal-goal-status' }, data.goal, data.monthlyStudySeconds, { includeLabelInStatus: true });
+
+            updateStreakSection({ statusId: 'advanced-streak-status', summaryId: 'advanced-streak-description', detailId: null }, data.streak);
+            updateStreakSection({ statusId: 'advanced-modal-streak-status', summaryId: 'advanced-modal-streak-summary', detailId: 'advanced-modal-streak-detail' }, data.streak);
+
+            populateAdvancedGoalForm(data.goal);
+        }
+
         function renderGroupSubPage(subpage) {
             const container = document.getElementById('group-detail-content');
             if (!container) return;
@@ -11363,27 +12074,81 @@ if (achievementsGrid) {
                     });
                     renderGroupLeaderboard('weekly');
                     break;
-                case 'invite':
+                case 'advanced':
                     container.innerHTML = `
-                        <div class="p-4 md:p-6 text-center flex flex-col items-center justify-center h-full">
-                            <div>
-                                <i class="fas fa-share-alt text-5xl text-sky-400 mb-6"></i>
-                                <h2 class="text-2xl font-bold mb-4">Invite Members</h2>
-                                <p class="text-gray-400 mb-6 max-w-md mx-auto">Share the group name with friends and tell them to search for it on the 'Group Rankings' page.</p>
-                                <div class="bg-gray-800 p-4 rounded-lg flex items-center justify-between w-full max-w-sm mx-auto">
-                                    <span id="invite-group-name" class="font-mono text-lg text-white truncate">Loading...</span>
-                                    <button id="copy-group-name-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition flex items-center gap-2">
-                                        <i class="fas fa-copy"></i> Copy
-                                    </button>
+                        <div class="p-4 md:p-6 space-y-6">
+                            <div class="bg-gradient-to-br from-slate-900 to-slate-800 border border-sky-500/20 rounded-3xl p-6 shadow-lg">
+                                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                    <div>
+                                        <p class="advanced-section-label mb-1">Advanced Suite</p>
+                                        <h2 class="text-2xl font-bold text-white">Automate motivation for the entire group</h2>
+                                        <p class="text-sm text-gray-400 mt-2">Unlock deep analytics, shared focus goals, and streak protection rewards.</p>
+                                    </div>
+                                    <div class="flex flex-col items-start md:items-end gap-3">
+                                        <div class="flex items-center gap-2 bg-sky-500/10 text-sky-200 px-3 py-1 rounded-full text-xs font-semibold">
+                                            <i class="fas fa-bell"></i>
+                                            Advanced Mode
+                                        </div>
+                                        <button id="open-advanced-suite-btn" class="px-5 py-2 bg-sky-500 hover:bg-sky-600 rounded-full font-semibold text-sm text-white flex items-center gap-2 transition">
+                                            <i class="fas fa-bell"></i>
+                                            View Advanced Suite
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="advanced-preview-grid">
+                                <div class="bg-gray-900/70 border border-sky-500/20 rounded-2xl p-4 space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-lg font-semibold text-white">Productivity Heatmap</h3>
+                                        <span id="advanced-heatmap-summary" class="text-xs text-gray-400 uppercase tracking-wide">Loading…</span>
+                                    </div>
+                                    <div id="advanced-heatmap" class="overflow-x-auto">
+                                        <div id="advanced-heatmap-grid" class="advanced-heatmap-grid"></div>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-900/70 border border-emerald-500/20 rounded-2xl p-4 space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-lg font-semibold text-white">Subject Mix</h3>
+                                        <span id="advanced-subject-summary" class="text-xs text-gray-400 uppercase tracking-wide">Loading…</span>
+                                    </div>
+                                    <div id="advanced-subject-mix" class="space-y-3 text-sm"></div>
+                                </div>
+                                <div class="bg-gray-900/70 border border-amber-500/20 rounded-2xl p-4 space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-lg font-semibold text-white">Focus vs Break</h3>
+                                        <span id="advanced-ratio-label" class="text-xs text-gray-400 uppercase tracking-wide">Loading…</span>
+                                    </div>
+                                    <div class="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                                        <div id="advanced-ratio-focus-bar" class="h-full bg-amber-400" style="width:0%"></div>
+                                    </div>
+                                    <p id="advanced-ratio-description" class="text-sm text-gray-300">Measuring completion ratio…</p>
+                                </div>
+                                <div class="bg-gray-900/70 border border-sky-500/20 rounded-2xl p-4 space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-lg font-semibold text-white">Custom Group Goal</h3>
+                                        <button id="advanced-edit-goal-btn" class="text-xs font-semibold text-sky-300 hover:text-sky-200 transition flex items-center gap-1">
+                                            <i class="fas fa-pen"></i>
+                                            Edit
+                                        </button>
+                                    </div>
+                                    <p id="advanced-goal-label" class="text-sm text-gray-300">No group goal set yet.</p>
+                                    <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                                        <div id="advanced-goal-progress" class="h-full bg-sky-400" style="width:0%"></div>
+                                    </div>
+                                    <p id="advanced-goal-progress-label" class="text-xs text-gray-400 uppercase tracking-wide">0% complete</p>
+                                </div>
+                                <div class="bg-gray-900/70 border border-purple-500/20 rounded-2xl p-4 space-y-3 md:col-span-2">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-lg font-semibold text-white">Group Rewards / Streak Protection</h3>
+                                        <span id="advanced-streak-status" class="text-xs text-purple-200 uppercase tracking-wide">Calculating…</span>
+                                    </div>
+                                    <p id="advanced-streak-description" class="text-sm text-gray-300">Tracking group streak multipliers…</p>
+                                    <p class="text-xs text-gray-500">If all members study daily → streak protected. Missed day breaks it.</p>
                                 </div>
                             </div>
                         </div>
                     `;
-                    fetchGroup(currentGroupId).then(group => {
-                        if (group) {
-                            document.getElementById('invite-group-name').textContent = group.name;
-                        }
-                    });
+                    renderAdvancedGroupFeatures().catch(err => console.error('Failed to render advanced suite', err));
                     break;
                 case 'chat':
                     container.innerHTML = `
@@ -13443,6 +14208,41 @@ if (achievementsGrid) {
             showToast('Study goal updated!', 'success');
         });
 
+        ael('advanced-goal-form', 'submit', (e) => {
+            e.preventDefault();
+            if (!currentGroupId) return;
+
+            const labelInput = document.getElementById('advanced-goal-label-input');
+            const hoursInput = document.getElementById('advanced-goal-hours-input');
+            const label = labelInput ? labelInput.value.trim() : '';
+            const hours = hoursInput ? parseFloat(hoursInput.value) : NaN;
+
+            if (!Number.isFinite(hours) || hours <= 0) {
+                showToast('Enter a positive target in hours to save a group goal.', 'error');
+                return;
+            }
+
+            const goalData = {
+                label: label || `Study ${hours}h this month`,
+                targetHours: hours,
+                targetSeconds: hours * 3600
+            };
+
+            setGroupGoal(currentGroupId, goalData);
+            populateAdvancedGoalForm(goalData);
+            renderAdvancedGroupFeatures({ force: true }).catch(err => console.error('Failed to refresh advanced suite after goal save', err));
+            showToast('Group goal saved!', 'success');
+        });
+
+        ael('advanced-goal-clear-btn', 'click', (e) => {
+            e.preventDefault();
+            if (!currentGroupId) return;
+            setGroupGoal(currentGroupId, null);
+            populateAdvancedGoalForm(null);
+            renderAdvancedGroupFeatures({ force: true }).catch(err => console.error('Failed to refresh advanced suite after clearing goal', err));
+            showToast('Group goal cleared.', 'info');
+        });
+
         ael('page-find-groups', 'click', (e) => {
             const sortBtn = e.target.closest('#group-ranking-sort-tabs .group-filter-btn');
             if (sortBtn && !sortBtn.classList.contains('active')) {
@@ -13474,16 +14274,13 @@ if (achievementsGrid) {
                 return;
             }
 
-            const copyBtn = e.target.closest('#copy-group-name-btn');
-            if (copyBtn) {
-                const groupName = document.getElementById('invite-group-name').textContent;
-                const tempInput = document.createElement('input');
-                document.body.appendChild(tempInput);
-                tempInput.value = groupName;
-                tempInput.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempInput);
-                showToast('Group name copied!', 'success');
+            const openAdvancedBtn = e.target.closest('#open-advanced-suite-btn, #advanced-edit-goal-btn');
+            if (openAdvancedBtn) {
+                const modal = document.getElementById('advanced-features-modal');
+                if (modal) {
+                    modal.classList.add('active');
+                    renderAdvancedGroupFeatures().catch(err => console.error('Failed to open advanced suite', err));
+                }
                 return;
             }
 
