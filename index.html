@@ -14,9 +14,11 @@
     <meta name="vapid-public-key" content="BJqi2nFBuazVXwx9OdCSLwKDhG65fZOL7IBsAzQI1YxBr0zmV4nTl80JtAZFeOIobDgJ0kNqwVpPf_BjEmblNa0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <link rel='icon' href="favicon.ico">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
     <style>
         /* Base styles */
@@ -1841,6 +1843,143 @@
             font-size: 1.5rem;
             cursor: pointer;
         }
+        #image-view-modal .modal-content {
+            background: rgba(15, 23, 42, 0.92);
+            max-width: min(92vw, 860px);
+            width: auto;
+            padding: 1rem 1.5rem 1.75rem;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            position: relative;
+        }
+        #image-view-modal .close-modal {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(15, 23, 42, 0.75);
+            width: 36px;
+            height: 36px;
+            border-radius: 9999px;
+            font-size: 1.3rem;
+        }
+        #image-view-modal .close-modal:hover {
+            background: rgba(30, 41, 59, 0.85);
+        }
+        #fullscreen-image {
+            max-width: min(80vw, 760px);
+            max-height: 70vh;
+            border-radius: 1rem;
+            box-shadow: 0 24px 45px rgba(8, 47, 73, 0.45);
+        }
+        .image-view-actions {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+        .image-view-actions a,
+        .image-view-actions button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.65rem 1.2rem;
+            border-radius: 9999px;
+            background: rgba(30, 64, 175, 0.35);
+            border: 1px solid rgba(59, 130, 246, 0.45);
+            color: #e2e8f0;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+        .image-view-actions a:hover,
+        .image-view-actions button:hover {
+            background: rgba(59, 130, 246, 0.55);
+            transform: translateY(-1px);
+        }
+        #image-crop-modal .modal-content {
+            max-width: min(95vw, 720px);
+            width: 100%;
+            background: rgba(8, 15, 28, 0.95);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            padding: 1.5rem;
+        }
+        .image-cropper-preview {
+            background: rgba(15, 23, 42, 0.65);
+            border-radius: 1.25rem;
+            overflow: hidden;
+            max-height: 420px;
+        }
+        #image-crop-preview {
+            display: block;
+            max-width: 100%;
+            width: 100%;
+        }
+        .image-crop-instructions {
+            margin-top: 0.75rem;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+        .image-crop-controls {
+            display: flex;
+            justify-content: center;
+            gap: 0.65rem;
+            margin-top: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .image-crop-controls button {
+            width: 44px;
+            height: 44px;
+            border-radius: 9999px;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            background: rgba(30, 41, 59, 0.9);
+            color: #e2e8f0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+        .image-crop-controls button:hover {
+            background: rgba(37, 99, 235, 0.45);
+            transform: translateY(-1px);
+        }
+        .image-crop-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.75rem;
+        }
+        .image-crop-actions button {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        #image-crop-cancel-btn {
+            background: rgba(30, 41, 59, 0.85);
+            color: #cbd5f5;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+        #image-crop-cancel-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.35);
+        }
+        #image-crop-confirm-btn {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: #fff;
+            box-shadow: 0 16px 32px rgba(37, 99, 235, 0.45);
+        }
+        #image-crop-confirm-btn:hover:not(:disabled) {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 20px 38px rgba(37, 99, 235, 0.5);
+        }
+        #image-crop-confirm-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
         
         /* Profile Settings */
         .profile-container { padding: 20px; }
@@ -2053,32 +2192,188 @@
         #group-detail-nav {
             display: none;
         }
-        .chat-message {
-            margin-bottom: 1rem;
+        .messenger-chat {
             display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 65%),
+                        radial-gradient(circle at bottom, rgba(14, 165, 233, 0.08), transparent 55%);
+        }
+        .messenger-chat.has-placeholder {
+            align-items: center;
+            justify-content: center;
+        }
+        .chat-message {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.75rem;
+            width: 100%;
         }
         .chat-message.sent {
             justify-content: flex-end;
         }
+        .chat-message.sent .chat-avatar {
+            display: none;
+        }
+        .chat-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.3), rgba(14, 116, 144, 0.55));
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #e2e8f0;
+            flex-shrink: 0;
+        }
         .chat-bubble {
-            max-width: 75%;
-            padding: 0.75rem;
-            border-radius: 1rem;
+            max-width: min(75%, 520px);
+            padding: 0.9rem 1.1rem;
+            border-radius: 1.4rem;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.45);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
         }
         .chat-bubble.sent {
-            background-color: #3B82F6;
-            color: white;
-            border-bottom-right-radius: 0.25rem;
+            background: linear-gradient(140deg, #3b82f6, #2563eb);
+            color: #fff;
+            border-bottom-right-radius: 0.5rem;
+            align-items: flex-end;
         }
         .chat-bubble.received {
-            background-color: #21262d;
-            color: white;
-            border-bottom-left-radius: 0.25rem;
+            background: rgba(15, 23, 42, 0.85);
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-bottom-left-radius: 0.5rem;
+            align-items: flex-start;
+        }
+        .chat-bubble.received .chat-sender {
+            color: #38bdf8;
         }
         .chat-sender {
             font-size: 0.75rem;
-            color: #9CA3AF;
-            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 600;
+        }
+        .chat-text {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 0.95rem;
+            line-height: 1.45;
+        }
+        .chat-meta {
+            font-size: 0.7rem;
+            letter-spacing: 0.04em;
+        }
+        .chat-meta.sent {
+            color: rgba(226, 232, 240, 0.85);
+        }
+        .chat-meta.received {
+            color: rgba(148, 163, 184, 0.85);
+        }
+        .chat-image-btn {
+            border: none;
+            padding: 0;
+            background: transparent;
+            border-radius: 1.1rem;
+            overflow: hidden;
+            cursor: zoom-in;
+            box-shadow: 0 18px 35px rgba(8, 47, 73, 0.55);
+        }
+        .chat-image-btn:focus-visible {
+            outline: 2px solid rgba(96, 165, 250, 0.8);
+            outline-offset: 2px;
+        }
+        .chat-image {
+            display: block;
+            max-width: min(320px, 100%);
+            height: auto;
+            border-radius: 1.1rem;
+            pointer-events: none;
+        }
+        .chat-empty-placeholder {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: #94a3b8;
+        }
+        .chat-composer {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(15, 23, 42, 0.85);
+            border-radius: 9999px;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 24px 40px rgba(15, 23, 42, 0.45);
+        }
+        .chat-composer input[type="text"] {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            padding: 0.65rem 0.75rem;
+            border-radius: 9999px;
+            outline: none;
+        }
+        .chat-composer input[type="text"]::placeholder {
+            color: #64748b;
+        }
+        .chat-composer button.send-btn {
+            width: 46px;
+            height: 46px;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            font-size: 1.1rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 14px 30px rgba(37, 99, 235, 0.45);
+        }
+        .chat-composer button.send-btn:hover {
+            transform: translateY(-1px) scale(1.05);
+            box-shadow: 0 18px 34px rgba(37, 99, 235, 0.55);
+        }
+        .chat-attach-trigger {
+            width: 44px;
+            height: 44px;
+            border-radius: 9999px;
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            color: #cbd5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+        }
+        .chat-attach-trigger:hover {
+            background: rgba(59, 130, 246, 0.35);
+            transform: translateY(-1px);
+            box-shadow: 0 12px 22px rgba(15, 23, 42, 0.35);
+        }
+        .chat-attachment-menu {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 18px 28px rgba(8, 47, 73, 0.4);
+        }
+        .chat-attachment-menu button {
+            font-weight: 500;
+        }
+        .chat-attachment-menu button i {
+            width: 18px;
+            text-align: center;
         }
 
         /* NEW STYLE for Studicon View */
@@ -3113,7 +3408,45 @@
     <div id="studicon-store-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Choose Your Studicon</div><button class="close-modal">&times;</button></div><div><div id="studicon-category-tabs" class="flex space-x-1 border-b border-gray-700 mb-4"></div><div id="studicon-picker" class="avatar-picker max-h-60 overflow-y-auto"></div><button id="save-studicon-btn" class="w-full mt-4 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save</button></div></div></div>
     <div id="edit-group-info-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Group Information</div><button class="close-modal">&times;</button></div><form id="edit-group-info-form" class="space-y-4"><input type="hidden" id="edit-group-id-input"><div><label class="block text-sm font-medium text-gray-300">Group Name</label><input id="edit-group-name" type="text" class="w-full bg-gray-700 rounded-lg p-2 mt-1" required></div><div><label class="block text-sm font-medium text-gray-300">Description</label><textarea id="edit-group-description" class="w-full bg-gray-700 rounded-lg p-2 mt-1 h-24" required></textarea></div><div><label class="block text-sm font-medium text-gray-300">Category</label><select id="edit-group-category" class="w-full bg-gray-700 rounded-lg p-2 mt-1"><option>General study</option><option>Language study</option><option>Secondary School</option><option>University</option></select></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-300">Time Goal (h)</label><input id="edit-group-goal" type="number" min="1" max="10" class="w-full bg-gray-700 rounded-lg p-2 mt-1"></div><div><label class="block text-sm font-medium text-gray-300">Capacity</label><input id="edit-group-capacity" type="number" min="2" max="100" class="w-full bg-gray-700 rounded-lg p-2 mt-1"></div></div><div><label class="block text-sm font-medium text-gray-300">Password (optional)</label><input id="edit-group-password" type="text" class="w-full bg-gray-700 rounded-lg p-2 mt-1" placeholder="Leave blank for public"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
     <div id="group-rules-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Group Rules</div><div id="group-rules-controls"></div><button class="close-modal">&times;</button></div><div id="group-rules-display" class="text-gray-300 whitespace-pre-wrap"></div><div id="group-rules-edit-container" class="hidden"><textarea id="group-rules-textarea" class="w-full bg-gray-700 rounded-lg p-3 h-48"></textarea><button id="save-group-rules-btn" class="w-full mt-2 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg">Save Rules</button></div></div></div>
-    <div id="image-view-modal" class="modal"><div class="modal-content p-1 bg-transparent"><img id="fullscreen-image" src="" class="max-w-full max-h-[90vh]"><button class="close-modal absolute top-2 right-2 text-white bg-black/50 rounded-full w-8 h-8">&times;</button></div></div>
+    <div id="image-view-modal" class="modal">
+        <div class="modal-content">
+            <button type="button" class="close-modal">&times;</button>
+            <div class="flex flex-col items-center gap-4">
+                <img id="fullscreen-image" src="" alt="Shared image preview">
+                <div class="image-view-actions">
+                    <a id="image-open-btn" href="#" target="_blank" rel="noopener" class="inline-flex items-center">
+                        <i class="fas fa-external-link-alt"></i><span>Open</span>
+                    </a>
+                    <a id="image-download-btn" href="#" download class="inline-flex items-center">
+                        <i class="fas fa-download"></i><span>Download</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="image-crop-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Adjust &amp; Share</div>
+                <button type="button" id="image-crop-close-btn" class="close-modal">&times;</button>
+            </div>
+            <div class="image-cropper-preview">
+                <img id="image-crop-preview" src="" alt="Crop preview">
+            </div>
+            <p class="image-crop-instructions">Drag to reposition, pinch or scroll to zoom. Rotate or reset using the controls below.</p>
+            <div id="image-crop-controls" class="image-crop-controls">
+                <button type="button" data-crop-control="zoom-out" aria-label="Zoom out"><i class="fas fa-search-minus"></i></button>
+                <button type="button" data-crop-control="zoom-in" aria-label="Zoom in"><i class="fas fa-search-plus"></i></button>
+                <button type="button" data-crop-control="rotate-left" aria-label="Rotate left"><i class="fas fa-undo"></i></button>
+                <button type="button" data-crop-control="rotate-right" aria-label="Rotate right"><i class="fas fa-redo"></i></button>
+                <button type="button" data-crop-control="reset" aria-label="Reset crop"><i class="fas fa-sync"></i></button>
+            </div>
+            <div class="image-crop-actions">
+                <button type="button" id="image-crop-cancel-btn">Cancel</button>
+                <button type="button" id="image-crop-confirm-btn">Send</button>
+            </div>
+        </div>
+    </div>
     <div id="user-profile-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">User Profile</div><button class="close-modal">&times;</button></div><div id="user-profile-loading"><i class="fas fa-spinner fa-spin fa-2x"></i></div><div id="user-profile-details" class="hidden"><div class="flex items-center mb-4"><div id="user-profile-avatar" class="profile-avatar bg-blue-500 mr-4"></div><div><div id="user-profile-name" class="profile-name"></div></div></div><div class="space-y-2 text-sm"><div class="flex justify-between"><span>Total Today:</span><span id="user-profile-total-today" class="font-semibold"></span></div><div class="flex justify-between"><span>Total Overall:</span><span id="user-profile-total-overall" class="font-semibold"></span></div><div class="flex justify-between"><span>Last Active:</span><span id="user-profile-last-active" class="font-semibold"></span></div></div></div></div></div>
     <div id="quick-add-task-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Add Task for <span id="quick-add-task-date"></span></h2><button class="close-modal">&times;</button></div><form id="quick-add-task-form"><input type="hidden" id="quick-add-task-date-input"><input id="quick-add-task-title-input" type="text" class="w-full bg-gray-700 rounded-lg p-3 text-white" placeholder="e.g., Review chapter 5" required><button type="submit" class="w-full mt-3 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg">Add Task</button></form></div></div>
     <div id="edit-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Edit Session</h2><button class="close-modal">&times;</button></div><form id="edit-session-form" class="space-y-4"><input type="hidden" id="edit-session-id"><input type="hidden" id="edit-session-old-duration"><input type="hidden" id="edit-session-ended-at"><div><label for="edit-session-subject" class="block text-gray-300 mb-2">Subject</label><input type="text" id="edit-session-subject" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div><label for="edit-session-duration" class="block text-gray-300 mb-2">Duration (minutes)</label><input type="number" id="edit-session-duration" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" min="1" required></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
@@ -5200,9 +5533,19 @@ let pauseStartTime = 0;
         window.viewImage = function(src) {
             const modal = document.getElementById('image-view-modal');
             const img = document.getElementById('fullscreen-image');
+            const downloadBtn = document.getElementById('image-download-btn');
+            const openBtn = document.getElementById('image-open-btn');
             if (modal && img) {
                 img.src = src;
                 modal.classList.add('active');
+            }
+            if (downloadBtn) {
+                downloadBtn.href = src;
+                const fileName = src?.split('?')[0]?.split('/').pop() || 'focusflow-chat-image.jpg';
+                downloadBtn.download = fileName;
+            }
+            if (openBtn) {
+                openBtn.href = src;
             }
         }
 
@@ -5334,9 +5677,140 @@ let pauseStartTime = 0;
                         created_at: new Date().toISOString()
                     });
                 if (insertError) throw insertError;
+                showToast('Image sent!', 'success');
             } catch (error) {
                 console.error('Error uploading image:', error);
                 showToast('Image upload failed.', 'error');
+            }
+        }
+
+        let activeImageCropper = null;
+        let cropperObjectUrl = '';
+        let pendingCropGroupId = null;
+        let pendingOriginalFile = null;
+
+        function cleanupCropperResources() {
+            if (activeImageCropper) {
+                activeImageCropper.destroy();
+                activeImageCropper = null;
+            }
+            const preview = document.getElementById('image-crop-preview');
+            if (preview) {
+                preview.onload = null;
+                preview.src = '';
+            }
+            if (cropperObjectUrl) {
+                URL.revokeObjectURL(cropperObjectUrl);
+                cropperObjectUrl = '';
+            }
+        }
+
+        function closeImageCropper() {
+            const modal = document.getElementById('image-crop-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+            cleanupCropperResources();
+            pendingCropGroupId = null;
+            pendingOriginalFile = null;
+        }
+
+        function openImageCropper(file, groupId) {
+            const modal = document.getElementById('image-crop-modal');
+            const preview = document.getElementById('image-crop-preview');
+            if (!modal || !preview || typeof Cropper === 'undefined') {
+                handleImageUpload(file, groupId);
+                return;
+            }
+
+            pendingCropGroupId = groupId;
+            pendingOriginalFile = file;
+
+            cleanupCropperResources();
+            cropperObjectUrl = URL.createObjectURL(file);
+            preview.src = cropperObjectUrl;
+            modal.classList.add('active');
+
+            const initializeCropper = () => {
+                if (activeImageCropper) {
+                    activeImageCropper.destroy();
+                }
+                activeImageCropper = new Cropper(preview, {
+                    viewMode: 1,
+                    dragMode: 'move',
+                    autoCropArea: 0.9,
+                    background: false,
+                    responsive: true,
+                    minCropBoxWidth: 120,
+                    minCropBoxHeight: 120,
+                    scalable: false,
+                    modal: true,
+                });
+            };
+
+            if (preview.complete) {
+                initializeCropper();
+            } else {
+                preview.onload = () => {
+                    initializeCropper();
+                    preview.onload = null;
+                };
+            }
+        }
+
+        function canvasToBlob(canvas, type, quality = 0.92) {
+            return new Promise((resolve, reject) => {
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error('Could not process image.'));
+                    }
+                }, type, quality);
+            });
+        }
+
+        async function applyImageCropper() {
+            const confirmBtn = document.getElementById('image-crop-confirm-btn');
+            if (confirmBtn) confirmBtn.disabled = true;
+
+            try {
+                if (!pendingCropGroupId || !pendingOriginalFile) {
+                    closeImageCropper();
+                    return;
+                }
+
+                if (!activeImageCropper) {
+                    await handleImageUpload(pendingOriginalFile, pendingCropGroupId);
+                    closeImageCropper();
+                    return;
+                }
+
+                const canvas = activeImageCropper.getCroppedCanvas({
+                    maxWidth: 1920,
+                    maxHeight: 1920,
+                    imageSmoothingQuality: 'high',
+                });
+
+                if (!canvas) {
+                    throw new Error('Unable to crop image.');
+                }
+
+                const mimeType = pendingOriginalFile.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                const quality = mimeType === 'image/png' ? undefined : 0.95;
+                const blob = await canvasToBlob(canvas, mimeType, quality);
+
+                const baseName = pendingOriginalFile.name ? pendingOriginalFile.name.replace(/\.[^/.]+$/, '') : 'chat-image';
+                const extension = mimeType === 'image/png' ? 'png' : 'jpg';
+                const croppedFile = new File([blob], `${baseName}-cropped.${extension}`, { type: mimeType });
+
+                await handleImageUpload(croppedFile, pendingCropGroupId);
+                closeImageCropper();
+            } catch (error) {
+                console.error('Image crop failed:', error);
+                showToast(error.message || 'Failed to crop image.', 'error');
+            } finally {
+                if (confirmBtn) confirmBtn.disabled = false;
             }
         }
 
@@ -12153,25 +12627,25 @@ if (achievementsGrid) {
                 case 'chat':
                     container.innerHTML = `
                         <div class="flex flex-col h-full">
-                            <div id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-4 no-scrollbar">
-                                <div class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+                            <div id="chat-messages" class="flex-grow overflow-y-auto no-scrollbar messenger-chat has-placeholder">
+                                <div class="text-center text-gray-400 py-10"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
                             </div>
-                            <div class="p-4 bg-gray-900 border-t border-gray-800">
-                                <form id="chat-form" class="flex items-center gap-2">
-                                     <div id="chat-attach-btn" class="relative">
-                                         <button type="button" class="w-10 h-10 flex-shrink-0 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600">
+                            <div class="p-4 md:p-6 bg-gray-900/80 border-t border-gray-800/60">
+                                <form id="chat-form" class="chat-composer">
+                                     <div id="chat-attach-btn" class="relative flex-shrink-0">
+                                         <button type="button" class="chat-attach-trigger" aria-label="Add attachment">
                                             <i class="fas fa-paperclip"></i>
                                          </button>
-                                         <div id="chat-attachment-menu" class="hidden absolute bottom-full left-0 mb-2 w-40 bg-gray-700 rounded-lg shadow-lg overflow-hidden">
-                                             <div class="p-1">
-                                                <button type="button" data-chat-action="album" class="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-600 rounded-md flex items-center gap-2"><i class="fas fa-images"></i> Album</button>
-                                                <button type="button" data-chat-action="camera" class="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-600 rounded-md flex items-center gap-2"><i class="fas fa-camera"></i> Camera</button>
-                                                <button type="button" data-chat-action="file" class="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-600 rounded-md flex items-center gap-2"><i class="fas fa-file"></i> File</button>
+                                         <div id="chat-attachment-menu" class="chat-attachment-menu hidden absolute bottom-full left-0 mb-3 w-48 rounded-2xl overflow-hidden">
+                                             <div class="p-2 space-y-1">
+                                                <button type="button" data-chat-action="album" class="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-slate-700/70 rounded-xl flex items-center gap-2 transition"><i class="fas fa-images"></i><span>Album</span></button>
+                                                <button type="button" data-chat-action="camera" class="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-slate-700/70 rounded-xl flex items-center gap-2 transition"><i class="fas fa-camera"></i><span>Camera</span></button>
+                                                <button type="button" data-chat-action="file" class="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-slate-700/70 rounded-xl flex items-center gap-2 transition"><i class="fas fa-file"></i><span>File</span></button>
                                              </div>
                                          </div>
                                      </div>
-                                    <input type="text" id="chat-input" class="w-full bg-gray-800 rounded-full p-3 px-5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type a message..." autocomplete="off">
-                                    <button type="submit" class="w-12 h-12 flex-shrink-0 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl hover:bg-blue-700 transition transform hover:scale-110">
+                                    <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+                                    <button type="submit" class="send-btn" aria-label="Send message">
                                         <i class="fas fa-paper-plane"></i>
                                     </button>
                                 </form>
@@ -12695,35 +13169,83 @@ if (achievementsGrid) {
 
             function renderMessage(msg) {
                 const isSent = msg.sender_id === currentUser?.id;
-                const el = document.createElement('div');
-                el.classList.add('chat-message', isSent ? 'sent' : 'received');
-                el.dataset.messageId = msg.id;
-                el.dataset.senderId = msg.sender_id;
+                const messageEl = document.createElement('div');
+                messageEl.classList.add('chat-message', isSent ? 'sent' : 'received');
+                messageEl.dataset.messageId = msg.id;
+                messageEl.dataset.senderId = msg.sender_id;
 
+                chatMessagesContainer.classList.remove('has-placeholder');
                 const placeholder = chatMessagesContainer.querySelector('.chat-empty-placeholder');
                 if (placeholder) {
                     placeholder.remove();
                 }
 
-                const content = msg.text
-                    ? `<div>${msg.text}</div>`
-                    : `<img src="${msg.image_url}" class="rounded-lg max-w-full h-auto cursor-pointer" style="max-height: 300px;" onclick="viewImage(this.src)">`;
+                if (!isSent) {
+                    const avatarEl = document.createElement('div');
+                    avatarEl.className = 'chat-avatar';
+                    avatarEl.textContent = (msg.sender_name || '?').charAt(0).toUpperCase();
+                    messageEl.appendChild(avatarEl);
+                }
+
+                const bubbleEl = document.createElement('div');
+                bubbleEl.classList.add('chat-bubble', isSent ? 'sent' : 'received');
+
+                if (!isSent) {
+                    const senderLabel = document.createElement('div');
+                    senderLabel.className = 'chat-sender';
+                    senderLabel.textContent = msg.sender_name || 'Member';
+                    bubbleEl.appendChild(senderLabel);
+                }
+
+                if (msg.text) {
+                    const textEl = document.createElement('p');
+                    textEl.className = 'chat-text';
+                    textEl.textContent = msg.text;
+                    bubbleEl.appendChild(textEl);
+                }
+
+                if (msg.image_url) {
+                    const imageBtn = document.createElement('button');
+                    imageBtn.type = 'button';
+                    imageBtn.className = 'chat-image-btn';
+                    imageBtn.dataset.imageUrl = msg.image_url;
+                    imageBtn.setAttribute('aria-label', 'Open shared image');
+
+                    const imgEl = document.createElement('img');
+                    imgEl.src = msg.image_url;
+                    imgEl.alt = 'Shared image';
+                    imgEl.className = 'chat-image';
+                    imageBtn.appendChild(imgEl);
+
+                    bubbleEl.appendChild(imageBtn);
+                }
+
                 const timeText = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const metaEl = document.createElement('div');
+                metaEl.classList.add('chat-meta', isSent ? 'sent' : 'received');
+                metaEl.textContent = timeText;
+                bubbleEl.appendChild(metaEl);
 
-                el.innerHTML = `
-                  <div class="chat-bubble ${isSent ? 'sent' : 'received'}">
-                    ${!isSent ? `<div class="chat-sender">${msg.sender_name || ''}</div>` : ''}
-                    ${content}
-                    <div class="text-xs ${isSent ? 'text-blue-200' : 'text-gray-400'} text-right mt-1">${timeText}</div>
-                  </div>`;
+                messageEl.appendChild(bubbleEl);
 
-                attachDeletionHandlers(el, msg);
-                chatMessagesContainer.appendChild(el);
+                attachDeletionHandlers(messageEl, msg);
+                chatMessagesContainer.appendChild(messageEl);
             }
+
+            chatMessagesContainer.addEventListener('click', (event) => {
+                const trigger = event.target.closest('.chat-image-btn');
+                if (!trigger) return;
+                const imageUrl = trigger.dataset.imageUrl;
+                if (imageUrl) {
+                    event.preventDefault();
+                    viewImage(imageUrl);
+                }
+            });
 
             async function loadMessages({ reset = false } = {}) {
                 if (reset) {
                     chatMessagesContainer.innerHTML = '';
+                    chatMessagesContainer.classList.remove('has-placeholder');
                     loadedMessageIds.clear();
                     lastMessageTimestamp = new Date(0).toISOString();
                 }
@@ -12741,7 +13263,8 @@ if (achievementsGrid) {
                 }
 
                 if (reset && (!msgs || msgs.length === 0)) {
-                    chatMessagesContainer.innerHTML = '<p class="chat-empty-placeholder text-center text-gray-500">No messages yet. Say hello!</p>';
+                    chatMessagesContainer.innerHTML = '<p class="chat-empty-placeholder">No messages yet. Say hello!</p>';
+                    chatMessagesContainer.classList.add('has-placeholder');
                     return;
                 }
 
@@ -15050,13 +15573,20 @@ if (achievementsGrid) {
         });
         
         document.querySelectorAll('.modal').forEach(modal => {
+            const closeModal = () => {
+                if (modal.id === 'image-crop-modal') {
+                    closeImageCropper();
+                } else {
+                    modal.classList.remove('active');
+                }
+            };
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
-                    modal.classList.remove('active');
+                    closeModal();
                 }
             });
             modal.querySelectorAll('.close-modal').forEach(btn => {
-                btn.addEventListener('click', () => { modal.classList.remove('active'); });
+                btn.addEventListener('click', closeModal);
             });
         });
 
@@ -15095,11 +15625,45 @@ if (achievementsGrid) {
             ael('image-upload-input', 'change', e => {
                 const file = e.target.files?.[0];
                 if (file && currentGroupId) {
-                    handleImageUpload(file, currentGroupId);
+                    openImageCropper(file, currentGroupId);
+                } else if (file) {
+                    showToast('Select a group to send images.', 'info');
                 }
                 // Reset input to allow selecting the same file again
                 e.target.value = '';
             });
+
+            ael('image-crop-cancel-btn', 'click', () => closeImageCropper());
+            ael('image-crop-close-btn', 'click', () => closeImageCropper());
+            ael('image-crop-confirm-btn', 'click', async () => { await applyImageCropper(); });
+
+            const cropControls = document.getElementById('image-crop-controls');
+            if (cropControls) {
+                cropControls.addEventListener('click', (event) => {
+                    const control = event.target.closest('[data-crop-control]');
+                    if (!control || !activeImageCropper) return;
+                    const action = control.dataset.cropControl;
+                    switch (action) {
+                        case 'zoom-in':
+                            activeImageCropper.zoom(0.1);
+                            break;
+                        case 'zoom-out':
+                            activeImageCropper.zoom(-0.1);
+                            break;
+                        case 'rotate-left':
+                            activeImageCropper.rotate(-90);
+                            break;
+                        case 'rotate-right':
+                            activeImageCropper.rotate(90);
+                            break;
+                        case 'reset':
+                            activeImageCropper.reset();
+                            break;
+                        default:
+                            break;
+                    }
+                });
+            }
 
             const pomodoroSettingsForm = document.getElementById('pomodoro-settings-form');
             if (pomodoroSettingsForm) {
