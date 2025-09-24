@@ -1,0 +1,394 @@
+// Supabase Edge Function: send-group-wake-up-notification
+// Sends wake-up push notifications to idle members of a study group.
+import { createClient } from "jsr:@supabase/supabase-js@2";
+import webpush from "npm:web-push";
+
+const allowedOrigins = new Set([
+  "https://nobel92435.github.io",
+  "https://nobel92435.github.io/FOCUS-NOBEL/",
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:4173"
+]);
+
+function buildCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin");
+  const allowOrigin = origin && allowedOrigins.has(origin) ? origin : "https://nobel92435.github.io";
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400"
+  };
+}
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY");
+const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY");
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+}
+
+if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  console.error("Missing VAPID keys");
+}
+
+webpush.setVapidDetails("mailto:nobelft26@gmail.com", VAPID_PUBLIC_KEY ?? "", VAPID_PRIVATE_KEY ?? "");
+
+const supabaseAdmin = SUPABASE_URL && SERVICE_ROLE_KEY ? createClient(SUPABASE_URL, SERVICE_ROLE_KEY) : null;
+
+const DEFAULT_ICON = "https://placehold.co/192x192/0a0a0a/e0e0e0?text=Flow+192";
+const DEFAULT_BADGE = "https://placehold.co/96x96/0a0a0a/e0e0e0?text=Flow";
+const DEFAULT_VIBRATION = [200, 100, 200, 100, 200];
+const DEFAULT_TAG_PREFIX = "wake-up-group";
+
+function normalizeString(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function normalizePayload(input: Record<string, unknown>) {
+  const groupId = normalizeString(input.groupId);
+  const senderId = normalizeString(input.senderId);
+  if (!groupId || !senderId) {
+    throw new Error("Missing groupId or senderId");
+  }
+
+  return {
+    groupId,
+    senderId,
+    appId: normalizeString(input.appId)
+  };
+}
+
+async function fetchGroup(groupId: string) {
+  if (!supabaseAdmin) throw new Error("Supabase admin client is not configured");
+  const { data, error } = await supabaseAdmin
+    .from("groups")
+    .select("id, name")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to fetch group: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error("Group not found");
+  }
+
+  return data;
+}
+
+async function fetchProfileName(userId: string) {
+  if (!supabaseAdmin) throw new Error("Supabase admin client is not configured");
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("username, full_name")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to fetch profile: ${error.message}`);
+  }
+
+  if (!data) return undefined;
+  return normalizeString(data.username) ?? normalizeString(data.full_name) ?? undefined;
+}
+
+function extractMemberId(raw: unknown) {
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    return raw.trim();
+  }
+  return undefined;
+}
+
+function memberIsStudying(member: Record<string, unknown>) {
+  const studying = (member as Record<string, unknown>).studying;
+  if (studying && typeof studying === "object") {
+    const typeRaw = (studying as Record<string, unknown>).type;
+    if (typeof typeRaw === "string" && typeRaw.trim().toLowerCase() === "study") {
+      return true;
+    }
+  }
+
+  const isStudyingFlag = (member as Record<string, unknown>).is_studying;
+  if (typeof isStudyingFlag === "boolean" && isStudyingFlag) {
+    return true;
+  }
+
+  const statusRaw = (member as Record<string, unknown>).status;
+  if (typeof statusRaw === "string" && statusRaw.trim().toLowerCase() === "studying") {
+    return true;
+  }
+
+  return false;
+}
+
+async function fetchIdleMembers(groupId: string, senderId: string) {
+  if (!supabaseAdmin) throw new Error("Supabase admin client is not configured");
+
+  const idleMembers: Array<{ id: string; username?: string }> = [];
+
+  try {
+    const { data, error } = await supabaseAdmin.rpc("get_group_realtime_status", {
+      group_id_param: groupId
+    });
+
+    if (error) {
+      console.error("Failed to call get_group_realtime_status:", error);
+    } else if (Array.isArray(data)) {
+      for (const entry of data) {
+        if (!entry || typeof entry !== "object") continue;
+        const member = entry as Record<string, unknown>;
+        const memberId = extractMemberId(member.id);
+        if (!memberId || memberId === senderId) continue;
+        if (memberIsStudying(member)) continue;
+        const usernameValue = typeof (member as Record<string, unknown>).username === "string"
+          ? (member as Record<string, unknown>).username
+          : undefined;
+        const fullNameValue = typeof (member as Record<string, unknown>).full_name === "string"
+          ? (member as Record<string, unknown>).full_name
+          : undefined;
+        const username = normalizeString(usernameValue ?? fullNameValue);
+        idleMembers.push({ id: memberId, username });
+      }
+    }
+  } catch (err) {
+    console.error("Error executing get_group_realtime_status:", err);
+  }
+
+  if (idleMembers.length > 0) {
+    return idleMembers;
+  }
+
+  const { data: memberRows, error: memberError } = await supabaseAdmin
+    .from("group_members")
+    .select("profile_id")
+    .eq("group_id", groupId);
+
+  if (memberError) {
+    throw new Error(`Failed to fetch group members: ${memberError.message}`);
+  }
+
+  for (const row of memberRows ?? []) {
+    const profileId = extractMemberId(row?.profile_id);
+    if (!profileId || profileId === senderId) continue;
+    idleMembers.push({ id: profileId });
+  }
+
+  return idleMembers;
+}
+
+async function fetchSubscriptions(userIds: string[]) {
+  if (!supabaseAdmin) throw new Error("Supabase admin client is not configured");
+  if (userIds.length === 0) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from("push_subscriptions")
+    .select("id, user_id, endpoint, p256dh, auth")
+    .in("user_id", userIds);
+
+  if (error) {
+    throw new Error(`Failed to fetch push subscriptions: ${error.message}`);
+  }
+
+  return data ?? [];
+}
+
+async function deleteSubscription(id: string | null | undefined) {
+  if (!id || !supabaseAdmin) return;
+  try {
+    const { error } = await supabaseAdmin
+      .from("push_subscriptions")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Failed to delete expired subscription:", error);
+    }
+  } catch (err) {
+    console.error("Exception while deleting subscription:", err);
+  }
+}
+
+function ensureActions(options: Record<string, unknown>) {
+  const actions = Array.isArray(options.actions) ? options.actions : [];
+  if (actions.length === 0) {
+    options.actions = [
+      { action: "open", title: "Open FocusFlow" },
+      { action: "snooze-5m", title: "Snooze 5m" }
+    ];
+  }
+}
+
+function buildNotificationPayload(params: {
+  senderName: string;
+  groupName: string;
+  groupId: string;
+  appId?: string;
+  recipientId: string;
+  recipientName?: string;
+}) {
+  const options: Record<string, unknown> = {
+    tag: `${DEFAULT_TAG_PREFIX}-${params.groupId}`,
+    renotify: true,
+    requireInteraction: true,
+    icon: DEFAULT_ICON,
+    badge: DEFAULT_BADGE,
+    vibrate: DEFAULT_VIBRATION,
+    timestamp: Date.now(),
+    data: {
+      type: "group_wake_up_nudge",
+      senderName: params.senderName,
+      groupName: params.groupName,
+      groupId: params.groupId,
+      appId: params.appId ?? null,
+      recipientId: params.recipientId,
+      recipientName: params.recipientName ?? null,
+      triggeredAt: new Date().toISOString()
+    }
+  };
+
+  ensureActions(options);
+
+  return {
+    title: "Wake Up Call",
+    body: `${params.senderName} nudged ${params.groupName} to get back to studying.`,
+    options
+  };
+}
+
+function buildTopic(groupId: string, recipientId: string) {
+  return `wake_${groupId}_${recipientId}`;
+}
+
+Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
+
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  }
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const normalized = normalizePayload(body ?? {});
+
+    const group = await fetchGroup(normalized.groupId);
+    const senderName = (await fetchProfileName(normalized.senderId)) ?? "A study buddy";
+
+    const idleMembers = await fetchIdleMembers(normalized.groupId, normalized.senderId);
+
+    if (idleMembers.length === 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        sentCount: 0,
+        message: "No idle members available to notify."
+      }), {
+        status: 202,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    const memberMap = new Map(idleMembers.map((m) => [m.id, m.username]));
+    const subscriptions = await fetchSubscriptions(Array.from(memberMap.keys()));
+
+    if (subscriptions.length === 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        sentCount: 0,
+        message: "No push subscriptions found for idle members."
+      }), {
+        status: 202,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    const results: Array<{ id: string | null; userId: string; status: "sent" | "error"; message?: string }> = [];
+    const successfulRecipients = new Set<string>();
+    const groupName = normalizeString(group.name) ?? "Your Study Group";
+
+    for (const subscription of subscriptions) {
+      const userId = extractMemberId(subscription.user_id);
+      if (!userId) continue;
+
+      const payload = buildNotificationPayload({
+        senderName,
+        groupName,
+        groupId: normalized.groupId,
+        appId: normalized.appId,
+        recipientId: userId,
+        recipientName: memberMap.get(userId)
+      });
+
+      try {
+        await webpush.sendNotification({
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: subscription.p256dh,
+            auth: subscription.auth
+          }
+        }, JSON.stringify(payload), {
+          TTL: 30,
+          urgency: "high",
+          headers: { Topic: buildTopic(normalized.groupId, userId) }
+        });
+
+        successfulRecipients.add(userId);
+        results.push({ id: subscription.id, userId, status: "sent" });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        results.push({ id: subscription.id, userId, status: "error", message });
+        if (error && typeof error === "object" && "statusCode" in error && (error as { statusCode?: number }).statusCode === 410) {
+          await deleteSubscription(subscription.id);
+        }
+      }
+    }
+
+    const sentCount = successfulRecipients.size;
+    const success = sentCount > 0;
+
+    return new Response(JSON.stringify({
+      success,
+      sentCount,
+      results
+    }), {
+      status: success ? 200 : 202,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  } catch (error) {
+    console.error("Failed to send group wake up notifications:", error);
+    return new Response(JSON.stringify({
+      error: String(error instanceof Error ? error.message : error)
+    }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  }
+});
