@@ -13,8 +13,6 @@ const urlsToCache = [
     './icons/pause.png',
     './icons/play.png',
     './icons/stop.png',
-    './focusflow/schedule/index.html',
-    './.well-known/assetlinks.json',
     OFFLINE_URL, // Add the offline page to cache
     'https://placehold.co/192x192/0a0a0a/e0e0e0?text=Flow+192',
     'https://placehold.co/512x512/0a0a0a/e0e0e0?text=Flow+512',
