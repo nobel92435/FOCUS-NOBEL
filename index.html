@@ -2758,7 +2758,7 @@
                     <h1 class="text-xl font-bold text-gray-100">Group Rankings</h1>
                     <div class="w-10"></div>
                 </header>
-                <div class="p-4 border-b border-gray-800 sticky top-[73px] bg-gray-900 z-10">
+                <div class="p-4 border-b border-gray-800 bg-gray-900 z-10">
                     <div class="flex space-x-1 bg-gray-800 p-1 rounded-lg mb-4" id="group-ranking-sort-tabs">
                         <button class="group-filter-btn flex-1" data-sort="new">New</button>
                         <button class="group-filter-btn flex-1" data-sort="attendance">Attendance</button>
@@ -2766,8 +2766,8 @@
                     </div>
                     <div class="flex items-center justify-center space-x-6 text-sm" id="group-ranking-filters">
                         <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" data-filter="univ" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
-                            <span>Univ</span>
+                            <input type="checkbox" data-filter="private" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
+                            <span>Private</span>
                         </label>
                         <label class="flex items-center space-x-2 cursor-pointer">
                             <input type="checkbox" data-filter="available" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
@@ -4833,6 +4833,8 @@ let pauseStartTime = 0;
             members: {},
             sessions: {}
         };
+
+        let currentGroupMemberIds = [];
         
         // --- NEW: State for Group Rankings Infinite Scroll ---
         let groupRankingsState = {
@@ -10702,23 +10704,39 @@ if (achievementsGrid) {
 
             const sortMethod = document.querySelector('#group-ranking-sort-tabs .active')?.dataset.sort || 'studytime';
             const filters = {
-                univ: document.querySelector('[data-filter="univ"]')?.checked,
+                private: document.querySelector('[data-filter="private"]')?.checked,
                 available: document.querySelector('[data-filter="available"]')?.checked,
                 public: document.querySelector('[data-filter="public"]')?.checked,
             };
 
+            let shouldAutoLoadNextPage = false;
+
             try {
                 // Assumes the 'get-enriched-groups' Edge Function now supports pagination, sorting, and filtering
                 const { data: enriched, error: fnError } = await supabase.functions.invoke('get-enriched-groups', {
-                    body: { 
+                    body: {
                         page: groupRankingsState.currentPage,
                         limit: groupRankingsState.limit,
                         sort: sortMethod,
                         filters: filters
                     }
                 });
-                
+
                 if (fnError) throw fnError;
+
+                let filteredGroups = Array.isArray(enriched) ? [...enriched] : [];
+                const showPrivateOnly = !!filters?.private;
+                const showPublicOnly = !!filters?.public;
+
+                if (showPrivateOnly && !showPublicOnly) {
+                    filteredGroups = filteredGroups.filter(group => !!group?.password);
+                } else if (showPublicOnly && !showPrivateOnly) {
+                    filteredGroups = filteredGroups.filter(group => !group?.password);
+                }
+
+                if (filters?.available) {
+                    filteredGroups = filteredGroups.filter(group => (group?.membersCount || 0) < (group?.capacity || 0));
+                }
 
                 if (!enriched || enriched.length < groupRankingsState.limit) {
                     groupRankingsState.hasMore = false;
@@ -10726,7 +10744,7 @@ if (achievementsGrid) {
                     if(findGroupsPageContainer) findGroupsPageContainer.removeEventListener('scroll', handleGroupRankingsScroll);
                 }
 
-                const newGroupsHtml = enriched.map((g, idx) => {
+                const newGroupsHtml = filteredGroups.map((g, idx) => {
                     const rank = ((groupRankingsState.currentPage - 1) * groupRankingsState.limit) + idx + 1;
                     const isFull = g.membersCount >= g.capacity;
                     const isJoined = (currentUserData?.joined_groups || []).includes(g.id);
@@ -10734,7 +10752,7 @@ if (achievementsGrid) {
                     const category = pick(g.category, 'General');
                     const leaderName = pick(g.leaderName, g.leader_name, '—');
                     const timeGoal = pick(g.timeGoal, g.time_goal, 0);
-        
+
                     return `
                         <div class="group-card ranking bg-gray-800 rounded-xl overflow-hidden shadow-lg" data-group-id="${g.id}">
                           <div class="p-4">
@@ -10764,13 +10782,24 @@ if (achievementsGrid) {
                 }).join('');
 
                 if (container) {
-                     if (isInitialLoad) {
-                        container.innerHTML = `<div class="flex flex-col gap-4">${newGroupsHtml}</div>` || `<div class="empty-group"><i class="fas fa-search-minus"></i><h3>No Groups Found</h3><p>Try adjusting your filters or create a new group!</p></div>`;
-                    } else {
-                        container.querySelector('.flex')?.insertAdjacentHTML('beforeend', newGroupsHtml);
+                    const hasResults = filteredGroups.length > 0;
+                    if (isInitialLoad) {
+                        if (hasResults) {
+                            container.innerHTML = `<div class="flex flex-col gap-4">${newGroupsHtml}</div>`;
+                        } else {
+                            container.innerHTML = `<div class="empty-group"><i class="fas fa-search-minus"></i><h3>No Groups Found</h3><p>Try adjusting your filters or create a new group!</p></div>`;
+                        }
+                    } else if (hasResults) {
+                        const listWrapper = container.querySelector('.flex.flex-col');
+                        if (listWrapper) {
+                            listWrapper.insertAdjacentHTML('beforeend', newGroupsHtml);
+                        } else {
+                            container.innerHTML = `<div class="flex flex-col gap-4">${newGroupsHtml}</div>`;
+                        }
                     }
+                    shouldAutoLoadNextPage = !hasResults && groupRankingsState.hasMore;
                 }
-                
+
                 groupRankingsState.currentPage++;
                 attachJoinGroupListeners(); // Attach listeners for the new items
 
@@ -10783,6 +10812,9 @@ if (achievementsGrid) {
                 const loadingIndicator = document.getElementById(loadingIndicatorId);
                 if (loadingIndicator) loadingIndicator.remove();
                 groupRankingsState.isLoading = false;
+                if (shouldAutoLoadNextPage) {
+                    loadMoreGroupRankings();
+                }
             }
         }
 
@@ -11391,6 +11423,8 @@ if (achievementsGrid) {
             memberTimerIntervals.forEach(clearInterval);
             memberTimerIntervals = [];
 
+            currentGroupMemberIds = Array.isArray(memberIds) ? [...memberIds] : [];
+
             if (!memberIds || memberIds.length === 0) {
                 groupRealtimeData = { members: {}, sessions: {} };
                 renderGroupSubPage(document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home');
@@ -11569,119 +11603,215 @@ if (achievementsGrid) {
             }
         }
 
-        function renderGroupAttendance() {
-            const container = document.getElementById('calendar-grid');
-            if (!container) return;
-            
+        async function renderGroupAttendance() {
+            const calendarContainer = document.getElementById('calendar-grid');
+            if (!calendarContainer) return;
+
+            const prevBtn = document.getElementById('prev-month-btn');
+            if (prevBtn) {
+                prevBtn.onclick = () => {
+                    attendanceMonth--;
+                    if (attendanceMonth < 0) {
+                        attendanceMonth = 11;
+                        attendanceYear--;
+                    }
+                    renderGroupAttendance();
+                };
+            }
+
+            const nextBtn = document.getElementById('next-month-btn');
+            if (nextBtn) {
+                nextBtn.onclick = () => {
+                    attendanceMonth++;
+                    if (attendanceMonth > 11) {
+                        attendanceMonth = 0;
+                        attendanceYear++;
+                    }
+                    renderGroupAttendance();
+                };
+            }
+
+            const targetYear = attendanceYear;
+            const targetMonth = attendanceMonth;
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            document.getElementById('current-month-display').textContent = `${monthNames[attendanceMonth]} ${attendanceYear}`;
-            
-            const firstDayOfMonth = new Date(attendanceYear, attendanceMonth, 1);
-            const lastDayOfMonth = new Date(attendanceYear, attendanceMonth + 1, 0);
+            const monthTitle = `${monthNames[targetMonth]} ${targetYear}`;
+            const monthDisplay = document.getElementById('current-month-display');
+            if (monthDisplay) monthDisplay.textContent = monthTitle;
+
+            const firstDayOfMonth = new Date(targetYear, targetMonth, 1);
+            const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0);
             const daysInMonth = lastDayOfMonth.getDate();
             const startDay = firstDayOfMonth.getDay();
-            
-            container.innerHTML = Array(startDay).fill('<div class="calendar-day empty"></div>').join('');
+
+            calendarContainer.innerHTML = Array(startDay).fill('<div class="calendar-day empty"></div>').join('');
             for (let day = 1; day <= daysInMonth; day++) {
-                const dateStr = `${attendanceYear}-${(attendanceMonth+1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-                container.innerHTML += `
-                    <div class="calendar-day ${isToday(attendanceYear, attendanceMonth, day) ? 'today' : ''}" data-date="${dateStr}">
+                const dateStr = `${targetYear}-${(targetMonth + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                calendarContainer.innerHTML += `
+                    <div class="calendar-day ${isToday(targetYear, targetMonth, day) ? 'today' : ''}" data-date="${dateStr}">
                         <div class="day-number">${day}</div>
                         <div class="day-time">0h 0m</div>
                     </div>
                 `;
             }
-            
-            const attendanceData = {};
-            const memberAttendanceData = {};
-            
-            for(const memberId in groupRealtimeData.sessions) {
-                memberAttendanceData[memberId] = { totalTime: 0, daysStudied: new Set() };
-                const memberSessions = groupRealtimeData.sessions[memberId];
-                memberSessions.forEach(session => {
-                    // Check if session.endedAt is a Date object before using it
-                    const sessionDate = session.endedAt instanceof Date ? session.endedAt : null;
-                    if(sessionDate && sessionDate.getFullYear() === attendanceYear && sessionDate.getMonth() === attendanceMonth && session.type === 'study') { // Filter for study sessions
-                        const dateStr = sessionDate.toISOString().split('T')[0];
-                        attendanceData[dateStr] = (attendanceData[dateStr] || 0) + session.durationSeconds;
-                        memberAttendanceData[memberId].totalTime += session.durationSeconds;
-                        memberAttendanceData[memberId].daysStudied.add(dateStr);
-                    }
-                });
-            }
 
-            const calendarDays = document.querySelectorAll('.calendar-day:not(.empty)');
-            let totalGroupTime = 0;
-            let daysWithStudy = 0;
-            
-            calendarDays.forEach(dayEl => {
-                const date = dayEl.dataset.date;
-                const daySeconds = attendanceData[date] || 0;
-                totalGroupTime += daySeconds;
-                
-                if (daySeconds > 0) {
-                    daysWithStudy++;
-                    dayEl.classList.add('active');
-                }
-                
-                const hours = Math.floor(daySeconds / 3600);
-                const minutes = Math.floor((daySeconds % 3600) / 60);
-                dayEl.querySelector('.day-time').textContent = `${hours}h ${minutes}m`;
-            });
-            
-            document.getElementById('total-hours').textContent = formatTime(totalGroupTime, false);
-            document.getElementById('days-studied').textContent = daysWithStudy;
-            const attendanceRate = Math.round((daysWithStudy / daysInMonth) * 100);
-            document.getElementById('attendance-rate').textContent = `${attendanceRate}%`;
-            
+            const totalHoursEl = document.getElementById('total-hours');
+            const daysStudiedEl = document.getElementById('days-studied');
+            const attendanceRateEl = document.getElementById('attendance-rate');
+            if (totalHoursEl) totalHoursEl.textContent = '--';
+            if (daysStudiedEl) daysStudiedEl.textContent = '--';
+            if (attendanceRateEl) attendanceRateEl.textContent = '--%';
+
             const memberGrid = document.getElementById('attendance-member-grid');
             if (memberGrid) {
-                memberGrid.innerHTML = Object.keys(groupRealtimeData.members).map(memberId => {
-                    const userData = groupRealtimeData.members[memberId];
-                    if (!userData) return '';
-                    const memberStats = memberAttendanceData[memberId] || { totalTime: 0, daysStudied: new Set() };
-                    const memberAttendanceRate = Math.round((memberStats.daysStudied.size / daysInMonth) * 100);
-                    
-                    const avatarHTML = userData.photo_url
-                        ? `<img src="${userData.photo_url}" class="w-full h-full object-cover">`
-                        : `<span>${(userData.username || 'U').charAt(0).toUpperCase()}</span>`;
+                memberGrid.innerHTML = '<div class="text-center text-gray-500 py-4"><i class="fas fa-spinner fa-spin"></i></div>';
+            }
 
-                    return `
-                        <div class="member-row">
-                            <div class="member-avatar-sm overflow-hidden">${avatarHTML}</div>
-                            <div class="member-info">
-                                <div class="member-name-sm">${userData.username || 'Anonymous'}</div>
-                                <div class="member-time-sm">${formatTime(memberStats.totalTime, false)} total</div>
-                                <div class="attendance-progress">
-                                    <div class="progress-bar" style="width: ${memberAttendanceRate}%"></div>
+            const memberIds = (Array.isArray(currentGroupMemberIds) && currentGroupMemberIds.length > 0)
+                ? [...currentGroupMemberIds]
+                : Object.keys(groupRealtimeData.members || {});
+
+            if (memberIds.length === 0) {
+                if (memberGrid) {
+                    memberGrid.innerHTML = '<div class="text-center text-gray-500 py-4">No members to display.</div>';
+                }
+                if (totalHoursEl) totalHoursEl.textContent = formatTime(0, false);
+                if (daysStudiedEl) daysStudiedEl.textContent = '0';
+                if (attendanceRateEl) attendanceRateEl.textContent = '0%';
+                return;
+            }
+
+            const monthStart = new Date(targetYear, targetMonth, 1);
+            const monthEnd = new Date(targetYear, targetMonth + 1, 1);
+
+            try {
+                const [attendanceResult, profileResult] = await Promise.all([
+                    supabase
+                        .from('sessions')
+                        .select('profile_id, durationSeconds, endedAt, type')
+                        .in('profile_id', memberIds)
+                        .eq('type', 'study')
+                        .gte('endedAt', monthStart.toISOString())
+                        .lt('endedAt', monthEnd.toISOString()),
+                    supabase
+                        .from('profiles')
+                        .select('id, username, photo_url')
+                        .in('id', memberIds)
+                ]);
+
+                if (attendanceResult.error) throw attendanceResult.error;
+                if (profileResult.error) throw profileResult.error;
+
+                if (targetYear !== attendanceYear || targetMonth !== attendanceMonth) {
+                    return;
+                }
+
+                const attendanceData = {};
+                const memberAttendanceData = {};
+                memberIds.forEach(id => {
+                    memberAttendanceData[id] = { totalTime: 0, daysStudied: new Set() };
+                });
+
+                (attendanceResult.data || []).forEach(row => {
+                    if (!row) return;
+                    const endedAt = row.endedAt ? new Date(row.endedAt) : null;
+                    if (!endedAt || Number.isNaN(endedAt.getTime())) return;
+                    if (endedAt.getFullYear() !== targetYear || endedAt.getMonth() !== targetMonth) return;
+
+                    const dateStr = endedAt.toISOString().split('T')[0];
+                    const duration = Number(row.durationSeconds) || 0;
+                    attendanceData[dateStr] = (attendanceData[dateStr] || 0) + duration;
+
+                    if (!memberAttendanceData[row.profile_id]) {
+                        memberAttendanceData[row.profile_id] = { totalTime: 0, daysStudied: new Set() };
+                    }
+                    memberAttendanceData[row.profile_id].totalTime += duration;
+                    memberAttendanceData[row.profile_id].daysStudied.add(dateStr);
+                });
+
+                const calendarDays = document.querySelectorAll('#calendar-grid .calendar-day:not(.empty)');
+                let totalGroupTime = 0;
+                let daysWithStudy = 0;
+
+                calendarDays.forEach(dayEl => {
+                    const date = dayEl.dataset.date;
+                    const daySeconds = attendanceData[date] || 0;
+                    totalGroupTime += daySeconds;
+
+                    if (daySeconds > 0) {
+                        daysWithStudy++;
+                        dayEl.classList.add('active');
+                    }
+
+                    const hours = Math.floor(daySeconds / 3600);
+                    const minutes = Math.floor((daySeconds % 3600) / 60);
+                    const timeLabel = `${hours}h ${minutes}m`;
+                    const timeEl = dayEl.querySelector('.day-time');
+                    if (timeEl) timeEl.textContent = timeLabel;
+                });
+
+                if (totalHoursEl) totalHoursEl.textContent = formatTime(totalGroupTime, false);
+                if (daysStudiedEl) daysStudiedEl.textContent = String(daysWithStudy);
+                if (attendanceRateEl) {
+                    const attendanceRate = daysInMonth > 0 ? Math.round((daysWithStudy / daysInMonth) * 100) : 0;
+                    attendanceRateEl.textContent = `${attendanceRate}%`;
+                }
+
+                const memberProfilesById = {};
+                (profileResult.data || []).forEach(profile => {
+                    if (profile?.id) {
+                        memberProfilesById[profile.id] = profile;
+                    }
+                });
+
+                Object.values(groupRealtimeData.members || {}).forEach(member => {
+                    if (member?.id) {
+                        memberProfilesById[member.id] = { ...memberProfilesById[member.id], ...member };
+                    }
+                });
+
+                if (memberGrid) {
+                    const sortedMemberIds = [...memberIds].sort((a, b) => {
+                        const nameA = (memberProfilesById[a]?.username || '').toLowerCase();
+                        const nameB = (memberProfilesById[b]?.username || '').toLowerCase();
+                        return nameA.localeCompare(nameB);
+                    });
+
+                    memberGrid.innerHTML = sortedMemberIds.map(memberId => {
+                        const userData = memberProfilesById[memberId] || { username: 'Member' };
+                        const memberStats = memberAttendanceData[memberId] || { totalTime: 0, daysStudied: new Set() };
+                        const memberAttendanceRate = daysInMonth > 0 ? Math.round((memberStats.daysStudied.size / daysInMonth) * 100) : 0;
+
+                        const avatarHTML = userData.photo_url
+                            ? `<img src="${userData.photo_url}" class="w-full h-full object-cover">`
+                            : `<span>${(userData.username || 'U').charAt(0).toUpperCase()}</span>`;
+
+                        return `
+                            <div class="member-row">
+                                <div class="member-avatar-sm overflow-hidden">${avatarHTML}</div>
+                                <div class="member-info">
+                                    <div class="member-name-sm">${userData.username || 'Anonymous'}</div>
+                                    <div class="member-time-sm">${formatTime(memberStats.totalTime, false)} total</div>
+                                    <div class="attendance-progress">
+                                        <div class="progress-bar" style="width: ${memberAttendanceRate}%"></div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm font-semibold">${memberAttendanceRate}%</div>
+                                    <div class="text-xs text-gray-500">${memberStats.daysStudied.size}/${daysInMonth} days</div>
                                 </div>
                             </div>
-                            <div class="text-right">
-                                <div class="text-sm font-semibold">${memberAttendanceRate}%</div>
-                                <div class="text-xs text-gray-500">${memberStats.daysStudied.size}/${daysInMonth} days</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load attendance data:', error);
+                if (memberGrid) {
+                    memberGrid.innerHTML = '<div class="text-center text-red-400 py-4">Unable to load attendance data.</div>';
+                }
+                if (totalHoursEl) totalHoursEl.textContent = formatTime(0, false);
+                if (daysStudiedEl) daysStudiedEl.textContent = '0';
+                if (attendanceRateEl) attendanceRateEl.textContent = '0%';
             }
-            
-            document.getElementById('prev-month-btn').onclick = () => {
-                attendanceMonth--;
-                if (attendanceMonth < 0) {
-                    attendanceMonth = 11;
-                    attendanceYear--;
-                }
-                renderGroupAttendance();
-            };
-            
-            document.getElementById('next-month-btn').onclick = () => {
-                attendanceMonth++;
-                if (attendanceMonth > 11) {
-                    attendanceMonth = 0;
-                    attendanceYear++;
-                }
-                renderGroupAttendance();
-            };
         }
         
         function isToday(year, month, day) {
