@@ -4395,6 +4395,7 @@
                 document.getElementById('manual-start-btn').classList.remove('hidden');
                 document.getElementById('stop-studying-btn').classList.add('hidden');
                 document.getElementById('pause-btn').classList.add('hidden');
+                setPomodoroWakeLockActive(false);
                 pomodoroStatusDisplay.textContent = `Ready for ${newState.replace('_', ' ')}`;
             }
         }
@@ -4848,11 +4849,70 @@ let pauseStartTime = 0;
             autoStartFocus: true
         };
         let pomodoroSounds = {
-            start: "tone_simple_beep", 
+            start: "tone_simple_beep",
             focus: "tone_chime_chord",
             break: "tone_metal_bell",
             volume: 1.0
         };
+        const supportsWakeLock = 'wakeLock' in navigator;
+        let pomodoroWakeLockSentinel = null;
+        let shouldHoldPomodoroWakeLock = false;
+
+        async function requestPomodoroWakeLock() {
+            if (!supportsWakeLock || document.visibilityState !== 'visible') {
+                return;
+            }
+            if (pomodoroWakeLockSentinel) {
+                return;
+            }
+            try {
+                pomodoroWakeLockSentinel = await navigator.wakeLock.request('screen');
+                pomodoroWakeLockSentinel.addEventListener('release', () => {
+                    pomodoroWakeLockSentinel = null;
+                    if (shouldHoldPomodoroWakeLock && document.visibilityState === 'visible') {
+                        requestPomodoroWakeLock();
+                    }
+                });
+            } catch (err) {
+                console.warn('Pomodoro wake lock request failed:', err);
+            }
+        }
+
+        async function releasePomodoroWakeLock() {
+            if (!pomodoroWakeLockSentinel) {
+                return;
+            }
+            try {
+                await pomodoroWakeLockSentinel.release();
+            } catch (err) {
+                console.warn('Pomodoro wake lock release failed:', err);
+            } finally {
+                pomodoroWakeLockSentinel = null;
+            }
+        }
+
+        function setPomodoroWakeLockActive(active) {
+            if (!supportsWakeLock) {
+                return;
+            }
+            shouldHoldPomodoroWakeLock = active;
+            if (active) {
+                requestPomodoroWakeLock();
+            } else {
+                releasePomodoroWakeLock();
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (!supportsWakeLock) return;
+            if (document.visibilityState === 'visible') {
+                if (shouldHoldPomodoroWakeLock && !pomodoroWakeLockSentinel) {
+                    requestPomodoroWakeLock();
+                }
+            } else if (pomodoroWakeLockSentinel) {
+                releasePomodoroWakeLock();
+            }
+        });
         const availableSounds = {
             'None': '',
             '8-Bit Powerup': 'tone_powerup',
@@ -6685,6 +6745,7 @@ let pauseStartTime = 0;
                     finalCopy: breakFinalCopy
                 });
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds, startedAt: workPhaseStartMs });
+                setPomodoroWakeLockActive(true);
             }
 
             document.getElementById('start-studying-btn').classList.add('hidden');
@@ -6703,6 +6764,9 @@ let pauseStartTime = 0;
         }
         
         async function stopTimer() {
+            if (timerMode === 'pomodoro') {
+                setPomodoroWakeLockActive(false);
+            }
             // Stop the UI timer in the web worker
             pomodoroWorker.postMessage({ command: 'stop' });
             cancelSWAlarm(POMODORO_HEADS_UP_TAG);
@@ -6779,6 +6843,7 @@ let pauseStartTime = 0;
                 document.getElementById('resume-btn').classList.remove('hidden');
             } else if (timerMode === 'pomodoro' && !isPaused) {
                 pomodoroWorker.postMessage({ command: 'pause' });
+                setPomodoroWakeLockActive(false);
                 isPaused = true;
                 document.getElementById('pause-btn').classList.add('hidden');
                 document.getElementById('resume-btn').classList.remove('hidden');
@@ -6799,6 +6864,7 @@ let pauseStartTime = 0;
                 document.getElementById('resume-btn').classList.add('hidden');
             } else if (timerMode === 'pomodoro' && isPaused) {
                 pomodoroWorker.postMessage({ command: 'resume' });
+                setPomodoroWakeLockActive(true);
                 isPaused = false;
                 document.getElementById('pause-btn').classList.remove('hidden');
                 document.getElementById('resume-btn').classList.add('hidden');
@@ -6844,6 +6910,7 @@ let pauseStartTime = 0;
 
             // Start the UI timer
             pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds, startedAt: phaseStartMs });
+            setPomodoroWakeLockActive(true);
             if (sessionTimerDisplay) {
                 sessionTimerDisplay.textContent = formatPomodoroTime(initialTimeLeftSeconds);
             }
@@ -12236,6 +12303,10 @@ if (achievementsGrid) {
             timerMode = mode;
             document.getElementById('normal-timer-btn').classList.toggle('active', mode === 'normal');
             document.getElementById('pomodoro-timer-btn').classList.toggle('active', mode === 'pomodoro');
+
+            if (mode !== 'pomodoro') {
+                setPomodoroWakeLockActive(false);
+            }
 
             if (mode === 'pomodoro') {
                 sessionTimerDisplay.textContent = formatPomodoroTime(pomodoroSettings.work * 60);
