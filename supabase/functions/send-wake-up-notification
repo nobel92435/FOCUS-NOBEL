@@ -3,29 +3,48 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import webpush from "npm:web-push";
 
+const DEFAULT_ORIGIN = "https://nobel92435.github.io";
 const allowedOrigins = new Set([
-  "https://nobel92435.github.io",
+  DEFAULT_ORIGIN,
+  "https://nobel92435.github.io/FOCUS-NOBEL",
   "https://nobel92435.github.io/FOCUS-NOBEL/",
   "http://localhost:5173",
   "http://localhost:4173",
   "http://127.0.0.1:5173",
-  "http://127.0.0.1:4173"
+  "http://127.0.0.1:4173",
+  "capacitor://localhost"
 ]);
 
 function resolveOrigin(originHeader: string | null) {
-  if (originHeader && allowedOrigins.has(originHeader)) {
+  if (originHeader && originHeader !== "null") {
+    if (allowedOrigins.has(originHeader)) {
+      return originHeader;
+    }
+
+    try {
+      const parsed = new URL(originHeader);
+      if (parsed.protocol.startsWith("http") && parsed.hostname.endsWith("github.io")) {
+        return originHeader;
+      }
+    } catch (error) {
+      console.warn("Invalid origin header supplied to wake up function:", originHeader, error);
+    }
+
     return originHeader;
   }
-  return "https://nobel92435.github.io";
+  return DEFAULT_ORIGIN;
 }
 
 function buildCorsHeaders(req: Request) {
   const origin = resolveOrigin(req.headers.get("origin"));
   const requestHeaders = req.headers.get("Access-Control-Request-Headers");
+  const allowHeaders = requestHeaders?.length
+    ? requestHeaders
+    : "authorization, x-client-info, apikey, content-type, prefer, x-client-version, x-supabase-api-version";
 
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers": requestHeaders?.length ? requestHeaders : "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": allowHeaders,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Max-Age": "86400",
@@ -170,9 +189,12 @@ Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
 
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders
+    return new Response("", {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Length": "0"
+      }
     });
   }
 

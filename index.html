@@ -3730,54 +3730,55 @@
                 }
                 
                 // --- START FIX: Save to the correct `push_subscriptions` table ---
-                const { data: existingSub, error: findError } = await supabase
-                    .from('push_subscriptions')
-                    .select('id, endpoint, p256dh, auth')
-                    .eq('user_id', currentUser.id)
-                    .eq('endpoint', serverReadySubscription.endpoint)
-                    .maybeSingle();
-
-                console.log('[Debug] ensurePushSubscription: Checked for existing DB subscription. Result:', existingSub, 'Error:', findError);
-
-                if (findError) {
-                    console.error('Error finding existing push subscription:', findError);
-                    return null;
-                }
-
                 const subscriptionPayload = {
                     user_id: currentUser.id,
                     endpoint: serverReadySubscription.endpoint,
                     p256dh: serverReadySubscription.keys.p256dh,
                     auth: serverReadySubscription.keys.auth,
                 };
-                
-                let dbSubscription;
-                
-                // If a subscription exists but its keys have changed, update it.
-                if (existingSub && (existingSub.p256dh !== subscriptionPayload.p256dh || existingSub.auth !== subscriptionPayload.auth)) {
-                    console.log('[Debug] ensurePushSubscription: Subscription exists but keys differ. Updating...');
-                    const { data, error } = await supabase
-                        .from('push_subscriptions')
-                        .update(subscriptionPayload)
-                        .eq('id', existingSub.id)
-                        .select()
-                        .single();
-                    if (error) { console.error('Error updating push subscription:', error); return null; }
-                    dbSubscription = data;
-                } else if (existingSub) {
-                    // If it exists and is identical, just use it.
-                    console.log('[Debug] ensurePushSubscription: Identical subscription exists. Using it.');
-                    dbSubscription = existingSub;
-                } else {
-                    // If it doesn't exist, insert a new one.
-                    console.log('[Debug] ensurePushSubscription: No subscription found in DB. Inserting new one...');
-                    const { data, error } = await supabase
-                        .from('push_subscriptions')
-                        .insert(subscriptionPayload)
-                        .select()
-                        .single();
-                    if (error) { console.error('Error inserting new push subscription:', error); return null; }
-                    dbSubscription = data;
+
+                console.log('[Debug] ensurePushSubscription: Saving subscription payload:', subscriptionPayload);
+
+                const { data: dbSubscription, error: upsertError } = await supabase
+                    .from('push_subscriptions')
+                    .upsert(subscriptionPayload, { onConflict: 'endpoint', ignoreDuplicates: false })
+                    .select()
+                    .single();
+
+                if (upsertError) {
+                    console.error('Error saving push subscription:', upsertError);
+                    if (upsertError.code === '23505') {
+                        console.warn('Subscription endpoint conflict detected, attempting to recover existing record.');
+                        const { data: existingSub, error: recoverError } = await supabase
+                            .from('push_subscriptions')
+                            .select('id, endpoint, p256dh, auth, user_id')
+                            .eq('endpoint', subscriptionPayload.endpoint)
+                            .maybeSingle();
+
+                        if (recoverError) {
+                            console.error('Failed to recover existing subscription after conflict:', recoverError);
+                            return null;
+                        }
+
+                        if (existingSub && (existingSub.user_id !== currentUser.id || existingSub.p256dh !== subscriptionPayload.p256dh || existingSub.auth !== subscriptionPayload.auth)) {
+                            console.log('[Debug] ensurePushSubscription: Updating conflicted subscription to match current user and keys.');
+                            const { data: updatedSub, error: updateError } = await supabase
+                                .from('push_subscriptions')
+                                .update(subscriptionPayload)
+                                .eq('endpoint', subscriptionPayload.endpoint)
+                                .select()
+                                .single();
+                            if (updateError) {
+                                console.error('Failed to update subscription after conflict:', updateError);
+                                return null;
+                            }
+                            return updatedSub;
+                        }
+
+                        return existingSub;
+                    }
+
+                    return null;
                 }
                 // --- END FIX ---
 
