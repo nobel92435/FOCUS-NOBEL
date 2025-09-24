@@ -1,0 +1,426 @@
+// Supabase Edge Function: send-group-wake-up-notification
+// Sends wake-up notifications to every idle member in a group.
+import { createClient } from "jsr:@supabase/supabase-js@2";
+import webpush from "npm:web-push";
+
+type Nullable<T> = T | null | undefined;
+
+type PushSubscriptionRecord = {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+};
+
+type GroupWakeUpPayload = {
+  groupId?: unknown;
+  senderId?: unknown;
+  appId?: unknown;
+};
+
+type ProfileRow = {
+  id: string;
+  username: string | null;
+  studying: unknown;
+};
+
+type GroupRow = {
+  id: string;
+  name: string | null;
+};
+
+const allowedOrigins = new Set([
+  "https://nobel92435.github.io",
+  "https://nobel92435.github.io/FOCUS-NOBEL/",
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:4173"
+]);
+
+function buildCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin");
+  const allowOrigin = origin && allowedOrigins.has(origin) ? origin : "https://nobel92435.github.io";
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+    "Access-Control-Max-Age": "86400"
+  } satisfies Record<string, string>;
+}
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY");
+const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY");
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables");
+}
+
+if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  console.error("Missing VAPID keys for wake up notifications");
+}
+
+webpush.setVapidDetails("mailto:nobelft26@gmail.com", VAPID_PUBLIC_KEY ?? "", VAPID_PRIVATE_KEY ?? "");
+
+const supabaseAdmin = SUPABASE_URL && SERVICE_ROLE_KEY ? createClient(SUPABASE_URL, SERVICE_ROLE_KEY) : null;
+
+const DEFAULT_ICON = "https://placehold.co/192x192/0a0a0a/e0e0e0?text=Flow+192";
+const DEFAULT_BADGE = "https://placehold.co/96x96/0a0a0a/e0e0e0?text=Flow";
+const DEFAULT_VIBRATION = [200, 100, 200, 100, 200];
+const DEFAULT_TAG_PREFIX = "wake-up";
+
+function sanitizeString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function isStudying(studying: unknown): boolean {
+  if (!studying) return false;
+  if (typeof studying === "string") {
+    try {
+      const parsed = JSON.parse(studying);
+      return isStudying(parsed);
+    } catch (_err) {
+      return false;
+    }
+  }
+  if (typeof studying !== "object") return false;
+  const value = studying as { type?: unknown };
+  return typeof value.type === "string" && value.type.toLowerCase() === "study";
+}
+
+async function fetchGroup(groupId: string): Promise<GroupRow | null> {
+  if (!supabaseAdmin) return null;
+  const { data, error } = await supabaseAdmin
+    .from("groups")
+    .select("id, name")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to fetch group info", error);
+    return null;
+  }
+
+  return data ?? null;
+}
+
+async function fetchMemberIds(groupId: string): Promise<string[]> {
+  if (!supabaseAdmin) return [];
+  const { data, error } = await supabaseAdmin
+    .from("group_members")
+    .select("profile_id")
+    .eq("group_id", groupId);
+
+  if (error) {
+    console.error("Failed to fetch group members", error);
+    return [];
+  }
+
+  return (data ?? [])
+    .map((row) => row?.profile_id as Nullable<string>)
+    .filter((id): id is string => typeof id === "string" && id.length > 0);
+}
+
+async function fetchProfiles(userIds: string[]): Promise<ProfileRow[]> {
+  if (!supabaseAdmin || userIds.length === 0) return [];
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("id, username, studying")
+    .in("id", userIds);
+
+  if (error) {
+    console.error("Failed to fetch profiles", error);
+    return [];
+  }
+
+  return (data ?? []) as ProfileRow[];
+}
+
+async function fetchSenderName(senderId: string | undefined): Promise<string | undefined> {
+  if (!senderId || !supabaseAdmin) return undefined;
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("username")
+    .eq("id", senderId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to fetch sender profile", error);
+    return undefined;
+  }
+
+  return (data?.username && data.username.trim().length > 0) ? data.username.trim() : undefined;
+}
+
+async function fetchLatestSubscriptions(userIds: string[]): Promise<PushSubscriptionRecord[]> {
+  if (!supabaseAdmin || userIds.length === 0) return [];
+  const { data, error } = await supabaseAdmin
+    .from("push_subscriptions")
+    .select("id, user_id, endpoint, p256dh, auth, created_at")
+    .in("user_id", userIds)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to fetch push subscriptions", error);
+    return [];
+  }
+
+  const latest = new Map<string, PushSubscriptionRecord>();
+  for (const record of data ?? []) {
+    if (!record || !record.user_id || latest.has(record.user_id)) continue;
+    if (!record.endpoint || !record.p256dh || !record.auth) continue;
+    latest.set(record.user_id, {
+      id: record.id,
+      user_id: record.user_id,
+      endpoint: record.endpoint,
+      p256dh: record.p256dh,
+      auth: record.auth
+    });
+  }
+
+  return Array.from(latest.values());
+}
+
+async function deleteSubscription(id: Nullable<string>) {
+  if (!supabaseAdmin || !id) return;
+  try {
+    const { error } = await supabaseAdmin
+      .from("push_subscriptions")
+      .delete()
+      .eq("id", id);
+    if (error) {
+      console.error("Failed to delete expired subscription", error);
+    }
+  } catch (err) {
+    console.error("Error deleting expired subscription", err);
+  }
+}
+
+function buildNotificationPayload(
+  recipientId: string,
+  meta: { senderName?: string; groupId: string; groupName?: string | null; appId?: string }
+) {
+  const displayName = meta.senderName ?? "A group member";
+  const groupLabel = meta.groupName && meta.groupName.trim().length > 0 ? meta.groupName.trim() : "your study group";
+  const title = `${displayName} nudged your group`;
+  const body = `Time to get back to studying with ${groupLabel}!`;
+  const tag = `${DEFAULT_TAG_PREFIX}-${meta.groupId}`;
+  const timestamp = Date.now();
+
+  const options = {
+    body,
+    tag,
+    renotify: true,
+    requireInteraction: true,
+    icon: DEFAULT_ICON,
+    badge: DEFAULT_BADGE,
+    vibrate: DEFAULT_VIBRATION,
+    timestamp,
+    actions: [
+      { action: "open", title: "Open FocusFlow" }
+    ],
+    data: {
+      type: "group_wake_up",
+      groupId: meta.groupId,
+      recipientId,
+      senderName: displayName,
+      appId: meta.appId ?? null,
+      timestamp
+    }
+  } satisfies Record<string, unknown>;
+
+  return {
+    title,
+    options
+  };
+}
+
+Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
+
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: corsHeaders
+    });
+  }
+
+  try {
+    if (!supabaseAdmin) {
+      throw new Error("Supabase admin client is not configured");
+    }
+
+    const payload = (await req.json()) as GroupWakeUpPayload | null;
+    const groupId = sanitizeString(payload?.groupId);
+    const senderId = sanitizeString(payload?.senderId);
+    const appId = sanitizeString(payload?.appId) ?? undefined;
+
+    if (!groupId) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: "Missing group id."
+      }), {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    const group = await fetchGroup(groupId);
+    if (!group) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: "Group not found."
+      }), {
+        status: 404,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    const senderName = await fetchSenderName(senderId);
+
+    const memberIds = await fetchMemberIds(groupId);
+    const filteredMemberIds = memberIds.filter((id) => id !== senderId);
+
+    if (filteredMemberIds.length === 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: "No eligible members to notify."
+      }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    const profiles = await fetchProfiles(filteredMemberIds);
+    const idleMemberIds = profiles
+      .filter((profile) => !isStudying(profile.studying))
+      .map((profile) => profile.id);
+
+    if (idleMemberIds.length === 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: "Everyone is currently studying."
+      }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    const subscriptions = await fetchLatestSubscriptions(idleMemberIds);
+    if (subscriptions.length === 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        message: "Idle members do not have push notifications enabled."
+      }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    let sentCount = 0;
+    const failures: { userId: string; reason: string }[] = [];
+
+    for (const subscription of subscriptions) {
+      const notificationPayload = buildNotificationPayload(subscription.user_id, {
+        senderName,
+        groupId,
+        groupName: group.name,
+        appId
+      });
+
+      const pushSubscription = {
+        endpoint: subscription.endpoint,
+        keys: {
+          p256dh: subscription.p256dh,
+          auth: subscription.auth
+        }
+      };
+
+      try {
+        await webpush.sendNotification(pushSubscription, JSON.stringify(notificationPayload), {
+          TTL: 30,
+          urgency: "high",
+          headers: {
+            Topic: notificationPayload.options.tag as string
+          }
+        });
+        sentCount += 1;
+      } catch (error) {
+        console.error(`Failed to send wake up notification to ${subscription.user_id}`, error);
+        const statusCode = typeof error === "object" && error && "statusCode" in error ? (error as { statusCode?: number }).statusCode : undefined;
+        if (statusCode === 410) {
+          await deleteSubscription(subscription.id);
+        }
+        const message = error instanceof Error ? error.message : "Failed to send notification";
+        failures.push({ userId: subscription.user_id, reason: message });
+      }
+    }
+
+    const responseBody = {
+      success: sentCount > 0,
+      sentCount,
+      attemptedCount: subscriptions.length,
+      failures
+    };
+
+    if (sentCount === 0) {
+      return new Response(JSON.stringify({
+        ...responseBody,
+        message: failures.length > 0 ? "All wake up attempts failed." : "No notifications were delivered."
+      }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    return new Response(JSON.stringify({
+      ...responseBody,
+      message: `Wake up notifications sent to ${sentCount} member${sentCount === 1 ? '' : 's'}.`
+    }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  } catch (error) {
+    console.error("Edge function error", error);
+    return new Response(JSON.stringify({
+      success: false,
+      message: error instanceof Error ? error.message : String(error)
+    }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  }
+});
