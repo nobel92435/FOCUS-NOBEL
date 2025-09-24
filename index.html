@@ -3479,7 +3479,7 @@
         [SERVER_HEADS_UP_GROUP_KEYS.BREAK_TO_WORK]: null
     };
 
-    function clearServerHeadsUpTimeout(entry) {
+    function clearServerHeadsUpTimeout(entry, { includeFinal = true } = {}) {
         if (entry && typeof entry === 'object') {
             if (entry.timeoutId) {
                 clearTimeout(entry.timeoutId);
@@ -3487,6 +3487,18 @@
             }
             if ('notificationPayload' in entry) {
                 entry.notificationPayload = null;
+            }
+            if (includeFinal) {
+                if (entry.finalTimeoutId) {
+                    clearTimeout(entry.finalTimeoutId);
+                    entry.finalTimeoutId = null;
+                }
+                if ('finalNotificationPayload' in entry) {
+                    entry.finalNotificationPayload = null;
+                }
+                if ('finalSendAt' in entry) {
+                    entry.finalSendAt = null;
+                }
             }
         }
     }
@@ -4545,6 +4557,85 @@ function scheduleServerHeadsUpTrigger({ groupKey, sendAtMs, notificationPayload 
     );
 }
 
+function scheduleServerFinalTrigger({ groupKey, sendAtMs, notificationPayload }) {
+    if (!groupKey || !(groupKey in serverHeadsUpSchedules)) {
+        return;
+    }
+
+    const scheduleInfo = serverHeadsUpSchedules[groupKey];
+    if (!scheduleInfo) {
+        return;
+    }
+
+    if (scheduleInfo.finalTimeoutId) {
+        clearTimeout(scheduleInfo.finalTimeoutId);
+        scheduleInfo.finalTimeoutId = null;
+    }
+
+    const delayMs = Math.max(Math.round(sendAtMs - Date.now()), 0);
+    let timeoutId = null;
+
+    const finalSendAtIso = new Date(sendAtMs).toISOString();
+    scheduleInfo.finalNotificationPayload = notificationPayload;
+    scheduleInfo.finalSendAt = finalSendAtIso;
+
+    const logContext = {
+        groupKey,
+        sendAt: finalSendAtIso,
+        sessionId: scheduleInfo.sessionId || null
+    };
+
+    const runTrigger = async () => {
+        const latest = serverHeadsUpSchedules[groupKey];
+        if (!latest || latest.finalNotificationPayload !== notificationPayload) {
+            return;
+        }
+
+        try {
+            const handled = await triggerServerNotification(notificationPayload, { silent: true });
+            if (handled) {
+                console.log(
+                    '%c[SUCCESS]%c Server final push requested from Edge Function.',
+                    'color: #f97316; font-weight: bold; background-color: #0f172a; padding: 2px 6px; border-radius: 4px;',
+                    'color: inherit;',
+                    logContext
+                );
+            } else {
+                console.warn('Server final notification did not confirm delivery.', logContext);
+            }
+        } catch (error) {
+            console.error('Failed to trigger server final notification:', error);
+        } finally {
+            const latestSchedule = serverHeadsUpSchedules[groupKey];
+            if (latestSchedule && latestSchedule.finalTimeoutId === timeoutId) {
+                latestSchedule.finalTimeoutId = null;
+            }
+        }
+    };
+
+    if (delayMs <= 0) {
+        console.log(
+            '%c[INFO]%c Server final push will be requested immediately.',
+            'color: #f59e0b; font-weight: bold;',
+            'color: inherit;',
+            logContext
+        );
+        runTrigger();
+        return;
+    }
+
+    timeoutId = setTimeout(runTrigger, delayMs);
+    scheduleInfo.finalTimeoutId = timeoutId;
+
+    console.log(
+        '%c[INFO]%c Server final push will be requested in',
+        'color: #fbbf24; font-weight: bold;',
+        'color: inherit;',
+        `${(delayMs / 1000).toFixed(1)}s`,
+        logContext
+    );
+}
+
         function normalizePushPayloadType(value) {
             if (typeof value !== 'string') {
                 return '';
@@ -4609,12 +4700,16 @@ function scheduleServerHeadsUpTrigger({ groupKey, sendAtMs, notificationPayload 
                 return;
             }
             const scheduleInfo = serverHeadsUpSchedules[groupKey];
-            clearServerHeadsUpTimeout(scheduleInfo);
-            if (deliveryType === 'final') {
-                serverHeadsUpSchedules[groupKey] = null;
-            } else if (scheduleInfo) {
-                scheduleInfo.headsUpDeliveredAt = Date.now();
+            if (!scheduleInfo) {
+                return;
             }
+            if (deliveryType === 'final') {
+                clearServerHeadsUpTimeout(scheduleInfo);
+                serverHeadsUpSchedules[groupKey] = null;
+                return;
+            }
+            clearServerHeadsUpTimeout(scheduleInfo, { includeFinal: false });
+            scheduleInfo.headsUpDeliveredAt = Date.now();
         }
 
         function coerceEpochMilliseconds(value) {
@@ -5574,8 +5669,11 @@ let pauseStartTime = 0;
                 kind: scheduledKind || 'heads_up_local_fallback',
                 sessionId: resolvedSessionId,
                 sessionEndMs,
+                finalSendAt: sessionEndIso,
                 timeoutId: null,
-                notificationPayload: null
+                notificationPayload: null,
+                finalTimeoutId: null,
+                finalNotificationPayload: null
             };
 
             const notificationPayload = {
@@ -5588,13 +5686,36 @@ let pauseStartTime = 0;
                 type: 'pomodoro_heads_up'
             };
 
+            const finalNotificationPayload = {
+                title: resolvedFinalCopy.title,
+                body: resolvedFinalCopy.body,
+                newState,
+                oldState,
+                session: sessionMetadata,
+                options: {
+                    ...finalOptions,
+                    data: {
+                        ...(finalOptions.data || {}),
+                        session: sessionMetadata
+                    }
+                },
+                type: 'pomodoro_final'
+            };
+
             serverHeadsUpSchedules[groupKey] = scheduleContext;
             scheduleContext.notificationPayload = notificationPayload;
+            scheduleContext.finalNotificationPayload = finalNotificationPayload;
 
             scheduleServerHeadsUpTrigger({
                 groupKey,
                 sendAtMs,
                 notificationPayload
+            });
+
+            scheduleServerFinalTrigger({
+                groupKey,
+                sendAtMs: sessionEndMs,
+                notificationPayload: finalNotificationPayload
             });
         }
 
