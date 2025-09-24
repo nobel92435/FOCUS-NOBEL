@@ -2953,6 +2953,7 @@
         </div>
     </div>
     <div id="group-settings-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Group Settings</div><button class="close-modal">&times;</button></div><div class="space-y-2"><div class="group-settings-item" data-action="edit-info"><i class="fas fa-edit"></i><span>Edit Group Info</span></div><div class="group-settings-item" data-action="group-rules"><i class="fas fa-gavel"></i><span>Group Rules</span></div><div class="group-settings-item" data-action="wake-up-group"><i class="fas fa-bullhorn"></i><span>Wake Up Group</span></div><div class="group-settings-item" data-action="kick-member"><i class="fas fa-user-minus"></i><span>Kick Member</span></div><div class="group-settings-item" data-action="promote-member"><i class="fas fa-crown"></i><span>Promote Member</span></div><div class="group-settings-item" data-action="member-logs"><i class="fas fa-history"></i><span>Member Logs</span></div><div class="group-settings-item text-red-400" data-action="leave-group"><i class="fas fa-sign-out-alt"></i><span>Leave Group</span></div></div></div></div>
+    <div id="kick-member-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Kick Member</div><button class="close-modal">&times;</button></div><div id="kick-member-content" class="space-y-3 max-h-80 overflow-y-auto"></div><div class="mt-4 text-right"><button class="close-modal px-4 py-2 bg-gray-700 rounded-lg">Close</button></div></div></div>
     <div id="studicon-store-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Choose Your Studicon</div><button class="close-modal">&times;</button></div><div><div id="studicon-category-tabs" class="flex space-x-1 border-b border-gray-700 mb-4"></div><div id="studicon-picker" class="avatar-picker max-h-60 overflow-y-auto"></div><button id="save-studicon-btn" class="w-full mt-4 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save</button></div></div></div>
     <div id="edit-group-info-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Group Information</div><button class="close-modal">&times;</button></div><form id="edit-group-info-form" class="space-y-4"><input type="hidden" id="edit-group-id-input"><div><label class="block text-sm font-medium text-gray-300">Group Name</label><input id="edit-group-name" type="text" class="w-full bg-gray-700 rounded-lg p-2 mt-1" required></div><div><label class="block text-sm font-medium text-gray-300">Description</label><textarea id="edit-group-description" class="w-full bg-gray-700 rounded-lg p-2 mt-1 h-24" required></textarea></div><div><label class="block text-sm font-medium text-gray-300">Category</label><select id="edit-group-category" class="w-full bg-gray-700 rounded-lg p-2 mt-1"><option>General study</option><option>Language study</option><option>Secondary School</option><option>University</option></select></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-300">Time Goal (h)</label><input id="edit-group-goal" type="number" min="1" max="10" class="w-full bg-gray-700 rounded-lg p-2 mt-1"></div><div><label class="block text-sm font-medium text-gray-300">Capacity</label><input id="edit-group-capacity" type="number" min="2" max="100" class="w-full bg-gray-700 rounded-lg p-2 mt-1"></div></div><div><label class="block text-sm font-medium text-gray-300">Password (optional)</label><input id="edit-group-password" type="text" class="w-full bg-gray-700 rounded-lg p-2 mt-1" placeholder="Leave blank for public"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
     <div id="group-rules-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Group Rules</div><div id="group-rules-controls"></div><button class="close-modal">&times;</button></div><div id="group-rules-display" class="text-gray-300 whitespace-pre-wrap"></div><div id="group-rules-edit-container" class="hidden"><textarea id="group-rules-textarea" class="w-full bg-gray-700 rounded-lg p-3 h-48"></textarea><button id="save-group-rules-btn" class="w-full mt-2 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg">Save Rules</button></div></div></div>
@@ -3933,7 +3934,30 @@
             .eq('id', groupId)
             .maybeSingle();
         if (error) throw error;
-        return data || null;
+        return data ? { ...data, members: normalizeGroupMemberIds(data.members) } : null;
+    }
+
+    function normalizeGroupMemberIds(rawMembers) {
+        if (!rawMembers) return [];
+        if (Array.isArray(rawMembers)) {
+            return rawMembers.filter(Boolean);
+        }
+        if (typeof rawMembers === 'string') {
+            try {
+                return normalizeGroupMemberIds(JSON.parse(rawMembers));
+            } catch (error) {
+                console.warn('Failed to parse members string to JSON:', error);
+                return [];
+            }
+        }
+        if (typeof rawMembers === 'object') {
+            const values = Object.values(rawMembers);
+            if (values.every(value => typeof value === 'string')) {
+                return values.filter(Boolean);
+            }
+            return Object.keys(rawMembers).filter(Boolean);
+        }
+        return [];
     }
 
     async function updateGroup(groupId, values) {
@@ -4816,6 +4840,7 @@ let pauseStartTime = 0;
         let groupDetailUnsubscribers = [];
         let memberTimerIntervals = [];
         let currentGroupId = null;
+        let currentGroupMeta = null;
         let groupRealtimeData = {
             members: {},
             sessions: {}
@@ -11013,6 +11038,7 @@ if (achievementsGrid) {
             // Load group data once (no real-time needed for this)
             const { data: group, error } = await supabase.from('groups').select('*').eq('id', groupId).single();
             if (error || !group) { showPage('page-my-groups'); return; }
+            currentGroupMeta = { ...group, members: normalizeGroupMemberIds(group.members) };
 
             // Settings icons (no change here)
             const settingsBtnContainer = document.getElementById('group-settings-btn-container');
@@ -11685,7 +11711,103 @@ if (achievementsGrid) {
             groupDetailUnsubscribers.forEach(unsub => unsub());
             groupDetailUnsubscribers = [];
 
+            function getStoragePathFromUrl(url) {
+                if (!url) return null;
+                try {
+                    const parsed = new URL(url);
+                    const marker = '/group-images/';
+                    const idx = parsed.pathname.indexOf(marker);
+                    if (idx === -1) return null;
+                    return decodeURIComponent(parsed.pathname.slice(idx + marker.length));
+                } catch (error) {
+                    console.warn('Failed to parse storage url:', error);
+                    return null;
+                }
+            }
+
+            async function deleteMessage(msg) {
+                try {
+                    const { error: deleteError } = await supabase
+                        .from('group_messages')
+                        .delete()
+                        .eq('id', msg.id);
+                    if (deleteError) throw deleteError;
+
+                    if (msg.image_url) {
+                        const storagePath = getStoragePathFromUrl(msg.image_url);
+                        if (storagePath) {
+                            const { error: storageError } = await storage
+                                .from('group-images')
+                                .remove([storagePath]);
+                            if (storageError) {
+                                console.warn('Failed to remove image from storage:', storageError);
+                            }
+                        }
+                    }
+
+                    const existing = chatMessagesContainer.querySelector(`[data-message-id="${msg.id}"]`);
+                    if (existing) {
+                        existing.remove();
+                    }
+
+                    await loadMessages(true);
+                    showToast('Message deleted.', 'success');
+                } catch (error) {
+                    console.error('Failed to delete message:', error);
+                    showToast('Could not delete the message.', 'error');
+                }
+            }
+
+            function attachDeletionHandlers(messageElement, msg) {
+                const canDelete = msg.sender_id === currentUser?.id || (currentGroupMeta && currentGroupMeta.leaderId === currentUser?.id);
+                if (!canDelete) return;
+
+                let pressTimer = null;
+
+                const startPress = (event) => {
+                    if (event.type === 'mousedown' && event.button !== 0) return;
+                    cancelPress();
+                    pressTimer = setTimeout(() => {
+                        pressTimer = null;
+                        showConfirmationModal(
+                            'Delete Message?',
+                            'This will remove the message for everyone in the group.',
+                            async () => {
+                                await deleteMessage(msg);
+                            }
+                        );
+                    }, 600);
+                };
+
+                const cancelPress = () => {
+                    if (pressTimer) {
+                        clearTimeout(pressTimer);
+                        pressTimer = null;
+                    }
+                };
+
+                messageElement.addEventListener('mousedown', startPress);
+                messageElement.addEventListener('touchstart', startPress, { passive: true });
+                ['mouseup', 'mouseleave', 'touchend', 'touchcancel', 'touchmove'].forEach(evt => {
+                    messageElement.addEventListener(evt, cancelPress);
+                });
+                messageElement.addEventListener('contextmenu', (event) => {
+                    event.preventDefault();
+                    showConfirmationModal(
+                        'Delete Message?',
+                        'This will remove the message for everyone in the group.',
+                        async () => {
+                            await deleteMessage(msg);
+                        }
+                    );
+                });
+            }
+
             async function loadMessages(isInitialLoad = false) {
+                if (isInitialLoad) {
+                    lastMessageTimestamp = new Date(0).toISOString();
+                }
+
                 // Fetch only messages created after the last one we saw
                 const { data: msgs, error } = await supabase
                     .from('group_messages')
@@ -11698,7 +11820,7 @@ if (achievementsGrid) {
                     console.error('Failed to load chat messages:', error);
                     return;
                 }
-                
+
                 if (isInitialLoad) {
                     chatMessagesContainer.innerHTML = '';
                 }
@@ -11711,7 +11833,8 @@ if (achievementsGrid) {
                         const isSent = msg.sender_id === currentUser.id;
                         const el = document.createElement('div');
                         el.classList.add('chat-message', isSent ? 'sent' : 'received');
-                        
+                        el.dataset.messageId = msg.id;
+
                         let content = msg.text ? `<div>${msg.text}</div>` : `<img src="${msg.image_url}" class="rounded-lg max-w-full h-auto cursor-pointer" style="max-height: 300px;" onclick="viewImage(this.src)">`;
                         const timeText = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -11721,6 +11844,7 @@ if (achievementsGrid) {
                             ${content}
                             <div class="text-xs ${isSent ? 'text-blue-200' : 'text-gray-400'} text-right mt-1">${timeText}</div>
                           </div>`;
+                        attachDeletionHandlers(el, msg);
                         chatMessagesContainer.appendChild(el);
                     });
                     chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
@@ -13326,8 +13450,95 @@ if (achievementsGrid) {
                     item.dataset.disabled = 'false';
                 }
             });
-            
+
             modal.classList.add('active');
+        }
+
+        function openKickMemberModal(groupData) {
+            const modal = document.getElementById('kick-member-modal');
+            const listContainer = document.getElementById('kick-member-content');
+            if (!modal || !listContainer) return;
+
+            const members = Object.values(groupRealtimeData.members || {})
+                .filter(member => member && member.id && member.id !== groupData.leaderId)
+                .sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+
+            if (members.length === 0) {
+                listContainer.innerHTML = '<div class="text-sm text-gray-400">No other members can be removed right now.</div>';
+            } else {
+                listContainer.innerHTML = members.map(member => {
+                    const avatar = member.photo_url
+                        ? `<img src="${member.photo_url}" class="w-full h-full object-cover">`
+                        : `<span>${(member.username || 'U').charAt(0).toUpperCase()}</span>`;
+
+                    return `
+                        <div class="flex items-center justify-between bg-gray-800 rounded-lg p-3" data-member-id="${member.id}">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-gray-700 overflow-hidden flex items-center justify-center text-lg font-semibold text-gray-200">${avatar}</div>
+                                <div class="font-semibold text-white">${member.username || 'Member'}</div>
+                            </div>
+                            <button class="kick-member-btn px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-sm rounded-md">Kick</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            modal.classList.add('active');
+        }
+
+        async function kickMemberFromGroup(memberId, memberName = 'Member') {
+            if (!currentGroupId || !memberId) return;
+
+            try {
+                const { error: deleteMembershipError } = await supabase
+                    .from('group_members')
+                    .delete()
+                    .eq('group_id', currentGroupId)
+                    .eq('profile_id', memberId);
+                if (deleteMembershipError) throw deleteMembershipError;
+
+                const { data: profileData, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('joined_groups')
+                    .eq('id', memberId)
+                    .maybeSingle();
+                if (profileError) throw profileError;
+
+                const updatedJoinedGroups = (profileData?.joined_groups || []).filter(id => id !== currentGroupId);
+                const { error: updateProfileError } = await supabase
+                    .from('profiles')
+                    .update({ joined_groups: updatedJoinedGroups })
+                    .eq('id', memberId);
+                if (updateProfileError) throw updateProfileError;
+
+                const updatedMembers = normalizeGroupMemberIds(currentGroupMeta?.members).filter(id => id !== memberId);
+                await updateGroup(currentGroupId, { members: updatedMembers });
+                if (currentGroupMeta) {
+                    currentGroupMeta = { ...currentGroupMeta, members: updatedMembers };
+                }
+
+                delete groupRealtimeData.members[memberId];
+
+                const rowEl = document.querySelector(`#kick-member-content [data-member-id="${memberId}"]`);
+                if (rowEl) {
+                    rowEl.remove();
+                }
+
+                if (!document.querySelector('#kick-member-content .kick-member-btn')) {
+                    const listContainer = document.getElementById('kick-member-content');
+                    if (listContainer) {
+                        listContainer.innerHTML = '<div class="text-sm text-gray-400">No other members can be removed right now.</div>';
+                    }
+                }
+
+                const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
+                renderGroupSubPage(activeSubPage);
+
+                showToast(`${memberName} was removed from the group.`, 'success');
+            } catch (error) {
+                console.error('Failed to kick member:', error);
+                showToast('Could not remove the member. Please try again.', 'error');
+            }
         }
 
         async function openGroupRulesModal() {
@@ -13687,6 +13898,21 @@ if (achievementsGrid) {
             const modal = document.getElementById('group-settings-modal');
 
             switch(action) {
+                case 'kick-member':
+                    modal.classList.remove('active');
+                    try {
+                        const groupData = currentGroupId ? await fetchGroup(currentGroupId) : null;
+                        if (groupData) {
+                            currentGroupMeta = groupData;
+                            openKickMemberModal(groupData);
+                        } else {
+                            showToast('Could not load group members.', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Failed to open kick member modal:', error);
+                        showToast('Could not load group members.', 'error');
+                    }
+                    break;
                 case 'leave-group':
                     modal.classList.remove('active'); // Close settings modal first
                     showConfirmationModal(
@@ -13705,7 +13931,8 @@ if (achievementsGrid) {
                                 showToast('Failed to leave the group.', 'error');
                                 return;
                             }
-                            if (groupData.leaderId === currentUser.id && (groupData.members?.length || 0) > 1) {
+                            const memberIds = normalizeGroupMemberIds(groupData.members);
+                            if (groupData.leaderId === currentUser.id && memberIds.length > 1) {
                                 showToast('Please transfer leadership or kick all members before leaving.', 'error');
                                 return;
                             }
@@ -13722,7 +13949,7 @@ if (achievementsGrid) {
                             }
 
                             const updatedJoinedGroups = (userData.joined_groups || []).filter(id => id !== currentGroupId);
-                            const updatedMembers = (groupData.members || []).filter(id => id !== currentUser.id);
+                            const updatedMembers = memberIds.filter(id => id !== currentUser.id);
 
                             const { error: upUserErr } = await supabase
                                 .from('profiles')
@@ -13784,6 +14011,31 @@ if (achievementsGrid) {
                     modal.classList.remove('active');
                     break;
             }
+        });
+
+        ael('kick-member-modal', 'click', (e) => {
+            const btn = e.target.closest('.kick-member-btn');
+            if (!btn) return;
+
+            const row = btn.closest('[data-member-id]');
+            const memberId = row?.dataset.memberId;
+            const memberName = row?.querySelector('.font-semibold')?.textContent?.trim() || 'Member';
+            if (!memberId) return;
+
+            showConfirmationModal(
+                'Kick Member?',
+                `Remove ${memberName} from the group?`,
+                async () => {
+                    const originalText = btn.textContent;
+                    btn.disabled = true;
+                    btn.textContent = 'Removing...';
+                    await kickMemberFromGroup(memberId, memberName);
+                    if (btn.isConnected) {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }
+                }
+            );
         });
 
 
