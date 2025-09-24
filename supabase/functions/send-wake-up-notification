@@ -6,6 +6,7 @@ import webpush from "npm:web-push";
 const allowedOrigins = new Set([
   "https://nobel92435.github.io",
   "https://nobel92435.github.io/FOCUS-NOBEL/",
+  "https://nobel92435.github.io/FOCUS-NOBEL",
   "http://localhost:5173",
   "http://localhost:4173",
   "http://127.0.0.1:5173",
@@ -15,11 +16,23 @@ const allowedOrigins = new Set([
 function buildCorsHeaders(req: Request) {
   const origin = req.headers.get("origin");
   const allowOrigin = origin && allowedOrigins.has(origin) ? origin : "https://nobel92435.github.io";
+  const requestHeaders = req.headers.get("access-control-request-headers");
+  const requestMethod = req.headers.get("access-control-request-method");
+
+  const allowHeaders = requestHeaders && requestHeaders.length > 0
+    ? requestHeaders
+    : "authorization, x-client-info, apikey, content-type";
+
+  const allowMethods = requestMethod && requestMethod.length > 0
+    ? `${requestMethod}, OPTIONS`
+    : "POST, OPTIONS";
+
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Max-Age": "86400"
+    "Access-Control-Allow-Headers": allowHeaders,
+    "Access-Control-Allow-Methods": allowMethods,
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin"
   };
 }
 
@@ -140,7 +153,7 @@ Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
 
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
