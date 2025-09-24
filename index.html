@@ -45,6 +45,70 @@
 
         /* UI element styles */
         .timer-text { font-weight: 900; letter-spacing: -0.05em; }
+
+        /* Advanced Group Suite */
+        .advanced-hero {
+            background: linear-gradient(135deg, rgba(20, 184, 166, 0.25), rgba(56, 189, 248, 0.18));
+            border: 1px solid rgba(20, 184, 166, 0.35);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 20px 45px rgba(15, 118, 110, 0.25);
+        }
+        .advanced-hero-icon {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(45, 212, 191, 0.35);
+            border-radius: 9999px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #2dd4bf;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .advanced-feature-card {
+            background: linear-gradient(180deg, rgba(17, 24, 39, 0.85), rgba(17, 24, 39, 0.55));
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 18px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        .advanced-feature-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(45, 212, 191, 0.4);
+            box-shadow: 0 18px 32px rgba(14, 165, 233, 0.2);
+        }
+        .advanced-feature-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: rgba(59, 130, 246, 0.15);
+            color: #38bdf8;
+            padding: 0.35rem 0.85rem;
+            border-radius: 9999px;
+        }
+        .advanced-feature-section {
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.82);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .advanced-feature-section.active {
+            border-color: rgba(20, 184, 166, 0.65);
+            box-shadow: 0 16px 30px rgba(20, 184, 166, 0.25);
+        }
+        .advanced-feature-section.active .advanced-feature-title {
+            color: #5eead4;
+        }
         
         /* Pomodoro Switch Styles */
         .timer-switch-container {
@@ -2870,9 +2934,9 @@
                         <i class="fas fa-chart-bar"></i>
                         <p class="text-xs mt-1">Rankings</p>
                     </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="invite">
-                        <i class="fas fa-user-plus"></i>
-                        <p class="text-xs mt-1">Invite</p>
+                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="advanced">
+                        <i class="fas fa-bell"></i>
+                        <p class="text-xs mt-1">Advanced</p>
                     </button>
                     <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="chat">
                         <i class="fas fa-comments"></i>
@@ -2899,6 +2963,63 @@
     
     <div id="study-goal-modal" class="modal">
         <div class="modal-content"><div class="modal-header"><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form"><div class="mb-4"><label for="study-goal-input" class="block text-gray-300 mb-2">Daily Study Goal (hours)</label><input type="number" id="study-goal-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required min="1" max="24"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Set Goal</button></form></div></div>
+
+    <div id="advanced-features-modal" class="modal">
+        <div class="modal-content max-w-3xl w-[90%]">
+            <div class="modal-header">
+                <div class="modal-title">FocusFlow Pro Playbook</div>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="space-y-6 text-left">
+                <p class="text-gray-300">Everything inside the Pro plan is designed to help study groups stay aligned, energized, and protected from burnout.</p>
+
+                <div class="space-y-4">
+                    <div class="advanced-feature-section" data-feature-section="analytics">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="advanced-feature-title text-xl font-semibold text-white">Advanced Group Analytics (Pro)</h3>
+                            <span class="advanced-feature-badge"><i class="fas fa-chart-pie"></i> Insights</span>
+                        </div>
+                        <ul class="list-disc list-inside text-gray-300 space-y-2">
+                            <li>Productivity heatmap (when group studies most).</li>
+                            <li>Subject mix per group.</li>
+                            <li>Completion ratio (focus:break).</li>
+                        </ul>
+                    </div>
+
+                    <div class="advanced-feature-section" data-feature-section="goals">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="advanced-feature-title text-xl font-semibold text-white">Custom Group Goals (Pro)</h3>
+                            <span class="advanced-feature-badge"><i class="fas fa-flag"></i> Goals</span>
+                        </div>
+                        <ul class="list-disc list-inside text-gray-300 space-y-2">
+                            <li>Group sets shared targets (e.g., “Study 50h this month”).</li>
+                            <li>Unlocks “Pro badges” when achieved.</li>
+                        </ul>
+                    </div>
+
+                    <div class="advanced-feature-section" data-feature-section="rewards">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="advanced-feature-title text-xl font-semibold text-white">Group Rewards / Streak Protection (Pro)</h3>
+                            <span class="advanced-feature-badge"><i class="fas fa-gift"></i> Rewards</span>
+                        </div>
+                        <ul class="list-disc list-inside text-gray-300 space-y-2">
+                            <li>Use group streak multipliers.</li>
+                            <li>If all members study daily → streak protected.</li>
+                            <li>Missed day breaks it. (Gamification for teams.)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                    <div class="text-sm text-gray-400">Ready to elevate your group? Upgrade to Pro and unlock the full toolkit instantly.</div>
+                    <a href="https://focusflow.pro" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-semibold hover:shadow-lg hover:shadow-teal-500/30 transition">
+                        <i class="fas fa-rocket"></i>
+                        Explore Plans
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-4"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-gray-300">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-gray-300">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-gray-300">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-gray-300">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="2" required></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-gray-300">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-gray-300">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-gray-300">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-gray-300">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Automation</h3><div class="space-y-3"> <div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Settings</button></form></div></div>
     <div id="pomodoro-setup-modal" class="modal">
@@ -6531,6 +6652,25 @@ let pauseStartTime = 0;
                 console.error('Error fetching user profile:', error);
                 modal.classList.remove('active');
                 showToast('Could not load user profile.', 'error');
+            }
+        }
+
+        function openAdvancedFeaturesModal(targetFeature = null) {
+            const modal = document.getElementById('advanced-features-modal');
+            if (!modal) return;
+
+            modal.classList.add('active');
+
+            const highlightFeature = targetFeature || 'analytics';
+            const sections = modal.querySelectorAll('[data-feature-section]');
+            sections.forEach(section => {
+                const isMatch = section.dataset.featureSection === highlightFeature;
+                section.classList.toggle('active', isMatch);
+            });
+
+            const targetSection = modal.querySelector(`[data-feature-section="${highlightFeature}"]`);
+            if (targetSection) {
+                targetSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
 
@@ -11363,27 +11503,81 @@ if (achievementsGrid) {
                     });
                     renderGroupLeaderboard('weekly');
                     break;
-                case 'invite':
+                case 'advanced':
                     container.innerHTML = `
-                        <div class="p-4 md:p-6 text-center flex flex-col items-center justify-center h-full">
-                            <div>
-                                <i class="fas fa-share-alt text-5xl text-sky-400 mb-6"></i>
-                                <h2 class="text-2xl font-bold mb-4">Invite Members</h2>
-                                <p class="text-gray-400 mb-6 max-w-md mx-auto">Share the group name with friends and tell them to search for it on the 'Group Rankings' page.</p>
-                                <div class="bg-gray-800 p-4 rounded-lg flex items-center justify-between w-full max-w-sm mx-auto">
-                                    <span id="invite-group-name" class="font-mono text-lg text-white truncate">Loading...</span>
-                                    <button id="copy-group-name-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition flex items-center gap-2">
-                                        <i class="fas fa-copy"></i> Copy
-                                    </button>
+                        <div class="p-4 md:p-8 space-y-6">
+                            <div class="advanced-hero text-center md:text-left">
+                                <div class="advanced-hero-icon mx-auto md:mx-0">
+                                    <i class="fas fa-bell"></i>
+                                </div>
+                                <h2 class="text-3xl font-bold text-white">Advanced Collaboration Suite</h2>
+                                <p class="text-gray-200 mt-3 max-w-2xl mx-auto md:mx-0">Unlock the full FocusFlow Pro toolkit to elevate your study group with actionable analytics, aligned targets, and streak-saving rewards.</p>
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-3 mt-6 justify-center md:justify-start">
+                                    <button class="px-5 py-3 rounded-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-semibold shadow-lg hover:shadow-sky-500/30 hover:scale-[1.02] transition" data-open-advanced-modal data-feature-target="analytics">Preview Analytics</button>
+                                    <button class="px-5 py-3 rounded-full bg-gray-900/70 border border-gray-700 text-gray-200 font-semibold hover:text-white hover:border-teal-400 transition" data-open-advanced-modal>View All Pro Features</button>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-4 md:grid-cols-3">
+                                <div class="advanced-feature-card">
+                                    <span class="advanced-feature-badge"><i class="fas fa-star"></i> Pro Exclusive</span>
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-white">Advanced Group Analytics</h3>
+                                        <p class="text-gray-300 mt-2">Visualize how your group performs throughout the week with intuitive dashboards.</p>
+                                    </div>
+                                    <ul class="text-sm text-gray-300 space-y-2">
+                                        <li class="flex items-start gap-2"><i class="fas fa-fire text-teal-400 mt-1"></i><span>Productivity heatmap showing when the group studies most.</span></li>
+                                        <li class="flex items-start gap-2"><i class="fas fa-book text-teal-400 mt-1"></i><span>Subject mix insights for every group session.</span></li>
+                                        <li class="flex items-start gap-2"><i class="fas fa-percentage text-teal-400 mt-1"></i><span>Completion ratio comparing focus time versus breaks.</span></li>
+                                    </ul>
+                                    <button class="mt-auto px-4 py-2 rounded-lg bg-teal-500/20 text-teal-200 font-semibold hover:bg-teal-500/30 transition" data-open-advanced-modal data-feature-target="analytics">Deep Dive</button>
+                                </div>
+                                <div class="advanced-feature-card">
+                                    <span class="advanced-feature-badge"><i class="fas fa-bullseye"></i> Team Goals</span>
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-white">Custom Group Goals</h3>
+                                        <p class="text-gray-300 mt-2">Keep everyone aligned with shared objectives and celebratory moments.</p>
+                                    </div>
+                                    <ul class="text-sm text-gray-300 space-y-2">
+                                        <li class="flex items-start gap-2"><i class="fas fa-flag-checkered text-teal-400 mt-1"></i><span>Set collaborative targets like “Study 50h this month”.</span></li>
+                                        <li class="flex items-start gap-2"><i class="fas fa-medal text-teal-400 mt-1"></i><span>Unlock animated Pro badges when goals are achieved.</span></li>
+                                    </ul>
+                                    <button class="mt-auto px-4 py-2 rounded-lg bg-sky-500/20 text-sky-200 font-semibold hover:bg-sky-500/30 transition" data-open-advanced-modal data-feature-target="goals">Design Goals</button>
+                                </div>
+                                <div class="advanced-feature-card">
+                                    <span class="advanced-feature-badge"><i class="fas fa-shield-heart"></i> Streak Safe</span>
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-white">Group Rewards &amp; Protection</h3>
+                                        <p class="text-gray-300 mt-2">Motivate consistent study habits with team-based streak multipliers.</p>
+                                    </div>
+                                    <ul class="text-sm text-gray-300 space-y-2">
+                                        <li class="flex items-start gap-2"><i class="fas fa-bolt text-teal-400 mt-1"></i><span>Apply streak multipliers when the entire group shows up.</span></li>
+                                        <li class="flex items-start gap-2"><i class="fas fa-users text-teal-400 mt-1"></i><span>Daily participation from all members keeps the streak protected.</span></li>
+                                        <li class="flex items-start gap-2"><i class="fas fa-skull-crossbones text-rose-400 mt-1"></i><span>Missed day? The streak breaks—perfect for playful gamification.</span></li>
+                                    </ul>
+                                    <button class="mt-auto px-4 py-2 rounded-lg bg-purple-500/20 text-purple-200 font-semibold hover:bg-purple-500/30 transition" data-open-advanced-modal data-feature-target="rewards">Boost Motivation</button>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 space-y-4">
+                                <h3 class="text-xl font-semibold text-white">Bring Pro superpowers to your study circle</h3>
+                                <div class="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
+                                    <div class="advanced-feature-section">
+                                        <h4 class="font-semibold text-white mb-2">Data that guides action</h4>
+                                        <p>Pinpoint high-energy hours, balance subjects, and adjust break patterns instantly.</p>
+                                    </div>
+                                    <div class="advanced-feature-section">
+                                        <h4 class="font-semibold text-white mb-2">Celebrate milestones</h4>
+                                        <p>Shared goals encourage accountability while Pro badges keep morale sky-high.</p>
+                                    </div>
+                                    <div class="advanced-feature-section">
+                                        <h4 class="font-semibold text-white mb-2">Protect the grind</h4>
+                                        <p>Group streak protection rewards collective dedication and nudges slow members back.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     `;
-                    fetchGroup(currentGroupId).then(group => {
-                        if (group) {
-                            document.getElementById('invite-group-name').textContent = group.name;
-                        }
-                    });
                     break;
                 case 'chat':
                     container.innerHTML = `
@@ -13474,16 +13668,9 @@ if (achievementsGrid) {
                 return;
             }
 
-            const copyBtn = e.target.closest('#copy-group-name-btn');
-            if (copyBtn) {
-                const groupName = document.getElementById('invite-group-name').textContent;
-                const tempInput = document.createElement('input');
-                document.body.appendChild(tempInput);
-                tempInput.value = groupName;
-                tempInput.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempInput);
-                showToast('Group name copied!', 'success');
+            const advancedBtn = e.target.closest('[data-open-advanced-modal]');
+            if (advancedBtn) {
+                openAdvancedFeaturesModal(advancedBtn.dataset.featureTarget || null);
                 return;
             }
 
