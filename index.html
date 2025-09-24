@@ -2758,7 +2758,7 @@
                     <h1 class="text-xl font-bold text-gray-100">Group Rankings</h1>
                     <div class="w-10"></div>
                 </header>
-                <div class="p-4 border-b border-gray-800 sticky top-[73px] bg-gray-900 z-10">
+                <div class="p-4 border-b border-gray-800 bg-gray-900">
                     <div class="flex space-x-1 bg-gray-800 p-1 rounded-lg mb-4" id="group-ranking-sort-tabs">
                         <button class="group-filter-btn flex-1" data-sort="new">New</button>
                         <button class="group-filter-btn flex-1" data-sort="attendance">Attendance</button>
@@ -2766,8 +2766,8 @@
                     </div>
                     <div class="flex items-center justify-center space-x-6 text-sm" id="group-ranking-filters">
                         <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" data-filter="univ" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
-                            <span>Univ</span>
+                            <input type="checkbox" data-filter="private" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
+                            <span>Private</span>
                         </label>
                         <label class="flex items-center space-x-2 cursor-pointer">
                             <input type="checkbox" data-filter="available" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
@@ -4833,6 +4833,9 @@ let pauseStartTime = 0;
             members: {},
             sessions: {}
         };
+        let groupAttendanceCache = {};
+        let attendanceFetchToken = 0;
+        let lastAttendanceMemberSignature = '';
         
         // --- NEW: State for Group Rankings Infinite Scroll ---
         let groupRankingsState = {
@@ -10702,22 +10705,23 @@ if (achievementsGrid) {
 
             const sortMethod = document.querySelector('#group-ranking-sort-tabs .active')?.dataset.sort || 'studytime';
             const filters = {
-                univ: document.querySelector('[data-filter="univ"]')?.checked,
+                private: document.querySelector('[data-filter="private"]')?.checked,
                 available: document.querySelector('[data-filter="available"]')?.checked,
                 public: document.querySelector('[data-filter="public"]')?.checked,
+                univ: false,
             };
 
             try {
                 // Assumes the 'get-enriched-groups' Edge Function now supports pagination, sorting, and filtering
                 const { data: enriched, error: fnError } = await supabase.functions.invoke('get-enriched-groups', {
-                    body: { 
+                    body: {
                         page: groupRankingsState.currentPage,
                         limit: groupRankingsState.limit,
                         sort: sortMethod,
                         filters: filters
                     }
                 });
-                
+
                 if (fnError) throw fnError;
 
                 if (!enriched || enriched.length < groupRankingsState.limit) {
@@ -10726,8 +10730,16 @@ if (achievementsGrid) {
                     if(findGroupsPageContainer) findGroupsPageContainer.removeEventListener('scroll', handleGroupRankingsScroll);
                 }
 
-                const newGroupsHtml = enriched.map((g, idx) => {
-                    const rank = ((groupRankingsState.currentPage - 1) * groupRankingsState.limit) + idx + 1;
+                const filteredGroups = (enriched || []).map((group, originalIndex) => ({ group, originalIndex }))
+                    .filter(({ group }) => {
+                        if (filters.private && !group.password) return false;
+                        if (filters.public && group.password) return false;
+                        if (filters.available && group.membersCount >= group.capacity) return false;
+                        return true;
+                    });
+
+                const newGroupsHtml = filteredGroups.map(({ group: g, originalIndex }) => {
+                    const rank = ((groupRankingsState.currentPage - 1) * groupRankingsState.limit) + originalIndex + 1;
                     const isFull = g.membersCount >= g.capacity;
                     const isJoined = (currentUserData?.joined_groups || []).includes(g.id);
                     const createdDate = g.created_at ? new Date(g.created_at) : new Date();
@@ -10764,10 +10776,20 @@ if (achievementsGrid) {
                 }).join('');
 
                 if (container) {
-                     if (isInitialLoad) {
-                        container.innerHTML = `<div class="flex flex-col gap-4">${newGroupsHtml}</div>` || `<div class="empty-group"><i class="fas fa-search-minus"></i><h3>No Groups Found</h3><p>Try adjusting your filters or create a new group!</p></div>`;
-                    } else {
-                        container.querySelector('.flex')?.insertAdjacentHTML('beforeend', newGroupsHtml);
+                    if (isInitialLoad) {
+                        if (newGroupsHtml) {
+                            container.innerHTML = `<div class="flex flex-col gap-4">${newGroupsHtml}</div>`;
+                        } else {
+                            container.innerHTML = `<div class="empty-group"><i class="fas fa-search-minus"></i><h3>No Groups Found</h3><p>Try adjusting your filters or create a new group!</p></div>`;
+                        }
+                    } else if (newGroupsHtml) {
+                        let listContainer = container.querySelector('.flex');
+                        if (!listContainer) {
+                            listContainer = document.createElement('div');
+                            listContainer.className = 'flex flex-col gap-4';
+                            container.appendChild(listContainer);
+                        }
+                        listContainer.insertAdjacentHTML('beforeend', newGroupsHtml);
                     }
                 }
                 
@@ -11008,6 +11030,9 @@ if (achievementsGrid) {
         
         async function renderGroupDetail(groupId) {
             currentGroupId = groupId;
+            groupAttendanceCache = {};
+            attendanceFetchToken++;
+            lastAttendanceMemberSignature = '';
 
             // Stop any previous polling intervals or listeners
             groupDetailUnsubscribers.forEach(unsub => unsub());
@@ -11043,7 +11068,7 @@ if (achievementsGrid) {
 
             // Fetch initial members and start the polling process
             const { data: rows } = await supabase.from('group_members').select('profile_id').eq('group_id', groupId);
-            setupGroupMemberListeners((rows || []).map(r => r.profile_id));
+            await setupGroupMemberListeners((rows || []).map(r => r.profile_id));
 
             // Render the initial sub-page
             const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
@@ -11386,13 +11411,15 @@ if (achievementsGrid) {
             }
         }
 
-        function setupGroupMemberListeners(memberIds) {
+        async function setupGroupMemberListeners(memberIds) {
             // Clear any previous polling intervals.
             memberTimerIntervals.forEach(clearInterval);
             memberTimerIntervals = [];
 
             if (!memberIds || memberIds.length === 0) {
                 groupRealtimeData = { members: {}, sessions: {} };
+                clearAttendanceCacheForCurrentGroup();
+                lastAttendanceMemberSignature = '';
                 renderGroupSubPage(document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home');
                 return;
             }
@@ -11420,6 +11447,12 @@ if (achievementsGrid) {
                 groupRealtimeData.members = newMembers;
                 groupRealtimeData.sessions = {};
 
+                const newSignature = Object.keys(newMembers).sort().join(',');
+                if (newSignature !== lastAttendanceMemberSignature) {
+                    clearAttendanceCacheForCurrentGroup();
+                    lastAttendanceMemberSignature = newSignature;
+                }
+
                 // Re-render the relevant part of the UI.
                 const activeSubPage = document.querySelector('#group-detail-nav .active')?.dataset.subpage || 'home';
                 if (activeSubPage === 'home') {
@@ -11429,11 +11462,13 @@ if (achievementsGrid) {
                     } else {
                         renderGroupMembers();
                     }
+                } else if (activeSubPage === 'attendance') {
+                    await renderGroupAttendance();
                 }
             }
 
             // Fetch initial data immediately, then poll every 20 seconds.
-            refreshGroupStatus();
+            await refreshGroupStatus();
             const refreshInterval = setInterval(refreshGroupStatus, 20000);
             memberTimerIntervals.push(refreshInterval);
         }
@@ -11569,10 +11604,19 @@ if (achievementsGrid) {
             }
         }
 
-        function renderGroupAttendance() {
+        function clearAttendanceCacheForCurrentGroup() {
+            if (!currentGroupId) return;
+            Object.keys(groupAttendanceCache).forEach(key => {
+                if (key.startsWith(`${currentGroupId}:`)) {
+                    delete groupAttendanceCache[key];
+                }
+            });
+        }
+
+        async function renderGroupAttendance() {
             const container = document.getElementById('calendar-grid');
             if (!container) return;
-            
+
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
             document.getElementById('current-month-display').textContent = `${monthNames[attendanceMonth]} ${attendanceYear}`;
             
@@ -11592,95 +11636,149 @@ if (achievementsGrid) {
                 `;
             }
             
-            const attendanceData = {};
-            const memberAttendanceData = {};
-            
-            for(const memberId in groupRealtimeData.sessions) {
-                memberAttendanceData[memberId] = { totalTime: 0, daysStudied: new Set() };
-                const memberSessions = groupRealtimeData.sessions[memberId];
-                memberSessions.forEach(session => {
-                    // Check if session.endedAt is a Date object before using it
-                    const sessionDate = session.endedAt instanceof Date ? session.endedAt : null;
-                    if(sessionDate && sessionDate.getFullYear() === attendanceYear && sessionDate.getMonth() === attendanceMonth && session.type === 'study') { // Filter for study sessions
-                        const dateStr = sessionDate.toISOString().split('T')[0];
-                        attendanceData[dateStr] = (attendanceData[dateStr] || 0) + session.durationSeconds;
-                        memberAttendanceData[memberId].totalTime += session.durationSeconds;
-                        memberAttendanceData[memberId].daysStudied.add(dateStr);
-                    }
-                });
-            }
+            const requestId = ++attendanceFetchToken;
 
-            const calendarDays = document.querySelectorAll('.calendar-day:not(.empty)');
-            let totalGroupTime = 0;
-            let daysWithStudy = 0;
-            
-            calendarDays.forEach(dayEl => {
-                const date = dayEl.dataset.date;
-                const daySeconds = attendanceData[date] || 0;
-                totalGroupTime += daySeconds;
-                
-                if (daySeconds > 0) {
-                    daysWithStudy++;
-                    dayEl.classList.add('active');
-                }
-                
-                const hours = Math.floor(daySeconds / 3600);
-                const minutes = Math.floor((daySeconds % 3600) / 60);
-                dayEl.querySelector('.day-time').textContent = `${hours}h ${minutes}m`;
-            });
-            
-            document.getElementById('total-hours').textContent = formatTime(totalGroupTime, false);
-            document.getElementById('days-studied').textContent = daysWithStudy;
-            const attendanceRate = Math.round((daysWithStudy / daysInMonth) * 100);
-            document.getElementById('attendance-rate').textContent = `${attendanceRate}%`;
-            
             const memberGrid = document.getElementById('attendance-member-grid');
             if (memberGrid) {
-                memberGrid.innerHTML = Object.keys(groupRealtimeData.members).map(memberId => {
-                    const userData = groupRealtimeData.members[memberId];
-                    if (!userData) return '';
-                    const memberStats = memberAttendanceData[memberId] || { totalTime: 0, daysStudied: new Set() };
-                    const memberAttendanceRate = Math.round((memberStats.daysStudied.size / daysInMonth) * 100);
-                    
-                    const avatarHTML = userData.photo_url
-                        ? `<img src="${userData.photo_url}" class="w-full h-full object-cover">`
-                        : `<span>${(userData.username || 'U').charAt(0).toUpperCase()}</span>`;
+                memberGrid.innerHTML = '<div class="text-sm text-gray-400">Loading attendance...</div>';
+            }
 
-                    return `
-                        <div class="member-row">
-                            <div class="member-avatar-sm overflow-hidden">${avatarHTML}</div>
-                            <div class="member-info">
-                                <div class="member-name-sm">${userData.username || 'Anonymous'}</div>
-                                <div class="member-time-sm">${formatTime(memberStats.totalTime, false)} total</div>
-                                <div class="attendance-progress">
-                                    <div class="progress-bar" style="width: ${memberAttendanceRate}%"></div>
+            const memberIds = Object.keys(groupRealtimeData.members || {});
+            if (!memberIds.length) {
+                if (memberGrid) {
+                    memberGrid.innerHTML = '<div class="text-sm text-gray-400">No member data available.</div>';
+                }
+                document.getElementById('total-hours').textContent = formatTime(0, false);
+                document.getElementById('days-studied').textContent = 0;
+                document.getElementById('attendance-rate').textContent = '0%';
+            } else {
+                const cacheKey = `${currentGroupId || 'group'}:${attendanceYear}-${attendanceMonth}`;
+                let monthSessions = groupAttendanceCache[cacheKey];
+
+                if (!monthSessions) {
+                    try {
+                        const rangeStart = new Date(attendanceYear, attendanceMonth, 1).toISOString();
+                        const rangeEnd = new Date(attendanceYear, attendanceMonth + 1, 1).toISOString();
+
+                        const { data, error } = await supabase
+                            .from('sessions')
+                            .select('profile_id, durationSeconds, endedAt, type')
+                            .in('profile_id', memberIds)
+                            .gte('endedAt', rangeStart)
+                            .lt('endedAt', rangeEnd)
+                            .eq('type', 'study');
+
+                        if (error) throw error;
+
+                        monthSessions = (data || []).map(row => ({
+                            profile_id: row.profile_id,
+                            durationSeconds: Number(row.durationSeconds) || 0,
+                            endedAt: row.endedAt ? new Date(row.endedAt) : null,
+                        }));
+
+                        groupAttendanceCache[cacheKey] = monthSessions;
+                    } catch (error) {
+                        console.error('Failed to load attendance data:', error);
+                        if (requestId !== attendanceFetchToken) return;
+                        document.getElementById('total-hours').textContent = '--';
+                        document.getElementById('days-studied').textContent = '--';
+                        document.getElementById('attendance-rate').textContent = '--%';
+                        if (memberGrid) {
+                            memberGrid.innerHTML = '<div class="text-sm text-red-400">Could not load attendance data.</div>';
+                        }
+                        return;
+                    }
+                }
+
+                if (requestId !== attendanceFetchToken) return;
+
+                const attendanceData = {};
+                const memberAttendanceData = {};
+
+                monthSessions.forEach(session => {
+                    if (!session || !session.endedAt) return;
+                    const date = session.endedAt;
+                    const dateStr = date.toISOString().split('T')[0];
+                    attendanceData[dateStr] = (attendanceData[dateStr] || 0) + session.durationSeconds;
+
+                    if (!memberAttendanceData[session.profile_id]) {
+                        memberAttendanceData[session.profile_id] = { totalTime: 0, daysStudied: new Set() };
+                    }
+                    memberAttendanceData[session.profile_id].totalTime += session.durationSeconds;
+                    memberAttendanceData[session.profile_id].daysStudied.add(dateStr);
+                });
+
+                const calendarDays = document.querySelectorAll('.calendar-day:not(.empty)');
+                let totalGroupTime = 0;
+                let daysWithStudy = 0;
+
+                calendarDays.forEach(dayEl => {
+                    const date = dayEl.dataset.date;
+                    const daySeconds = attendanceData[date] || 0;
+                    totalGroupTime += daySeconds;
+
+                    if (daySeconds > 0) {
+                        daysWithStudy++;
+                        dayEl.classList.add('active');
+                    }
+
+                    const hours = Math.floor(daySeconds / 3600);
+                    const minutes = Math.floor((daySeconds % 3600) / 60);
+                    dayEl.querySelector('.day-time').textContent = `${hours}h ${minutes}m`;
+                });
+
+                document.getElementById('total-hours').textContent = formatTime(totalGroupTime, false);
+                document.getElementById('days-studied').textContent = daysWithStudy;
+                const attendanceRate = daysInMonth ? Math.round((daysWithStudy / daysInMonth) * 100) : 0;
+                document.getElementById('attendance-rate').textContent = `${attendanceRate}%`;
+
+                if (memberGrid) {
+                    memberGrid.innerHTML = Object.keys(groupRealtimeData.members).map(memberId => {
+                        const userData = groupRealtimeData.members[memberId];
+                        if (!userData) return '';
+                        const memberStats = memberAttendanceData[memberId] || { totalTime: 0, daysStudied: new Set() };
+                        const memberAttendanceRate = daysInMonth ? Math.round((memberStats.daysStudied.size / daysInMonth) * 100) : 0;
+
+                        const avatarHTML = userData.photo_url
+                            ? `<img src="${userData.photo_url}" class="w-full h-full object-cover">`
+                            : `<span>${(userData.username || 'U').charAt(0).toUpperCase()}</span>`;
+
+                        return `
+                            <div class="member-row">
+                                <div class="member-avatar-sm overflow-hidden">${avatarHTML}</div>
+                                <div class="member-info">
+                                    <div class="member-name-sm">${userData.username || 'Anonymous'}</div>
+                                    <div class="member-time-sm">${formatTime(memberStats.totalTime, false)} total</div>
+                                    <div class="attendance-progress">
+                                        <div class="progress-bar" style="width: ${memberAttendanceRate}%"></div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm font-semibold">${memberAttendanceRate}%</div>
+                                    <div class="text-xs text-gray-500">${memberStats.daysStudied.size}/${daysInMonth} days</div>
                                 </div>
                             </div>
-                            <div class="text-right">
-                                <div class="text-sm font-semibold">${memberAttendanceRate}%</div>
-                                <div class="text-xs text-gray-500">${memberStats.daysStudied.size}/${daysInMonth} days</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    }).join('');
+                }
             }
-            
-            document.getElementById('prev-month-btn').onclick = () => {
+
+            document.getElementById('prev-month-btn').onclick = async () => {
                 attendanceMonth--;
                 if (attendanceMonth < 0) {
                     attendanceMonth = 11;
                     attendanceYear--;
                 }
-                renderGroupAttendance();
+                await renderGroupAttendance();
             };
-            
-            document.getElementById('next-month-btn').onclick = () => {
+
+            document.getElementById('next-month-btn').onclick = async () => {
                 attendanceMonth++;
                 if (attendanceMonth > 11) {
                     attendanceMonth = 0;
                     attendanceYear++;
                 }
-                renderGroupAttendance();
+                await renderGroupAttendance();
             };
         }
         
@@ -13615,6 +13713,7 @@ if (achievementsGrid) {
                         renderGroupMembers();
                     }
                 } else if (activeSubPage === 'attendance') {
+                    clearAttendanceCacheForCurrentGroup();
                     renderGroupAttendance();
                 }
 
