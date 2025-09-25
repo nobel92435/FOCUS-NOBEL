@@ -22,13 +22,372 @@
 
     <style>
         /* Base styles */
-        body { 
-            font-family: 'Inter', sans-serif; 
+        body {
+            font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
-            background-color: #0d1117; /* Darker, modern background */
-            background-image: radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15), transparent 60%);
+            background-color: #050914;
+            background-image:
+                radial-gradient(120% 120% at 0% 0%, rgba(56, 189, 248, 0.18) 0%, rgba(15, 23, 42, 0.9) 45%, #050914 100%),
+                radial-gradient(85% 85% at 100% 0%, rgba(236, 72, 153, 0.12) 0%, rgba(12, 18, 32, 0.95) 55%, #050914 100%);
             color: #e6edf3; /* Brighter default text */
+            min-height: 100vh;
+        }
+        .page-topbar {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.85));
+            border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+            box-shadow: 0 20px 45px rgba(8, 47, 73, 0.35);
+            backdrop-filter: blur(18px);
+        }
+        .timer-page-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            padding: 3rem 0 4rem;
+        }
+        .timer-page-inner {
+            width: 100%;
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+        .glass-panel {
+            position: relative;
+            border-radius: 32px;
+            padding: 2.5rem;
+            background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 55%), rgba(11, 16, 28, 0.82);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            box-shadow: 0 40px 80px rgba(2, 6, 23, 0.55);
+            overflow: hidden;
+        }
+        .glass-panel::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent 60%);
+            pointer-events: none;
+        }
+        .timer-hero {
+            display: grid;
+            gap: 2rem;
+        }
+        @media (min-width: 1024px) {
+            .timer-hero {
+                grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+                align-items: stretch;
+            }
+        }
+        .timer-hero-main {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .timer-hero-heading {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .timer-status-chip {
+            width: fit-content;
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            background: rgba(56, 189, 248, 0.16);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #38bdf8;
+        }
+        .timer-hero-title {
+            font-size: clamp(2.25rem, 4vw + 1rem, 3.75rem);
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            color: #f8fafc;
+        }
+        .timer-hero-subtitle {
+            max-width: 34rem;
+            color: #94a3b8;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        .timer-hero-status {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            min-height: 1.75rem;
+        }
+        .timer-phase-label {
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #fbbf24;
+        }
+        .timer-phase-label:empty {
+            display: none;
+        }
+        .timer-subject-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.9rem;
+            border-radius: 999px;
+            background: rgba(59, 130, 246, 0.12);
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            color: #bfdbfe;
+            font-weight: 600;
+            font-size: 0.9rem;
+            min-height: 1.8rem;
+        }
+        .timer-subject-chip:empty {
+            color: #94a3b8;
+            border-style: dashed;
+            background: rgba(148, 163, 184, 0.08);
+        }
+        .timer-subject-chip:empty::before {
+            content: 'Select a subject';
+        }
+        .timer-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: baseline;
+        }
+        .timer-main-value {
+            font-size: clamp(3.5rem, 11vw, 5.5rem);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            color: #f8fafc;
+        }
+        .timer-pills {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        }
+        .timer-pill {
+            background: rgba(9, 13, 24, 0.88);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 1.1rem;
+            padding: 1rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            box-shadow: 0 24px 48px rgba(8, 47, 73, 0.25);
+        }
+        .pill-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #94a3b8;
+        }
+        .pill-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+        #timer-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: flex-start;
+        }
+        .timer-hero-side {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .glass-panel-sm {
+            background: rgba(10, 15, 28, 0.86);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 24px;
+            padding: 1.75rem;
+            box-shadow: 0 35px 60px rgba(8, 47, 73, 0.28);
+        }
+        .timer-side-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.1rem;
+        }
+        .timer-side-heading h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin: 0;
+        }
+        .timer-side-heading button {
+            background: none;
+            border: none;
+            color: #38bdf8;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 999px;
+            transition: background-color 0.2s ease;
+        }
+        .timer-side-heading button:hover {
+            background-color: rgba(56, 189, 248, 0.16);
+        }
+        .timer-metrics-grid {
+            display: grid;
+            gap: 1rem;
+        }
+        @media (min-width: 640px) {
+            .timer-metrics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            }
+        }
+        .timer-metric {
+            border-radius: 1.1rem;
+            padding: 1rem 1.1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .timer-metric:nth-child(1) {
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.32);
+        }
+        .timer-metric:nth-child(2) {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.32);
+        }
+        .timer-metric:nth-child(3) {
+            background: rgba(244, 114, 182, 0.12);
+            border: 1px solid rgba(244, 114, 182, 0.32);
+        }
+        .metric-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #cbd5f5;
+        }
+        .metric-value {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+        .metric-value[data-mode="pomodoro"] {
+            color: #fb923c;
+        }
+        .group-study-btn {
+            margin-top: 1.25rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.75rem 1.4rem;
+            border-radius: 999px;
+            border: none;
+            background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
+            color: #f8fafc;
+            font-weight: 600;
+            font-size: 0.95rem;
+            box-shadow: 0 24px 45px rgba(79, 70, 229, 0.35);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .group-study-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 32px 60px rgba(79, 70, 229, 0.4);
+        }
+        .timer-secondary-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        @media (min-width: 768px) {
+            .timer-secondary-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+        .soft-card {
+            background: rgba(10, 15, 28, 0.88);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 26px;
+            padding: 1.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            box-shadow: 0 28px 65px rgba(2, 6, 23, 0.45);
+        }
+        .soft-card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.1rem;
+        }
+        .soft-card-icon {
+            width: 3.25rem;
+            height: 3.25rem;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+        .soft-card-icon--sky {
+            background: rgba(56, 189, 248, 0.16);
+            color: #38bdf8;
+        }
+        .soft-card-icon--emerald {
+            background: rgba(16, 185, 129, 0.16);
+            color: #34d399;
+        }
+        .soft-card-icon--rose {
+            background: rgba(244, 114, 182, 0.16);
+            color: #f472b6;
+        }
+        .soft-card-meta {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.75rem;
+            color: #38bdf8;
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+        }
+        .soft-card-meta--emerald {
+            color: #34d399;
+        }
+        .soft-card-meta--rose {
+            color: #f472b6;
+        }
+        .soft-card h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin: 0.1rem 0 0.35rem;
+        }
+        .soft-card p {
+            color: #9aa5be;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin: 0;
+        }
+        .soft-card-btn {
+            align-self: flex-start;
+            padding: 0.65rem 1.3rem;
+            border-radius: 999px;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            background: rgba(56, 189, 248, 0.14);
+            color: #38bdf8;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+        }
+        .soft-card-btn:hover {
+            background: rgba(56, 189, 248, 0.22);
+            color: #f8fafc;
+            transform: translateY(-1px);
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -152,35 +511,35 @@
         
         /* Pomodoro Switch Styles */
         .timer-switch-container {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            background-color: #161b22; /* Darker secondary bg */
-            padding: 0.5rem;
+            justify-content: flex-start;
+            background: rgba(148, 163, 184, 0.12);
+            padding: 0.4rem;
             border-radius: 9999px;
             width: fit-content;
+            border: 1px solid rgba(148, 163, 184, 0.2);
         }
         .timer-switch-btn {
-            padding: 0.5rem 1.5rem;
+            padding: 0.45rem 1.4rem;
             border: none;
             background-color: transparent;
-            color: #9ca3af;
+            color: #94a3b8;
             font-weight: 600;
             border-radius: 9999px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
         .timer-switch-btn.active {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8); /* Teal to Sky gradient */
+            background-image: linear-gradient(to right, #2dd4bf, #38bdf8);
             color: white;
-            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
+            box-shadow: 0 6px 18px rgba(56, 189, 248, 0.3);
         }
         #pomodoro-status {
-            font-size: 1.25rem;
+            font-size: 0.9rem;
             font-weight: 600;
-            color: #f59e0b; /* Amber color for breaks */
-            height: 2rem;
-            margin-bottom: 0.5rem;
+            margin: 0;
+            height: auto;
         }
 
         /* Pomodoro Settings Modal Scroll Fix */
@@ -2791,27 +3150,6 @@
             height: 0;
         }
 
-        /* New Group Study Button */
-        #group-study-timer-btn {
-            background-color: #1f2937;
-            color: #9ca3af;
-            font-weight: 600;
-            border-radius: 9999px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: fit-content;
-            margin: 1rem auto 0; /* Center it below the switch */
-            padding: 0.5rem 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        #group-study-timer-btn:hover {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8);
-            color: white;
-            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
-        }
-
         /* Group Detail Header Dropdown */
         .group-detail-header-dropdown {
             position: relative;
@@ -2885,7 +3223,7 @@
 
     </style>
 </head>
-<body class="bg-gray-900 text-white flex flex-col h-screen antialiased">
+<body class="flex flex-col h-screen antialiased">
 
     <input type="file" id="image-upload-input" class="hidden" accept="image/*">
     <input type="file" id="profile-picture-upload" class="hidden" accept="image/*">
@@ -2966,7 +3304,7 @@
     <div id="app-container" class="flex-col h-screen">
         <main id="main" class="flex-grow overflow-y-auto no-scrollbar">
             <div id="page-timer" class="page active flex-col h-full">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20">
+                <header class="page-topbar p-4 md:p-6 flex items-center justify-between z-20">
                      <div class="flex items-center">
                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                              <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
@@ -2992,33 +3330,118 @@
                          </button>
                      </div>
                 </header>
-                <div class="relative flex-grow flex items-center justify-center -mt-16">
-                    <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
-                        <div class="timer-switch-container mx-auto mb-4">
-                            <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
-                            <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
-                        </div>
-                        <button id="group-study-timer-btn" class="text-sm">
-                            <i class="fas fa-users-line"></i> Group Study
-                        </button>
-                        <p id="active-subject-display" class="text-xl font-semibold text-blue-400 h-7 mb-2"></p>
-                        <p id="pomodoro-status"></p>
-                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
-                        <p id="total-time-display" class="text-gray-400 mt-2">Total Today: 00:00:00</p>
-                        <p id="total-break-time-display" class="text-gray-400 mt-1">Total Break: 00:00:00</p>
-                        <div id="timer-controls" class="mt-8">
-                            <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
-                            <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
-                            <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
-                            <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
-                            <button id="resume-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Resume</button>
-                        </div>
+                <div class="timer-page-wrapper flex-grow overflow-y-auto no-scrollbar">
+                    <div class="timer-page-inner">
+                        <section class="timer-hero glass-panel">
+                            <div class="timer-hero-main">
+                                <div class="timer-hero-heading">
+                                    <span class="timer-status-chip">Daily Focus</span>
+                                    <h1 class="timer-hero-title">Find your flow today</h1>
+                                    <p class="timer-hero-subtitle">Build momentum with intentional sessions, quick stats, and friendly accountability.</p>
+                                </div>
+                                <div class="timer-switch-container">
+                                    <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
+                                    <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
+                                </div>
+                                <div class="timer-hero-status">
+                                    <span id="pomodoro-status" class="timer-phase-label"></span>
+                                    <span id="active-subject-display" class="timer-subject-chip"></span>
+                                </div>
+                                <div class="timer-display">
+                                    <span id="session-timer" class="timer-main-value">00:00:00</span>
+                                </div>
+                                <div class="timer-pills">
+                                    <div class="timer-pill">
+                                        <span class="pill-label">Focus Today</span>
+                                        <span id="total-time-display" class="pill-value">00:00:00</span>
+                                    </div>
+                                    <div class="timer-pill">
+                                        <span class="pill-label">Break Balance</span>
+                                        <span id="total-break-time-display" class="pill-value">00:00:00</span>
+                                    </div>
+                                </div>
+                                <div id="timer-controls" class="mt-6">
+                                    <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
+                                    <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
+                                    <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
+                                    <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
+                                    <button id="resume-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Resume</button>
+                                </div>
+                            </div>
+                            <aside class="timer-hero-side">
+                                <div class="glass-panel-sm">
+                                    <div class="timer-side-heading">
+                                        <h3>Your momentum</h3>
+                                        <button id="timer-open-study-goal" type="button">Adjust goal</button>
+                                    </div>
+                                    <div class="timer-metrics-grid">
+                                        <div class="timer-metric">
+                                            <span class="metric-label">Mode</span>
+                                            <span id="timer-mode-label" class="metric-value" data-mode="normal">Focus</span>
+                                        </div>
+                                        <div class="timer-metric">
+                                            <span class="metric-label">Daily Goal</span>
+                                            <span id="timer-goal-label" class="metric-value">Set a daily goal</span>
+                                        </div>
+                                        <div class="timer-metric">
+                                            <span class="metric-label">Current Streak</span>
+                                            <span id="timer-streak-label" class="metric-value">0 days</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="glass-panel-sm">
+                                    <div class="timer-side-heading">
+                                        <h3>Stay accountable</h3>
+                                    </div>
+                                    <p class="text-sm text-gray-300 leading-relaxed">Jump into a group room to see who is studying right now and share the same focus timer.</p>
+                                    <button id="group-study-timer-btn" class="group-study-btn" type="button">
+                                        <i class="fas fa-users-line"></i>
+                                        Start group session
+                                    </button>
+                                </div>
+                            </aside>
+                        </section>
+                        <section class="timer-secondary-grid">
+                            <article class="soft-card">
+                                <div class="soft-card-header">
+                                    <div class="soft-card-icon soft-card-icon--sky"><i class="fas fa-chart-line"></i></div>
+                                    <div>
+                                        <div class="soft-card-meta">Insights</div>
+                                        <h3>Understand your best hours</h3>
+                                        <p>Spot daily rhythms, session streaks, and deep-work moments with beautifully detailed charts.</p>
+                                    </div>
+                                </div>
+                                <button id="timer-open-stats" class="soft-card-btn" type="button">Open stats</button>
+                            </article>
+                            <article class="soft-card">
+                                <div class="soft-card-header">
+                                    <div class="soft-card-icon soft-card-icon--emerald"><i class="fas fa-calendar-check"></i></div>
+                                    <div>
+                                        <div class="soft-card-meta soft-card-meta--emerald">Planner</div>
+                                        <h3>Design a mindful study plan</h3>
+                                        <p>Drag tasks, set priorities, and stay prepared for upcoming deadlines in one place.</p>
+                                    </div>
+                                </div>
+                                <button id="timer-open-planner" class="soft-card-btn" type="button">Go to planner</button>
+                            </article>
+                            <article class="soft-card">
+                                <div class="soft-card-header">
+                                    <div class="soft-card-icon soft-card-icon--rose"><i class="fas fa-people-group"></i></div>
+                                    <div>
+                                        <div class="soft-card-meta soft-card-meta--rose">Community</div>
+                                        <h3>Join a focus circle</h3>
+                                        <p>Discover study groups that match your interests and keep motivation high together.</p>
+                                    </div>
+                                </div>
+                                <button id="timer-open-groups" class="soft-card-btn" type="button">Explore groups</button>
+                            </article>
+                        </section>
                     </div>
                 </div>
             </div>
             
             <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-topbar p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3032,7 +3455,7 @@
             </div>
             
             <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-topbar p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3052,7 +3475,7 @@
             </div>
             
             <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-topbar p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3078,7 +3501,7 @@
             </div>
 
             <div id="page-profile" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-topbar p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3125,7 +3548,7 @@
             </div>
 
             <div id="page-my-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-topbar p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3140,7 +3563,7 @@
             </div>
             
             <div id="page-find-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-topbar p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
                     <button class="back-button text-gray-400 hover:text-white" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3177,7 +3600,7 @@
             </div>
             
             <div id="page-create-group" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-topbar p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
                     <button class="back-button text-gray-400 hover:text-white" data-target="find-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3199,7 +3622,7 @@
             </div>
             
             <div id="page-group-detail" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-topbar p-4 md:p-6 flex items-center z-20 sticky top-0">
                     <button class="back-button text-gray-400 hover:text-white" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -3285,7 +3708,7 @@
             </div>
             
             <div id="page-pulse-forum" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-topbar p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -5632,6 +6055,20 @@ let pauseStartTime = 0;
         const totalBreakTimeDisplay = document.getElementById('total-break-time-display');
         const activeSubjectDisplay = document.getElementById('active-subject-display');
         const pomodoroStatusDisplay = document.getElementById('pomodoro-status');
+        const timerModeLabel = document.getElementById('timer-mode-label');
+        const timerGoalLabel = document.getElementById('timer-goal-label');
+        const timerStreakLabel = document.getElementById('timer-streak-label');
+
+        if (timerModeLabel) {
+            timerModeLabel.textContent = 'Focus';
+            timerModeLabel.dataset.mode = 'normal';
+        }
+        if (timerGoalLabel && !timerGoalLabel.textContent.trim()) {
+            timerGoalLabel.textContent = 'Set a daily goal';
+        }
+        if (timerStreakLabel) {
+            timerStreakLabel.textContent = '0 days';
+        }
 
         function closeImageViewer() {
             const modal = document.getElementById('image-view-modal');
@@ -7749,8 +8186,12 @@ let pauseStartTime = 0;
         }
         
         function updateTotalTimeDisplay() {
-            totalTimeDisplay.textContent = `Total Today: ${formatTime(totalTimeTodayInSeconds)}`;
-            totalBreakTimeDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
+            if (totalTimeDisplay) {
+                totalTimeDisplay.textContent = formatTime(totalTimeTodayInSeconds);
+            }
+            if (totalBreakTimeDisplay) {
+                totalBreakTimeDisplay.textContent = formatTime(totalBreakTimeTodayInSeconds);
+            }
         }
 
         async function saveSession(subject, durationSeconds, sessionType = 'study') { // Default to 'study'
@@ -7916,6 +8357,12 @@ let pauseStartTime = 0;
                 if(profileAuthView) profileAuthView.classList.add('hidden');
                 if(profileAnonView) profileAnonView.classList.remove('hidden');
                 if(headerAvatar) headerAvatar.innerHTML = `<i class="fas fa-user-secret text-xl"></i>`;
+                if (timerGoalLabel) {
+                    timerGoalLabel.textContent = 'Sign in to track goals';
+                }
+                if (timerStreakLabel) {
+                    timerStreakLabel.textContent = '0 days';
+                }
                 return;
             }
 
@@ -7940,7 +8387,7 @@ let pauseStartTime = 0;
 
             document.getElementById('profile-page-name').textContent = username;
             document.getElementById('profile-page-email').textContent = email;
-            
+
             const profileAvatar = document.getElementById('profile-page-avatar');
             
             // FIX: Make avatar updates more robust by checking if elements exist.
@@ -7959,16 +8406,27 @@ let pauseStartTime = 0;
             const studyGoalValueEl = document.getElementById('study-goal-value');
             if (studyGoal) {
                 studyGoalValueEl.textContent = `${studyGoal} hours/day`;
+                if (timerGoalLabel) {
+                    timerGoalLabel.textContent = `${studyGoal}h / day`;
+                }
             } else {
                 studyGoalValueEl.textContent = 'Not set';
+                if (timerGoalLabel) {
+                    timerGoalLabel.textContent = 'Set a daily goal';
+                }
             }
             const streakDisplay = document.getElementById('profile-streak-display');
-if (streakDisplay) {
-    const streak = userData.current_streak || 0;
-    streakDisplay.textContent = `${streak} day${streak === 1 ? '' : 's'}`;
-}
+            if (streakDisplay) {
+                const streak = userData.current_streak || 0;
+                streakDisplay.textContent = `${streak} day${streak === 1 ? '' : 's'}`;
+            }
 
-const achievementsGrid = document.getElementById('achievements-grid');
+            if (timerStreakLabel) {
+                const streak = userData.current_streak || 0;
+                timerStreakLabel.textContent = `${streak} day${streak === 1 ? '' : 's'}`;
+            }
+
+            const achievementsGrid = document.getElementById('achievements-grid');
 if (achievementsGrid) {
     const unlocked = userData.unlocked_achievements || [];
     achievementsGrid.innerHTML = Object.keys(ACHIEVEMENTS).map(key => {
@@ -13842,20 +14300,35 @@ if (achievementsGrid) {
         }));
 
         // --- START: ADDED GUARDS FOR GUEST USERS ---
-        ael('groups-btn', 'click', () => { 
+        ael('groups-btn', 'click', () => {
             if (currentUser && currentUser.isAnonymous) {
                 showToast('Please create an account to use study groups.', 'info');
                 showPage('page-profile');
                 return;
             }
-            renderJoinedGroups(); 
-            showPage('page-my-groups'); 
+            renderJoinedGroups();
+            showPage('page-my-groups');
         });
         ael('premium-btn', 'click', () => {
             const premiumModal = document.getElementById('premium-modal');
             if (premiumModal) premiumModal.classList.add('active');
         });
-        ael('go-to-find-groups-btn', 'click', () => { 
+        ael('timer-open-stats', 'click', () => {
+            showPage('page-stats');
+        });
+        ael('timer-open-planner', 'click', () => {
+            showPage('page-planner');
+        });
+        ael('timer-open-groups', 'click', () => {
+            if (currentUser && currentUser.isAnonymous) {
+                showToast('Please create an account to use study groups.', 'info');
+                showPage('page-profile');
+                return;
+            }
+            renderGroupRankings();
+            showPage('page-find-groups');
+        });
+        ael('go-to-find-groups-btn', 'click', () => {
              if (currentUser && currentUser.isAnonymous) {
                 showToast('Please create an account to use study groups.', 'info');
                 return;
@@ -14023,6 +14496,11 @@ if (achievementsGrid) {
             timerMode = mode;
             document.getElementById('normal-timer-btn').classList.toggle('active', mode === 'normal');
             document.getElementById('pomodoro-timer-btn').classList.toggle('active', mode === 'pomodoro');
+
+            if (timerModeLabel) {
+                timerModeLabel.textContent = mode === 'pomodoro' ? 'Pomodoro' : 'Focus';
+                timerModeLabel.dataset.mode = mode;
+            }
 
             if (mode !== 'pomodoro') {
                 setPomodoroWakeLockActive(false);
@@ -14796,6 +15274,17 @@ if (achievementsGrid) {
                 studyGoalModal.classList.add('active');
             }
         });
+        ael('timer-open-study-goal', 'click', () => {
+            if (!currentUser || (currentUser && currentUser.isAnonymous)) {
+                showToast('Sign in to track a study goal.', 'info');
+                showPage('page-profile');
+                return;
+            }
+            if (studyGoalModal) {
+                document.getElementById('study-goal-input').value = currentUserData.study_goal_hours || '';
+                studyGoalModal.classList.add('active');
+            }
+        });
 
         const pomodoroSettingsModal = document.getElementById('pomodoro-settings-modal');
         ael('settings-pomodoro', 'click', () => {
@@ -14882,6 +15371,9 @@ if (achievementsGrid) {
                 return;
             }
             currentUserData.study_goal_hours = goal;
+            if (timerGoalLabel) {
+                timerGoalLabel.textContent = `${goal}h / day`;
+            }
             studyGoalModal.classList.remove('active');
             showToast('Study goal updated!', 'success');
         });
@@ -15561,6 +16053,9 @@ if (achievementsGrid) {
                 return;
             }
             currentUserData.study_goal_hours = goal;
+            if (timerGoalLabel) {
+                timerGoalLabel.textContent = `${goal}h / day`;
+            }
             studyGoalModal.classList.remove('active');
             showToast('Study goal updated!', 'success');
         });
