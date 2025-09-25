@@ -1,0 +1,401 @@
+// Supabase Edge Function: send-group-wake-up-notification
+// Sends wake up notifications to every idle member of a study group.
+import { createClient } from "jsr:@supabase/supabase-js@2";
+import webpush from "npm:web-push";
+
+const allowedOrigins = new Set([
+  "https://nobel92435.github.io",
+  "https://nobel92435.github.io/FOCUS-NOBEL/",
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:4173"
+]);
+
+function mergeAllowHeaders(requestHeaders: string | null) {
+  const base = ["authorization", "x-client-info", "apikey", "content-type"];
+  if (!requestHeaders) return base.join(", ");
+
+  const unique = new Set<string>();
+  for (const header of requestHeaders.split(",")) {
+    const trimmed = header.trim().toLowerCase();
+    if (trimmed) unique.add(trimmed);
+  }
+  for (const header of base) {
+    unique.add(header);
+  }
+
+  return Array.from(unique).join(", ");
+}
+
+function resolveCors(req: Request) {
+  const origin = req.headers.get("origin");
+  const requestHeaders = req.headers.get("access-control-request-headers");
+  const allowHeaders = mergeAllowHeaders(requestHeaders);
+  const originAllowed = Boolean(origin && allowedOrigins.has(origin));
+
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers": allowHeaders,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin"
+  };
+
+  if (originAllowed && origin) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Access-Control-Allow-Credentials"] = "true";
+  } else {
+    headers["Access-Control-Allow-Origin"] = "*";
+  }
+
+  return { headers, originAllowed };
+}
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY");
+const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY");
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+}
+
+if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  console.error("Missing VAPID keys");
+}
+
+webpush.setVapidDetails("mailto:nobelft26@gmail.com", VAPID_PUBLIC_KEY ?? "", VAPID_PRIVATE_KEY ?? "");
+
+const supabaseAdmin = SUPABASE_URL && SERVICE_ROLE_KEY ? createClient(SUPABASE_URL, SERVICE_ROLE_KEY) : null;
+
+const DEFAULT_ICON = "https://placehold.co/192x192/0a0a0a/e0e0e0?text=Focus";
+const DEFAULT_BADGE = "https://placehold.co/96x96/0a0a0a/e0e0e0?text=Focus";
+const DEFAULT_VIBRATION = [150, 75, 150, 75, 300];
+const DEFAULT_TAG = "wake-up-group";
+
+function ensureActions(options: Record<string, unknown>) {
+  const actions = Array.isArray(options.actions) ? options.actions : [];
+  if (actions.length === 0) {
+    options.actions = [
+      { action: "open", title: "Open" },
+      { action: "snooze-5m", title: "Snooze 5m" }
+    ];
+  }
+}
+
+function isActiveStudyState(studying: unknown) {
+  if (!studying || typeof studying !== "object") return false;
+  try {
+    const record = studying as Record<string, unknown>;
+    return typeof record.type === "string" && record.type.toLowerCase() === "study";
+  } catch (_err) {
+    return false;
+  }
+}
+
+async function fetchSenderName(senderId: string) {
+  if (!supabaseAdmin) throw new Error("Supabase admin client is not configured");
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("username")
+    .eq("id", senderId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to fetch sender profile: ${error.message}`);
+  }
+
+  return data?.username?.trim() || "A teammate";
+}
+
+async function fetchIdleGroupMembers(groupId: string, senderId: string) {
+  if (!supabaseAdmin) throw new Error("Supabase admin client is not configured");
+
+  const { data: membershipRows, error: membershipError } = await supabaseAdmin
+    .from("group_members")
+    .select("profile_id")
+    .eq("group_id", groupId);
+
+  if (membershipError) {
+    throw new Error(`Failed to fetch group members: ${membershipError.message}`);
+  }
+
+  const memberIds = (membershipRows ?? [])
+    .map((row) => row.profile_id)
+    .filter((id): id is string => typeof id === "string" && id.trim() !== "")
+    .filter((id) => id !== senderId);
+
+  if (memberIds.length === 0) {
+    return [];
+  }
+
+  const { data: profiles, error: profileError } = await supabaseAdmin
+    .from("profiles")
+    .select("id, username, studying")
+    .in("id", memberIds);
+
+  if (profileError) {
+    throw new Error(`Failed to fetch member profiles: ${profileError.message}`);
+  }
+
+  return (profiles ?? []).filter((profile) => !isActiveStudyState(profile?.studying));
+}
+
+async function fetchLatestSubscriptions(userIds: string[]) {
+  if (!supabaseAdmin) throw new Error("Supabase admin client is not configured");
+  if (userIds.length === 0) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from("push_subscriptions")
+    .select("id, user_id, endpoint, p256dh, auth")
+    .in("user_id", userIds)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to fetch push subscriptions: ${error.message}`);
+  }
+
+  const latestByUser = new Map<string, { id: string | null; endpoint: string; p256dh: string; auth: string }>();
+  for (const row of data ?? []) {
+    const userId = typeof row.user_id === "string" ? row.user_id : null;
+    if (!userId || latestByUser.has(userId)) continue;
+    latestByUser.set(userId, {
+      id: typeof row.id === "string" ? row.id : null,
+      endpoint: row.endpoint,
+      p256dh: row.p256dh,
+      auth: row.auth
+    });
+  }
+
+  return Array.from(latestByUser.entries()).map(([userId, subscription]) => ({
+    userId,
+    ...subscription
+  }));
+}
+
+async function handleExpiredSubscription(id: string | null | undefined) {
+  if (!id || !supabaseAdmin) return;
+  try {
+    const { error } = await supabaseAdmin
+      .from("push_subscriptions")
+      .delete()
+      .eq("id", id);
+    if (error) {
+      console.error("Failed to delete expired subscription:", error);
+    }
+  } catch (err) {
+    console.error("An exception occurred while trying to delete expired subscription:", err);
+  }
+}
+
+function buildNotificationPayload({
+  senderName,
+  recipientName,
+  recipientId,
+  appId
+}: {
+  senderName: string;
+  recipientName?: string;
+  recipientId: string;
+  appId?: string;
+}) {
+  const safeSender = senderName || "A teammate";
+  const safeRecipient = recipientName || "there";
+  const title = `${safeSender} needs you back!`;
+  const body = `${safeSender} sent you a wake up call, ${safeRecipient}.`;
+
+  const options: Record<string, unknown> = {
+    tag: DEFAULT_TAG,
+    renotify: true,
+    requireInteraction: true,
+    vibrate: DEFAULT_VIBRATION,
+    icon: DEFAULT_ICON,
+    badge: DEFAULT_BADGE,
+    timestamp: Date.now(),
+    data: {
+      type: "WAKE_UP_GROUP",
+      senderName: safeSender,
+      recipientId,
+      appId: appId ?? null,
+      createdAt: new Date().toISOString()
+    }
+  };
+
+  ensureActions(options);
+
+  return {
+    title,
+    body,
+    options
+  };
+}
+
+function normalizePayload(input: unknown) {
+  if (!input || typeof input !== "object") {
+    throw new Error("Invalid payload");
+  }
+
+  const record = input as Record<string, unknown>;
+  const groupId = typeof record.groupId === "string" ? record.groupId.trim() : "";
+  const senderId = typeof record.senderId === "string" ? record.senderId.trim() : "";
+  const appId = typeof record.appId === "string" ? record.appId.trim() : undefined;
+
+  if (!groupId) {
+    throw new Error("groupId is required");
+  }
+  if (!senderId) {
+    throw new Error("senderId is required");
+  }
+
+  return { groupId, senderId, appId };
+}
+
+Deno.serve(async (req) => {
+  const { headers: corsHeaders, originAllowed } = resolveCors(req);
+
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  if (!originAllowed) {
+    return new Response(JSON.stringify({ success: false, message: "Origin not allowed" }), {
+      status: 403,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  }
+
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: corsHeaders
+    });
+  }
+
+  try {
+    const payload = await req.json();
+    const normalized = normalizePayload(payload);
+
+    const senderName = await fetchSenderName(normalized.senderId);
+    const idleMembers = await fetchIdleGroupMembers(normalized.groupId, normalized.senderId);
+
+    if (idleMembers.length === 0) {
+      return new Response(JSON.stringify({
+        success: true,
+        sentCount: 0,
+        skippedCount: 0,
+        delivered: []
+      }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    const idleMemberIds = idleMembers
+      .map((profile) => profile?.id)
+      .filter((id): id is string => typeof id === "string" && id.trim() !== "");
+
+    const subscriptions = await fetchLatestSubscriptions(idleMemberIds);
+
+    if (subscriptions.length === 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        sentCount: 0,
+        skippedCount: idleMemberIds.length,
+        message: "No push subscriptions found for idle members."
+      }), {
+        status: 202,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    const nameLookup = new Map<string, string>();
+    for (const profile of idleMembers) {
+      if (profile && typeof profile.id === "string") {
+        const username = typeof profile.username === "string" && profile.username.trim() !== ""
+          ? profile.username.trim()
+          : "teammate";
+        nameLookup.set(profile.id, username);
+      }
+    }
+
+    let sentCount = 0;
+    let failedCount = 0;
+    const delivered: string[] = [];
+    const failures: { userId: string; message: string }[] = [];
+
+    for (const subscription of subscriptions) {
+      const notificationPayload = buildNotificationPayload({
+        senderName,
+        recipientName: nameLookup.get(subscription.userId),
+        recipientId: subscription.userId,
+        appId: normalized.appId
+      });
+
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: subscription.endpoint,
+            keys: {
+              p256dh: subscription.p256dh,
+              auth: subscription.auth
+            }
+          },
+          JSON.stringify(notificationPayload),
+          {
+            TTL: 30,
+            urgency: "high",
+            headers: {
+              Topic: `wake_up_group_${subscription.userId}`
+            }
+          }
+        );
+        sentCount += 1;
+        delivered.push(subscription.userId);
+      } catch (pushError) {
+        console.error(`Failed to send wake up notification to ${subscription.userId}:`, pushError);
+        if (pushError && typeof pushError === "object" && "statusCode" in pushError && pushError.statusCode === 410) {
+          await handleExpiredSubscription(subscription.id);
+        }
+        failedCount += 1;
+        const message = pushError instanceof Error ? pushError.message : String(pushError);
+        failures.push({ userId: subscription.userId, message });
+      }
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      sentCount,
+      failedCount,
+      delivered,
+      failures
+    }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  } catch (error) {
+    console.error("Edge function error:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    return new Response(JSON.stringify({
+      success: false,
+      message
+    }), {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  }
+});
