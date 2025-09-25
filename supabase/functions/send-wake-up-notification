@@ -3,7 +3,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import webpush from "npm:web-push";
 
-const allowedOrigins = [
+const allowedOrigins = new Set([
   "https://nobel92435.github.io",
   "https://nobel92435.github.io/FOCUS-NOBEL",
   "https://nobel92435.github.io/FOCUS-NOBEL/",
@@ -11,42 +11,38 @@ const allowedOrigins = [
   "http://localhost:4173",
   "http://127.0.0.1:5173",
   "http://127.0.0.1:4173"
-];
+]);
 
-function resolveAllowedOrigin(origin: string | null) {
-  if (!origin) return allowedOrigins[0];
-
-  for (const allowed of allowedOrigins) {
-    if (origin === allowed || origin.startsWith(`${allowed}/`)) {
-      return allowed;
-    }
-  }
-
-  return allowedOrigins[0];
-}
+const DEFAULT_ORIGIN = "https://nobel92435.github.io";
 
 function buildCorsHeaders(req: Request) {
   const origin = req.headers.get("origin");
-  const allowOrigin = resolveAllowedOrigin(origin);
+  const allowOrigin = origin && allowedOrigins.has(origin) ? origin : DEFAULT_ORIGIN;
   const requestedHeaders = req.headers.get("access-control-request-headers");
   const requestedMethod = req.headers.get("access-control-request-method");
 
-  const allowHeaders = requestedHeaders && requestedHeaders.length > 0
-    ? requestedHeaders
-    : "authorization, x-client-info, apikey, content-type";
+  const headers = new Headers();
+  headers.set("Access-Control-Allow-Origin", allowOrigin);
+  headers.set(
+    "Access-Control-Allow-Headers",
+    requestedHeaders && requestedHeaders.length > 0
+      ? requestedHeaders
+      : "authorization, x-client-info, apikey, content-type"
+  );
+  headers.set(
+    "Access-Control-Allow-Methods",
+    requestedMethod && requestedMethod.length > 0
+      ? requestedMethod
+      : "POST, OPTIONS"
+  );
+  headers.set("Access-Control-Max-Age", "86400");
+  headers.set("Vary", "Origin");
 
-  const allowMethods = requestedMethod && requestedMethod.length > 0
-    ? requestedMethod
-    : "POST, OPTIONS";
+  if (allowOrigin !== "*") {
+    headers.set("Access-Control-Allow-Credentials", "true");
+  }
 
-  return {
-    "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Headers": allowHeaders,
-    "Access-Control-Allow-Methods": allowMethods,
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Max-Age": "86400",
-    Vary: "Origin"
-  };
+  return headers;
 }
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -155,7 +151,7 @@ Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
 
   if (req.method === "OPTIONS") {
-    return new Response("ok", { status: 200, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
@@ -171,16 +167,15 @@ Deno.serve(async (req) => {
 
     const subscriptions = await fetchSubscriptions(normalized.targetUserId);
     if (subscriptions.length === 0) {
+      const headers = new Headers(corsHeaders);
+      headers.set("Content-Type", "application/json");
       return new Response(JSON.stringify({
         success: false,
         delivered: false,
         error: "No active push subscriptions for user."
       }), {
         status: 202,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        }
+        headers
       });
     }
 
@@ -222,6 +217,9 @@ Deno.serve(async (req) => {
 
     const delivered = results.some((result) => result.delivered);
 
+    const headers = new Headers(corsHeaders);
+    headers.set("Content-Type", "application/json");
+
     return new Response(JSON.stringify({
       success: delivered,
       delivered,
@@ -229,22 +227,19 @@ Deno.serve(async (req) => {
       results
     }), {
       status: delivered ? 200 : 202,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json"
-      }
+      headers
     });
   } catch (error) {
     console.error("Edge function error:", error);
+    const headers = new Headers(corsHeaders);
+    headers.set("Content-Type", "application/json");
+
     return new Response(JSON.stringify({
       success: false,
       error: String(error instanceof Error ? error.message : error)
     }), {
       status: 500,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json"
-      }
+      headers
     });
   }
 });
