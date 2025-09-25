@@ -1,0 +1,248 @@
+// Supabase Edge Function: send-wake-up-notification
+// Sends a targeted wake up notification to a single user.
+import { createClient } from "jsr:@supabase/supabase-js@2";
+import webpush from "npm:web-push";
+
+const allowedOrigins = new Set([
+  "https://nobel92435.github.io",
+  "https://nobel92435.github.io/FOCUS-NOBEL/",
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:4173"
+]);
+
+function buildCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin");
+  const allowOrigin = origin && allowedOrigins.has(origin) ? origin : "https://nobel92435.github.io";
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400"
+  };
+}
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY");
+const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY");
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+}
+
+if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  console.error("Missing VAPID keys");
+}
+
+webpush.setVapidDetails("mailto:nobelft26@gmail.com", VAPID_PUBLIC_KEY ?? "", VAPID_PRIVATE_KEY ?? "");
+
+const supabaseAdmin = SUPABASE_URL && SERVICE_ROLE_KEY ? createClient(SUPABASE_URL, SERVICE_ROLE_KEY) : null;
+
+const DEFAULT_ICON = "https://placehold.co/192x192/0a0a0a/e0e0e0?text=Focus";
+const DEFAULT_BADGE = "https://placehold.co/96x96/0a0a0a/e0e0e0?text=Focus";
+const DEFAULT_VIBRATION = [150, 75, 150, 75, 300];
+const DEFAULT_TAG = "wake-up-alert";
+
+function ensureActions(options: Record<string, unknown>) {
+  const actions = Array.isArray(options.actions) ? options.actions : [];
+  if (actions.length === 0) {
+    options.actions = [
+      { action: "open", title: "Open" },
+      { action: "snooze-5m", title: "Snooze 5m" }
+    ];
+  }
+}
+
+async function fetchLatestSubscription(userId: string) {
+  if (!supabaseAdmin) throw new Error("Supabase admin client is not configured");
+  const { data, error } = await supabaseAdmin
+    .from("push_subscriptions")
+    .select("id, endpoint, p256dh, auth")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to fetch push subscription: ${error.message}`);
+  }
+
+  return data;
+}
+
+async function handleExpiredSubscription(id: string | null | undefined) {
+  if (!id || !supabaseAdmin) return;
+  try {
+    const { error } = await supabaseAdmin
+      .from("push_subscriptions")
+      .delete()
+      .eq("id", id);
+    if (error) {
+      console.error("Failed to delete expired subscription:", error);
+    }
+  } catch (err) {
+    console.error("An exception occurred while trying to delete expired subscription:", err);
+  }
+}
+
+function buildNotificationPayload({
+  senderName,
+  targetUserId,
+  appId
+}: {
+  senderName: string;
+  targetUserId: string;
+  appId?: string;
+}) {
+  const safeSender = senderName || "A teammate";
+  const title = `${safeSender} says it's time to focus!`;
+  const body = `${safeSender} sent you a wake up call.`;
+
+  const options: Record<string, unknown> = {
+    tag: DEFAULT_TAG,
+    renotify: true,
+    requireInteraction: true,
+    vibrate: DEFAULT_VIBRATION,
+    icon: DEFAULT_ICON,
+    badge: DEFAULT_BADGE,
+    timestamp: Date.now(),
+    data: {
+      type: "WAKE_UP",
+      senderName: safeSender,
+      targetUserId,
+      appId: appId ?? null,
+      createdAt: new Date().toISOString()
+    }
+  };
+
+  ensureActions(options);
+
+  return {
+    title,
+    body,
+    options
+  };
+}
+
+function normalizePayload(input: unknown) {
+  if (!input || typeof input !== "object") {
+    throw new Error("Invalid payload");
+  }
+
+  const record = input as Record<string, unknown>;
+  const targetUserId = typeof record.targetUserId === "string" ? record.targetUserId.trim() : "";
+  const senderName = typeof record.senderName === "string" ? record.senderName.trim() : "";
+  const appId = typeof record.appId === "string" ? record.appId.trim() : undefined;
+
+  if (!targetUserId) {
+    throw new Error("targetUserId is required");
+  }
+
+  return {
+    targetUserId,
+    senderName: senderName || "A teammate",
+    appId
+  };
+}
+
+Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
+
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: corsHeaders
+    });
+  }
+
+  try {
+    const payload = await req.json();
+    const normalized = normalizePayload(payload);
+
+    const subscriptionRecord = await fetchLatestSubscription(normalized.targetUserId);
+    if (!subscriptionRecord || !subscriptionRecord.endpoint) {
+      return new Response(JSON.stringify({
+        success: false,
+        delivered: false,
+        message: "No push subscription found for the target user."
+      }), {
+        status: 202,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    const subscription = {
+      endpoint: subscriptionRecord.endpoint,
+      keys: {
+        p256dh: subscriptionRecord.p256dh,
+        auth: subscriptionRecord.auth
+      }
+    };
+
+    const notificationPayload = buildNotificationPayload({
+      senderName: normalized.senderName,
+      targetUserId: normalized.targetUserId,
+      appId: normalized.appId
+    });
+
+    try {
+      await webpush.sendNotification(subscription, JSON.stringify(notificationPayload), {
+        TTL: 30,
+        urgency: "high",
+        headers: {
+          Topic: `wake_up_${normalized.targetUserId}`
+        }
+      });
+    } catch (pushError) {
+      console.error("Failed to send wake up notification:", pushError);
+      if (pushError && typeof pushError === "object" && "statusCode" in pushError && pushError.statusCode === 410) {
+        await handleExpiredSubscription(subscriptionRecord.id);
+      }
+      const message = pushError instanceof Error ? pushError.message : String(pushError);
+      return new Response(JSON.stringify({
+        success: false,
+        delivered: false,
+        message
+      }), {
+        status: 202,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      delivered: true
+    }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  } catch (error) {
+    console.error("Edge function error:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    return new Response(JSON.stringify({
+      success: false,
+      message
+    }), {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      }
+    });
+  }
+});
