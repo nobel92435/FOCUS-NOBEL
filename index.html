@@ -13,7 +13,7 @@
     <link rel="manifest" href="manifest.json">
     <!-- Set the content attribute to your app's VAPID public key so push subscriptions can be created -->
     <meta name="vapid-public-key" content="BJqi2nFBuazVXwx9OdCSLwKDhG65fZOL7IBsAzQI1YxBr0zmV4nTl80JtAZFeOIobDgJ0kNqwVpPf_BjEmblNa0">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Roboto+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel='icon' href="favicon.ico">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -22,23 +22,24 @@
 
     <style>
         /* Base styles */
-        body { 
-            font-family: 'Inter', sans-serif; 
+        :root {
+            color-scheme: dark;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            font-feature-settings: 'cv11', 'ss01', 'tnum';
+            -webkit-font-smoothing: antialiased;
             -webkit-tap-highlight-color: transparent;
-            overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
-            background-color: #0d1117; /* Darker, modern background */
-            background-image: radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15), transparent 60%);
-            color: #e6edf3; /* Brighter default text */
+            overflow-x: hidden;
+            background-color: #0d1117;
+            background-image:
+                radial-gradient(circle at 20% 0%, rgba(56, 189, 248, 0.14), transparent 55%),
+                radial-gradient(circle at 80% 10%, rgba(45, 212, 191, 0.12), transparent 60%),
+                linear-gradient(180deg, rgba(6, 11, 23, 0.75) 0%, #020617 100%);
+            color: #e6edf3;
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .nav-item.active, .group-nav-item.active {
-            background: linear-gradient(to top, rgba(20, 184, 166, 0.2), transparent);
-        }
-        .nav-item.active svg, .nav-item.active p, .group-nav-item.active i, .group-nav-item.active p { 
-            color: #14b8a6; /* Teal-500 */
-        }
-
         /* Page and container visibility */
         #auth-screen, .page, #app-container, .modal { display: none; }
         #auth-screen.active, .page.active, #app-container.active, .modal.active { display: flex; }
@@ -46,8 +47,390 @@
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
         /* UI element styles */
-        .timer-text { font-weight: 900; letter-spacing: -0.05em; }
+        .timer-text {
+            font-family: 'Roboto Mono', 'Inter', monospace;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            font-variant-numeric: tabular-nums;
+            text-rendering: geometricPrecision;
+            text-shadow: 0 18px 32px rgba(var(--timer-accent-rgb), 0.35);
+            color: #f8fafc;
+            transition: text-shadow 0.4s ease, color 0.4s ease, transform 0.25s ease;
+        }
+        .timer-text.timer-pulse {
+            animation: timerPulse 0.5s ease;
+        }
+        @keyframes timerPulse {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
 
+        .timer-page-shell {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 32px 24px 128px;
+            gap: 24px;
+        }
+        @media (min-width: 768px) {
+            .timer-page-shell {
+                padding: 48px 40px 144px;
+            }
+        }
+        .timer-header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 24px 8px;
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            background: linear-gradient(180deg, rgba(6, 11, 23, 0.92) 0%, rgba(6, 11, 23, 0.6) 55%, rgba(6, 11, 23, 0) 100%);
+            backdrop-filter: blur(12px);
+        }
+        .timer-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .timer-brand-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background-image: linear-gradient(90deg, #2dd4bf 0%, #38bdf8 100%);
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+        .timer-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .icon-pill {
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: linear-gradient(180deg, rgba(30, 41, 59, 0.72) 0%, rgba(15, 23, 42, 0.8) 100%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #cbd5f5;
+            transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+        .icon-pill:hover {
+            border-color: rgba(56, 189, 248, 0.45);
+            color: #38bdf8;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 22px rgba(14, 165, 233, 0.18);
+        }
+        .icon-pill svg {
+            width: 22px;
+            height: 22px;
+        }
+        .profile-avatar-shell {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid rgba(148, 163, 184, 0.35);
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.3s ease, transform 0.2s ease;
+            background: linear-gradient(180deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.9) 100%);
+        }
+        .profile-avatar-shell:hover {
+            border-color: rgba(56, 189, 248, 0.7);
+            transform: translateY(-2px);
+        }
+        #header-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+        .timer-mode-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        #timer-mode-switch {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(12, 20, 38, 0.92));
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 40px rgba(2, 6, 23, 0.65);
+            min-width: min(260px, 90vw);
+            overflow: hidden;
+        }
+        #timer-mode-switch::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(120deg, rgba(59, 130, 246, 0.15), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #timer-mode-switch:hover::after {
+            opacity: 1;
+        }
+        #timer-mode-indicator {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: calc((100% - 20px) / 2);
+            height: calc(100% - 12px);
+            border-radius: 999px;
+            background: linear-gradient(135deg, #2dd4bf 0%, #38bdf8 100%);
+            box-shadow: 0 10px 20px rgba(56, 189, 248, 0.32);
+            transition: transform 0.35s cubic-bezier(0.25, 0.9, 0.35, 1.2), width 0.35s ease;
+            pointer-events: none;
+        }
+        #timer-mode-switch[data-active="pomodoro"] #timer-mode-indicator {
+            transform: translateX(calc(100% + 8px));
+        }
+        .segment-btn {
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            padding: 10px 18px;
+            border-radius: 999px;
+            border: none;
+            background: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: rgba(203, 213, 225, 0.8);
+            transition: color 0.3s ease;
+            cursor: pointer;
+        }
+        .segment-btn.active {
+            color: #f8fafc;
+            font-weight: 700;
+        }
+        .group-study-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            background: linear-gradient(135deg, rgba(148, 163, 184, 0.12), rgba(30, 41, 59, 0.36));
+            color: rgba(226, 232, 240, 0.78);
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.02em;
+            transition: color 0.3s ease, transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            align-self: center;
+            margin-top: 4px;
+        }
+        .group-study-btn:hover {
+            color: #38bdf8;
+            border-color: rgba(56, 189, 248, 0.55);
+            transform: translateY(-2px);
+            box-shadow: 0 18px 30px rgba(14, 165, 233, 0.16);
+        }
+        .group-study-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+        .timer-orb {
+            position: relative;
+            width: min(78vw, 420px);
+            aspect-ratio: 1/1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 32px;
+            padding: 36px;
+            background:
+                radial-gradient(circle at top, rgba(59, 130, 246, 0.2), transparent 65%),
+                linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, rgba(2, 6, 23, 0.92) 100%);
+            box-shadow: 0 45px 120px rgba(2, 6, 23, 0.65);
+            overflow: hidden;
+            --timer-accent: #38bdf8;
+            --timer-accent-rgb: 56, 189, 248;
+        }
+        .timer-progress-glow {
+            position: absolute;
+            inset: 16px;
+            border-radius: 999px;
+            box-shadow: 0 0 50px rgba(var(--timer-accent-rgb), 0.35);
+            transition: box-shadow 0.4s ease;
+            pointer-events: none;
+        }
+        .timer-progress {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .timer-progress svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+            filter: drop-shadow(0 18px 28px rgba(14, 165, 233, 0.15));
+        }
+        .timer-progress-ring-bg {
+            stroke: rgba(15, 23, 42, 0.65);
+            stroke-width: 14;
+        }
+        .timer-progress-ring {
+            stroke: var(--timer-accent);
+            stroke-width: 14;
+            stroke-linecap: round;
+            fill: transparent;
+            stroke-dasharray: 0;
+            stroke-dashoffset: 0;
+            transition: stroke 0.4s ease, stroke-dashoffset 0.4s ease;
+        }
+        .timer-progress-ring.indeterminate {
+            animation: timerProgressIndeterminate 2.4s ease-in-out infinite;
+        }
+        @keyframes timerProgressIndeterminate {
+            0% {
+                stroke-dasharray: 40 440;
+                stroke-dashoffset: 0;
+            }
+            50% {
+                stroke-dasharray: 240 440;
+                stroke-dashoffset: -120;
+            }
+            100% {
+                stroke-dasharray: 40 440;
+                stroke-dashoffset: -360;
+            }
+        }
+        .timer-core {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 8px;
+            animation: timerIntro 0.65s ease forwards;
+            animation-fill-mode: both;
+        }
+        @keyframes timerIntro {
+            from {
+                opacity: 0;
+                transform: translateY(16px) scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .timer-core.timer-swap {
+            animation: timerSwap 0.55s cubic-bezier(0.25, 0.9, 0.35, 1.2);
+        }
+        @keyframes timerSwap {
+            0% { transform: rotateX(0deg); opacity: 1; }
+            45% { transform: rotateX(-70deg); opacity: 0; }
+            55% { transform: rotateX(70deg); opacity: 0; }
+            100% { transform: rotateX(0deg); opacity: 1; }
+        }
+        #pomodoro-status {
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: rgba(248, 250, 252, 0.82);
+            min-height: 20px;
+            margin-bottom: 8px;
+        }
+        .timer-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 12px;
+        }
+        .timer-meta-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            color: rgba(226, 232, 240, 0.68);
+        }
+        .timer-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+        }
+        .cta-button {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 38px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            letter-spacing: 0.01em;
+            color: #0b1120;
+            background-image: linear-gradient(135deg, #38bdf8 0%, #2dd4bf 45%, #0ea5e9 100%);
+            box-shadow: 0 18px 48px rgba(14, 165, 233, 0.35);
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+        }
+        .cta-button:focus-visible {
+            outline: 3px solid rgba(56, 189, 248, 0.45);
+            outline-offset: 4px;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 28px 70px rgba(14, 165, 233, 0.45);
+        }
+        .cta-button:active {
+            transform: scale(0.96);
+        }
+        .cta-button .cta-ripple {
+            position: absolute;
+            border-radius: 999px;
+            transform: scale(0);
+            background: rgba(255, 255, 255, 0.35);
+            animation: rippleEffect 0.6s ease-out;
+            pointer-events: none;
+        }
+        @keyframes rippleEffect {
+            to {
+                transform: scale(12);
+                opacity: 0;
+            }
+        }
+        .secondary-button {
+            padding: 14px 28px;
+            border-radius: 999px;
+            font-weight: 600;
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            color: rgba(226, 232, 240, 0.9);
+            transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+        .secondary-button:hover {
+            transform: translateY(-2px);
+            border-color: rgba(56, 189, 248, 0.55);
+            color: #e0f2fe;
+        }
+        .secondary-button:active {
+            transform: scale(0.97);
+        }
         .advanced-heatmap-grid {
             display: grid;
             gap: 0.35rem;
@@ -319,6 +702,90 @@
         .pomodoro-summary-button i {
             color: #94a3b8;
             font-size: 0.85rem;
+        }
+
+        #main-nav,
+        #group-detail-nav {
+            position: sticky;
+            bottom: 0;
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            align-items: center;
+            padding: 12px 16px;
+            gap: 6px;
+            backdrop-filter: blur(18px);
+            border-top: 1px solid rgba(148, 163, 184, 0.16);
+            background: linear-gradient(180deg, rgba(10, 15, 28, 0.75) 0%, rgba(2, 6, 23, 0.92) 100%);
+            box-shadow: 0 -18px 40px rgba(2, 6, 23, 0.72);
+            z-index: 40;
+        }
+        #group-detail-nav {
+            padding: 10px 12px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(2, 6, 23, 0.92) 100%);
+        }
+        .nav-item,
+        .group-nav-item {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 12px 10px;
+            border-radius: 18px;
+            border: 1px solid transparent;
+            background: rgba(15, 23, 42, 0.25);
+            color: rgba(148, 163, 184, 0.85);
+            font-weight: 600;
+            transition: color 0.25s ease, background 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+        }
+        .nav-item svg,
+        .group-nav-item svg,
+        .group-nav-item i {
+            width: 22px;
+            height: 22px;
+        }
+        .nav-item:hover,
+        .group-nav-item:hover {
+            color: #cbd5f5;
+            border-color: rgba(148, 163, 184, 0.25);
+            background: rgba(30, 41, 59, 0.45);
+            transform: translateY(-2px);
+        }
+        .nav-item.active,
+        .group-nav-item.active {
+            background: linear-gradient(135deg, rgba(45, 212, 191, 0.18), rgba(56, 189, 248, 0.18));
+            border-color: rgba(56, 189, 248, 0.45);
+            color: #e0f2fe;
+            box-shadow: 0 12px 30px rgba(14, 165, 233, 0.22);
+        }
+        .nav-item .nav-label,
+        .group-nav-item .nav-label {
+            font-size: 0.7rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .nav-item.active .nav-label,
+        .group-nav-item.active .nav-label {
+            color: #f0f9ff;
+        }
+        .nav-item svg,
+        .group-nav-item svg {
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 1.8;
+        }
+        .group-nav-item i {
+            font-size: 1.1rem;
+        }
+        #add-subject-btn {
+            color: #38bdf8;
+            border-color: rgba(56, 189, 248, 0.45);
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(14, 165, 233, 0.14));
+        }
+        #add-subject-btn:hover {
+            color: #f0f9ff;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.3));
         }
 
         /* Toggle Switch Styles */
@@ -2737,27 +3204,6 @@
             height: 0;
         }
 
-        /* New Group Study Button */
-        #group-study-timer-btn {
-            background-color: #1f2937;
-            color: #9ca3af;
-            font-weight: 600;
-            border-radius: 9999px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: fit-content;
-            margin: 1rem auto 0; /* Center it below the switch */
-            padding: 0.5rem 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        #group-study-timer-btn:hover {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8);
-            color: white;
-            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
-        }
-
         /* Group Detail Header Dropdown */
         .group-detail-header-dropdown {
             position: relative;
@@ -2912,55 +3358,83 @@
     <div id="app-container" class="flex-col h-screen">
         <main id="main" class="flex-grow overflow-y-auto no-scrollbar">
             <div id="page-timer" class="page active flex-col h-full">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20">
-                     <div class="flex items-center">
-                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                             <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
-                             <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
-                             <defs>
-                                 <linearGradient id="paint0_linear_logo_header" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
-                                     <stop stop-color="#14B8A6"></stop>
-                                     <stop offset="1" stop-color="#0EA5E9"></stop>
-                                 </linearGradient>
-                             </defs>
-                         </svg>
-                         <span class="text-2xl font-bold ml-2 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
-                     </div>
-                     <div class="flex items-center space-x-4">
-                         <button id="groups-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition">
-                             <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                 <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                             </svg>
-                         </button>
-                         <button id="premium-btn" class="w-10 h-10 rounded-full bg-yellow-900/50 border border-yellow-800 flex items-center justify-center text-yellow-400 hover:bg-yellow-800/60 transition" title="Premium Features">
-                             <i class="fas fa-star"></i>
-                         </button>
-                         <button id="profile-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition overflow-hidden">
-                             <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
-                         </button>
-                     </div>
-                </header>
-                <div class="relative flex-grow flex items-center justify-center -mt-16">
-                    <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
-                        <div class="timer-switch-container mx-auto mb-4">
-                            <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
-                            <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
-                        </div>
-                        <button id="group-study-timer-btn" class="text-sm">
-                            <i class="fas fa-users-line"></i> Group Study
+                <header class="timer-header">
+                    <div class="timer-brand">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                            <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
+                            <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
+                            <defs>
+                                <linearGradient id="paint0_linear_logo_header" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#14B8A6"></stop>
+                                    <stop offset="1" stop-color="#0EA5E9"></stop>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <span class="timer-brand-name">FocusFlow</span>
+                    </div>
+                    <div class="timer-header-actions">
+                        <button id="groups-btn" class="icon-pill" title="Study groups" type="button">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                                <path d="M9 7a3 3 0 116 0 3 3 0 01-6 0zm8.5 3a2.5 2.5 0 10-2.4-3.1 4.98 4.98 0 010 6.2A2.5 2.5 0 0017.5 10zm-13 0a2.5 2.5 0 102.4-3.1 4.98 4.98 0 010 6.2A2.5 2.5 0 004.5 10zM12 14c-3.63 0-6.5 2.12-6.5 4.75 0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25C18.5 16.12 15.63 14 12 14zm8.25 5c.69 0 1.25-.56 1.25-1.25 0-1.58-1.04-2.97-2.66-3.84" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                            </svg>
                         </button>
-                        <p id="active-subject-display" class="text-xl font-semibold text-blue-400 h-7 mb-2"></p>
-                        <p id="pomodoro-status"></p>
-                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
-                        <p id="total-time-display" class="text-gray-400 mt-2">Total Today: 00:00:00</p>
-                        <p id="total-break-time-display" class="text-gray-400 mt-1">Total Break: 00:00:00</p>
-                        <div id="timer-controls" class="mt-8">
-                            <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
-                            <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
-                            <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
-                            <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
-                            <button id="resume-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Resume</button>
+                        <button id="premium-btn" class="icon-pill" title="Premium features" type="button">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                                <defs>
+                                    <linearGradient id="premium-star-gradient" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0" stop-color="#facc15"></stop>
+                                        <stop offset="1" stop-color="#f97316"></stop>
+                                    </linearGradient>
+                                </defs>
+                                <path d="M12 3.5l1.98 4.76 5.22.44-3.98 3.35 1.22 5.05L12 14.9l-4.44 2.2 1.22-5.05-3.98-3.35 5.22-.44L12 3.5z" fill="url(#premium-star-gradient)" stroke="rgba(251, 191, 36, 0.35)" stroke-width="1.1" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button id="profile-btn" class="profile-avatar-shell" title="Profile" type="button">
+                            <div id="header-avatar" class="bg-blue-500 text-white font-bold">U</div>
+                        </button>
+                    </div>
+                </header>
+                <div class="timer-page-shell">
+                    <div class="timer-mode-wrapper">
+                        <div id="timer-mode-switch" data-active="normal">
+                            <div id="timer-mode-indicator" aria-hidden="true"></div>
+                            <button id="normal-timer-btn" class="segment-btn active" type="button">Normal</button>
+                            <button id="pomodoro-timer-btn" class="segment-btn" type="button">Pomodoro</button>
                         </div>
+                        <button id="group-study-timer-btn" class="group-study-btn" type="button">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                                <path d="M9 7a3 3 0 116 0 3 3 0 01-6 0z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M17.5 10a2.5 2.5 0 10-2.4-3.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M6.9 6.9A2.5 2.5 0 104.5 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 14c-3.63 0-6.5 2.12-6.5 4.75 0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25C18.5 16.12 15.63 14 12 14z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Group Study
+                        </button>
+                    </div>
+                    <div class="timer-orb" id="timer-orb">
+                        <div class="timer-progress">
+                            <svg viewBox="0 0 360 360" aria-hidden="true" focusable="false">
+                                <circle class="timer-progress-ring-bg" cx="180" cy="180" r="150"></circle>
+                                <circle class="timer-progress-ring" cx="180" cy="180" r="150"></circle>
+                            </svg>
+                        </div>
+                        <div class="timer-progress-glow"></div>
+                        <div class="timer-core" id="timer-core">
+                            <p id="active-subject-display" class="text-base font-semibold text-sky-300 h-7"></p>
+                            <p id="pomodoro-status"></p>
+                            <h2 id="session-timer" class="timer-text text-white text-7xl md:text-8xl">00:00:00</h2>
+                            <div class="timer-meta">
+                                <p id="total-time-display" class="timer-meta-label">Total Today: 00:00:00</p>
+                                <p id="total-break-time-display" class="timer-meta-label">Total Break: 00:00:00</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="timer-controls" class="timer-actions">
+                        <button id="start-studying-btn" class="cta-button" type="button">Start Studying</button>
+                        <button id="stop-studying-btn" class="hidden secondary-button" type="button">Stop</button>
+                        <button id="manual-start-btn" class="hidden secondary-button" type="button">Start Next</button>
+                        <button id="pause-btn" class="hidden secondary-button" type="button">Pause</button>
+                        <button id="resume-btn" class="hidden secondary-button" type="button">Resume</button>
                     </div>
                 </div>
             </div>
@@ -3196,36 +3670,81 @@
                 </div>
                 <div id="group-detail-content" class="flex-grow overflow-y-auto no-scrollbar">
                 </div>
-                <nav id="group-detail-nav" class="bg-gray-800 border-t border-gray-700 grid grid-cols-5 sticky bottom-0">
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors active" data-subpage="home">
-                        <i class="fas fa-home"></i>
-                        <p class="text-xs mt-1">Home</p>
+                <nav id="group-detail-nav">
+                    <button class="group-nav-item active" data-subpage="home" type="button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-5v-5.5h-4V21H5a1 1 0 01-1-1v-9.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="nav-label">Home</span>
                     </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="attendance">
-                        <i class="fas fa-calendar-check"></i>
-                        <p class="text-xs mt-1">Attendance</p>
+                    <button class="group-nav-item" data-subpage="attendance" type="button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <rect x="3" y="5" width="18" height="16" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                            <path d="M16 3v4M8 3v4M3 11h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            <path d="M9.5 15h2.5l1 2 2-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        </svg>
+                        <span class="nav-label">Attendance</span>
                     </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="rankings">
-                        <i class="fas fa-chart-bar"></i>
-                        <p class="text-xs mt-1">Rankings</p>
+                    <button class="group-nav-item" data-subpage="rankings" type="button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 20v-6m6 6V10m6 10V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            <path d="M3 20h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                        <span class="nav-label">Rankings</span>
                     </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="advanced">
-                        <i class="fas fa-bell"></i>
-                        <p class="text-xs mt-1">Advanced</p>
+                    <button class="group-nav-item" data-subpage="advanced" type="button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M18 8a6 6 0 10-12 0c0 3-1.5 4.5-1.5 4.5h15S18 11 18 8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="nav-label">Advanced</span>
                     </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="chat">
-                        <i class="fas fa-comments"></i>
-                        <p class="text-xs mt-1">Chat</p>
+                    <button class="group-nav-item" data-subpage="chat" type="button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 5h16a1 1 0 011 1v9a1 1 0 01-1 1H8l-4 4V6a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M8 9h8M8 13h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="nav-label">Chat</span>
                     </button>
                 </nav>
             </div>
         </main>
-        <nav id="main-nav" class="bg-gray-800 border-t border-gray-700 grid grid-cols-5 sticky bottom-0">
-            <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors active" data-page="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p class="text-xs mt-1">Timer</p></button>
-            <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="stats"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg><p class="text-xs mt-1">Stats</p></button>
-            <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="ranking"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg><p class="text-xs mt-1">Ranking</p></button>
-            <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="planner"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg><p class="text-xs mt-1">Planner</p></button>
-            <button id="add-subject-btn" class="p-3 flex flex-col items-center justify-center text-sky-400 hover:bg-gray-700 transition-colors"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p class="text-xs mt-1">Add Subject</p></button>
+        <nav id="main-nav">
+            <button class="nav-item active" data-page="timer" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M12 8v4l2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="nav-label">Timer</span>
+            </button>
+            <button class="nav-item" data-page="stats" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M4 18l4-4 3 3 6-6 3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="4" cy="6" r="1.1" fill="currentColor"/>
+                </svg>
+                <span class="nav-label">Stats</span>
+            </button>
+            <button class="nav-item" data-page="ranking" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M7 11V5l5-2 5 2v6l-5 2-5-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M7 14v6m10-6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                <span class="nav-label">Ranking</span>
+            </button>
+            <button class="nav-item" data-page="planner" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M8 3v4M16 3v4M4 10h16M9 14h6M9 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="nav-label">Planner</span>
+            </button>
+            <button id="add-subject-btn" class="nav-item" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M12 9v6m-3-3h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                <span class="nav-label">Add Subject</span>
+            </button>
         </nav>
     </div>
 
@@ -4687,6 +5206,7 @@
             if (type === 'tick' && sessionTimerDisplay) {
                 // Update the timer display on every tick from the worker
                 sessionTimerDisplay.textContent = formatPomodoroTime(timeLeft);
+                handleTimerTick(timeLeft, currentTimerTotalSeconds, { state: pomodoroState });
             } else if (type === 'phase_ended') {
                 if (skipNextLocalPhaseEnd) {
                     skipNextLocalPhaseEnd = false;
@@ -5524,6 +6044,142 @@ let pauseStartTime = 0;
         const totalBreakTimeDisplay = document.getElementById('total-break-time-display');
         const activeSubjectDisplay = document.getElementById('active-subject-display');
         const pomodoroStatusDisplay = document.getElementById('pomodoro-status');
+        const timerCore = document.getElementById('timer-core');
+        const timerModeSwitch = document.getElementById('timer-mode-switch');
+        const timerModeIndicator = document.getElementById('timer-mode-indicator');
+        const timerProgressRing = document.querySelector('.timer-progress-ring');
+        const timerOrb = document.getElementById('timer-orb');
+
+        let timerRingCircumference = 0;
+        if (timerProgressRing) {
+            const radius = (timerProgressRing.r && timerProgressRing.r.baseVal && timerProgressRing.r.baseVal.value)
+                ? timerProgressRing.r.baseVal.value
+                : Number(timerProgressRing.getAttribute('r')) || 0;
+            timerRingCircumference = 2 * Math.PI * radius;
+            timerProgressRing.style.strokeDasharray = `${timerRingCircumference}`;
+            timerProgressRing.style.strokeDashoffset = `${timerRingCircumference}`;
+        }
+
+        let currentTimerTotalSeconds = 0;
+        let currentTimerRemainingSeconds = 0;
+        let currentTimerPhase = 'focus';
+
+        function hexToRgb(hex) {
+            if (typeof hex !== 'string') return null;
+            const sanitized = hex.replace('#', '');
+            if (sanitized.length !== 6) return null;
+            const bigint = parseInt(sanitized, 16);
+            if (Number.isNaN(bigint)) return null;
+            return {
+                r: (bigint >> 16) & 255,
+                g: (bigint >> 8) & 255,
+                b: bigint & 255
+            };
+        }
+
+        function setTimerAccent(color) {
+            if (!timerOrb) return;
+            timerOrb.style.setProperty('--timer-accent', color);
+            const rgb = hexToRgb(color);
+            if (rgb) {
+                timerOrb.style.setProperty('--timer-accent-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
+            }
+        }
+
+        function updateTimerVisualState(remainingSeconds, totalSeconds = currentTimerTotalSeconds, options = {}) {
+            if (typeof totalSeconds === 'number') {
+                currentTimerTotalSeconds = Math.max(totalSeconds, 0);
+            }
+            if (typeof remainingSeconds === 'number') {
+                currentTimerRemainingSeconds = Math.max(remainingSeconds, 0);
+            }
+            if (options.state) {
+                currentTimerPhase = options.state;
+            }
+
+            const total = currentTimerTotalSeconds;
+            const remaining = currentTimerRemainingSeconds;
+
+            if (timerProgressRing) {
+                if (!total) {
+                    timerProgressRing.classList.add('indeterminate');
+                    timerProgressRing.style.strokeDashoffset = `${timerRingCircumference}`;
+                } else {
+                    timerProgressRing.classList.remove('indeterminate');
+                    const clampedRatio = Math.min(Math.max(remaining / total, 0), 1);
+                    timerProgressRing.style.strokeDashoffset = `${timerRingCircumference * clampedRatio}`;
+                }
+            }
+
+            let accent = '#38bdf8';
+            if (currentTimerPhase && String(currentTimerPhase).includes('break')) {
+                accent = '#f59e0b';
+            } else if (total > 0) {
+                const ratio = total === 0 ? 1 : remaining / total;
+                if (ratio <= 0.33) {
+                    accent = '#ef4444';
+                } else if (ratio <= 0.66) {
+                    accent = '#22c55e';
+                }
+            }
+
+            setTimerAccent(accent);
+        }
+
+        function triggerTimerPulse() {
+            if (!sessionTimerDisplay) return;
+            sessionTimerDisplay.classList.remove('timer-pulse');
+            sessionTimerDisplay.offsetWidth;
+            sessionTimerDisplay.classList.add('timer-pulse');
+        }
+
+        function animateTimerSwap() {
+            if (!timerCore) return;
+            timerCore.classList.remove('timer-swap');
+            timerCore.offsetWidth;
+            timerCore.classList.add('timer-swap');
+        }
+
+        function handleTimerTick(remainingSeconds, totalSeconds, options = {}) {
+            triggerTimerPulse();
+            updateTimerVisualState(remainingSeconds, totalSeconds, options);
+        }
+
+        function setTimerModeIndicator(mode) {
+            if (timerModeSwitch) {
+                timerModeSwitch.dataset.active = mode;
+            }
+            if (timerModeSwitch) {
+                timerModeSwitch.querySelectorAll('.segment-btn').forEach(btn => {
+                    const isActive = (mode === 'normal' && btn.id === 'normal-timer-btn') ||
+                        (mode === 'pomodoro' && btn.id === 'pomodoro-timer-btn');
+                    btn.classList.toggle('active', isActive);
+                });
+            }
+        }
+
+        setTimerAccent('#38bdf8');
+        setTimerModeIndicator('normal');
+
+        const startStudyingBtn = document.getElementById('start-studying-btn');
+        if (startStudyingBtn) {
+            startStudyingBtn.addEventListener('click', (event) => {
+                const rect = startStudyingBtn.getBoundingClientRect();
+                const ripple = document.createElement('span');
+                ripple.className = 'cta-ripple';
+                const size = Math.max(rect.width, rect.height);
+                const offsetX = typeof event.offsetX === 'number' ? event.offsetX : rect.width / 2;
+                const offsetY = typeof event.offsetY === 'number' ? event.offsetY : rect.height / 2;
+                ripple.style.width = ripple.style.height = `${size}px`;
+                ripple.style.left = `${offsetX - size / 2}px`;
+                ripple.style.top = `${offsetY - size / 2}px`;
+                startStudyingBtn.appendChild(ripple);
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        }
+
 
         function closeImageViewer() {
             const modal = document.getElementById('image-view-modal');
@@ -7364,16 +8020,20 @@ let pauseStartTime = 0;
                 sessionTimerDisplay.textContent = activeTaskTargetSeconds
                     ? formatTime(activeTaskTargetSeconds)
                     : formatTime(0);
+                updateTimerVisualState(activeTaskTargetSeconds || 0, activeTaskTargetSeconds || 0, { state: 'focus' });
+                animateTimerSwap();
                 timerInterval = setInterval(() => {
                     const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
                     if (activeTaskTargetSeconds) {
                         const remainingSeconds = activeTaskTargetSeconds - elapsedSeconds;
                         sessionTimerDisplay.textContent = formatTime(Math.max(remainingSeconds, 0));
+                        handleTimerTick(Math.max(remainingSeconds, 0), activeTaskTargetSeconds, { state: 'focus' });
                         if (remainingSeconds <= 0) {
                             stopTimer().catch(err => console.error('Failed to auto-stop timer', err));
                         }
                     } else {
                         sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
+                        handleTimerTick(elapsedSeconds, 0, { state: 'focus' });
                     }
                 }, 1000);
             } else { // Pomodoro Mode
@@ -7421,6 +8081,8 @@ let pauseStartTime = 0;
                     finalCopy: breakFinalCopy
                 });
                 pomodoroWorker.postMessage({ command: 'start', duration: workDurationSeconds, startedAt: workPhaseStartMs });
+                updateTimerVisualState(workDurationSeconds, workDurationSeconds, { state: 'work' });
+                animateTimerSwap();
                 setPomodoroWakeLockActive(true);
             }
 
@@ -7496,6 +8158,11 @@ let pauseStartTime = 0;
                 : formatTime(0);
             pomodoroStatusDisplay.textContent = timerMode === 'pomodoro' ? 'Ready for Pomodoro' : '';
             pomodoroStatusDisplay.style.color = '#9ca3af';
+            if (timerMode === 'pomodoro') {
+                updateTimerVisualState(pomodoroSettings.work * 60, pomodoroSettings.work * 60, { state: 'work' });
+            } else {
+                updateTimerVisualState(0, 0, { state: 'focus' });
+            }
 
             // Reset button visibility
             document.getElementById('start-studying-btn').classList.remove('hidden');
@@ -7532,7 +8199,17 @@ let pauseStartTime = 0;
                 sessionStartTime += pauseDuration;
                 timerInterval = setInterval(() => {
                     const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
-                    sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
+                    if (activeTaskTargetSeconds) {
+                        const remainingSeconds = Math.max(activeTaskTargetSeconds - elapsedSeconds, 0);
+                        sessionTimerDisplay.textContent = formatTime(remainingSeconds);
+                        handleTimerTick(remainingSeconds, activeTaskTargetSeconds, { state: 'focus' });
+                        if (remainingSeconds <= 0) {
+                            clearInterval(timerInterval);
+                        }
+                    } else {
+                        sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
+                        handleTimerTick(elapsedSeconds, 0, { state: 'focus' });
+                    }
                 }, 1000);
                 isPaused = false;
                 pauseStartTime = 0;
@@ -7587,11 +8264,13 @@ let pauseStartTime = 0;
             // Start the UI timer
             pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds, startedAt: phaseStartMs });
             setPomodoroWakeLockActive(true);
+            updateTimerVisualState(initialTimeLeftSeconds, durationSeconds, { state });
+            animateTimerSwap();
             if (sessionTimerDisplay) {
                 sessionTimerDisplay.textContent = formatPomodoroTime(initialTimeLeftSeconds);
             }
             pomodoroStatusDisplay.textContent = statusText;
-            pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
+            pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e0b' : '#3b82f6';
 
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
             if (state === 'work') {
@@ -7638,6 +8317,7 @@ let pauseStartTime = 0;
             sessionTimerDisplay.textContent = formatTime(elapsedSeconds); // Show break time on main timer display
             pomodoroStatusDisplay.textContent = 'On Break'; // Indicate break status
             pomodoroStatusDisplay.style.color = '#f59e0b'; // Break color
+            handleTimerTick(elapsedSeconds, 0, { state: 'break_manual' });
         }
         
         function updateTotalTimeDisplay() {
@@ -13716,9 +14396,12 @@ if (achievementsGrid) {
 
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', function() {
+            const pageName = this.dataset.page;
+            if (!pageName) {
+                return;
+            }
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             this.classList.add('active');
-            const pageName = this.dataset.page;
             showPage(`page-${pageName}`);
         }));
 
@@ -13912,8 +14595,9 @@ if (achievementsGrid) {
             }
 
             timerMode = mode;
-            document.getElementById('normal-timer-btn').classList.toggle('active', mode === 'normal');
-            document.getElementById('pomodoro-timer-btn').classList.toggle('active', mode === 'pomodoro');
+            setTimerModeIndicator(mode);
+            animateTimerSwap();
+            triggerTimerPulse();
 
             if (mode !== 'pomodoro') {
                 setPomodoroWakeLockActive(false);
@@ -13923,9 +14607,11 @@ if (achievementsGrid) {
                 sessionTimerDisplay.textContent = formatPomodoroTime(pomodoroSettings.work * 60);
                 pomodoroStatusDisplay.textContent = 'Ready for Pomodoro';
                 pomodoroStatusDisplay.style.color = '#9ca3af';
+                updateTimerVisualState(pomodoroSettings.work * 60, pomodoroSettings.work * 60, { state: 'work' });
             } else { // 'normal'
                 sessionTimerDisplay.textContent = formatTime(0);
                 pomodoroStatusDisplay.textContent = '';
+                updateTimerVisualState(0, 0, { state: 'focus' });
             }
         }
         
