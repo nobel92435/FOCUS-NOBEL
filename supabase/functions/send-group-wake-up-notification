@@ -4,12 +4,62 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import webpush from "npm:web-push";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Max-Age": "86400"
-};
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://nobel92435.github.io",
+  "http://localhost:5173",
+  "http://localhost:3000"
+];
+
+const envAllowedOrigins = (Deno.env.get("WAKE_FUNCTION_ALLOWED_ORIGINS") ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0);
+
+const allowedOrigins = Array.from(new Set([...DEFAULT_ALLOWED_ORIGINS, ...envAllowedOrigins]));
+
+function resolveCorsHeaders(req: Request) {
+  const headers = new Headers({
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin"
+  });
+
+  const requestOrigin = req.headers.get("origin") ?? "";
+  const allowedOrigin = allowedOrigins.find((origin) => origin === requestOrigin)
+    ?? allowedOrigins[0]
+    ?? "*";
+
+  headers.set("Access-Control-Allow-Origin", allowedOrigin);
+
+  if (allowedOrigin !== "*") {
+    headers.set("Access-Control-Allow-Credentials", "true");
+  }
+
+  const requestHeaders = req.headers.get("access-control-request-headers");
+  if (requestHeaders) {
+    headers.set("Access-Control-Allow-Headers", requestHeaders);
+  } else {
+    headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+  }
+
+  return headers;
+}
+
+function respond(req: Request, body: BodyInit | null, init: ResponseInit = {}) {
+  const headers = resolveCorsHeaders(req);
+  if (init.headers) {
+    for (const [key, value] of new Headers(init.headers).entries()) {
+      headers.set(key, value);
+    }
+  }
+  return new Response(body, { ...init, headers });
+}
+
+function respondJson(req: Request, body: unknown, init: ResponseInit = {}) {
+  const headers = new Headers(init.headers ?? {});
+  headers.set("Content-Type", "application/json");
+  return respond(req, JSON.stringify(body), { ...init, headers });
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -172,11 +222,11 @@ function buildGroupWakePayload(input: {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return respond(req, null, { status: 204 });
   }
 
   if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+    return respond(req, "Method not allowed", { status: 405 });
   }
 
   try {
@@ -190,48 +240,33 @@ Deno.serve(async (req) => {
     const appId = typeof payload?.appId === "string" ? payload.appId : null;
 
     if (!groupId || !senderId) {
-      return new Response(JSON.stringify({ success: false, message: "Missing groupId or senderId." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return respondJson(req, { success: false, message: "Missing groupId or senderId." }, { status: 400 });
     }
 
     const group = await fetchGroup(groupId);
     if (!group) {
-      return new Response(JSON.stringify({ success: false, message: "Group not found." }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return respondJson(req, { success: false, message: "Group not found." }, { status: 404 });
     }
 
     if (group.leaderId && group.leaderId !== senderId) {
-      return new Response(JSON.stringify({ success: false, message: "Only the group leader can send a wake-up blast." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return respondJson(req, { success: false, message: "Only the group leader can send a wake-up blast." }, { status: 403 });
     }
 
     const memberIds = await fetchGroupMemberIds(groupId);
     const targetIds = Array.from(new Set(memberIds)).filter((id) => id !== senderId);
 
     if (targetIds.length === 0) {
-      return new Response(JSON.stringify({ success: true, sentCount: 0, delivered: 0 }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return respondJson(req, { success: true, sentCount: 0, delivered: 0 });
     }
 
     const subscriptions = await fetchLatestSubscriptions(targetIds);
     if (subscriptions.length === 0) {
-      return new Response(JSON.stringify({
+      return respondJson(req, {
         success: false,
         sentCount: 0,
         delivered: 0,
         message: "No push subscriptions found for group members."
-      }), {
-        status: 202,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      }, { status: 202 });
     }
 
     let senderName = typeof payload?.senderName === "string" ? payload.senderName : null;
@@ -278,21 +313,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({
+    return respondJson(req, {
       success: true,
       sentCount: subscriptions.length,
       delivered,
       errors
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   } catch (error) {
     console.error("Unhandled error in send-group-wake-up-notification", error);
     const message = error instanceof Error ? error.message : String(error ?? "Unknown error");
-    return new Response(JSON.stringify({ success: false, message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
+    return respondJson(req, { success: false, message }, { status: 500 });
   }
 });
