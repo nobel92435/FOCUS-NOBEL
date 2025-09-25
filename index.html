@@ -22,13 +22,16 @@
 
     <style>
         /* Base styles */
-        body { 
-            font-family: 'Inter', sans-serif; 
+        body {
+            font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
-            background-color: #0d1117; /* Darker, modern background */
-            background-image: radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15), transparent 60%);
-            color: #e6edf3; /* Brighter default text */
+            background-color: #f7f8ff; /* Soft, airy backdrop */
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(96, 165, 250, 0.18), transparent 55%),
+                radial-gradient(circle at 85% 15%, rgba(251, 191, 36, 0.16), transparent 50%),
+                radial-gradient(circle at 20% 85%, rgba(248, 113, 113, 0.12), transparent 60%);
+            color: #0f172a; /* Deep blue-gray for readability */
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -175,10 +178,337 @@
             color: white;
             box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
         }
+        .timer-header {
+            background: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+            backdrop-filter: blur(18px);
+            position: sticky;
+            top: 0;
+            z-index: 30;
+        }
+        .header-circle-btn {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(96, 165, 250, 0.12);
+            border: 1px solid rgba(96, 165, 250, 0.25);
+            color: #475569;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .header-circle-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 20px rgba(148, 163, 184, 0.25);
+        }
+        .header-circle-btn--sunrise {
+            background: rgba(251, 191, 36, 0.15);
+            border-color: rgba(251, 191, 36, 0.35);
+        }
+        .timer-hero {
+            padding: 2rem 1.5rem 3.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .timer-hero::before,
+        .timer-hero::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(0.5px);
+            opacity: 0.6;
+        }
+        .timer-hero::before {
+            width: 420px;
+            height: 420px;
+            background: radial-gradient(circle, rgba(191, 219, 254, 0.45) 0%, rgba(255, 255, 255, 0) 70%);
+            top: -120px;
+            right: -120px;
+        }
+        .timer-hero::after {
+            width: 520px;
+            height: 520px;
+            background: radial-gradient(circle, rgba(254, 226, 226, 0.55) 0%, rgba(255, 255, 255, 0) 75%);
+            bottom: -180px;
+            left: -180px;
+        }
+        .timer-hero__grid {
+            position: relative;
+            width: 100%;
+            max-width: 1160px;
+            display: grid;
+            gap: 3rem;
+            align-items: center;
+        }
+        @media (min-width: 1024px) {
+            .timer-hero__grid {
+                grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+            }
+        }
+        .timer-hero__intro {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+        .timer-hero__badge {
+            width: fit-content;
+            background: rgba(59, 130, 246, 0.12);
+            color: #1d4ed8;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.15em;
+            padding: 0.45rem 0.9rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(59, 130, 246, 0.25);
+        }
+        .timer-hero__title {
+            font-size: clamp(2.25rem, 5vw, 3.5rem);
+            line-height: 1.1;
+            font-weight: 800;
+            color: #111827;
+            max-width: 18ch;
+        }
+        .timer-hero__description {
+            font-size: 1.05rem;
+            line-height: 1.75;
+            color: #475569;
+            max-width: 52ch;
+        }
+        .timer-hero__highlights {
+            display: grid;
+            gap: 1rem;
+        }
+        @media (min-width: 640px) {
+            .timer-hero__highlights {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        .highlight-card {
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 1.25rem;
+            padding: 1.2rem 1.35rem;
+            box-shadow: 0 25px 45px rgba(148, 163, 184, 0.15);
+        }
+        .highlight-card__label {
+            display: block;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: #f97316;
+            margin-bottom: 0.5rem;
+        }
+        .highlight-card__text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #475569;
+        }
+        .timer-illustration {
+            position: relative;
+            width: min(320px, 80%);
+            aspect-ratio: 1;
+            margin-top: 1.5rem;
+        }
+        .timer-illustration__blob {
+            width: 100%;
+            height: 100%;
+            border-radius: 48% 52% 58% 42% / 55% 45% 55% 45%;
+            background: radial-gradient(circle at 30% 30%, rgba(252, 211, 77, 0.35), rgba(251, 146, 60, 0.55));
+            filter: drop-shadow(0 25px 45px rgba(249, 168, 212, 0.45));
+        }
+        .timer-illustration__character {
+            position: absolute;
+            bottom: 18%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 42%;
+            aspect-ratio: 1;
+            border-radius: 46% 54% 52% 48%;
+            background: linear-gradient(180deg, #fb923c 0%, #f97316 100%);
+            box-shadow: 0 18px 35px rgba(249, 115, 22, 0.35);
+        }
+        .timer-illustration__face {
+            position: absolute;
+            top: 38%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: space-between;
+            width: 48%;
+        }
+        .timer-illustration__face span {
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 9999px;
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+        }
+        .timer-illustration__smile {
+            position: absolute;
+            bottom: 32%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 36%;
+            height: 22%;
+            border-bottom-left-radius: 50% 70%;
+            border-bottom-right-radius: 50% 70%;
+            border-bottom: 4px solid rgba(255, 255, 255, 0.85);
+        }
+        .timer-illustration__sparkle {
+            position: absolute;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, rgba(96, 165, 250, 0.85), rgba(192, 132, 252, 0.85));
+            box-shadow: 0 10px 18px rgba(96, 165, 250, 0.25);
+        }
+        .timer-illustration__sparkle--one {
+            width: 46px;
+            height: 46px;
+            top: 12%;
+            right: 8%;
+        }
+        .timer-illustration__sparkle--two {
+            width: 32px;
+            height: 32px;
+            bottom: 6%;
+            left: 12%;
+        }
+        .timer-card {
+            position: relative;
+            z-index: 1;
+            padding: clamp(2rem, 4vw, 2.75rem);
+            border-radius: 28px;
+            background: #ffffff;
+            box-shadow: 0 35px 60px rgba(93, 142, 247, 0.18);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            width: min(420px, 100%);
+            margin: 0 auto;
+        }
+        .timer-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(135deg, rgba(96, 165, 250, 0.08), rgba(249, 115, 22, 0.08));
+            z-index: -1;
+        }
+        #page-timer .timer-switch-container {
+            background: rgba(226, 232, 240, 0.6);
+            border-radius: 9999px;
+            padding: 0.5rem;
+            border: 1px solid rgba(129, 140, 248, 0.35);
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9);
+        }
+        #page-timer .timer-switch-btn {
+            color: #64748b;
+        }
+        #page-timer .timer-switch-btn.active {
+            background-image: linear-gradient(135deg, #60a5fa 0%, #f97316 100%);
+            box-shadow: 0 6px 20px rgba(96, 165, 250, 0.25);
+        }
+        .timer-group-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: #2563eb;
+            background: rgba(191, 219, 254, 0.45);
+            padding: 0.6rem 1rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-bottom: 1.5rem;
+        }
+        .timer-group-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 25px rgba(59, 130, 246, 0.2);
+        }
+        .timer-active-subject {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #3b82f6;
+        }
+        .timer-display {
+            font-size: clamp(3.5rem, 7vw, 5rem);
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            color: #111827;
+            margin-bottom: 0.75rem;
+        }
+        .timer-total {
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+        .timer-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+            margin-top: 2.25rem;
+        }
+        .timer-primary-btn,
+        .timer-secondary-btn,
+        .timer-stop-btn,
+        .timer-pause-btn {
+            border: none;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            padding: 0.95rem 2.6rem;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .timer-primary-btn {
+            background-image: linear-gradient(135deg, #f97316 0%, #fb7185 100%);
+            color: white;
+            box-shadow: 0 20px 35px rgba(249, 115, 22, 0.35);
+        }
+        .timer-primary-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 24px 40px rgba(249, 115, 22, 0.4);
+        }
+        .timer-secondary-btn {
+            background: rgba(96, 165, 250, 0.15);
+            color: #1d4ed8;
+            box-shadow: 0 12px 20px rgba(96, 165, 250, 0.2);
+        }
+        .timer-secondary-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 26px rgba(96, 165, 250, 0.28);
+        }
+        .timer-stop-btn {
+            background-image: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+            color: white;
+            box-shadow: 0 18px 32px rgba(239, 68, 68, 0.35);
+        }
+        .timer-stop-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 22px 38px rgba(239, 68, 68, 0.42);
+        }
+        .timer-pause-btn {
+            background: linear-gradient(135deg, #facc15 0%, #f97316 100%);
+            color: #78350f;
+            box-shadow: 0 18px 32px rgba(250, 204, 21, 0.3);
+        }
+        .timer-pause-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 22px 38px rgba(250, 204, 21, 0.35);
+        }
+        .timer-controls button:focus-visible {
+            outline: 3px solid rgba(96, 165, 250, 0.45);
+            outline-offset: 3px;
+        }
         #pomodoro-status {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #f59e0b; /* Amber color for breaks */
+            color: #f08a24; /* Warm amber for break indicator */
             height: 2rem;
             margin-bottom: 0.5rem;
         }
@@ -2793,23 +3123,24 @@
 
         /* New Group Study Button */
         #group-study-timer-btn {
-            background-color: #1f2937;
-            color: #9ca3af;
+            background: rgba(191, 219, 254, 0.45);
+            color: #2563eb;
             font-weight: 600;
             border-radius: 9999px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             width: fit-content;
-            margin: 1rem auto 0; /* Center it below the switch */
-            padding: 0.5rem 1.5rem;
-            display: flex;
+            margin: 0 auto 1.5rem;
+            padding: 0.6rem 1rem;
+            display: inline-flex;
             align-items: center;
             gap: 0.5rem;
+            border: 1px solid rgba(59, 130, 246, 0.25);
         }
         #group-study-timer-btn:hover {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8);
-            color: white;
-            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 12px 25px rgba(59, 130, 246, 0.2);
+            color: #1d4ed8;
         }
 
         /* Group Detail Header Dropdown */
@@ -2966,7 +3297,7 @@
     <div id="app-container" class="flex-col h-screen">
         <main id="main" class="flex-grow overflow-y-auto no-scrollbar">
             <div id="page-timer" class="page active flex-col h-full">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20">
+                <header class="timer-header p-4 md:p-6 flex items-center justify-between z-20">
                      <div class="flex items-center">
                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                              <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
@@ -2981,37 +3312,67 @@
                          <span class="text-2xl font-bold ml-2 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
                      </div>
                      <div class="flex items-center space-x-4">
-                        <button id="groups-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition">
+                        <button id="groups-btn" class="header-circle-btn">
                             <img src="assets/icons/groups.svg" alt="Groups" class="w-6 h-6">
                         </button>
-                        <button id="premium-btn" class="w-10 h-10 rounded-full bg-yellow-900/50 border border-yellow-800 flex items-center justify-center text-yellow-400 hover:bg-yellow-800/60 transition" title="Premium Features">
+                        <button id="premium-btn" class="header-circle-btn header-circle-btn--sunrise" title="Premium Features">
                             <img src="assets/icons/premium.svg" alt="Premium" class="w-6 h-6">
                         </button>
-                         <button id="profile-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition overflow-hidden">
+                         <button id="profile-btn" class="header-circle-btn overflow-hidden">
                              <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
                          </button>
                      </div>
                 </header>
-                <div class="relative flex-grow flex items-center justify-center -mt-16">
-                    <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
-                        <div class="timer-switch-container mx-auto mb-4">
-                            <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
-                            <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
+                <div class="timer-hero relative flex-grow w-full">
+                    <div class="timer-hero__grid">
+                        <div class="timer-hero__intro">
+                            <span class="timer-hero__badge">Your mindful workspace</span>
+                            <h1 class="timer-hero__title">Find your calm and get things done.</h1>
+                            <p class="timer-hero__description">FocusFlow keeps your sessions balanced with gentle nudges and purposeful pauses so you can study with clarity and joy.</p>
+                            <div class="timer-hero__highlights">
+                                <div class="highlight-card">
+                                    <span class="highlight-card__label">Daily momentum</span>
+                                    <p class="highlight-card__text">Track focus streaks and celebrate every small win along the way.</p>
+                                </div>
+                                <div class="highlight-card">
+                                    <span class="highlight-card__label">Balanced breaks</span>
+                                    <p class="highlight-card__text">Recharge with mindful pauses and return feeling refreshed.</p>
+                                </div>
+                            </div>
+                            <div class="timer-illustration" aria-hidden="true">
+                                <div class="timer-illustration__blob"></div>
+                                <div class="timer-illustration__sparkle timer-illustration__sparkle--one"></div>
+                                <div class="timer-illustration__sparkle timer-illustration__sparkle--two"></div>
+                                <div class="timer-illustration__character">
+                                    <div class="timer-illustration__face">
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                    <div class="timer-illustration__smile"></div>
+                                </div>
+                            </div>
                         </div>
-                        <button id="group-study-timer-btn" class="text-sm">
-                            <i class="fas fa-users-line"></i> Group Study
-                        </button>
-                        <p id="active-subject-display" class="text-xl font-semibold text-blue-400 h-7 mb-2"></p>
-                        <p id="pomodoro-status"></p>
-                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
-                        <p id="total-time-display" class="text-gray-400 mt-2">Total Today: 00:00:00</p>
-                        <p id="total-break-time-display" class="text-gray-400 mt-1">Total Break: 00:00:00</p>
-                        <div id="timer-controls" class="mt-8">
-                            <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
-                            <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
-                            <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
-                            <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
-                            <button id="resume-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Resume</button>
+                        <div class="timer-card text-center">
+                            <div class="timer-switch-container mx-auto mb-6">
+                                <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
+                                <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
+                            </div>
+                            <button id="group-study-timer-btn" class="timer-group-btn">
+                                <i class="fas fa-users-line"></i>
+                                <span>Group Study</span>
+                            </button>
+                            <p id="active-subject-display" class="timer-active-subject h-7 mb-2"></p>
+                            <p id="pomodoro-status"></p>
+                            <h2 id="session-timer" class="timer-display">00:00:00</h2>
+                            <p id="total-time-display" class="timer-total">Total Today: 00:00:00</p>
+                            <p id="total-break-time-display" class="timer-total">Total Break: 00:00:00</p>
+                            <div id="timer-controls" class="timer-controls">
+                                <button id="start-studying-btn" class="timer-primary-btn">Start working</button>
+                                <button id="stop-studying-btn" class="timer-stop-btn hidden">Stop</button>
+                                <button id="manual-start-btn" class="timer-secondary-btn hidden">Start Next</button>
+                                <button id="pause-btn" class="timer-pause-btn hidden">Pause</button>
+                                <button id="resume-btn" class="timer-secondary-btn hidden">Resume</button>
+                            </div>
                         </div>
                     </div>
                 </div>
