@@ -13,7 +13,7 @@
     <link rel="manifest" href="manifest.json">
     <!-- Set the content attribute to your app's VAPID public key so push subscriptions can be created -->
     <meta name="vapid-public-key" content="BJqi2nFBuazVXwx9OdCSLwKDhG65fZOL7IBsAzQI1YxBr0zmV4nTl80JtAZFeOIobDgJ0kNqwVpPf_BjEmblNa0">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Roboto+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel='icon' href="favicon.ico">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -22,13 +22,43 @@
 
     <style>
         /* Base styles */
-        body { 
-            font-family: 'Inter', sans-serif; 
+        :root {
+            --timer-color: #38bdf8;
+            --timer-progress: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
             background-color: #0d1117; /* Darker, modern background */
             background-image: radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15), transparent 60%);
             color: #e6edf3; /* Brighter default text */
+        }
+
+        #page-timer {
+            position: relative;
+        }
+
+        #page-timer::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.18), transparent 60%);
+            pointer-events: none;
+            opacity: 0;
+            animation: fadeHero 0.6s ease forwards 0.2s;
+        }
+
+        @keyframes fadeHero {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -46,7 +76,414 @@
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
         /* UI element styles */
-        .timer-text { font-weight: 900; letter-spacing: -0.05em; }
+        .timer-text {
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            font-family: 'Roboto Mono', 'Inter', monospace;
+            font-feature-settings: 'tnum';
+            font-variant-numeric: tabular-nums;
+            text-rendering: geometricPrecision;
+            transition: transform 0.25s ease, color 0.6s ease;
+        }
+
+        .timer-text.ticking {
+            transform: scale(1.05);
+        }
+
+        #timer-card {
+            position: relative;
+            width: min(100%, 420px);
+            margin: 0 auto;
+            padding: 32px 28px 28px;
+            border-radius: 36px;
+            background: linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(8, 11, 20, 0.92)),
+                        radial-gradient(circle at top, rgba(56, 189, 248, 0.15), transparent 65%);
+            border: 1px solid rgba(56, 189, 248, 0.12);
+            box-shadow: 0 28px 70px rgba(15, 118, 110, 0.25);
+            backdrop-filter: blur(22px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            isolation: isolate;
+            animation: cardIn 0.6s ease forwards 0.2s;
+        }
+
+        #timer-card::before {
+            content: "";
+            position: absolute;
+            inset: 12px;
+            border-radius: 28px;
+            background: radial-gradient(circle at 50% 30%, rgba(125, 211, 252, 0.18), transparent 65%);
+            opacity: 0.75;
+            z-index: -1;
+        }
+
+        @keyframes cardIn {
+            from {
+                transform: translateY(12px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        #timer-card-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #timer-card-header p {
+            margin: 0;
+        }
+
+        #timer-progress-ring {
+            position: relative;
+            width: min(70vw, 320px);
+            aspect-ratio: 1 / 1;
+            display: grid;
+            place-items: center;
+        }
+
+        #timer-progress-ring::after {
+            content: "";
+            position: absolute;
+            inset: 6%;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.1), transparent 65%);
+            filter: blur(8px);
+            z-index: 0;
+        }
+
+        #timer-progress-ring svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .timer-ring-bg {
+            fill: none;
+            stroke: rgba(148, 163, 184, 0.18);
+            stroke-width: 14;
+        }
+
+        .timer-ring-progress {
+            fill: none;
+            stroke: var(--timer-color);
+            stroke-width: 14;
+            stroke-linecap: round;
+            stroke-dasharray: 0;
+            stroke-dashoffset: 0;
+            transition: stroke 0.4s ease, stroke-dashoffset 0.6s ease;
+            filter: drop-shadow(0 0 22px rgba(56, 189, 248, 0.35));
+        }
+
+        .timer-ring-progress.timer-progress-indeterminate {
+            animation: rotateProgress 1.8s linear infinite;
+            stroke-dasharray: 160;
+            stroke-dashoffset: 0;
+        }
+
+        @keyframes rotateProgress {
+            from { stroke-dashoffset: 0; }
+            to { stroke-dashoffset: -320; }
+        }
+
+        #timer-display {
+            position: absolute;
+            inset: 16%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at 50% 30%, rgba(15, 23, 42, 0.9), rgba(13, 17, 23, 0.88));
+            box-shadow: inset 0 0 18px rgba(14, 165, 233, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.12);
+            z-index: 1;
+        }
+
+        .timer-metrics {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .timer-metric {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 12px 16px;
+            border-radius: 20px;
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            box-shadow: 0 10px 28px rgba(15, 118, 110, 0.15);
+        }
+
+        .timer-metric span {
+            display: block;
+        }
+
+        .timer-metric-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: rgba(226, 232, 240, 0.72);
+            letter-spacing: 0.01em;
+        }
+
+        .timer-metric-value {
+            font-weight: 600;
+            font-size: 1.05rem;
+            color: #f8fafc;
+        }
+
+        #timer-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+        }
+
+        #timer-controls button {
+            min-width: 140px;
+        }
+
+        #start-studying-btn {
+            position: relative;
+            overflow: hidden;
+            border-radius: 9999px;
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #06b6d4, #3b82f6);
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        #start-studying-btn:hover {
+            box-shadow: 0 12px 28px rgba(14, 165, 233, 0.35);
+            transform: translateY(-2px);
+        }
+
+        #start-studying-btn:active {
+            transform: scale(0.96);
+        }
+
+        #start-studying-btn .ripple {
+            position: absolute;
+            border-radius: 9999px;
+            transform: scale(0);
+            background: rgba(255, 255, 255, 0.35);
+            animation: ripple 0.6s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(4.5);
+                opacity: 0;
+            }
+        }
+
+        #group-study-timer-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 9999px;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            background: rgba(15, 23, 42, 0.65);
+            color: rgba(226, 232, 240, 0.82);
+            font-weight: 600;
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        #group-study-timer-btn:hover {
+            border-color: rgba(56, 189, 248, 0.45);
+            background: rgba(8, 47, 73, 0.65);
+            transform: translateY(-1px);
+        }
+
+        #group-study-timer-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        #pomodoro-status {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #94a3b8;
+            letter-spacing: 0.01em;
+            min-height: 24px;
+        }
+
+        #active-subject-display {
+            min-height: 28px;
+            color: #38bdf8;
+        }
+
+        header .brand-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+
+        .timer-switch-container[data-segmented="true"] {
+            position: relative;
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 9999px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.12);
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+            backdrop-filter: blur(18px);
+            --switch-active-index: 0;
+        }
+
+        .timer-switch-container[data-segmented="true"] .timer-switch-highlight {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            width: calc(50% - 0.25rem);
+            height: calc(100% - 1rem);
+            border-radius: 9999px;
+            background: linear-gradient(135deg, rgba(45, 212, 191, 0.95), rgba(56, 189, 248, 0.95));
+            box-shadow: 0 12px 30px rgba(56, 189, 248, 0.25);
+            transform: translateX(calc(var(--switch-active-index, 0) * (100% + 0.5rem)));
+            transition: transform 0.35s cubic-bezier(0.22, 0.68, 0.35, 1), opacity 0.3s ease;
+            z-index: 0;
+        }
+
+        .timer-switch-container[data-segmented="true"] .timer-switch-btn {
+            position: relative;
+            z-index: 1;
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px;
+            background: transparent;
+            color: rgba(148, 163, 184, 0.85);
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        .timer-switch-container[data-segmented="true"] .timer-switch-btn.active {
+            color: #0f172a;
+            font-weight: 700;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .timer-switch-container[data-segmented="true"] .timer-switch-btn:not(.active):hover {
+            color: rgba(226, 232, 240, 0.88);
+        }
+
+        #main-nav.main-nav {
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(22px);
+            border-top: 1px solid rgba(148, 163, 184, 0.16);
+            box-shadow: 0 -12px 32px rgba(8, 47, 73, 0.4);
+        }
+
+        #main-nav .nav-item {
+            position: relative;
+            padding: 12px 4px;
+            color: rgba(148, 163, 184, 0.9);
+            font-weight: 500;
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
+
+        #main-nav .nav-item svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        #main-nav .nav-item.active {
+            color: #0ea5e9;
+            font-weight: 700;
+        }
+
+        #main-nav .nav-item.active::after {
+            content: "";
+            position: absolute;
+            inset: auto 16px 6px;
+            height: 3px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(45, 212, 191, 0.9), rgba(14, 165, 233, 0.9));
+        }
+
+        #main-nav .nav-item:hover {
+            color: rgba(226, 232, 240, 0.95);
+            transform: translateY(-2px);
+        }
+
+        header .header-actions button {
+            width: 42px;
+            height: 42px;
+            border-radius: 9999px;
+            border: 1px solid rgba(56, 189, 248, 0.16);
+            background: rgba(15, 23, 42, 0.65);
+            color: rgba(148, 163, 184, 0.9);
+            display: grid;
+            place-items: center;
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        header .header-actions button:hover {
+            transform: translateY(-2px);
+            border-color: rgba(56, 189, 248, 0.35);
+            background: rgba(15, 23, 42, 0.85);
+        }
+
+        #premium-btn {
+            color: #facc15;
+            border-color: rgba(250, 204, 21, 0.45);
+            background: rgba(161, 98, 7, 0.2);
+        }
+
+        #premium-btn:hover {
+            background: rgba(202, 138, 4, 0.28);
+        }
+
+        #profile-btn {
+            position: relative;
+            overflow: hidden;
+            border-color: rgba(56, 189, 248, 0.45);
+            box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.2);
+        }
+
+        #header-avatar {
+            border-radius: 9999px;
+            overflow: hidden;
+            border: 2px solid rgba(56, 189, 248, 0.4);
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(45, 212, 191, 0.2));
+            color: #e2e8f0;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 640px) {
+            #timer-card {
+                padding: 28px 20px 24px;
+                gap: 20px;
+            }
+
+            #timer-progress-ring {
+                width: min(82vw, 280px);
+            }
+
+            .timer-metrics {
+                gap: 12px;
+            }
+
+            .timer-metric {
+                padding: 10px 14px;
+            }
+        }
 
         .advanced-heatmap-grid {
             display: grid;
@@ -121,14 +558,6 @@
             color: white;
             box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
         }
-        #pomodoro-status {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #f59e0b; /* Amber color for breaks */
-            height: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
         /* Pomodoro Settings Modal Scroll Fix */
         #pomodoro-settings-modal .modal-content {
             max-height: 90vh;
@@ -2738,26 +3167,6 @@
         }
 
         /* New Group Study Button */
-        #group-study-timer-btn {
-            background-color: #1f2937;
-            color: #9ca3af;
-            font-weight: 600;
-            border-radius: 9999px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: fit-content;
-            margin: 1rem auto 0; /* Center it below the switch */
-            padding: 0.5rem 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        #group-study-timer-btn:hover {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8);
-            color: white;
-            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
-        }
-
         /* Group Detail Header Dropdown */
         .group-detail-header-dropdown {
             position: relative;
@@ -2912,50 +3321,80 @@
     <div id="app-container" class="flex-col h-screen">
         <main id="main" class="flex-grow overflow-y-auto no-scrollbar">
             <div id="page-timer" class="page active flex-col h-full">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20">
-                     <div class="flex items-center">
-                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                             <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
-                             <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
-                             <defs>
-                                 <linearGradient id="paint0_linear_logo_header" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
-                                     <stop stop-color="#14B8A6"></stop>
-                                     <stop offset="1" stop-color="#0EA5E9"></stop>
-                                 </linearGradient>
-                             </defs>
-                         </svg>
-                         <span class="text-2xl font-bold ml-2 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
-                     </div>
-                     <div class="flex items-center space-x-4">
-                         <button id="groups-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition">
-                             <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                 <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                             </svg>
-                         </button>
-                         <button id="premium-btn" class="w-10 h-10 rounded-full bg-yellow-900/50 border border-yellow-800 flex items-center justify-center text-yellow-400 hover:bg-yellow-800/60 transition" title="Premium Features">
-                             <i class="fas fa-star"></i>
-                         </button>
-                         <button id="profile-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition overflow-hidden">
-                             <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
-                         </button>
-                     </div>
-                </header>
-                <div class="relative flex-grow flex items-center justify-center -mt-16">
-                    <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
-                        <div class="timer-switch-container mx-auto mb-4">
-                            <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
-                            <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
-                        </div>
-                        <button id="group-study-timer-btn" class="text-sm">
-                            <i class="fas fa-users-line"></i> Group Study
+                <header class="relative z-20 flex items-center justify-between px-6 pt-8 pb-6 md:px-10 md:pt-10">
+                    <div class="flex items-center gap-3">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
+                            <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
+                            <defs>
+                                <linearGradient id="paint0_linear_logo_header" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#14B8A6"></stop>
+                                    <stop offset="1" stop-color="#0EA5E9"></stop>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <span class="brand-title bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
+                    </div>
+                    <div class="header-actions flex items-center gap-3">
+                        <button id="groups-btn" class="transition" aria-label="Open study groups">
+                            <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M22 21v-2a4 4 0 00-3-3.87" />
+                                <path d="M16 3.13a4 4 0 010 7.75" />
+                            </svg>
                         </button>
-                        <p id="active-subject-display" class="text-xl font-semibold text-blue-400 h-7 mb-2"></p>
-                        <p id="pomodoro-status"></p>
-                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
-                        <p id="total-time-display" class="text-gray-400 mt-2">Total Today: 00:00:00</p>
-                        <p id="total-break-time-display" class="text-gray-400 mt-1">Total Break: 00:00:00</p>
-                        <div id="timer-controls" class="mt-8">
-                            <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
+                        <button id="premium-btn" class="transition" aria-label="Premium features" title="Premium Features">
+                            <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2.75l2.09 5.72 6.02.46-4.55 3.73 1.42 5.89L12 14.98l-4.98 3.57 1.42-5.89-4.55-3.73 6.02-.46L12 2.75z" />
+                            </svg>
+                        </button>
+                        <button id="profile-btn" class="transition" aria-label="Open profile">
+                            <div id="header-avatar" class="w-full h-full flex items-center justify-center">U</div>
+                        </button>
+                    </div>
+                </header>
+                <div class="relative flex-1 flex items-center justify-center px-4 pb-28 pt-6 sm:px-6 md:pb-36">
+                    <div id="timer-card" class="text-center">
+                        <div class="timer-switch-container mx-auto" data-segmented="true">
+                            <span class="timer-switch-highlight" aria-hidden="true"></span>
+                            <button id="normal-timer-btn" class="timer-switch-btn active" type="button">Normal</button>
+                            <button id="pomodoro-timer-btn" class="timer-switch-btn" type="button">Pomodoro</button>
+                        </div>
+                        <button id="group-study-timer-btn" class="text-sm" type="button">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 18v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M22 18v-1a4 4 0 00-3-3.87" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 3.13a4 4 0 010 7.75" />
+                            </svg>
+                            <span>Group Study</span>
+                        </button>
+                        <div id="timer-card-header">
+                            <p id="active-subject-display" class="text-lg font-semibold"></p>
+                            <p id="pomodoro-status"></p>
+                        </div>
+                        <div id="timer-progress-ring">
+                            <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <circle class="timer-ring-bg" cx="120" cy="120" r="104"></circle>
+                                <circle id="timer-progress-circle" class="timer-ring-progress" cx="120" cy="120" r="104"></circle>
+                            </svg>
+                            <div id="timer-display">
+                                <h2 id="session-timer" class="timer-text text-[3.75rem] sm:text-[4.5rem] text-white">00:00:00</h2>
+                            </div>
+                        </div>
+                        <div class="timer-metrics">
+                            <div class="timer-metric">
+                                <span class="timer-metric-label">Total Today</span>
+                                <span id="total-time-display" class="timer-metric-value">00:00:00</span>
+                            </div>
+                            <div class="timer-metric">
+                                <span class="timer-metric-label">Total Break</span>
+                                <span id="total-break-time-display" class="timer-metric-value">00:00:00</span>
+                            </div>
+                        </div>
+                        <div id="timer-controls">
+                            <button id="start-studying-btn" class="text-white">Start Studying</button>
                             <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
                             <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
                             <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
@@ -3237,7 +3676,7 @@
                 </div>
             </div>
         </main>
-        <nav id="main-nav" class="bg-gray-800 border-t border-gray-700 grid grid-cols-5 sticky bottom-0">
+        <nav id="main-nav" class="main-nav grid grid-cols-5 sticky bottom-0">
             <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors active" data-page="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p class="text-xs mt-1">Timer</p></button>
             <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="stats"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg><p class="text-xs mt-1">Stats</p></button>
             <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="ranking"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg><p class="text-xs mt-1">Ranking</p></button>
@@ -4709,6 +5148,8 @@
             if (type === 'tick' && sessionTimerDisplay) {
                 // Update the timer display on every tick from the worker
                 sessionTimerDisplay.textContent = formatPomodoroTime(timeLeft);
+                triggerTimerPulse();
+                updateTimerVisuals({ totalSeconds: timerPhaseTotalSeconds, remainingSeconds: timeLeft, phaseState: timerPhaseState });
             } else if (type === 'phase_ended') {
                 if (skipNextLocalPhaseEnd) {
                     skipNextLocalPhaseEnd = false;
@@ -5546,6 +5987,118 @@ let pauseStartTime = 0;
         const totalBreakTimeDisplay = document.getElementById('total-break-time-display');
         const activeSubjectDisplay = document.getElementById('active-subject-display');
         const pomodoroStatusDisplay = document.getElementById('pomodoro-status');
+        const timerProgressCircle = document.getElementById('timer-progress-circle');
+        const timerCardElement = document.getElementById('timer-card');
+        const timerSwitchContainer = document.querySelector('#timer-card .timer-switch-container');
+
+        let timerProgressCircumference = 0;
+        if (timerProgressCircle) {
+            const radius = timerProgressCircle.r.baseVal.value || 0;
+            timerProgressCircumference = 2 * Math.PI * radius;
+            timerProgressCircle.style.strokeDasharray = timerProgressCircumference.toFixed(2);
+            timerProgressCircle.style.strokeDashoffset = timerProgressCircumference.toFixed(2);
+        }
+
+        if (timerCardElement) {
+            timerCardElement.style.setProperty('--timer-color', '#38bdf8');
+        }
+
+        let timerPhaseTotalSeconds = null;
+        let timerPhaseState = 'idle';
+        let timerPulseTimeoutId = null;
+
+        function setTimerSwitchActive(index = 0) {
+            if (timerSwitchContainer) {
+                timerSwitchContainer.style.setProperty('--switch-active-index', index);
+            }
+        }
+
+        function triggerTimerPulse() {
+            if (!sessionTimerDisplay) return;
+            sessionTimerDisplay.classList.remove('ticking');
+            // Force reflow so the animation can retrigger
+            void sessionTimerDisplay.offsetWidth;
+            sessionTimerDisplay.classList.add('ticking');
+            if (timerPulseTimeoutId) {
+                clearTimeout(timerPulseTimeoutId);
+            }
+            timerPulseTimeoutId = setTimeout(() => {
+                sessionTimerDisplay.classList.remove('ticking');
+            }, 220);
+        }
+
+        function setTimerVisualIndeterminate() {
+            if (!timerProgressCircle || !timerCardElement) return;
+            timerProgressCircle.classList.add('timer-progress-indeterminate');
+            timerProgressCircle.style.strokeDasharray = '160';
+            timerProgressCircle.style.strokeDashoffset = '0';
+            timerCardElement.style.setProperty('--timer-color', '#38bdf8');
+            timerPhaseTotalSeconds = null;
+            timerPhaseState = 'idle';
+        }
+
+        function updateTimerVisuals({ totalSeconds, remainingSeconds, phaseState = timerPhaseState } = {}) {
+            if (!timerProgressCircle || !timerCardElement) return;
+
+            if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
+                setTimerVisualIndeterminate();
+                return;
+            }
+
+            const safeRemaining = Math.max(Number.isFinite(remainingSeconds) ? remainingSeconds : totalSeconds, 0);
+            const clampedProgress = Math.min(Math.max((totalSeconds - safeRemaining) / totalSeconds, 0), 1);
+            timerProgressCircle.classList.remove('timer-progress-indeterminate');
+            timerProgressCircle.style.strokeDasharray = timerProgressCircumference.toFixed(2);
+            const offset = timerProgressCircumference * (1 - clampedProgress);
+            timerProgressCircle.style.strokeDashoffset = offset.toFixed(2);
+
+            let nextColor = '#38bdf8';
+            const ratio = totalSeconds > 0 ? safeRemaining / totalSeconds : 1;
+            if (phaseState && String(phaseState).includes('break')) {
+                nextColor = ratio <= 0.3 ? '#fb7185' : '#f59e0b';
+            } else {
+                if (ratio <= 0.3) {
+                    nextColor = '#f87171';
+                } else if (ratio <= 0.6) {
+                    nextColor = '#34d399';
+                }
+            }
+            timerCardElement.style.setProperty('--timer-color', nextColor);
+            timerPhaseTotalSeconds = totalSeconds;
+            timerPhaseState = phaseState;
+        }
+
+        const startStudyingButton = document.getElementById('start-studying-btn');
+        if (startStudyingButton) {
+            startStudyingButton.addEventListener('click', createRippleEffect);
+        }
+
+        function createRippleEffect(event) {
+            const button = event.currentTarget;
+            if (!button) return;
+            const existingRipple = button.querySelector('.ripple');
+            if (existingRipple) {
+                existingRipple.remove();
+            }
+            const ripple = document.createElement('span');
+            ripple.className = 'ripple';
+            const rect = button.getBoundingClientRect();
+            const diameter = Math.max(rect.width, rect.height);
+            ripple.style.width = ripple.style.height = `${diameter}px`;
+            const clientX = Number.isFinite(event.clientX) ? event.clientX : rect.left + rect.width / 2;
+            const clientY = Number.isFinite(event.clientY) ? event.clientY : rect.top + rect.height / 2;
+            ripple.style.left = `${clientX - rect.left - diameter / 2}px`;
+            ripple.style.top = `${clientY - rect.top - diameter / 2}px`;
+            button.appendChild(ripple);
+            ripple.addEventListener('animationend', () => ripple.remove());
+        }
+
+        if (timerMode === 'normal' && !activeTaskTargetSeconds) {
+            setTimerVisualIndeterminate();
+        } else if (timerMode === 'pomodoro') {
+            timerPhaseState = 'work';
+            updateTimerVisuals({ totalSeconds: pomodoroSettings.work * 60, remainingSeconds: pomodoroSettings.work * 60, phaseState: 'work' });
+        }
 
         function closeImageViewer() {
             const modal = document.getElementById('image-view-modal');
@@ -7386,16 +7939,26 @@ let pauseStartTime = 0;
                 sessionTimerDisplay.textContent = activeTaskTargetSeconds
                     ? formatTime(activeTaskTargetSeconds)
                     : formatTime(0);
+                timerPhaseState = 'normal';
+                if (activeTaskTargetSeconds) {
+                    updateTimerVisuals({ totalSeconds: activeTaskTargetSeconds, remainingSeconds: activeTaskTargetSeconds, phaseState: 'normal' });
+                } else {
+                    setTimerVisualIndeterminate();
+                }
                 timerInterval = setInterval(() => {
                     const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
                     if (activeTaskTargetSeconds) {
                         const remainingSeconds = activeTaskTargetSeconds - elapsedSeconds;
-                        sessionTimerDisplay.textContent = formatTime(Math.max(remainingSeconds, 0));
+                        const safeRemaining = Math.max(remainingSeconds, 0);
+                        sessionTimerDisplay.textContent = formatTime(safeRemaining);
+                        triggerTimerPulse();
+                        updateTimerVisuals({ totalSeconds: activeTaskTargetSeconds, remainingSeconds: safeRemaining, phaseState: 'normal' });
                         if (remainingSeconds <= 0) {
                             stopTimer().catch(err => console.error('Failed to auto-stop timer', err));
                         }
                     } else {
                         sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
+                        triggerTimerPulse();
                     }
                 }, 1000);
             } else { // Pomodoro Mode
@@ -7416,6 +7979,10 @@ let pauseStartTime = 0;
                 pomodoroStatusDisplay.style.color = '#3b82f6';
 
                 const workDurationSeconds = pomodoroSettings.work * 60;
+                sessionTimerDisplay.textContent = formatPomodoroTime(workDurationSeconds);
+                triggerTimerPulse();
+                timerPhaseState = 'work';
+                updateTimerVisuals({ totalSeconds: workDurationSeconds, remainingSeconds: workDurationSeconds, phaseState: 'work' });
                 await ensurePushSubscription();
                 cancelSWAlarm(POMODORO_HEADS_UP_TAG);
                 const workPhaseStartMs = Date.now();
@@ -7518,6 +8085,13 @@ let pauseStartTime = 0;
                 : formatTime(0);
             pomodoroStatusDisplay.textContent = timerMode === 'pomodoro' ? 'Ready for Pomodoro' : '';
             pomodoroStatusDisplay.style.color = '#9ca3af';
+            if (timerMode === 'pomodoro') {
+                timerPhaseState = 'work';
+                updateTimerVisuals({ totalSeconds: pomodoroSettings.work * 60, remainingSeconds: pomodoroSettings.work * 60, phaseState: 'work' });
+            } else {
+                setTimerVisualIndeterminate();
+            }
+            triggerTimerPulse();
 
             // Reset button visibility
             document.getElementById('start-studying-btn').classList.remove('hidden');
@@ -7554,7 +8128,18 @@ let pauseStartTime = 0;
                 sessionStartTime += pauseDuration;
                 timerInterval = setInterval(() => {
                     const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
-                    sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
+                    if (activeTaskTargetSeconds) {
+                        const remainingSeconds = Math.max(activeTaskTargetSeconds - elapsedSeconds, 0);
+                        sessionTimerDisplay.textContent = formatTime(remainingSeconds);
+                        triggerTimerPulse();
+                        updateTimerVisuals({ totalSeconds: activeTaskTargetSeconds, remainingSeconds, phaseState: 'normal' });
+                        if (remainingSeconds <= 0) {
+                            stopTimer().catch(err => console.error('Failed to auto-stop timer', err));
+                        }
+                    } else {
+                        sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
+                        triggerTimerPulse();
+                    }
                 }, 1000);
                 isPaused = false;
                 pauseStartTime = 0;
@@ -7612,8 +8197,11 @@ let pauseStartTime = 0;
             if (sessionTimerDisplay) {
                 sessionTimerDisplay.textContent = formatPomodoroTime(initialTimeLeftSeconds);
             }
+            triggerTimerPulse();
             pomodoroStatusDisplay.textContent = statusText;
-            pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
+            pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e0b' : '#3b82f6';
+            timerPhaseState = state;
+            updateTimerVisuals({ totalSeconds: durationSeconds, remainingSeconds: initialTimeLeftSeconds, phaseState: state });
 
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
             if (state === 'work') {
@@ -7663,8 +8251,8 @@ let pauseStartTime = 0;
         }
         
         function updateTotalTimeDisplay() {
-            totalTimeDisplay.textContent = `Total Today: ${formatTime(totalTimeTodayInSeconds)}`;
-            totalBreakTimeDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
+            totalTimeDisplay.textContent = formatTime(totalTimeTodayInSeconds);
+            totalBreakTimeDisplay.textContent = formatTime(totalBreakTimeTodayInSeconds);
         }
 
         async function saveSession(subject, durationSeconds, sessionType = 'study') { // Default to 'study'
@@ -7829,7 +8417,7 @@ let pauseStartTime = 0;
                 // Show guest view
                 if(profileAuthView) profileAuthView.classList.add('hidden');
                 if(profileAnonView) profileAnonView.classList.remove('hidden');
-                if(headerAvatar) headerAvatar.innerHTML = `<i class="fas fa-user-secret text-xl"></i>`;
+                if(headerAvatar) headerAvatar.textContent = '?';
                 return;
             }
 
@@ -7865,7 +8453,7 @@ let pauseStartTime = 0;
                         el.innerHTML = `<img src="${photoURL}" alt="${username}" class="w-full h-full object-cover">`;
                     } else {
                         const initial = username ? username.charAt(0).toUpperCase() : 'U';
-                        el.innerHTML = `<span>${initial}</span>`;
+                        el.textContent = initial;
                     }
                 }
             });
@@ -13936,6 +14524,7 @@ if (achievementsGrid) {
             timerMode = mode;
             document.getElementById('normal-timer-btn').classList.toggle('active', mode === 'normal');
             document.getElementById('pomodoro-timer-btn').classList.toggle('active', mode === 'pomodoro');
+            setTimerSwitchActive(mode === 'pomodoro' ? 1 : 0);
 
             if (mode !== 'pomodoro') {
                 setPomodoroWakeLockActive(false);
@@ -13945,9 +14534,12 @@ if (achievementsGrid) {
                 sessionTimerDisplay.textContent = formatPomodoroTime(pomodoroSettings.work * 60);
                 pomodoroStatusDisplay.textContent = 'Ready for Pomodoro';
                 pomodoroStatusDisplay.style.color = '#9ca3af';
+                timerPhaseState = 'work';
+                updateTimerVisuals({ totalSeconds: pomodoroSettings.work * 60, remainingSeconds: pomodoroSettings.work * 60, phaseState: 'work' });
             } else { // 'normal'
                 sessionTimerDisplay.textContent = formatTime(0);
                 pomodoroStatusDisplay.textContent = '';
+                setTimerVisualIndeterminate();
             }
         }
         
