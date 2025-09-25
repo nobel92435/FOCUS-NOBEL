@@ -22,21 +22,47 @@
 
     <style>
         /* Base styles */
-        body { 
-            font-family: 'Inter', sans-serif; 
+        :root {
+            --focus-base-bg: #050a1a;
+            --focus-surface: rgba(15, 23, 42, 0.78);
+            --focus-surface-hero: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(99, 102, 241, 0.3) 55%, rgba(20, 184, 166, 0.25) 100%);
+            --focus-surface-border: rgba(148, 163, 184, 0.25);
+            --focus-surface-border-strong: rgba(99, 102, 241, 0.45);
+            --focus-shadow: 0 28px 60px rgba(10, 20, 45, 0.45);
+            --focus-text-primary: #e8edff;
+            --focus-text-muted: rgba(226, 232, 240, 0.72);
+            --focus-accent-start: #60a5fa;
+            --focus-accent-end: #22d3ee;
+            --focus-success: #34d399;
+            --focus-warning: #fbbf24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
-            background-color: #0d1117; /* Darker, modern background */
-            background-image: radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15), transparent 60%);
+            background-color: var(--focus-base-bg);
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.18), transparent 58%),
+                radial-gradient(circle at 80% 0%, rgba(56, 189, 248, 0.22), transparent 62%),
+                linear-gradient(180deg, #040813 0%, #081124 55%, #0d172f 100%);
             color: #e6edf3; /* Brighter default text */
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .nav-item.active, .group-nav-item.active {
-            background-color: rgba(129, 140, 248, 0.25);
+            background-image: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(129, 140, 248, 0.35));
+            box-shadow: 0 12px 24px rgba(56, 189, 248, 0.2);
         }
         .nav-item.active span, .group-nav-item.active span {
             color: #f8fafc;
+        }
+
+        #main-nav,
+        #group-detail-nav {
+            background: rgba(8, 13, 30, 0.88);
+            border-top: 1px solid rgba(148, 163, 184, 0.18);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 -18px 40px rgba(3, 6, 18, 0.58);
         }
 
         .sidebar-nav ul {
@@ -52,7 +78,7 @@
             gap: 0.75rem;
             padding: 0.75rem 1rem;
             text-decoration: none;
-            color: #cbd5f5;
+            color: rgba(226, 232, 240, 0.85);
             border-radius: 0.75rem;
             transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, transform 0.2s ease-in-out;
         }
@@ -84,7 +110,7 @@
         }
 
         .sidebar-nav .nav-link.active {
-            background-color: rgba(129, 140, 248, 0.3);
+            background-image: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(129, 140, 248, 0.32));
             color: #f8fafc;
             font-weight: 600;
         }
@@ -175,12 +201,296 @@
             color: white;
             box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
         }
+        #page-timer {
+            position: relative;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, rgba(4, 7, 18, 0.95) 75%, rgba(5, 9, 20, 0.98) 100%);
+        }
+        #page-timer > header {
+            background-color: transparent !important;
+            border-bottom: none !important;
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            backdrop-filter: blur(18px);
+            background-image: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0.65));
+            border: 1px solid rgba(56, 189, 248, 0.1);
+            border-radius: 24px;
+            margin: 1rem;
+        }
+        .page > header {
+            background-color: rgba(11, 18, 35, 0.88) !important;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.18) !important;
+            backdrop-filter: blur(18px);
+        }
+        #timer-hero {
+            padding-top: 4rem;
+            padding-bottom: 2rem;
+        }
+        .timer-shell {
+            background: var(--focus-surface-hero);
+            border: 1px solid var(--focus-surface-border-strong);
+            border-radius: 42px;
+            box-shadow: var(--focus-shadow);
+            backdrop-filter: blur(22px);
+        }
+        .timer-shell #session-timer {
+            text-shadow: 0 20px 48px rgba(56, 189, 248, 0.2);
+        }
+        .timer-shell button {
+            box-shadow: none;
+        }
+        .timer-shell #timer-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+        }
         #pomodoro-status {
             font-size: 1.25rem;
             font-weight: 600;
             color: #f59e0b; /* Amber color for breaks */
             height: 2rem;
             margin-bottom: 0.5rem;
+        }
+
+        /* Home overview */
+        #home-overview {
+            margin-top: -1.5rem;
+            padding-bottom: 5.5rem;
+        }
+        .home-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        @media (min-width: 640px) {
+            .home-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (min-width: 1024px) {
+            .home-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+            .home-card--hero {
+                grid-column: span 2;
+            }
+        }
+        .home-card {
+            position: relative;
+            border-radius: 28px;
+            padding: 1.75rem;
+            background: var(--focus-surface);
+            border: 1px solid var(--focus-surface-border);
+            box-shadow: 0 22px 48px rgba(8, 12, 30, 0.35);
+            backdrop-filter: blur(18px);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            overflow: hidden;
+        }
+        .home-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(120deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 55%);
+            pointer-events: none;
+        }
+        .home-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 30px 60px rgba(12, 18, 40, 0.45);
+        }
+        .home-card h2,
+        .home-card h3 {
+            font-weight: 700;
+            color: var(--focus-text-primary);
+        }
+        .home-card p {
+            color: var(--focus-text-muted);
+            line-height: 1.5;
+        }
+        .home-card--hero {
+            background: var(--focus-surface-hero);
+            border: 1px solid rgba(94, 234, 212, 0.38);
+        }
+        .home-card--community {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(99, 102, 241, 0.28) 100%);
+            border: 1px solid rgba(165, 243, 252, 0.4);
+        }
+        .home-card--insight {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.22) 0%, rgba(236, 72, 153, 0.2) 100%);
+            border: 1px solid rgba(244, 114, 182, 0.35);
+        }
+        .home-card--tasks {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(45, 212, 191, 0.2) 100%);
+            border: 1px solid rgba(74, 222, 128, 0.35);
+        }
+        .home-card__header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        .home-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.9rem;
+            border-radius: 9999px;
+            background: rgba(148, 163, 184, 0.2);
+            color: #f8fafc;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .home-card__title {
+            font-size: clamp(1.6rem, 2vw, 2rem);
+            margin-bottom: 0.35rem;
+        }
+        .home-card__subtitle {
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+        .home-hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .home-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            padding: 0.9rem 1rem;
+            border-radius: 18px;
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+        }
+        .home-stat .label {
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: rgba(226, 232, 240, 0.7);
+        }
+        .home-stat .value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+        .home-card__actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .home-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.75rem 1.3rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .home-cta i {
+            font-size: 0.95rem;
+        }
+        .home-cta--primary {
+            background-image: linear-gradient(135deg, var(--focus-accent-start), var(--focus-accent-end));
+            color: #f8fafc;
+            box-shadow: 0 15px 35px rgba(56, 189, 248, 0.35);
+        }
+        .home-cta--primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(56, 189, 248, 0.45);
+        }
+        .home-cta--ghost {
+            background: rgba(15, 23, 42, 0.6);
+            border-color: rgba(148, 163, 184, 0.25);
+            color: #e2e8f0;
+        }
+        .home-cta--ghost:hover {
+            transform: translateY(-2px);
+            border-color: rgba(148, 163, 184, 0.45);
+        }
+        .home-card__icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.55);
+            color: #f8fafc;
+            font-size: 1.4rem;
+            margin-bottom: 1.25rem;
+        }
+        .home-chip,
+        .home-chip--secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.55rem 1.1rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            color: #f8fafc;
+            font-weight: 600;
+            background: rgba(15, 23, 42, 0.55);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .home-chip i {
+            font-size: 0.9rem;
+        }
+        .home-chip:hover,
+        .home-chip--secondary:hover {
+            transform: translateY(-2px);
+            border-color: rgba(148, 163, 184, 0.45);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.35);
+        }
+        .home-chip--secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.22);
+        }
+        .home-card__chip-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }
+        .home-focus-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.9rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: capitalize;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            background: rgba(56, 189, 248, 0.18);
+            color: #bae6fd;
+        }
+        .home-focus-pill[data-state="focus"] {
+            background: rgba(52, 211, 153, 0.22);
+            color: #bbf7d0;
+        }
+        .home-focus-pill[data-state="break"] {
+            background: rgba(251, 191, 36, 0.22);
+            color: #fef3c7;
+        }
+        .home-focus-pill[data-state="idle"] {
+            background: rgba(148, 163, 184, 0.2);
+            color: rgba(226, 232, 240, 0.8);
+        }
+        .home-card--community .home-chip {
+            background: rgba(15, 23, 42, 0.45);
+            border-color: rgba(165, 243, 252, 0.35);
+        }
+        .home-card--insight .home-chip {
+            background: rgba(76, 29, 149, 0.45);
+            border-color: rgba(244, 114, 182, 0.4);
+        }
+        .home-card--tasks .home-chip {
+            background: rgba(6, 95, 70, 0.55);
+            border-color: rgba(74, 222, 128, 0.45);
         }
 
         /* Pomodoro Settings Modal Scroll Fix */
@@ -2992,8 +3302,8 @@
                          </button>
                      </div>
                 </header>
-                <div class="relative flex-grow flex items-center justify-center -mt-16">
-                    <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
+                <div id="timer-hero" class="relative flex-grow flex items-center justify-center -mt-16">
+                    <div class="timer-shell relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
                         <div class="timer-switch-container mx-auto mb-4">
                             <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
                             <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
@@ -3015,8 +3325,69 @@
                         </div>
                     </div>
                 </div>
+
+                <section id="home-overview" class="px-4 sm:px-6 md:px-10">
+                    <div class="home-grid">
+                        <article class="home-card home-card--hero">
+                            <div class="home-card__header">
+                                <span class="home-badge" id="home-greeting">Ready to focus</span>
+                                <span class="home-focus-pill" id="home-focus-state" data-state="ready"><i class="fas fa-sun"></i> Ready</span>
+                            </div>
+                            <h2 class="home-card__title">Hello, <span id="home-username">FocusFlow friend</span> 👋</h2>
+                            <p class="home-card__subtitle">Active subject: <span id="home-active-subject">Select a subject to get started</span></p>
+                            <div class="home-hero-stats">
+                                <div class="home-stat">
+                                    <span class="label">Today's focus</span>
+                                    <span class="value" id="home-total-today">00:00:00</span>
+                                </div>
+                                <div class="home-stat">
+                                    <span class="label">Break time</span>
+                                    <span class="value" id="home-total-break">00:00:00</span>
+                                </div>
+                                <div class="home-stat">
+                                    <span class="label">Current streak</span>
+                                    <span class="value" id="home-streak-count">0 days</span>
+                                </div>
+                            </div>
+                            <div class="home-card__actions">
+                                <button id="home-start-session-btn" class="home-cta home-cta--primary"><i class="fas fa-play"></i> Start a session</button>
+                                <button id="home-open-planner-btn" class="home-cta home-cta--ghost"><i class="fas fa-calendar"></i> Open planner</button>
+                            </div>
+                        </article>
+
+                        <article class="home-card home-card--community">
+                            <div class="home-card__icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <h3>Study together</h3>
+                            <p>Jump into live rooms and stay accountable with friends around the globe.</p>
+                            <button id="home-open-groups-btn" class="home-chip"><i class="fas fa-compass"></i> Explore groups</button>
+                        </article>
+
+                        <article class="home-card home-card--insight">
+                            <div class="home-card__icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <h3>Review insights</h3>
+                            <p>Spot your focus trends and celebrate consistency with detailed stats.</p>
+                            <button id="home-open-stats-btn" class="home-chip"><i class="fas fa-bolt"></i> View stats</button>
+                        </article>
+
+                        <article class="home-card home-card--tasks">
+                            <div class="home-card__icon">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            <h3>Plan next steps</h3>
+                            <p>Capture tasks, map your sessions, and keep your study queue ready.</p>
+                            <div class="home-card__chip-group">
+                                <button id="home-add-task-btn" class="home-chip"><i class="fas fa-plus"></i> Quick add task</button>
+                                <button id="home-open-planner-secondary-btn" class="home-chip home-chip--secondary"><i class="fas fa-list-check"></i> My planner</button>
+                            </div>
+                        </article>
+                    </div>
+                </section>
             </div>
-            
+
             <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
@@ -4985,7 +5356,9 @@
                 document.getElementById('stop-studying-btn').classList.add('hidden');
                 document.getElementById('pause-btn').classList.add('hidden');
                 setPomodoroWakeLockActive(false);
-                pomodoroStatusDisplay.textContent = `Ready for ${newState.replace('_', ' ')}`;
+                const upcomingLabel = newState.replace('_', ' ');
+                pomodoroStatusDisplay.textContent = `Ready for ${upcomingLabel}`;
+                syncHomeFocusState(`Ready for ${upcomingLabel}`, newState === 'work' ? 'focus' : 'break');
             }
         }
         // --- FIX END ---
@@ -5632,6 +6005,61 @@ let pauseStartTime = 0;
         const totalBreakTimeDisplay = document.getElementById('total-break-time-display');
         const activeSubjectDisplay = document.getElementById('active-subject-display');
         const pomodoroStatusDisplay = document.getElementById('pomodoro-status');
+        const homeGreetingDisplay = document.getElementById('home-greeting');
+        const homeUsernameDisplay = document.getElementById('home-username');
+        const homeActiveSubjectDisplay = document.getElementById('home-active-subject');
+        const homeFocusStateDisplay = document.getElementById('home-focus-state');
+        const homeTotalTodayDisplay = document.getElementById('home-total-today');
+        const homeTotalBreakDisplay = document.getElementById('home-total-break');
+        const homeStreakValueDisplay = document.getElementById('home-streak-count');
+
+        function updateHomeGreeting() {
+            if (!homeGreetingDisplay) return;
+            const hour = new Date().getHours();
+            let greeting = 'Good evening';
+            if (hour < 12) {
+                greeting = 'Good morning';
+            } else if (hour < 17) {
+                greeting = 'Good afternoon';
+            }
+            homeGreetingDisplay.textContent = greeting;
+        }
+
+        function updateHomeUsername(name) {
+            if (!homeUsernameDisplay) return;
+            const fallback = 'FocusFlow friend';
+            homeUsernameDisplay.textContent = name && name.trim().length ? name : fallback;
+        }
+
+        function syncHomeActiveSubject(subject) {
+            if (!homeActiveSubjectDisplay) return;
+            const content = subject && subject.trim().length ? subject : 'Select a subject to get started';
+            homeActiveSubjectDisplay.textContent = content;
+        }
+
+        function syncHomeTotals() {
+            if (homeTotalTodayDisplay) {
+                homeTotalTodayDisplay.textContent = formatTime(totalTimeTodayInSeconds);
+            }
+            if (homeTotalBreakDisplay) {
+                homeTotalBreakDisplay.textContent = formatTime(totalBreakTimeTodayInSeconds);
+            }
+        }
+
+        function syncHomeStreakDisplay(streakCount = 0) {
+            if (!homeStreakValueDisplay) return;
+            const value = Number.isFinite(streakCount) ? streakCount : 0;
+            homeStreakValueDisplay.textContent = `${value} day${value === 1 ? '' : 's'}`;
+        }
+
+        function syncHomeFocusState(label, state = 'ready') {
+            if (!homeFocusStateDisplay) return;
+            const normalizedState = state?.includes('break') ? 'break' : (state === 'work' || state === 'focus' ? 'focus' : state || 'ready');
+            const iconClass = normalizedState === 'focus' ? 'fa-fire' : normalizedState === 'break' ? 'fa-mug-hot' : normalizedState === 'idle' ? 'fa-moon' : 'fa-sun';
+            const text = label && label.trim().length ? label : 'Ready to focus';
+            homeFocusStateDisplay.dataset.state = normalizedState;
+            homeFocusStateDisplay.innerHTML = `<i class="fas ${iconClass}"></i> ${text}`;
+        }
 
         function closeImageViewer() {
             const modal = document.getElementById('image-view-modal');
@@ -7418,6 +7846,7 @@ let pauseStartTime = 0;
             }
             // Clear break status from UI
             pomodoroStatusDisplay.textContent = ''; // Clear the "On Break" status
+            syncHomeFocusState('Ready to focus', 'ready');
 
             // --- Modified: Check and save idle time before starting a new study session ---
             if (currentUser && !currentUser.isAnonymous) {
@@ -7464,6 +7893,7 @@ let pauseStartTime = 0;
 
             activeSubject = resolvedSubject;
             activeSubjectDisplay.textContent = activeSubject;
+            syncHomeActiveSubject(activeSubject);
 
             if(timerInterval) clearInterval(timerInterval);
 
@@ -7500,6 +7930,7 @@ let pauseStartTime = 0;
                 const cycleForDisplay = (currentUserData.pomodoroCycle || 0) % pomodoroSettings.long_break_interval + 1;
                 pomodoroStatusDisplay.textContent = `Work (${cycleForDisplay}/${pomodoroSettings.long_break_interval})`;
                 pomodoroStatusDisplay.style.color = '#3b82f6';
+                syncHomeFocusState(`Work (${cycleForDisplay}/${pomodoroSettings.long_break_interval})`, 'focus');
 
                 const workDurationSeconds = pomodoroSettings.work * 60;
                 await ensurePushSubscription();
@@ -7599,11 +8030,14 @@ let pauseStartTime = 0;
             activeTaskTargetSeconds = null;
             activeTaskRemainingPomodoros = null;
             activeSubjectDisplay.textContent = '';
+            syncHomeActiveSubject('');
             sessionTimerDisplay.textContent = timerMode === 'pomodoro'
                 ? formatPomodoroTime(pomodoroSettings.work * 60)
                 : formatTime(0);
+            const readyLabel = timerMode === 'pomodoro' ? 'Ready for Pomodoro' : 'Ready to focus';
             pomodoroStatusDisplay.textContent = timerMode === 'pomodoro' ? 'Ready for Pomodoro' : '';
             pomodoroStatusDisplay.style.color = '#9ca3af';
+            syncHomeFocusState(readyLabel, 'ready');
 
             // Reset button visibility
             document.getElementById('start-studying-btn').classList.remove('hidden');
@@ -7700,6 +8134,7 @@ let pauseStartTime = 0;
             }
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
+            syncHomeFocusState(statusText, state.includes('break') ? 'break' : 'focus');
 
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
             if (state === 'work') {
@@ -7746,11 +8181,13 @@ let pauseStartTime = 0;
             sessionTimerDisplay.textContent = formatTime(elapsedSeconds); // Show break time on main timer display
             pomodoroStatusDisplay.textContent = 'On Break'; // Indicate break status
             pomodoroStatusDisplay.style.color = '#f59e0b'; // Break color
+            syncHomeFocusState('On break', 'break');
         }
         
         function updateTotalTimeDisplay() {
             totalTimeDisplay.textContent = `Total Today: ${formatTime(totalTimeTodayInSeconds)}`;
             totalBreakTimeDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
+            syncHomeTotals();
         }
 
         async function saveSession(subject, durationSeconds, sessionType = 'study') { // Default to 'study'
@@ -7916,6 +8353,8 @@ let pauseStartTime = 0;
                 if(profileAuthView) profileAuthView.classList.add('hidden');
                 if(profileAnonView) profileAnonView.classList.remove('hidden');
                 if(headerAvatar) headerAvatar.innerHTML = `<i class="fas fa-user-secret text-xl"></i>`;
+                updateHomeUsername('FocusFlow friend');
+                syncHomeStreakDisplay(0);
                 return;
             }
 
@@ -7937,6 +8376,9 @@ let pauseStartTime = 0;
             const email = userData.email || '';
             const photoURL = userData.photo_url;
             const studyGoal = userData.study_goal_hours;
+
+            updateHomeUsername(username);
+            syncHomeStreakDisplay(userData.current_streak || 0);
 
             document.getElementById('profile-page-name').textContent = username;
             document.getElementById('profile-page-email').textContent = email;
@@ -13855,24 +14297,59 @@ if (achievementsGrid) {
             const premiumModal = document.getElementById('premium-modal');
             if (premiumModal) premiumModal.classList.add('active');
         });
-        ael('go-to-find-groups-btn', 'click', () => { 
+        ael('go-to-find-groups-btn', 'click', () => {
              if (currentUser && currentUser.isAnonymous) {
                 showToast('Please create an account to use study groups.', 'info');
                 return;
             }
-            renderGroupRankings(); 
-            showPage('page-find-groups'); 
+            renderGroupRankings();
+            showPage('page-find-groups');
         });
-        ael('go-to-create-group-btn', 'click', () => { 
+        ael('go-to-create-group-btn', 'click', () => {
              if (currentUser && currentUser.isAnonymous) {
                 showToast('Please create an account to use study groups.', 'info');
                 return;
             }
-            showPage('page-create-group'); 
+            showPage('page-create-group');
+        });
+        ael('home-open-groups-btn', 'click', () => {
+            if (currentUser && currentUser.isAnonymous) {
+                showToast('Please create an account to use study groups.', 'info');
+                showPage('page-profile');
+                return;
+            }
+            renderJoinedGroups();
+            showPage('page-my-groups');
+        });
+        const activateMainNav = (pageName) => {
+            const navItem = document.querySelector(`.nav-item[data-page="${pageName}"]`);
+            if (navItem) {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                navItem.classList.add('active');
+            }
+        };
+        const openPlannerPage = () => {
+            showPage('page-planner');
+            activateMainNav('planner');
+        };
+        const openStatsPage = () => {
+            showPage('page-stats');
+            activateMainNav('stats');
+        };
+        ael('home-open-planner-btn', 'click', openPlannerPage);
+        ael('home-open-planner-secondary-btn', 'click', openPlannerPage);
+        ael('home-open-stats-btn', 'click', openStatsPage);
+        ael('home-start-session-btn', 'click', () => {
+            const modal = document.getElementById('start-session-modal');
+            if (modal) modal.classList.add('active');
+        });
+        ael('home-add-task-btn', 'click', () => {
+            const modal = document.getElementById('add-task-modal');
+            if (modal) modal.classList.add('active');
         });
         // --- END: ADDED GUARDS FOR GUEST USERS ---
         ael('profile-btn', 'click', () => { showPage('page-profile'); });
-        
+
         // --- FIXES START HERE ---
 
         // Timer Controls
@@ -14032,9 +14509,11 @@ if (achievementsGrid) {
                 sessionTimerDisplay.textContent = formatPomodoroTime(pomodoroSettings.work * 60);
                 pomodoroStatusDisplay.textContent = 'Ready for Pomodoro';
                 pomodoroStatusDisplay.style.color = '#9ca3af';
+                syncHomeFocusState('Ready for Pomodoro', 'ready');
             } else { // 'normal'
                 sessionTimerDisplay.textContent = formatTime(0);
                 pomodoroStatusDisplay.textContent = '';
+                syncHomeFocusState('Ready to focus', 'ready');
             }
         }
         
@@ -16082,6 +16561,14 @@ if (achievementsGrid) {
     };
 
     document.addEventListener('DOMContentLoaded', () => {
+        updateHomeGreeting();
+        syncHomeFocusState('Ready to focus', 'ready');
+        syncHomeActiveSubject('');
+        syncHomeTotals();
+        syncHomeStreakDisplay(0);
+        updateHomeUsername('FocusFlow friend');
+        setInterval(updateHomeGreeting, 15 * 60 * 1000);
+
         const usernameAvatarPicker = document.getElementById('username-avatar-picker');
             if (usernameAvatarPicker) {
                 usernameAvatarPicker.innerHTML = PRESET_AVATARS.map((url, index) => `
