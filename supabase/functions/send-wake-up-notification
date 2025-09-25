@@ -1,0 +1,213 @@
+// Supabase Edge Function: send-wake-up-notification
+// Sends an urgent wake-up push notification to a single target user.
+// Keeps the logic separate from the Pomodoro notification flow so it can evolve independently.
+import { createClient } from "jsr:@supabase/supabase-js@2";
+import webpush from "npm:web-push";
+
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://nobel92435.github.io",
+  "http://localhost:5173",
+  "http://localhost:3000"
+];
+
+const envAllowedOrigins = (Deno.env.get("WAKE_FUNCTION_ALLOWED_ORIGINS") ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0);
+
+const allowedOrigins = Array.from(new Set([...DEFAULT_ALLOWED_ORIGINS, ...envAllowedOrigins]));
+
+function resolveCorsHeaders(req: Request) {
+  const headers = new Headers({
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin"
+  });
+
+  const requestOrigin = req.headers.get("origin") ?? "";
+  const allowedOrigin = allowedOrigins.find((origin) => origin === requestOrigin)
+    ?? allowedOrigins[0]
+    ?? "*";
+
+  headers.set("Access-Control-Allow-Origin", allowedOrigin);
+
+  if (allowedOrigin !== "*") {
+    headers.set("Access-Control-Allow-Credentials", "true");
+  }
+
+  const requestHeaders = req.headers.get("access-control-request-headers");
+  if (requestHeaders) {
+    headers.set("Access-Control-Allow-Headers", requestHeaders);
+  } else {
+    headers.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+  }
+
+  return headers;
+}
+
+function respond(req: Request, body: BodyInit | null, init: ResponseInit = {}) {
+  const headers = resolveCorsHeaders(req);
+  if (init.headers) {
+    for (const [key, value] of new Headers(init.headers).entries()) {
+      headers.set(key, value);
+    }
+  }
+  return new Response(body, { ...init, headers });
+}
+
+function respondJson(req: Request, body: unknown, init: ResponseInit = {}) {
+  const headers = new Headers(init.headers ?? {});
+  headers.set("Content-Type", "application/json");
+  return respond(req, JSON.stringify(body), { ...init, headers });
+}
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY");
+const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY");
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+}
+
+if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  console.error("Missing VAPID keys");
+}
+
+webpush.setVapidDetails("mailto:nobelft26@gmail.com", VAPID_PUBLIC_KEY ?? "", VAPID_PRIVATE_KEY ?? "");
+
+const supabaseAdmin = SUPABASE_URL && SERVICE_ROLE_KEY ? createClient(SUPABASE_URL, SERVICE_ROLE_KEY) : null;
+
+interface PushSubscriptionRow {
+  id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
+async function fetchLatestSubscription(userId: string) {
+  if (!supabaseAdmin) throw new Error("Supabase admin client is not configured");
+  const { data, error } = await supabaseAdmin
+    .from("push_subscriptions")
+    .select("id, endpoint, p256dh, auth")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as (PushSubscriptionRow | null);
+}
+
+async function deleteSubscription(id: string) {
+  if (!supabaseAdmin) return;
+  const { error } = await supabaseAdmin
+    .from("push_subscriptions")
+    .delete()
+    .eq("id", id);
+  if (error) {
+    console.warn("Failed to delete expired subscription", { id, error });
+  }
+}
+
+function buildWakePayload(input: {
+  senderName?: string | null;
+  appId?: string | null;
+}) {
+  const senderName = typeof input.senderName === "string" && input.senderName.trim() !== ""
+    ? input.senderName.trim()
+    : "A fellow student";
+
+  const title = "Wake Up Call";
+  const body = `${senderName} needs you back in focus!`;
+
+  return {
+    title,
+    body,
+    options: {
+      body,
+      icon: "https://placehold.co/192x192/0a0a0a/e0e0e0?text=Flow+192",
+      badge: "https://placehold.co/96x96/0a0a0a/e0e0e0?text=Flow",
+      vibrate: [200, 100, 200, 100, 200],
+      tag: "wake-up-alert",
+      renotify: true,
+      requireInteraction: true,
+      data: {
+        type: "WAKE_UP_ALERT",
+        appId: input.appId ?? null
+      },
+      actions: [
+        { action: "open", title: "Open" },
+        { action: "snooze-5m", title: "Snooze 5m" }
+      ]
+    }
+  };
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return respond(req, null, { status: 204 });
+  }
+
+  if (req.method !== "POST") {
+    return respond(req, "Method not allowed", { status: 405 });
+  }
+
+  try {
+    if (!supabaseAdmin) {
+      throw new Error("Supabase admin client is not configured");
+    }
+
+    const payload = await req.json();
+    const targetUserId = typeof payload?.targetUserId === "string" ? payload.targetUserId.trim() : "";
+    const senderName = typeof payload?.senderName === "string" ? payload.senderName : null;
+    const appId = typeof payload?.appId === "string" ? payload.appId : null;
+
+    if (!targetUserId) {
+      return respondJson(req, { success: false, message: "Missing targetUserId." }, { status: 400 });
+    }
+
+    const subscription = await fetchLatestSubscription(targetUserId);
+    if (!subscription) {
+      return respondJson(req, {
+        success: false,
+        delivered: false,
+        message: "No push subscription found for the target user."
+      }, { status: 202 });
+    }
+
+    const webPushSubscription = {
+      endpoint: subscription.endpoint,
+      keys: {
+        p256dh: subscription.p256dh,
+        auth: subscription.auth
+      }
+    };
+
+    const notificationPayload = buildWakePayload({ senderName, appId });
+
+    try {
+      await webpush.sendNotification(webPushSubscription, JSON.stringify(notificationPayload), {
+        TTL: 30,
+        urgency: "high"
+      });
+    } catch (pushError) {
+      console.error("Failed to send wake-up notification", pushError);
+      if (pushError && typeof pushError === "object" && "statusCode" in pushError && pushError.statusCode === 410) {
+        await deleteSubscription(subscription.id);
+      }
+
+      const message = pushError instanceof Error ? pushError.message : String(pushError ?? "Failed to send notification");
+      return respondJson(req, { success: false, delivered: false, message }, { status: 202 });
+    }
+
+    return respondJson(req, { success: true, delivered: true });
+  } catch (error) {
+    console.error("Unhandled error in send-wake-up-notification", error);
+    const message = error instanceof Error ? error.message : String(error ?? "Unknown error");
+    return respondJson(req, { success: false, message }, { status: 500 });
+  }
+});
