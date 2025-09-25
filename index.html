@@ -89,8 +89,348 @@
             font-weight: 600;
         }
 
+        .sidebar-nav {
+            background: rgba(15, 23, 42, 0.72);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            backdrop-filter: blur(18px);
+            box-shadow: 0 24px 60px rgba(15, 118, 110, 0.18);
+        }
+
         .sidebar-nav .nav-link.active img {
             transform: scale(1.1);
+        }
+
+        .bottom-nav {
+            border-radius: 24px 24px 0 0;
+            margin: 0 auto;
+            max-width: 980px;
+        }
+
+        .page-header {
+            position: sticky;
+            top: 0;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            border-radius: 24px;
+            box-shadow: 0 25px 45px rgba(14, 165, 233, 0.12);
+            margin: 0.75rem auto;
+            max-width: 1100px;
+            backdrop-filter: blur(18px);
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.78);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            backdrop-filter: blur(22px);
+        }
+
+        .timer-surface {
+            position: relative;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .timer-surface::before,
+        .timer-surface::after {
+            content: "";
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(90px);
+            opacity: 0.55;
+            z-index: 0;
+        }
+
+        .timer-surface::before {
+            width: 380px;
+            height: 380px;
+            background: radial-gradient(circle at center, rgba(14, 165, 233, 0.45), transparent 70%);
+            top: -120px;
+            left: -120px;
+        }
+
+        .timer-surface::after {
+            width: 320px;
+            height: 320px;
+            background: radial-gradient(circle at center, rgba(236, 72, 153, 0.35), transparent 65%);
+            bottom: -140px;
+            right: -100px;
+        }
+
+        .timer-grid {
+            position: relative;
+            display: grid;
+            gap: 1.5rem;
+            z-index: 1;
+        }
+
+        .timer-main,
+        .highlight-card,
+        .community-card,
+        .tips-card {
+            position: relative;
+            border-radius: 28px;
+            padding: 1.75rem;
+            background: linear-gradient(160deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.72));
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            box-shadow: 0 20px 45px rgba(15, 118, 110, 0.18);
+            overflow: hidden;
+        }
+
+        .timer-main::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top right, rgba(45, 212, 191, 0.22), transparent 55%);
+            pointer-events: none;
+        }
+
+        .timer-main-header {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .timer-title {
+            font-size: clamp(2rem, 4vw, 2.75rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: #f8fafc;
+        }
+
+        .timer-subtitle {
+            color: rgba(226, 232, 240, 0.7);
+            max-width: 480px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.85rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: rgba(45, 212, 191, 0.2);
+            color: #5eead4;
+        }
+
+        .chip i {
+            font-size: 0.85rem;
+        }
+
+        .chip-sky {
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+        }
+
+        .timer-main-body {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .timer-meta-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            width: 100%;
+        }
+
+        .meta-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            background: rgba(56, 189, 248, 0.14);
+            color: #bae6fd;
+            font-weight: 600;
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            align-self: center;
+            transition: all 0.25s ease;
+        }
+
+        .meta-pill:hover {
+            background: rgba(56, 189, 248, 0.25);
+            color: #f0f9ff;
+            transform: translateY(-2px);
+        }
+
+        .timer-display {
+            text-align: center;
+        }
+
+        .timer-status {
+            font-weight: 600;
+            color: #fcd34d;
+            letter-spacing: 0.05em;
+        }
+
+        .timer-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+        }
+
+        .timer-footnote {
+            font-size: 0.85rem;
+            color: rgba(226, 232, 240, 0.55);
+        }
+
+        .timer-side-grid {
+            display: grid;
+            gap: 1.25rem;
+        }
+
+        .highlight-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top left, rgba(129, 140, 248, 0.22), transparent 65%);
+            pointer-events: none;
+        }
+
+        .highlight-card h3,
+        .community-card h3,
+        .tips-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: #f8fafc;
+        }
+
+        .highlight-metrics {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .highlight-metrics p {
+            margin: 0;
+            color: rgba(226, 232, 240, 0.78);
+        }
+
+        .highlight-metrics .metric-label {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.75rem;
+            color: rgba(148, 163, 184, 0.8);
+        }
+
+        .community-card {
+            background: linear-gradient(170deg, rgba(12, 74, 110, 0.9), rgba(7, 89, 133, 0.7));
+            border: 1px solid rgba(56, 189, 248, 0.35);
+        }
+
+        .community-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.9rem;
+            border-radius: 9999px;
+            background: rgba(14, 165, 233, 0.25);
+            color: #bae6fd;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.85rem;
+        }
+
+        .community-card ul {
+            margin-top: 0.75rem;
+            display: grid;
+            gap: 0.6rem;
+        }
+
+        .community-card li {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: rgba(226, 232, 240, 0.82);
+        }
+
+        .community-card li i {
+            color: #38bdf8;
+        }
+
+        .tips-card {
+            background: linear-gradient(170deg, rgba(30, 41, 59, 0.95), rgba(17, 24, 39, 0.82));
+            border: 1px solid rgba(148, 163, 184, 0.18);
+        }
+
+        .tips-card blockquote {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: rgba(226, 232, 240, 0.85);
+        }
+
+        .tips-card cite {
+            display: block;
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(148, 163, 184, 0.7);
+        }
+
+        .mini-divider {
+            width: 36px;
+            height: 3px;
+            border-radius: 9999px;
+            background: linear-gradient(to right, #38bdf8, #c084fc);
+            margin-bottom: 0.75rem;
+        }
+
+        @media (min-width: 768px) {
+            .timer-main,
+            .highlight-card,
+            .community-card,
+            .tips-card {
+                padding: 2.25rem;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .timer-grid {
+                grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+            }
+
+            .timer-main-header {
+                align-items: flex-start;
+                text-align: left;
+            }
+
+            .timer-main-body {
+                align-items: flex-start;
+            }
+
+            .timer-meta-row {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .meta-pill {
+                align-self: flex-start;
+            }
+
+            .timer-display {
+                text-align: left;
+            }
+
+            .timer-actions {
+                justify-content: flex-start;
+            }
         }
 
         /* Page and container visibility */
@@ -2793,23 +3133,12 @@
 
         /* New Group Study Button */
         #group-study-timer-btn {
-            background-color: #1f2937;
-            color: #9ca3af;
-            font-weight: 600;
-            border-radius: 9999px;
             cursor: pointer;
             transition: all 0.3s ease;
             width: fit-content;
-            margin: 1rem auto 0; /* Center it below the switch */
-            padding: 0.5rem 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
         }
         #group-study-timer-btn:hover {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8);
-            color: white;
-            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+            box-shadow: 0 10px 25px rgba(56, 189, 248, 0.25);
         }
 
         /* Group Detail Header Dropdown */
@@ -2966,7 +3295,7 @@
     <div id="app-container" class="flex-col h-screen">
         <main id="main" class="flex-grow overflow-y-auto no-scrollbar">
             <div id="page-timer" class="page active flex-col h-full">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20">
+                <header class="page-header glass-panel p-4 md:p-6 flex items-center justify-between z-20">
                      <div class="flex items-center">
                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                              <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
@@ -2992,33 +3321,70 @@
                          </button>
                      </div>
                 </header>
-                <div class="relative flex-grow flex items-center justify-center -mt-16">
-                    <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
-                        <div class="timer-switch-container mx-auto mb-4">
-                            <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
-                            <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
-                        </div>
-                        <button id="group-study-timer-btn" class="text-sm">
-                            <i class="fas fa-users-line"></i> Group Study
-                        </button>
-                        <p id="active-subject-display" class="text-xl font-semibold text-blue-400 h-7 mb-2"></p>
-                        <p id="pomodoro-status"></p>
-                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
-                        <p id="total-time-display" class="text-gray-400 mt-2">Total Today: 00:00:00</p>
-                        <p id="total-break-time-display" class="text-gray-400 mt-1">Total Break: 00:00:00</p>
-                        <div id="timer-controls" class="mt-8">
-                            <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
-                            <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
-                            <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
-                            <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
-                            <button id="resume-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Resume</button>
+                <div class="flex-grow overflow-y-auto no-scrollbar px-4 pb-28 pt-6 md:px-10 md:pt-8 md:pb-16">
+                    <div class="timer-surface">
+                        <div class="timer-grid">
+                            <section class="timer-main">
+                                <div class="timer-main-header">
+                                    <span class="chip chip-sky"><i class="fas fa-sun"></i><span id="timer-greeting">Hello there</span></span>
+                                    <h1 class="timer-title">Your focus ritual starts here</h1>
+                                    <p class="timer-subtitle">Set your intention, start the timer, and stay accountable with your community cheering you on.</p>
+                                </div>
+                                <div class="timer-main-body">
+                                    <div class="timer-meta-row">
+                                        <button id="group-study-timer-btn" class="meta-pill"><i class="fas fa-users-line"></i> Group Study Lounge</button>
+                                        <div class="timer-switch-container">
+                                            <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
+                                            <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
+                                        </div>
+                                    </div>
+                                    <div class="timer-display">
+                                        <p id="active-subject-display" class="text-xl font-semibold text-blue-400 h-7"></p>
+                                        <p id="pomodoro-status" class="timer-status"></p>
+                                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
+                                    </div>
+                                    <div class="timer-actions" id="timer-controls">
+                                        <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
+                                        <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
+                                        <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
+                                        <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
+                                        <button id="resume-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Resume</button>
+                                    </div>
+                                    <p class="timer-footnote">Stay in flow for at least 25 minutes to keep your streak glowing.</p>
+                                </div>
+                            </section>
+                            <aside class="timer-side-grid">
+                                <article class="highlight-card">
+                                    <div class="mini-divider"></div>
+                                    <h3>Today's progress</h3>
+                                    <div class="highlight-metrics">
+                                        <p><span class="metric-label">Focused</span><span id="total-time-display">Total Today: 00:00:00</span></p>
+                                        <p><span class="metric-label">Recovered</span><span id="total-break-time-display">Total Break: 00:00:00</span></p>
+                                    </div>
+                                </article>
+                                <article class="community-card">
+                                    <span class="community-pill"><i class="fas fa-bolt"></i> Momentum boost</span>
+                                    <h3>Study live with <span id="timer-community-count">1,914</span> others</h3>
+                                    <ul>
+                                        <li><i class="fas fa-check-circle"></i> Protect your streak with daily focus blocks</li>
+                                        <li><i class="fas fa-heart"></i> Share wins and celebrate consistent effort</li>
+                                        <li><i class="fas fa-star"></i> Unlock badges as you hit your goals</li>
+                                    </ul>
+                                </article>
+                                <article class="tips-card">
+                                    <div class="mini-divider"></div>
+                                    <h3>Focus inspiration</h3>
+                                    <blockquote id="focus-tip">Small, intentional sessions compound into big progress.</blockquote>
+                                    <cite id="focus-tip-author">FocusFlow Collective</cite>
+                                </article>
+                            </aside>
                         </div>
                     </div>
                 </div>
             </div>
             
             <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-header glass-panel p-4 md:p-6 flex items-center justify-between z-20">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3032,7 +3398,7 @@
             </div>
             
             <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-header glass-panel p-4 md:p-6 flex items-center justify-between z-20">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3052,7 +3418,7 @@
             </div>
             
             <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-header glass-panel p-4 md:p-6 flex items-center justify-between z-20">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3078,7 +3444,7 @@
             </div>
 
             <div id="page-profile" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-header glass-panel p-4 md:p-6 flex items-center justify-between z-20">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3125,7 +3491,7 @@
             </div>
 
             <div id="page-my-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-header glass-panel p-4 md:p-6 flex items-center justify-between z-20">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3140,7 +3506,7 @@
             </div>
             
             <div id="page-find-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-header glass-panel p-4 md:p-6 flex items-center justify-between z-20">
                     <button class="back-button text-gray-400 hover:text-white" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3177,7 +3543,7 @@
             </div>
             
             <div id="page-create-group" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-header glass-panel p-4 md:p-6 flex items-center justify-between z-20">
                     <button class="back-button text-gray-400 hover:text-white" data-target="find-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3199,7 +3565,7 @@
             </div>
             
             <div id="page-group-detail" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-header glass-panel p-4 md:p-6 flex items-center z-20">
                     <button class="back-button text-gray-400 hover:text-white" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -3248,7 +3614,7 @@
                 </div>
                 <div id="group-detail-content" class="flex-grow overflow-y-auto no-scrollbar">
                 </div>
-                <nav id="group-detail-nav" class="sidebar-nav bg-gray-800 border-t border-gray-700 sticky bottom-0">
+                <nav id="group-detail-nav" class="sidebar-nav glass-panel bottom-nav sticky bottom-0">
                     <ul class="grid grid-cols-5">
                         <li>
                             <a href="#group-home" class="nav-link nav-link--stacked group-nav-item active" data-subpage="home">
@@ -3285,7 +3651,7 @@
             </div>
             
             <div id="page-pulse-forum" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
+                <header class="page-header glass-panel p-4 md:p-6 flex items-center justify-between z-20">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -3301,7 +3667,7 @@
                 </div>
             </div>
         </main>
-        <nav id="main-nav" class="sidebar-nav bg-gray-800 border-t border-gray-700 sticky bottom-0">
+        <nav id="main-nav" class="sidebar-nav glass-panel bottom-nav sticky bottom-0">
             <ul class="grid grid-cols-5">
                 <li>
                     <a href="#timer" class="nav-link nav-link--stacked nav-item active" data-page="timer">
@@ -16082,6 +16448,47 @@ if (achievementsGrid) {
     };
 
     document.addEventListener('DOMContentLoaded', () => {
+        const timerGreeting = document.getElementById('timer-greeting');
+        if (timerGreeting) {
+            const now = new Date();
+            const hours = now.getHours();
+            let greeting = 'Let\'s focus';
+            if (hours < 12) greeting = 'Good morning';
+            else if (hours < 18) greeting = 'Good afternoon';
+            else greeting = 'Good evening';
+            timerGreeting.textContent = greeting;
+
+            const greetingIcon = timerGreeting.previousElementSibling;
+            if (greetingIcon && greetingIcon.classList.contains('fa-sun')) {
+                greetingIcon.classList.toggle('fa-moon', hours >= 18 || hours < 6);
+                greetingIcon.classList.toggle('fa-sun', hours >= 6 && hours < 18);
+            }
+        }
+
+        const communityCount = document.getElementById('timer-community-count');
+        if (communityCount) {
+            const base = 1850;
+            const variance = Math.floor(Math.random() * 180) + 60;
+            const formatter = new Intl.NumberFormat();
+            communityCount.textContent = formatter.format(base + variance);
+        }
+
+        const tipElement = document.getElementById('focus-tip');
+        if (tipElement) {
+            const tipAuthor = document.getElementById('focus-tip-author');
+            const tips = [
+                { text: 'Protect a single block of time and the rest of your day follows your lead.', author: 'FocusFlow Coaches' },
+                { text: 'Start with the smallest possible win, then stack another when the timer ends.', author: 'Atomic Habits' },
+                { text: 'Silence the noise, celebrate the next five minutes, and show up again tomorrow.', author: 'Study Community' },
+                { text: 'Momentum loves clarity—write the next task before you press start.', author: 'Productivity Mentor' }
+            ];
+            const randomTip = tips[Math.floor(Math.random() * tips.length)];
+            tipElement.textContent = randomTip.text;
+            if (tipAuthor) {
+                tipAuthor.textContent = randomTip.author;
+            }
+        }
+
         const usernameAvatarPicker = document.getElementById('username-avatar-picker');
             if (usernameAvatarPicker) {
                 usernameAvatarPicker.innerHTML = PRESET_AVATARS.map((url, index) => `
