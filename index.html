@@ -21,22 +21,40 @@
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
 
     <style>
+        :root {
+            --ff-primary: 'Inter', sans-serif;
+            --bg-primary: #ffffff;
+            --bg-muted: #f4f7fb;
+            --bg-accent-blue: #e4f2ff;
+            --bg-accent-pink: #ffe7f1;
+            --text-primary: #1f2937;
+            --text-muted: #64748b;
+            --text-subtle: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-orange: #f97316;
+            --accent-pink: #fda4af;
+            --accent-lilac: #a855f7;
+            --shadow-soft: 0 24px 70px rgba(15, 23, 42, 0.12);
+        }
+
         /* Base styles */
-        body { 
-            font-family: 'Inter', sans-serif; 
+        body {
+            font-family: var(--ff-primary);
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
-            background-color: #0d1117; /* Darker, modern background */
-            background-image: radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15), transparent 60%);
-            color: #e6edf3; /* Brighter default text */
+            background-color: var(--bg-primary);
+            background-image: radial-gradient(circle at 20% -10%, rgba(250, 204, 21, 0.12), transparent 55%),
+                              radial-gradient(circle at 85% 10%, rgba(56, 189, 248, 0.16), transparent 50%),
+                              radial-gradient(circle at 15% 80%, rgba(249, 115, 22, 0.12), transparent 60%);
+            color: var(--text-primary);
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .nav-item.active, .group-nav-item.active {
-            background-color: rgba(129, 140, 248, 0.25);
+            background-color: rgba(59, 130, 246, 0.12);
         }
         .nav-item.active span, .group-nav-item.active span {
-            color: #f8fafc;
+            color: var(--accent-blue);
         }
 
         .sidebar-nav ul {
@@ -52,7 +70,7 @@
             gap: 0.75rem;
             padding: 0.75rem 1rem;
             text-decoration: none;
-            color: #cbd5f5;
+            color: var(--text-muted);
             border-radius: 0.75rem;
             transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, transform 0.2s ease-in-out;
         }
@@ -80,12 +98,12 @@
         }
 
         .sidebar-nav .nav-link:hover {
-            background-color: rgba(129, 140, 248, 0.18);
+            background-color: rgba(148, 163, 184, 0.12);
         }
 
         .sidebar-nav .nav-link.active {
-            background-color: rgba(129, 140, 248, 0.3);
-            color: #f8fafc;
+            background-color: rgba(59, 130, 246, 0.12);
+            color: var(--accent-blue);
             font-weight: 600;
         }
 
@@ -155,32 +173,163 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #161b22; /* Darker secondary bg */
+            background-color: var(--bg-muted);
             padding: 0.5rem;
             border-radius: 9999px;
             width: fit-content;
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.24);
         }
         .timer-switch-btn {
             padding: 0.5rem 1.5rem;
             border: none;
             background-color: transparent;
-            color: #9ca3af;
+            color: var(--text-muted);
             font-weight: 600;
             border-radius: 9999px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
         .timer-switch-btn.active {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8); /* Teal to Sky gradient */
+            background-image: linear-gradient(135deg, var(--accent-pink), var(--accent-orange));
             color: white;
-            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
+            box-shadow: 0 10px 25px rgba(249, 115, 22, 0.2);
         }
         #pomodoro-status {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #f59e0b; /* Amber color for breaks */
+            color: var(--accent-orange);
             height: 2rem;
             margin-bottom: 0.5rem;
+        }
+
+        /* Timer Hero */
+        .timer-header {
+            padding: 1.5rem clamp(1.5rem, 5vw, 3rem);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 10;
+        }
+        .timer-header::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(56, 189, 248, 0.12), transparent 60%);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+            z-index: -1;
+        }
+        .timer-header .action-chip {
+            width: 2.75rem;
+            height: 2.75rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            background-color: var(--bg-primary);
+            color: var(--accent-blue);
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px rgba(148, 163, 184, 0.25);
+        }
+        .timer-header .action-chip:hover {
+            transform: translateY(-2px);
+            border-color: rgba(59, 130, 246, 0.45);
+            box-shadow: 0 18px 30px rgba(59, 130, 246, 0.25);
+        }
+        .timer-header .action-chip.premium {
+            color: var(--accent-orange);
+        }
+        .timer-header .action-chip.profile {
+            overflow: hidden;
+        }
+
+        .timer-hero {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: clamp(2rem, 6vw, 5rem) clamp(1.5rem, 7vw, 6rem) clamp(3rem, 8vw, 6rem);
+            gap: clamp(2rem, 6vw, 5rem);
+            overflow: hidden;
+        }
+        .timer-hero::before,
+        .timer-hero::after {
+            content: '';
+            position: absolute;
+            border-radius: 999px;
+            filter: blur(0);
+            opacity: 0.45;
+            z-index: 1;
+        }
+        .timer-hero::before {
+            width: 420px;
+            height: 420px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, rgba(255, 255, 255, 0) 65%);
+            top: -120px;
+            right: -140px;
+        }
+        .timer-hero::after {
+            width: 520px;
+            height: 520px;
+            background: radial-gradient(circle, rgba(249, 115, 22, 0.18) 0%, rgba(255, 255, 255, 0) 60%);
+            bottom: -180px;
+            left: -160px;
+        }
+
+        .timer-card {
+            position: relative;
+            z-index: 5;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.85) 100%);
+            border-radius: 36px;
+            padding: clamp(2rem, 5vw, 3rem) clamp(2rem, 6vw, 4rem);
+            max-width: 520px;
+            width: 100%;
+            box-shadow: var(--shadow-soft);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            backdrop-filter: blur(8px);
+        }
+        .timer-card h2 {
+            color: var(--text-primary);
+        }
+        .timer-card p {
+            color: var(--text-muted);
+        }
+
+        .timer-illustration {
+            position: relative;
+            z-index: 4;
+            background: radial-gradient(circle at 30% 20%, rgba(253, 164, 175, 0.5) 0%, rgba(255, 255, 255, 0.3) 60%);
+            border-radius: 32px;
+            padding: clamp(1.5rem, 5vw, 3rem);
+            width: min(420px, 90%);
+            box-shadow: var(--shadow-soft);
+            border: 1px solid rgba(255, 182, 193, 0.35);
+            display: none;
+        }
+        .timer-illustration::after {
+            content: '';
+            position: absolute;
+            inset: 12px;
+            border-radius: 28px;
+            border: 1px dashed rgba(248, 113, 113, 0.45);
+            pointer-events: none;
+        }
+        .timer-illustration svg {
+            width: 100%;
+            height: auto;
+        }
+        @media (min-width: 1024px) {
+            .timer-illustration {
+                display: block;
+            }
+            .timer-hero {
+                flex-direction: row;
+                justify-content: space-between;
+            }
         }
 
         /* Pomodoro Settings Modal Scroll Fix */
@@ -2793,8 +2942,8 @@
 
         /* New Group Study Button */
         #group-study-timer-btn {
-            background-color: #1f2937;
-            color: #9ca3af;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(244, 114, 182, 0.2));
+            color: var(--text-muted);
             font-weight: 600;
             border-radius: 9999px;
             cursor: pointer;
@@ -2805,11 +2954,12 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
         }
         #group-study-timer-btn:hover {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8);
+            background-image: linear-gradient(135deg, var(--accent-blue), var(--accent-pink));
             color: white;
-            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+            box-shadow: 0 12px 24px rgba(59, 130, 246, 0.25);
         }
 
         /* Group Detail Header Dropdown */
@@ -2885,7 +3035,7 @@
 
     </style>
 </head>
-<body class="bg-gray-900 text-white flex flex-col h-screen antialiased">
+<body class="flex flex-col h-screen antialiased">
 
     <input type="file" id="image-upload-input" class="hidden" accept="image/*">
     <input type="file" id="profile-picture-upload" class="hidden" accept="image/*">
@@ -2966,55 +3116,85 @@
     <div id="app-container" class="flex-col h-screen">
         <main id="main" class="flex-grow overflow-y-auto no-scrollbar">
             <div id="page-timer" class="page active flex-col h-full">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20">
-                     <div class="flex items-center">
-                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                             <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
-                             <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
-                             <defs>
-                                 <linearGradient id="paint0_linear_logo_header" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
-                                     <stop stop-color="#14B8A6"></stop>
-                                     <stop offset="1" stop-color="#0EA5E9"></stop>
-                                 </linearGradient>
-                             </defs>
-                         </svg>
-                         <span class="text-2xl font-bold ml-2 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
-                     </div>
-                     <div class="flex items-center space-x-4">
-                        <button id="groups-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition">
-                            <img src="assets/icons/groups.svg" alt="Groups" class="w-6 h-6">
+                <header class="timer-header">
+                    <div class="flex items-center">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
+                            <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
+                            <defs>
+                                <linearGradient id="paint0_linear_logo_header" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#14B8A6"></stop>
+                                    <stop offset="1" stop-color="#0EA5E9"></stop>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <span class="text-2xl font-bold ml-3 bg-clip-text text-transparent bg-gradient-to-r from-sky-500 via-purple-500 to-orange-400">FocusFlow</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button id="groups-btn" class="action-chip" aria-label="Study groups">
+                            <img src="assets/icons/groups.svg" alt="Groups" class="w-5 h-5">
                         </button>
-                        <button id="premium-btn" class="w-10 h-10 rounded-full bg-yellow-900/50 border border-yellow-800 flex items-center justify-center text-yellow-400 hover:bg-yellow-800/60 transition" title="Premium Features">
-                            <img src="assets/icons/premium.svg" alt="Premium" class="w-6 h-6">
+                        <button id="premium-btn" class="action-chip premium" title="Premium Features">
+                            <img src="assets/icons/premium.svg" alt="Premium" class="w-5 h-5">
                         </button>
-                         <button id="profile-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition overflow-hidden">
-                             <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
-                         </button>
-                     </div>
+                        <button id="profile-btn" class="action-chip profile" aria-label="Profile">
+                            <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-gradient-to-br from-sky-400 to-purple-400 text-white font-semibold">U</div>
+                        </button>
+                    </div>
                 </header>
-                <div class="relative flex-grow flex items-center justify-center -mt-16">
-                    <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
+                <section class="timer-hero">
+                    <div class="timer-card text-center">
                         <div class="timer-switch-container mx-auto mb-4">
                             <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
                             <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
                         </div>
-                        <button id="group-study-timer-btn" class="text-sm">
+                        <button id="group-study-timer-btn" class="text-sm font-semibold">
                             <i class="fas fa-users-line"></i> Group Study
                         </button>
-                        <p id="active-subject-display" class="text-xl font-semibold text-blue-400 h-7 mb-2"></p>
+                        <p id="active-subject-display" class="text-xl font-semibold text-sky-500 h-7 mb-2"></p>
                         <p id="pomodoro-status"></p>
-                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
-                        <p id="total-time-display" class="text-gray-400 mt-2">Total Today: 00:00:00</p>
-                        <p id="total-break-time-display" class="text-gray-400 mt-1">Total Break: 00:00:00</p>
-                        <div id="timer-controls" class="mt-8">
-                            <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
-                            <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
-                            <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
-                            <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
-                            <button id="resume-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Resume</button>
+                        <h2 id="session-timer" class="text-6xl md:text-7xl lg:text-8xl timer-text">00:00:00</h2>
+                        <p id="total-time-display" class="mt-3 text-sm md:text-base font-medium text-slate-500">Total Today: 00:00:00</p>
+                        <p id="total-break-time-display" class="mt-1 text-sm font-medium text-slate-400">Total Break: 00:00:00</p>
+                        <div id="timer-controls" class="mt-10 flex flex-wrap items-center justify-center gap-3">
+                            <button id="start-studying-btn" class="bg-gradient-to-r from-orange-400 via-pink-400 to-sky-400 text-white font-bold py-4 px-10 rounded-full text-lg shadow-lg shadow-orange-200/60 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">Start Studying</button>
+                            <button id="stop-studying-btn" class="hidden bg-rose-500 hover:bg-rose-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:-translate-y-0.5">Stop</button>
+                            <button id="manual-start-btn" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:-translate-y-0.5">Start Next</button>
+                            <button id="pause-btn" class="hidden bg-amber-400 hover:bg-amber-500 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:-translate-y-0.5">Pause</button>
+                            <button id="resume-btn" class="hidden bg-teal-500 hover:bg-teal-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:-translate-y-0.5">Resume</button>
                         </div>
                     </div>
-                </div>
+                    <div class="timer-illustration">
+                        <svg viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of a joyful focus companion">
+                            <defs>
+                                <linearGradient id="blobGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#FDE68A" />
+                                    <stop offset="100%" stop-color="#FDBA74" />
+                                </linearGradient>
+                                <linearGradient id="shadowGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="rgba(255, 255, 255, 0.8)" />
+                                    <stop offset="1" stop-color="rgba(255, 255, 255, 0)" />
+                                </linearGradient>
+                            </defs>
+                            <path d="M270 150C270 220 220 290 160 290C100 290 50 230 50 165C50 95 105 40 165 40C225 40 270 85 270 150Z" fill="url(#blobGradient)" />
+                            <ellipse cx="165" cy="280" rx="85" ry="18" fill="rgba(249, 115, 22, 0.25)" />
+                            <path d="M205 134C205 160 187 179 164 179C141 179 123 160 123 134C123 108 141 89 164 89C187 89 205 108 205 134Z" fill="#FDE68A" />
+                            <path d="M185 124C185 132.837 177.837 140 169 140C160.163 140 153 132.837 153 124C153 115.163 160.163 108 169 108C177.837 108 185 115.163 185 124Z" fill="white" />
+                            <circle cx="169" cy="124" r="12" fill="#0F172A" />
+                            <circle cx="173" cy="120" r="4" fill="white" />
+                            <path d="M148 146C154 154 164 158 175 156" stroke="#0F172A" stroke-width="5" stroke-linecap="round" />
+                            <path d="M120 210C120 210 135 224 164 224C193 224 210 210 210 210" stroke="#F97316" stroke-width="10" stroke-linecap="round" fill="none" />
+                            <path d="M110 190C125 205 150 214 176 210" stroke="#F97316" stroke-width="6" stroke-linecap="round" opacity="0.4" />
+                            <g opacity="0.6">
+                                <path d="M88 120C88 112 94 106 102 106C110 106 116 112 116 120C116 128 110 134 102 134" stroke="#38BDF8" stroke-width="6" stroke-linecap="round" />
+                                <path d="M226 120C226 112 232 106 240 106C248 106 254 112 254 120C254 128 248 134 240 134" stroke="#F472B6" stroke-width="6" stroke-linecap="round" />
+                            </g>
+                            <path d="M205 70C205 70 218 58 236 62" stroke="#F97316" stroke-width="6" stroke-linecap="round" opacity="0.4" />
+                            <path d="M128 76C128 76 114 60 90 64" stroke="#38BDF8" stroke-width="6" stroke-linecap="round" opacity="0.4" />
+                            <path d="M162 62C180 62 196 74 201 91" stroke="url(#shadowGradient)" stroke-width="18" stroke-linecap="round" opacity="0.7" />
+                        </svg>
+                    </div>
+                </section>
             </div>
             
             <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar">
