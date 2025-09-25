@@ -14,6 +14,7 @@
     <!-- Set the content attribute to your app's VAPID public key so push subscriptions can be created -->
     <meta name="vapid-public-key" content="BJqi2nFBuazVXwx9OdCSLwKDhG65fZOL7IBsAzQI1YxBr0zmV4nTl80JtAZFeOIobDgJ0kNqwVpPf_BjEmblNa0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel='icon' href="favicon.ico">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -22,13 +23,312 @@
 
     <style>
         /* Base styles */
-        body { 
-            font-family: 'Inter', sans-serif; 
+        :root {
+            --ff-heading: 'Playfair Display', serif;
+            --ff-body: 'Inter', sans-serif;
+            --surface-glass: rgba(15, 23, 42, 0.7);
+            --surface-card: rgba(17, 24, 39, 0.82);
+            --surface-muted: rgba(30, 41, 59, 0.65);
+            --outline-subtle: rgba(148, 163, 184, 0.18);
+            --text-muted: #9db4d0;
+            --focus-gradient: linear-gradient(135deg, #22d3ee 0%, #6366f1 100%);
+            --accent-gradient: linear-gradient(135deg, #f97316 0%, #f472b6 100%);
+        }
+
+        body {
+            font-family: var(--ff-body);
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
-            background-color: #0d1117; /* Darker, modern background */
-            background-image: radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15), transparent 60%);
-            color: #e6edf3; /* Brighter default text */
+            background-color: #050f1f;
+            background-image:
+                radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.18), transparent 55%),
+                radial-gradient(circle at 100% 10%, rgba(236, 72, 153, 0.12), transparent 60%),
+                linear-gradient(180deg, #050f1f 0%, #0b1120 100%);
+            color: #e7f0ff; /* Brighter default text */
+        }
+        .heading-font {
+            font-family: var(--ff-heading);
+            letter-spacing: -0.02em;
+        }
+        .text-muted {
+            color: var(--text-muted);
+        }
+        .timer-page-wrapper {
+            position: relative;
+        }
+        .timer-page-wrapper .glow-splash {
+            position: absolute;
+            filter: blur(120px);
+            opacity: 0.55;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .timer-hero-card {
+            position: relative;
+            background: linear-gradient(200deg, rgba(15, 23, 42, 0.92) 0%, rgba(8, 47, 73, 0.9) 45%, rgba(12, 74, 110, 0.85) 100%);
+            border: 1px solid var(--outline-subtle);
+            border-radius: 28px;
+            padding: clamp(1.5rem, 4vw, 2.75rem);
+            box-shadow: 0 35px 70px rgba(8, 47, 73, 0.45);
+            overflow: hidden;
+        }
+        .timer-hero-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.35), transparent 55%);
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .timer-hero-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(1.25rem, 3vw, 2rem);
+        }
+        .timer-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        @media (min-width: 1024px) {
+            .timer-meta {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: flex-start;
+            }
+        }
+        .timer-meta-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 1rem;
+            border-radius: 9999px;
+            background: rgba(226, 232, 240, 0.08);
+            border: 1px solid rgba(226, 232, 240, 0.12);
+            color: #e0f2fe;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .timer-meta-badge i {
+            color: #facc15;
+        }
+        .timer-heading {
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 600;
+        }
+        .timer-subheading {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+        .timer-mode-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .timer-mode-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .timer-mode-actions button {
+            font-size: 0.9rem;
+            padding: 0.55rem 1.05rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(14, 165, 233, 0.35);
+            background: rgba(14, 165, 233, 0.08);
+            color: #bae6fd;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .timer-mode-actions button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(14, 165, 233, 0.2);
+        }
+        .timer-display-shell {
+            display: grid;
+            gap: 1.5rem;
+            justify-items: center;
+        }
+        .timer-big-number {
+            font-size: clamp(4rem, 12vw, 6.5rem);
+            font-weight: 800;
+            letter-spacing: -0.05em;
+        }
+        .timer-stats-row {
+            display: grid;
+            gap: 0.75rem;
+            width: 100%;
+        }
+        @media (min-width: 640px) {
+            .timer-stats-row {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        .timer-stat-tile {
+            padding: 0.85rem 1rem;
+            border-radius: 18px;
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .timer-stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(226, 232, 240, 0.65);
+        }
+        .timer-stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+        .goal-progress-card {
+            padding: 1.1rem 1.3rem;
+            border-radius: 20px;
+            background: rgba(15, 118, 110, 0.18);
+            border: 1px solid rgba(45, 212, 191, 0.35);
+            color: #ccfbf1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+        }
+        .goal-progress-rail {
+            width: 100%;
+            height: 10px;
+            border-radius: 9999px;
+            background: rgba(15, 118, 110, 0.35);
+            overflow: hidden;
+            position: relative;
+        }
+        .goal-progress-bar {
+            position: absolute;
+            inset: 0;
+            width: 0%;
+            background: linear-gradient(90deg, #22d3ee 0%, #6366f1 100%);
+            border-radius: 9999px;
+            transition: width 0.4s ease;
+        }
+        .goal-progress-meta {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+            color: rgba(226, 232, 240, 0.7);
+        }
+        .goal-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.8rem;
+            border-radius: 9999px;
+            background: rgba(14, 165, 233, 0.15);
+            color: #bae6fd;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        .timer-secondary-grid {
+            display: grid;
+            gap: 1.25rem;
+        }
+        @media (min-width: 1024px) {
+            .timer-secondary-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        .glass-card {
+            position: relative;
+            background: var(--surface-card);
+            border-radius: 22px;
+            border: 1px solid var(--outline-subtle);
+            padding: clamp(1.2rem, 3vw, 1.75rem);
+            box-shadow: 0 25px 60px rgba(8, 25, 53, 0.35);
+        }
+        .glass-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .snapshot-grid {
+            display: grid;
+            gap: 1rem;
+        }
+        @media (min-width: 480px) {
+            .snapshot-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+        .snapshot-pill {
+            padding: 0.85rem;
+            border-radius: 18px;
+            background: rgba(59, 130, 246, 0.12);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .snapshot-pill span:first-child {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(191, 219, 254, 0.8);
+        }
+        .snapshot-pill span:last-child {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #e0f2fe;
+        }
+        .quick-action-grid {
+            display: grid;
+            gap: 0.8rem;
+        }
+        @media (min-width: 480px) {
+            .quick-action-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+        .quick-action {
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(15, 23, 42, 0.72);
+            padding: 0.85rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+        .quick-action:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 18px 35px rgba(59, 130, 246, 0.25);
+        }
+        .quick-action i {
+            font-size: 1.1rem;
+            color: #60a5fa;
+        }
+        .quick-action span {
+            font-weight: 600;
+        }
+        .quick-action small {
+            color: var(--text-muted);
+        }
+        .streak-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.45rem 0.85rem;
+            border-radius: 9999px;
+            background: rgba(251, 191, 36, 0.15);
+            border: 1px solid rgba(250, 204, 21, 0.35);
+            color: #facc15;
+            font-weight: 600;
+            font-size: 0.85rem;
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -2965,54 +3265,153 @@
 
     <div id="app-container" class="flex-col h-screen">
         <main id="main" class="flex-grow overflow-y-auto no-scrollbar">
-            <div id="page-timer" class="page active flex-col h-full">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20">
-                     <div class="flex items-center">
-                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                             <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
-                             <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
-                             <defs>
-                                 <linearGradient id="paint0_linear_logo_header" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
-                                     <stop stop-color="#14B8A6"></stop>
-                                     <stop offset="1" stop-color="#0EA5E9"></stop>
-                                 </linearGradient>
-                             </defs>
-                         </svg>
-                         <span class="text-2xl font-bold ml-2 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
-                     </div>
-                     <div class="flex items-center space-x-4">
-                        <button id="groups-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition">
+            <div id="page-timer" class="page active flex-col h-full overflow-y-auto no-scrollbar">
+                <header class="p-4 md:px-10 md:py-6 flex items-center justify-between z-20">
+                    <div class="flex items-center">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
+                            <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
+                            <defs>
+                                <linearGradient id="paint0_linear_logo_header" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#14B8A6"></stop>
+                                    <stop offset="1" stop-color="#0EA5E9"></stop>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <span class="text-2xl font-bold ml-2 bg-clip-text text-transparent bg-gradient-to-r from-teal-300 via-sky-400 to-indigo-400">FocusFlow</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button id="groups-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-200/80 hover:bg-sky-800/60 transition">
                             <img src="assets/icons/groups.svg" alt="Groups" class="w-6 h-6">
                         </button>
-                        <button id="premium-btn" class="w-10 h-10 rounded-full bg-yellow-900/50 border border-yellow-800 flex items-center justify-center text-yellow-400 hover:bg-yellow-800/60 transition" title="Premium Features">
+                        <button id="premium-btn" class="w-10 h-10 rounded-full bg-yellow-900/40 border border-yellow-700 flex items-center justify-center text-yellow-300 hover:bg-yellow-800/60 transition" title="Premium Features">
                             <img src="assets/icons/premium.svg" alt="Premium" class="w-6 h-6">
                         </button>
-                         <button id="profile-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition overflow-hidden">
-                             <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
-                         </button>
-                     </div>
-                </header>
-                <div class="relative flex-grow flex items-center justify-center -mt-16">
-                    <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
-                        <div class="timer-switch-container mx-auto mb-4">
-                            <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
-                            <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
-                        </div>
-                        <button id="group-study-timer-btn" class="text-sm">
-                            <i class="fas fa-users-line"></i> Group Study
+                        <button id="profile-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-200/80 hover:bg-sky-800/60 transition overflow-hidden">
+                            <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
                         </button>
-                        <p id="active-subject-display" class="text-xl font-semibold text-blue-400 h-7 mb-2"></p>
-                        <p id="pomodoro-status"></p>
-                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
-                        <p id="total-time-display" class="text-gray-400 mt-2">Total Today: 00:00:00</p>
-                        <p id="total-break-time-display" class="text-gray-400 mt-1">Total Break: 00:00:00</p>
-                        <div id="timer-controls" class="mt-8">
-                            <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
-                            <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
-                            <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
-                            <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
-                            <button id="resume-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Resume</button>
-                        </div>
+                    </div>
+                </header>
+                <div class="timer-page-wrapper flex-grow overflow-y-auto">
+                    <div class="glow-splash w-72 h-72 bg-sky-500/30 -top-10 -left-16"></div>
+                    <div class="glow-splash w-96 h-96 bg-purple-500/20 top-20 -right-24"></div>
+                    <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-28 pt-10 md:pt-16 space-y-10">
+                        <section class="timer-hero-card">
+                            <div class="timer-hero-content">
+                                <div class="timer-meta">
+                                    <div>
+                                        <p id="timer-date" class="uppercase tracking-[0.35em] text-xs text-muted mb-2">Today</p>
+                                        <h1 id="timer-greeting" class="timer-heading heading-font">Welcome back</h1>
+                                        <p id="timer-motivation" class="timer-subheading">Let’s build momentum on your goals.</p>
+                                    </div>
+                                    <div class="flex flex-col items-start gap-2">
+                                        <span class="timer-meta-badge"><i class="fas fa-crown"></i><span>Focus League</span></span>
+                                        <span id="streak-pill" class="streak-pill"><i class="fas fa-fire"></i> 0 day streak</span>
+                                    </div>
+                                </div>
+                                <div class="timer-mode-row">
+                                    <div class="timer-switch-container">
+                                        <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
+                                        <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
+                                    </div>
+                                    <div class="timer-mode-actions">
+                                        <button id="group-study-timer-btn" type="button">
+                                            <i class="fas fa-users-line"></i> Study with friends
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="timer-display-shell">
+                                    <p id="active-subject-display" class="text-sm uppercase tracking-[0.4em] text-sky-200 h-5"></p>
+                                    <p id="pomodoro-status" class="text-sm font-semibold text-amber-300 h-6"></p>
+                                    <h2 id="session-timer" class="timer-big-number text-white">00:00:00</h2>
+                                    <div class="timer-stats-row">
+                                        <div class="timer-stat-tile">
+                                            <span class="timer-stat-label">Total Focus Today</span>
+                                            <span id="focus-summary-hours" class="timer-stat-value">0h 0m</span>
+                                            <p id="total-time-display" class="text-muted text-sm">Total Today: 00:00:00</p>
+                                        </div>
+                                        <div class="timer-stat-tile">
+                                            <span class="timer-stat-label">Break Collected</span>
+                                            <span id="focus-summary-break" class="timer-stat-value">0h 0m</span>
+                                            <p id="total-break-time-display" class="text-muted text-sm">Total Break: 00:00:00</p>
+                                        </div>
+                                    </div>
+                                    <div class="goal-progress-card">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div class="flex items-center gap-2">
+                                                <i class="fas fa-bullseye text-teal-200"></i>
+                                                <span id="daily-goal-label" class="font-semibold text-sm text-white">Daily goal: not set</span>
+                                            </div>
+                                            <span id="daily-goal-percent" class="text-sm font-semibold text-white">0%</span>
+                                        </div>
+                                        <div class="goal-progress-rail">
+                                            <div id="daily-goal-progress-bar" class="goal-progress-bar"></div>
+                                        </div>
+                                        <div class="goal-progress-meta">
+                                            <span id="daily-goal-remaining">Set a daily focus goal to track your win.</span>
+                                            <span id="daily-goal-chip" class="goal-chip"><i class="fas fa-plus"></i> Add goal</span>
+                                        </div>
+                                    </div>
+                                    <div id="timer-controls" class="mt-2 flex flex-wrap gap-3 justify-center md:justify-start">
+                                        <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
+                                        <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
+                                        <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
+                                        <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
+                                        <button id="resume-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Resume</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                        <section class="timer-secondary-grid">
+                            <div class="glass-card">
+                                <h3 class="flex items-center gap-2"><i class="fas fa-sun text-sky-400"></i> Today's Snapshot</h3>
+                                <div class="snapshot-grid">
+                                    <div class="snapshot-pill">
+                                        <span>Focus streak</span>
+                                        <span id="focus-summary-streak">0 days</span>
+                                    </div>
+                                    <div class="snapshot-pill">
+                                        <span>Next break</span>
+                                        <span id="focus-summary-next">Start a session</span>
+                                    </div>
+                                    <div class="snapshot-pill">
+                                        <span>Pomodoro cycle</span>
+                                        <span id="focus-summary-cycle">Cycle 0</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="glass-card">
+                                <h3 class="flex items-center gap-2"><i class="fas fa-compass text-emerald-300"></i> Quick Actions</h3>
+                                <div class="quick-action-grid">
+                                    <button class="quick-action" type="button" data-quick-page="stats">
+                                        <i class="fas fa-chart-line"></i>
+                                        <span>View insights</span>
+                                        <small>See how your focus time trends over the week.</small>
+                                    </button>
+                                    <button class="quick-action" type="button" data-quick-page="planner">
+                                        <i class="fas fa-calendar-check"></i>
+                                        <span>Open planner</span>
+                                        <small>Organise tasks and keep your sessions intentional.</small>
+                                    </button>
+                                    <button class="quick-action" type="button" data-open-modal="study-goal-modal">
+                                        <i class="fas fa-bullseye"></i>
+                                        <span>Set goals</span>
+                                        <small>Define a daily focus target to unlock crowns faster.</small>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="glass-card lg:col-span-2">
+                                <h3 class="flex items-center gap-2"><i class="fas fa-star text-amber-300"></i> Keep your momentum</h3>
+                                <p id="timer-momentum-message" class="text-sm text-muted leading-relaxed">
+                                    Small, consistent sessions fuel big wins. Start a 25-minute sprint to keep the streak alive.
+                                </p>
+                                <ul class="mt-4 space-y-2 text-sm text-muted">
+                                    <li class="flex items-start gap-2"><i class="fas fa-check-circle text-emerald-300 mt-0.5"></i><span>Choose a subject or task before you hit start to focus with intention.</span></li>
+                                    <li class="flex items-start gap-2"><i class="fas fa-check-circle text-emerald-300 mt-0.5"></i><span>Use Pomodoro mode to balance deep work with restorative breaks.</span></li>
+                                    <li class="flex items-start gap-2"><i class="fas fa-check-circle text-emerald-300 mt-0.5"></i><span>Share your progress with your group to stay accountable together.</span></li>
+                                </ul>
+                            </div>
+                        </section>
                     </div>
                 </div>
             </div>
@@ -3683,6 +4082,22 @@
     const storage = supabase.storage;
 
     const focusflowConfig = window.__FOCUSFLOW_CONFIG || {};
+    const MOTIVATION_MESSAGES = [
+        'Small steps compound into big wins. Your focus session today is proof.',
+        'Protect this block of time like it’s a meeting with your future self.',
+        'Deep breaths in, distractions out. You’re about to do something great.',
+        'Consistency beats intensity. Show up, even if it’s for 15 minutes.',
+        'Momentum loves company—invite your future self to celebrate this session.'
+    ];
+    const MOMENTUM_MESSAGES = [
+        'Start with a single Pomodoro to light the fuse on your focus streak.',
+        'Not every session has to be perfect—only started. Hit play and adjust later.',
+        'Break bigger goals into one focused sprint. Begin with the timer.',
+        'Celebrate each restart. The streak grows every time you press start.',
+        'Need motivation? Imagine checking this off your list in 25 minutes.'
+    ];
+    let previousMotivationIndex = -1;
+    let previousMomentumIndex = -1;
 
     function normalizeVapidKey(value) {
         return typeof value === 'string' ? value.replace(/\s+/g, '') : '';
@@ -4860,6 +5275,7 @@
             if (oldState === 'work') {
                 const newCycleCount = (currentUserData.pomodoroCycle || 0) + 1;
                 currentUserData.pomodoroCycle = newCycleCount;
+                updateCycleSummary();
                 if (currentUser && !currentUser.isAnonymous) {
                     await updateUserPrivate(currentUser.id, { pomodoroCycle: newCycleCount });
                 }
@@ -4986,6 +5402,7 @@
                 document.getElementById('pause-btn').classList.add('hidden');
                 setPomodoroWakeLockActive(false);
                 pomodoroStatusDisplay.textContent = `Ready for ${newState.replace('_', ' ')}`;
+                updateNextSummary(`Next: ${newState.replace('_', ' ')}`);
             }
         }
         // --- FIX END ---
@@ -5395,6 +5812,7 @@ let pauseStartTime = 0;
         let sessionStartTime = 0;
         let totalTimeTodayInSeconds = 0;
         let totalBreakTimeTodayInSeconds = 0; // New: Track total break time today
+        let dailyGoalSeconds = 0;
         let activeSubject = '';
         let activeTaskId = null;
         let activeTaskTargetSeconds = null;
@@ -5632,6 +6050,21 @@ let pauseStartTime = 0;
         const totalBreakTimeDisplay = document.getElementById('total-break-time-display');
         const activeSubjectDisplay = document.getElementById('active-subject-display');
         const pomodoroStatusDisplay = document.getElementById('pomodoro-status');
+        const timerGreetingEl = document.getElementById('timer-greeting');
+        const timerDateEl = document.getElementById('timer-date');
+        const timerMotivationEl = document.getElementById('timer-motivation');
+        const timerMomentumMessageEl = document.getElementById('timer-momentum-message');
+        const focusSummaryHoursEl = document.getElementById('focus-summary-hours');
+        const focusSummaryBreakEl = document.getElementById('focus-summary-break');
+        const focusSummaryStreakEl = document.getElementById('focus-summary-streak');
+        const focusSummaryNextEl = document.getElementById('focus-summary-next');
+        const focusSummaryCycleEl = document.getElementById('focus-summary-cycle');
+        const dailyGoalLabelEl = document.getElementById('daily-goal-label');
+        const dailyGoalPercentEl = document.getElementById('daily-goal-percent');
+        const dailyGoalProgressBarEl = document.getElementById('daily-goal-progress-bar');
+        const dailyGoalRemainingEl = document.getElementById('daily-goal-remaining');
+        const dailyGoalChipEl = document.getElementById('daily-goal-chip');
+        const streakPillEl = document.getElementById('streak-pill');
 
         function closeImageViewer() {
             const modal = document.getElementById('image-view-modal');
@@ -7384,6 +7817,130 @@ let pauseStartTime = 0;
             return `${remaining}m`;
         }
 
+        function formatDurationShort(seconds) {
+            if (!Number.isFinite(seconds) || seconds <= 0) return '0m';
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.round((seconds % 3600) / 60);
+            const parts = [];
+            if (hours) parts.push(`${hours}h`);
+            if (minutes || parts.length === 0) parts.push(`${minutes}m`);
+            return parts.join(' ');
+        }
+
+        function pickMessageWithMemory(messages, previousIndex) {
+            if (!Array.isArray(messages) || messages.length === 0) {
+                return { message: '', index: -1 };
+            }
+            let index = Math.floor(Math.random() * messages.length);
+            if (messages.length > 1) {
+                const guard = 10;
+                let attempts = 0;
+                while (index === previousIndex && attempts < guard) {
+                    index = Math.floor(Math.random() * messages.length);
+                    attempts++;
+                }
+            }
+            return { message: messages[index], index };
+        }
+
+        function updateGreetingUI(userData = currentUserData) {
+            const now = getCurrentDate();
+            if (timerDateEl) {
+                try {
+                    const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+                    timerDateEl.textContent = formatter.format(now);
+                } catch (error) {
+                    timerDateEl.textContent = now.toDateString();
+                }
+            }
+
+            if (timerGreetingEl) {
+                const hour = now.getHours();
+                let prefix = 'Hello';
+                if (hour < 12) prefix = 'Good morning';
+                else if (hour < 18) prefix = 'Good afternoon';
+                else prefix = 'Good evening';
+                const name = (userData?.username || 'there').split(' ')[0];
+                timerGreetingEl.textContent = `${prefix}, ${name}`;
+            }
+
+            if (timerMotivationEl) {
+                const { message, index } = pickMessageWithMemory(MOTIVATION_MESSAGES, previousMotivationIndex);
+                previousMotivationIndex = index;
+                timerMotivationEl.textContent = message;
+            }
+
+            if (timerMomentumMessageEl) {
+                const { message, index } = pickMessageWithMemory(MOMENTUM_MESSAGES, previousMomentumIndex);
+                previousMomentumIndex = index;
+                timerMomentumMessageEl.textContent = message;
+            }
+        }
+
+        function updateNextSummary(text) {
+            if (focusSummaryNextEl) {
+                focusSummaryNextEl.textContent = text || 'Start a session';
+            }
+        }
+
+        function updateGoalUI() {
+            if (!dailyGoalLabelEl || !dailyGoalPercentEl || !dailyGoalProgressBarEl || !dailyGoalRemainingEl) return;
+
+            if (dailyGoalSeconds > 0) {
+                const hours = dailyGoalSeconds / 3600;
+                const displayHours = Number.isInteger(hours) ? hours.toFixed(0) : hours.toFixed(1);
+                dailyGoalLabelEl.textContent = `Daily goal: ${displayHours}h`;
+                const progress = Math.max(0, Math.min(100, Math.round((totalTimeTodayInSeconds / dailyGoalSeconds) * 100)));
+                dailyGoalPercentEl.textContent = `${progress}%`;
+                dailyGoalProgressBarEl.style.width = `${progress}%`;
+                const remainingSeconds = Math.max(0, dailyGoalSeconds - totalTimeTodayInSeconds);
+                dailyGoalRemainingEl.textContent = remainingSeconds === 0
+                    ? 'Goal achieved! Keep the flow going.'
+                    : `${formatDurationShort(remainingSeconds)} to goal`;
+                if (dailyGoalChipEl) {
+                    dailyGoalChipEl.innerHTML = `<i class="fas fa-rocket"></i> ${progress >= 100 ? 'Goal complete' : 'Keep going'}`;
+                }
+            } else {
+                dailyGoalLabelEl.textContent = 'Daily goal: not set';
+                dailyGoalPercentEl.textContent = '0%';
+                dailyGoalProgressBarEl.style.width = '0%';
+                dailyGoalRemainingEl.textContent = 'Set a daily focus goal to track your win.';
+                if (dailyGoalChipEl) {
+                    dailyGoalChipEl.innerHTML = '<i class="fas fa-plus"></i> Add goal';
+                }
+            }
+        }
+
+        function refreshFocusSummary() {
+            if (focusSummaryHoursEl) {
+                focusSummaryHoursEl.textContent = formatTime(totalTimeTodayInSeconds, false);
+            }
+            if (focusSummaryBreakEl) {
+                focusSummaryBreakEl.textContent = formatTime(totalBreakTimeTodayInSeconds, false);
+            }
+            updateGoalUI();
+        }
+
+        function updateStreakSummary(streak = 0) {
+            if (focusSummaryStreakEl) {
+                focusSummaryStreakEl.textContent = `${streak} day${streak === 1 ? '' : 's'}`;
+            }
+            if (streakPillEl) {
+                streakPillEl.innerHTML = `<i class="fas fa-fire"></i> ${streak} day streak`;
+            }
+        }
+
+        function updateCycleSummary() {
+            if (focusSummaryCycleEl) {
+                const cycle = currentUserData?.pomodoroCycle || 0;
+                focusSummaryCycleEl.textContent = cycle ? `Cycle ${cycle}` : 'Cycle 0';
+            }
+        }
+
+        updateGreetingUI();
+        refreshFocusSummary();
+        updateNextSummary('Timer ready');
+
         function escapeAttribute(value) {
             return String(value ?? '')
                 .replace(/&/g, '&amp;')
@@ -7418,6 +7975,7 @@ let pauseStartTime = 0;
             }
             // Clear break status from UI
             pomodoroStatusDisplay.textContent = ''; // Clear the "On Break" status
+            updateNextSummary('Focus session starting');
 
             // --- Modified: Check and save idle time before starting a new study session ---
             if (currentUser && !currentUser.isAnonymous) {
@@ -7472,6 +8030,7 @@ let pauseStartTime = 0;
                 sessionTimerDisplay.textContent = activeTaskTargetSeconds
                     ? formatTime(activeTaskTargetSeconds)
                     : formatTime(0);
+                updateNextSummary('Timer running');
                 timerInterval = setInterval(() => {
                     const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
                     if (activeTaskTargetSeconds) {
@@ -7492,6 +8051,7 @@ let pauseStartTime = 0;
                  // If the last completed cycle was a long break interval, reset it.
                 if (currentCycle > 0 && (currentCycle % pomodoroSettings.long_break_interval === 0)) {
                     currentUserData.pomodoroCycle = 0;
+                    updateCycleSummary();
                     if (currentUser && !currentUser.isAnonymous) {
                          updateUserPrivate(currentUser.id, { pomodoroCycle: 0 }); // Persist reset
                     }
@@ -7500,6 +8060,7 @@ let pauseStartTime = 0;
                 const cycleForDisplay = (currentUserData.pomodoroCycle || 0) % pomodoroSettings.long_break_interval + 1;
                 pomodoroStatusDisplay.textContent = `Work (${cycleForDisplay}/${pomodoroSettings.long_break_interval})`;
                 pomodoroStatusDisplay.style.color = '#3b82f6';
+                updateNextSummary('Focus sprint in progress');
 
                 const workDurationSeconds = pomodoroSettings.work * 60;
                 await ensurePushSubscription();
@@ -7604,6 +8165,7 @@ let pauseStartTime = 0;
                 : formatTime(0);
             pomodoroStatusDisplay.textContent = timerMode === 'pomodoro' ? 'Ready for Pomodoro' : '';
             pomodoroStatusDisplay.style.color = '#9ca3af';
+            updateNextSummary(timerMode === 'pomodoro' ? 'Pomodoro ready' : 'Ready when you are');
 
             // Reset button visibility
             document.getElementById('start-studying-btn').classList.remove('hidden');
@@ -7700,6 +8262,7 @@ let pauseStartTime = 0;
             }
             pomodoroStatusDisplay.textContent = statusText;
             pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
+            updateNextSummary(state === 'work' ? 'Focus sprint in progress' : `Enjoy your ${statusText}`);
 
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
             if (state === 'work') {
@@ -7746,11 +8309,13 @@ let pauseStartTime = 0;
             sessionTimerDisplay.textContent = formatTime(elapsedSeconds); // Show break time on main timer display
             pomodoroStatusDisplay.textContent = 'On Break'; // Indicate break status
             pomodoroStatusDisplay.style.color = '#f59e0b'; // Break color
+            updateNextSummary('Break in progress');
         }
         
         function updateTotalTimeDisplay() {
             totalTimeDisplay.textContent = `Total Today: ${formatTime(totalTimeTodayInSeconds)}`;
             totalBreakTimeDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
+            refreshFocusSummary();
         }
 
         async function saveSession(subject, durationSeconds, sessionType = 'study') { // Default to 'study'
@@ -7913,6 +8478,9 @@ let pauseStartTime = 0;
 
             if (!userData || (currentUser && currentUser.isAnonymous)) {
                 // Show guest view
+                updateGreetingUI(userData || {});
+                updateStreakSummary(0);
+                refreshFocusSummary();
                 if(profileAuthView) profileAuthView.classList.add('hidden');
                 if(profileAnonView) profileAnonView.classList.remove('hidden');
                 if(headerAvatar) headerAvatar.innerHTML = `<i class="fas fa-user-secret text-xl"></i>`;
@@ -7924,7 +8492,9 @@ let pauseStartTime = 0;
             if(profileAnonView) profileAnonView.classList.add('hidden');
             // --- END: MODIFIED PROFILE UI LOGIC ---
 
-            currentUserData = userData; 
+            currentUserData = userData;
+            updateGreetingUI(userData);
+            updateCycleSummary();
             // FIX #2: Load persisted Pomodoro settings from the database
             if (userData.pomodoro_settings) {
                 // Merge with defaults to ensure all keys are present even if some are missing from DB
@@ -7937,6 +8507,7 @@ let pauseStartTime = 0;
             const email = userData.email || '';
             const photoURL = userData.photo_url;
             const studyGoal = userData.study_goal_hours;
+            dailyGoalSeconds = (studyGoal || 0) * 3600;
 
             document.getElementById('profile-page-name').textContent = username;
             document.getElementById('profile-page-email').textContent = email;
@@ -7962,11 +8533,14 @@ let pauseStartTime = 0;
             } else {
                 studyGoalValueEl.textContent = 'Not set';
             }
+            updateGoalUI();
             const streakDisplay = document.getElementById('profile-streak-display');
 if (streakDisplay) {
     const streak = userData.current_streak || 0;
     streakDisplay.textContent = `${streak} day${streak === 1 ? '' : 's'}`;
 }
+            updateStreakSummary(userData.current_streak || 0);
+            refreshFocusSummary();
 
 const achievementsGrid = document.getElementById('achievements-grid');
 if (achievementsGrid) {
@@ -13831,6 +14405,37 @@ if (achievementsGrid) {
             showPage(`page-${pageName}`);
         }));
 
+        document.querySelectorAll('[data-quick-page]').forEach(button => {
+            button.addEventListener('click', () => {
+                const targetPage = button.getAttribute('data-quick-page');
+                if (!targetPage) return;
+                const navItem = document.querySelector(`.nav-item[data-page="${targetPage}"]`);
+                if (navItem) {
+                    navItem.click();
+                } else {
+                    showPage(`page-${targetPage}`);
+                }
+            });
+        });
+
+        document.querySelectorAll('[data-open-modal]').forEach(button => {
+            button.addEventListener('click', () => {
+                const targetModal = button.getAttribute('data-open-modal');
+                if (!targetModal) return;
+                const modalEl = document.getElementById(targetModal);
+                if (modalEl) {
+                    modalEl.classList.add('active');
+                }
+            });
+        });
+
+        if (dailyGoalChipEl) {
+            dailyGoalChipEl.addEventListener('click', () => {
+                const modalEl = document.getElementById('study-goal-modal');
+                if (modalEl) modalEl.classList.add('active');
+            });
+        }
+
         document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function() {
             const targetPage = this.getAttribute('data-target');
             showPage(`page-${targetPage}`);
@@ -14032,9 +14637,11 @@ if (achievementsGrid) {
                 sessionTimerDisplay.textContent = formatPomodoroTime(pomodoroSettings.work * 60);
                 pomodoroStatusDisplay.textContent = 'Ready for Pomodoro';
                 pomodoroStatusDisplay.style.color = '#9ca3af';
+                updateNextSummary('Pomodoro ready');
             } else { // 'normal'
                 sessionTimerDisplay.textContent = formatTime(0);
                 pomodoroStatusDisplay.textContent = '';
+                updateNextSummary('Timer ready');
             }
         }
         
@@ -14882,6 +15489,8 @@ if (achievementsGrid) {
                 return;
             }
             currentUserData.study_goal_hours = goal;
+            dailyGoalSeconds = goal * 3600;
+            updateGoalUI();
             studyGoalModal.classList.remove('active');
             showToast('Study goal updated!', 'success');
         });
@@ -15561,6 +16170,8 @@ if (achievementsGrid) {
                 return;
             }
             currentUserData.study_goal_hours = goal;
+            dailyGoalSeconds = goal * 3600;
+            updateGoalUI();
             studyGoalModal.classList.remove('active');
             showToast('Study goal updated!', 'success');
         });
