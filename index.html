@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -33,7 +32,7 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .nav-item.active, .group-nav-item.active {
-            background-color: rgba(129, 140, 248, 0.25);
+            background-color: rgb(255, 255, 255);
         }
         .nav-item.active span, .group-nav-item.active span {
             color: #f8fafc;
@@ -80,17 +79,41 @@
         }
 
         .sidebar-nav .nav-link:hover {
-            background-color: rgba(129, 140, 248, 0.18);
+            background-color: rgb(255, 255, 255);
         }
 
         .sidebar-nav .nav-link.active {
-            background-color: rgba(129, 140, 248, 0.3);
+            background-color: rgb(255, 255, 255);
             color: #f8fafc;
             font-weight: 600;
         }
 
         .sidebar-nav .nav-link.active img {
             transform: scale(1.1);
+        }
+
+        /* New Timer Page Styles */
+        #page-timer.active {
+            position: relative;
+            overflow: hidden;
+            background-color: #ffffff; /* Clean white background */
+            color: #f97316; /* High-contrast bold orange for text */
+        }
+        #page-timer.active::before,
+        #page-timer.active::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+        }
+        #page-timer.active::before {
+            width: 50vw; height: 50vw; max-width: 500px; max-height: 500px;
+            background: rgb(255, 255, 255); top: -10%; left: -20%;
+        }
+        #page-timer.active::after {
+            width: 40vw; height: 40vw; max-width: 400px; max-height: 400px;
+            background: rgb(255, 255, 255); bottom: -15%; right: -15%;
         }
 
         /* Page and container visibility */
@@ -155,7 +178,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #161b22; /* Darker secondary bg */
+            background-color: #f3f4f6; /* Light gray bg */
             padding: 0.5rem;
             border-radius: 9999px;
             width: fit-content;
@@ -164,16 +187,16 @@
             padding: 0.5rem 1.5rem;
             border: none;
             background-color: transparent;
-            color: #9ca3af;
+            color: #6b7280; /* Gray-500 */
             font-weight: 600;
             border-radius: 9999px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
         .timer-switch-btn.active {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8); /* Teal to Sky gradient */
+            background-image: linear-gradient(to right, #f97316, #ef4444); /* Orange to Red gradient */
             color: white;
-            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
+            box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
         }
         #pomodoro-status {
             font-size: 1.25rem;
@@ -2979,21 +3002,21 @@
                              </defs>
                          </svg>
                          <span class="text-2xl font-bold ml-2 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
-                     </div>
-                     <div class="flex items-center space-x-4">
-                        <button id="groups-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition">
-                            <img src="assets/icons/groups.svg" alt="Groups" class="w-6 h-6">
-                        </button>
-                        <button id="premium-btn" class="w-10 h-10 rounded-full bg-yellow-900/50 border border-yellow-800 flex items-center justify-center text-yellow-400 hover:bg-yellow-800/60 transition" title="Premium Features">
-                            <img src="assets/icons/premium.svg" alt="Premium" class="w-6 h-6">
-                        </button>
-                         <button id="profile-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition overflow-hidden">
-                             <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
-                         </button>
-                     </div>
-                </header>
-                <div class="relative flex-grow flex items-center justify-center -mt-16">
-                    <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
+                 </div>
+                 <div class="flex items-center space-x-4">
+                    <button id="groups-btn" class="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">
+                        <img src="assets/icons/groups.svg" alt="Groups" class="w-6 h-6">
+                    </button>
+                    <button id="premium-btn" class="w-10 h-10 rounded-full bg-yellow-900/50 border border-yellow-800 flex items-center justify-center text-yellow-400 hover:bg-yellow-800/60 transition" title="Premium Features">
+                        <img src="assets/icons/premium.svg" alt="Premium" class="w-6 h-6">
+                    </button>
+                     <button id="profile-btn" class="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition overflow-hidden">
+                         <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
+                     </button>
+                 </div>
+            </header>
+                <div class="relative flex-grow flex items-center justify-center -mt-16 z-10">
+                    <div class="relative text-center z-10">
                         <div class="timer-switch-container mx-auto mb-4">
                             <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
                             <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
@@ -3001,16 +3024,16 @@
                         <button id="group-study-timer-btn" class="text-sm">
                             <i class="fas fa-users-line"></i> Group Study
                         </button>
-                        <p id="active-subject-display" class="text-xl font-semibold text-blue-400 h-7 mb-2"></p>
-                        <p id="pomodoro-status"></p>
-                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
-                        <p id="total-time-display" class="text-gray-400 mt-2">Total Today: 00:00:00</p>
-                        <p id="total-break-time-display" class="text-gray-400 mt-1">Total Break: 00:00:00</p>
+                        <p id="active-subject-display" class="text-xl font-semibold h-7 mb-2"></p>
+                        <p id="pomodoro-status" class="font-semibold"></p>
+                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text">00:00:00</h2>
+                        <p id="total-time-display" class="mt-2 font-bold text-pink-500">Total Today: 00:00:00</p>
+                        <p id="total-break-time-display" class="mt-1 font-bold text-pink-500">Total Break: 00:00:00</p>
                         <div id="timer-controls" class="mt-8">
-                            <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
-                            <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
+                            <button id="start-studying-btn" class="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/40 hover:scale-105">Start working</button>
+                            <button id="stop-studying-btn" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
                             <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
-                            <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
+                            <button id="pause-btn" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
                             <button id="resume-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Resume</button>
                         </div>
                     </div>
