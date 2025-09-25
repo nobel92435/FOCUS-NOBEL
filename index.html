@@ -13,7 +13,7 @@
     <link rel="manifest" href="manifest.json">
     <!-- Set the content attribute to your app's VAPID public key so push subscriptions can be created -->
     <meta name="vapid-public-key" content="BJqi2nFBuazVXwx9OdCSLwKDhG65fZOL7IBsAzQI1YxBr0zmV4nTl80JtAZFeOIobDgJ0kNqwVpPf_BjEmblNa0">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Roboto+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel='icon' href="favicon.ico">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -22,21 +22,120 @@
 
     <style>
         /* Base styles */
-        body { 
-            font-family: 'Inter', sans-serif; 
+        :root {
+            --focusflow-bg: #0d1117;
+            --focusflow-surface: rgba(13, 20, 35, 0.85);
+            --focusflow-surface-strong: rgba(17, 25, 40, 0.94);
+            --focusflow-border: rgba(148, 163, 184, 0.18);
+            --focusflow-border-strong: rgba(148, 163, 184, 0.28);
+            --focusflow-text-primary: #e6edf3;
+            --focusflow-text-muted: rgba(226, 232, 240, 0.7);
+            --focusflow-accent: #38bdf8;
+            --focusflow-accent-green: #34d399;
+            --focusflow-accent-red: #f87171;
+            --focusflow-accent-break: #fbbf24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
-            overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
-            background-color: #0d1117; /* Darker, modern background */
-            background-image: radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15), transparent 60%);
-            color: #e6edf3; /* Brighter default text */
+            overflow-x: hidden;
+            background: radial-gradient(circle at 20% 0%, rgba(14, 165, 233, 0.12), transparent 55%),
+                        radial-gradient(circle at 80% 0%, rgba(20, 184, 166, 0.12), transparent 60%),
+                        var(--focusflow-bg);
+            color: var(--focusflow-text-primary);
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .nav-item.active, .group-nav-item.active {
-            background: linear-gradient(to top, rgba(20, 184, 166, 0.2), transparent);
+        .nav-glass {
+            backdrop-filter: blur(22px);
+            background: linear-gradient(160deg, rgba(10, 16, 28, 0.78), rgba(12, 18, 32, 0.6));
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 -6px 32px rgba(2, 12, 27, 0.42);
         }
-        .nav-item.active svg, .nav-item.active p, .group-nav-item.active i, .group-nav-item.active p { 
-            color: #14b8a6; /* Teal-500 */
+        .nav-item,
+        .group-nav-item {
+            position: relative;
+            gap: 4px;
+            font-weight: 500;
+            border-radius: 18px;
+            color: rgba(226, 232, 240, 0.72);
+            transition: color 0.25s ease, background-color 0.25s ease, transform 0.2s ease;
+        }
+        .nav-item::before,
+        .group-nav-item::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 18px;
+            background: rgba(56, 189, 248, 0.08);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .nav-item:hover::before,
+        .group-nav-item:hover::before {
+            opacity: 1;
+        }
+        .nav-item svg,
+        .group-nav-item svg,
+        .nav-item i,
+        .group-nav-item i {
+            transition: color 0.25s ease;
+        }
+        .nav-item.active,
+        .group-nav-item.active {
+            color: var(--focusflow-text-primary);
+            font-weight: 700;
+        }
+        .nav-item.active::before,
+        .group-nav-item.active::before {
+            opacity: 1;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.28), rgba(20, 184, 166, 0.22));
+        }
+        .nav-item.active svg,
+        .group-nav-item.active svg,
+        .nav-item.active p,
+        .group-nav-item.active p,
+        .nav-item.active i,
+        .group-nav-item.active i {
+            color: var(--focusflow-accent);
+            background: linear-gradient(135deg, #38bdf8, #14b8a6);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        .nav-label {
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: rgba(226, 232, 240, 0.7);
+        }
+        .nav-item.active .nav-label,
+        .group-nav-item.active .nav-label {
+            background: linear-gradient(135deg, #38bdf8, #14b8a6);
+            -webkit-background-clip: text;
+            color: transparent;
+            font-weight: 700;
+        }
+        .nav-icon {
+            display: grid;
+            place-items: center;
+            width: 32px;
+            height: 32px;
+        }
+        #main-nav,
+        #group-detail-nav {
+            padding: 10px 18px 18px;
+            gap: 8px;
+        }
+        #add-subject-btn {
+            color: var(--focusflow-accent);
+        }
+        #add-subject-btn::before {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(20, 184, 166, 0.18));
+            opacity: 1;
+        }
+        #add-subject-btn .nav-label {
+            color: rgba(125, 211, 252, 0.85);
         }
 
         /* Page and container visibility */
@@ -98,35 +197,356 @@
         
         /* Pomodoro Switch Styles */
         .timer-switch-container {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(30, 41, 59, 0.7));
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            box-shadow: inset 0 0 0 1px rgba(9, 13, 23, 0.45);
+            isolation: isolate;
+        }
+        .timer-switch-indicator {
+            position: absolute;
+            inset: 4px;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.85), rgba(45, 212, 191, 0.85));
+            box-shadow: 0 12px 28px rgba(14, 165, 233, 0.28);
+            transition: transform 0.3s ease, width 0.3s ease;
+            z-index: -1;
+        }
+        .timer-switch-btn {
+            position: relative;
+            z-index: 1;
+            flex: 1 1 auto;
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            color: rgba(226, 232, 240, 0.7);
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: 0.02em;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .timer-switch-btn.active {
+            color: #0f172a;
+            font-weight: 700;
+        }
+        .timer-switch-btn:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.45);
+        }
+        #pomodoro-status {
+            min-height: 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: rgba(148, 163, 184, 0.8);
+            transition: color 0.3s ease;
+        }
+
+        /* Timer hero styles */
+        #page-timer {
+            padding: 32px 24px 120px;
+            gap: 32px;
+        }
+        #page-timer header {
+            padding: 24px;
+            margin-bottom: 0;
+        }
+        #page-timer header .icon-button {
+            width: 44px;
+            height: 44px;
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--focusflow-border);
+            background: rgba(15, 23, 42, 0.72);
+            color: rgba(148, 163, 184, 0.9);
+            transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+        #page-timer header .icon-button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 12px 28px rgba(14, 165, 233, 0.2);
+            color: #38bdf8;
+        }
+        #page-timer header .icon-button.premium {
+            color: #fbbf24;
+            border-color: rgba(251, 191, 36, 0.4);
+            background: rgba(146, 64, 14, 0.28);
+        }
+        #page-timer header .icon-button.premium:hover {
+            color: #fde68a;
+            border-color: rgba(251, 191, 36, 0.55);
+            box-shadow: 0 16px 34px rgba(251, 191, 36, 0.25);
+        }
+        #brand-title {
+            font-size: 1.25rem;
+            letter-spacing: -0.5px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #38bdf8, #14b8a6);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        #header-avatar {
+            border-radius: 999px;
+            border: 2px solid rgba(148, 163, 184, 0.35);
+            overflow: hidden;
+            background: linear-gradient(160deg, rgba(37, 99, 235, 0.45), rgba(14, 165, 233, 0.35));
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        #header-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #timer-stage {
+            position: relative;
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #161b22; /* Darker secondary bg */
-            padding: 0.5rem;
-            border-radius: 9999px;
-            width: fit-content;
+            padding: 40px 0 48px;
         }
-        .timer-switch-btn {
-            padding: 0.5rem 1.5rem;
-            border: none;
-            background-color: transparent;
-            color: #9ca3af;
+        #timer-background-glow {
+            position: absolute;
+            width: min(520px, 85vw);
+            height: min(520px, 85vw);
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.26), rgba(14, 165, 233, 0.08) 48%, rgba(14, 165, 233, 0) 70%);
+            filter: blur(12px);
+            opacity: 0.5;
+            transition: opacity 0.4s ease;
+        }
+        #timer-background-glow.active {
+            opacity: 0.85;
+        }
+        .timer-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 40px 36px;
+            border-radius: 40px;
+            background: linear-gradient(160deg, rgba(13, 20, 35, 0.94), rgba(10, 17, 28, 0.88));
+            border: 1px solid rgba(56, 189, 248, 0.12);
+            box-shadow: 0 30px 70px rgba(2, 12, 27, 0.58), inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+            min-width: min(480px, 92vw);
+            transition: box-shadow 0.4s ease, transform 0.4s ease;
+            --timer-accent: var(--focusflow-accent);
+        }
+        .timer-card::after {
+            content: "";
+            position: absolute;
+            inset: 18px;
+            border-radius: 32px;
+            background: radial-gradient(circle at 50% 15%, rgba(56, 189, 248, 0.12), transparent 65%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+        .timer-card.is-running::after {
+            opacity: 1;
+        }
+        .timer-card.is-running {
+            box-shadow: 0 32px 90px rgba(14, 165, 233, 0.35), inset 0 0 0 1px rgba(56, 189, 248, 0.22);
+        }
+        .timer-card.timer-card-pulse {
+            transform: translateY(-2px);
+        }
+        .timer-card.is-break {
+            --timer-accent: var(--focusflow-accent-break);
+        }
+        .timer-card.is-indeterminate #timer-progress-ring {
+            animation: timerRingIndeterminate 3s linear infinite;
+        }
+        .timer-progress-wrapper {
+            position: relative;
+            width: min(320px, 72vw);
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .timer-progress-wrapper svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+        .timer-ring-track {
+            fill: none;
+            stroke: rgba(56, 189, 248, 0.15);
+            stroke-width: 12;
+            stroke-linecap: round;
+        }
+        #timer-progress-ring {
+            fill: none;
+            stroke: var(--timer-accent);
+            stroke-width: 12;
+            stroke-linecap: round;
+            stroke-dasharray: 0;
+            stroke-dashoffset: 0;
+            filter: drop-shadow(0 10px 24px rgba(56, 189, 248, 0.35));
+            transition: stroke 0.3s ease, stroke-dashoffset 0.3s ease;
+        }
+        .timer-digits {
+            position: absolute;
+            font-family: 'Roboto Mono', 'Inter', monospace;
+            font-variant-numeric: tabular-nums;
+            font-size: clamp(3.5rem, 14vw, 6.5rem);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            text-rendering: geometricPrecision;
+            color: var(--focusflow-text-primary);
+            transition: color 0.3s ease, transform 0.25s ease, text-shadow 0.3s ease;
+        }
+        .timer-digits.timer-digit-tick {
+            transform: scale(1.05);
+        }
+        .timer-digits.timer-mode-change {
+            animation: timerModeFlip 0.35s ease;
+        }
+        .timer-digits.appear {
+            animation: timerDigitsIn 0.6s ease-out;
+        }
+        .timer-card.is-running .timer-digits {
+            color: var(--timer-accent);
+            text-shadow: 0 8px 24px rgba(56, 189, 248, 0.35);
+        }
+        .timer-meta {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .timer-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .timer-stat-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: rgba(226, 232, 240, 0.7);
+        }
+        .timer-stat-value {
+            font-family: 'Roboto Mono', 'Inter', monospace;
+            font-size: 1.2rem;
             font-weight: 600;
-            border-radius: 9999px;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            color: var(--focusflow-text-primary);
         }
-        .timer-switch-btn.active {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8); /* Teal to Sky gradient */
-            color: white;
-            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
-        }
-        #pomodoro-status {
-            font-size: 1.25rem;
+        .timer-subject {
+            min-height: 28px;
+            font-size: 1.1rem;
             font-weight: 600;
-            color: #f59e0b; /* Amber color for breaks */
-            height: 2rem;
-            margin-bottom: 0.5rem;
+            color: #60a5fa;
+        }
+        #group-study-timer-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 9999px;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            background: rgba(148, 163, 184, 0.08);
+            color: rgba(226, 232, 240, 0.78);
+            box-shadow: 0 6px 18px rgba(8, 47, 73, 0.32);
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+        }
+        #group-study-timer-btn:hover {
+            transform: translateY(-1px);
+            color: var(--focusflow-accent);
+            border-color: rgba(56, 189, 248, 0.45);
+            box-shadow: 0 16px 32px rgba(14, 165, 233, 0.28);
+        }
+        #group-study-timer-btn:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.4);
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 16px;
+        }
+        .cta-button {
+            position: relative;
+            overflow: hidden;
+            border-radius: 9999px;
+            padding: 14px 44px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            box-shadow: 0 4px 12px rgba(0, 200, 255, 0.25);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .cta-button::after {
+            content: "";
+            position: absolute;
+            top: var(--ripple-y, 50%);
+            left: var(--ripple-x, 50%);
+            transform: translate(-50%, -50%) scale(0);
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.35);
+            opacity: 0;
+            transition: transform 0.45s ease, opacity 0.45s ease;
+        }
+        .cta-button.rippling::after {
+            transform: translate(-50%, -50%) scale(16);
+            opacity: 0.35;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 42px rgba(14, 165, 233, 0.38);
+        }
+        .cta-button:active {
+            transform: scale(0.96);
+        }
+        .timer-secondary-btn {
+            padding: 12px 28px;
+            border-radius: 9999px;
+            font-weight: 600;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+        }
+        .timer-secondary-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(56, 189, 248, 0.45);
+            color: inherit;
+        }
+
+        @keyframes timerDigitsIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes timerModeFlip {
+            from { transform: rotateX(90deg); opacity: 0; }
+            to { transform: rotateX(0deg); opacity: 1; }
+        }
+        @keyframes timerRingIndeterminate {
+            0% { stroke-dasharray: 40 320; stroke-dashoffset: 0; }
+            50% { stroke-dasharray: 160 200; stroke-dashoffset: -120; }
+            100% { stroke-dasharray: 40 320; stroke-dashoffset: -360; }
         }
 
         /* Pomodoro Settings Modal Scroll Fix */
@@ -2912,57 +3332,82 @@
     <div id="app-container" class="flex-col h-screen">
         <main id="main" class="flex-grow overflow-y-auto no-scrollbar">
             <div id="page-timer" class="page active flex-col h-full">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20">
-                     <div class="flex items-center">
-                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                             <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
-                             <path d="M9 8H15V10H11V12H14V14H11V16H9V8Z" fill="white"></path>
-                             <defs>
-                                 <linearGradient id="paint0_linear_logo_header" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
-                                     <stop stop-color="#14B8A6"></stop>
-                                     <stop offset="1" stop-color="#0EA5E9"></stop>
-                                 </linearGradient>
-                             </defs>
-                         </svg>
-                         <span class="text-2xl font-bold ml-2 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
-                     </div>
-                     <div class="flex items-center space-x-4">
-                         <button id="groups-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition">
-                             <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                 <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                             </svg>
-                         </button>
-                         <button id="premium-btn" class="w-10 h-10 rounded-full bg-yellow-900/50 border border-yellow-800 flex items-center justify-center text-yellow-400 hover:bg-yellow-800/60 transition" title="Premium Features">
-                             <i class="fas fa-star"></i>
-                         </button>
-                         <button id="profile-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition overflow-hidden">
-                             <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
-                         </button>
-                     </div>
-                </header>
-                <div class="relative flex-grow flex items-center justify-center -mt-16">
-                    <div class="relative text-center z-10 bg-gray-900/50 backdrop-blur-sm p-4 sm:p-8 rounded-full">
-                        <div class="timer-switch-container mx-auto mb-4">
-                            <button id="normal-timer-btn" class="timer-switch-btn active">Normal</button>
-                            <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
-                        </div>
-                        <button id="group-study-timer-btn" class="text-sm">
-                            <i class="fas fa-users-line"></i> Group Study
+                <header class="flex items-center justify-between z-20">
+                    <div class="flex items-center gap-3">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2Z" fill="url(#paint0_linear_logo_header)"></path>
+                            <path d="M9 8h6v2h-4v2h3v2h-3v2H9V8Z" fill="#fff"></path>
+                            <defs>
+                                <linearGradient id="paint0_linear_logo_header" x1="2" y1="12" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#14B8A6"></stop>
+                                    <stop offset="1" stop-color="#0EA5E9"></stop>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <span id="brand-title" class="ml-1">FocusFlow</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button id="groups-btn" class="icon-button" type="button" aria-label="Study groups">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 20a6 6 0 0112 0H3Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 9.5a2.5 2.5 0 10-5 0 2.5 2.5 0 005 0ZM21 20h-4.5a5.5 5.5 0 014.5-5.323V20Z" />
+                            </svg>
                         </button>
-                        <p id="active-subject-display" class="text-xl font-semibold text-blue-400 h-7 mb-2"></p>
+                        <button id="premium-btn" class="icon-button premium" type="button" aria-label="Premium features">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 3.25 14.09 8h4.91l-3.97 2.883 1.515 4.659L12 12.985l-4.545 2.557L8.97 10.883 5 8h4.91L12 3.25Z" />
+                            </svg>
+                        </button>
+                        <button id="profile-btn" class="icon-button overflow-hidden" type="button" aria-label="Profile">
+                            <div id="header-avatar" class="w-full h-full flex items-center justify-center text-white">U</div>
+                        </button>
+                    </div>
+                </header>
+                <section id="timer-stage">
+                    <div id="timer-background-glow"></div>
+                    <div id="timer-visual-card" class="timer-card">
+                        <div id="timer-mode-switch" class="timer-switch-container">
+                            <span id="timer-switch-indicator" class="timer-switch-indicator"></span>
+                            <button id="normal-timer-btn" class="timer-switch-btn active" type="button">Normal</button>
+                            <button id="pomodoro-timer-btn" class="timer-switch-btn" type="button">Pomodoro</button>
+                        </div>
+            <button id="group-study-timer-btn" class="mt-2" type="button">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 20a6 6 0 0112 0H3Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 9.5a2.5 2.5 0 10-5 0 2.5 2.5 0 005 0ZM21 20h-4.5a5.5 5.5 0 014.5-5.323V20Z" />
+                            </svg>
+                            <span>Group Study</span>
+                        </button>
+                        <p id="active-subject-display" class="timer-subject"></p>
                         <p id="pomodoro-status"></p>
-                        <h2 id="session-timer" class="text-7xl md:text-8xl timer-text text-white">00:00:00</h2>
-                        <p id="total-time-display" class="text-gray-400 mt-2">Total Today: 00:00:00</p>
-                        <p id="total-break-time-display" class="text-gray-400 mt-1">Total Break: 00:00:00</p>
-                        <div id="timer-controls" class="mt-8">
-                            <button id="start-studying-btn" class="bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Studying</button>
-                            <button id="stop-studying-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
-                            <button id="manual-start-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Start Next</button>
-                            <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Pause</button>
-                            <button id="resume-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105">Resume</button>
+                        <div class="timer-progress-wrapper">
+                            <svg viewBox="0 0 240 240" aria-hidden="true">
+                                <circle class="timer-ring-track" cx="120" cy="120" r="108"></circle>
+                                <circle id="timer-progress-ring" cx="120" cy="120" r="108"></circle>
+                            </svg>
+                            <h2 id="session-timer" class="timer-digits appear">00:00:00</h2>
+                        </div>
+                        <div class="timer-meta">
+                            <div class="timer-stat">
+                                <span class="timer-stat-label">Total Today</span>
+                                <p id="total-time-display" class="timer-stat-value">00:00:00</p>
+                            </div>
+                            <div class="timer-stat">
+                                <span class="timer-stat-label">Total Break</span>
+                                <p id="total-break-time-display" class="timer-stat-value">00:00:00</p>
+                            </div>
+                        </div>
+                        <div id="timer-controls" class="timer-controls">
+                            <button id="start-studying-btn" class="cta-button text-white" type="button">Start Studying</button>
+                            <button id="stop-studying-btn" class="hidden timer-secondary-btn bg-red-600 hover:bg-red-700 text-white" type="button">Stop</button>
+                            <button id="manual-start-btn" class="hidden timer-secondary-btn bg-green-600 hover:bg-green-700 text-white" type="button">Start Next</button>
+                            <button id="pause-btn" class="hidden timer-secondary-btn bg-yellow-500 hover:bg-yellow-600 text-black" type="button">Pause</button>
+                            <button id="resume-btn" class="hidden timer-secondary-btn bg-green-500 hover:bg-green-600 text-white" type="button">Resume</button>
                         </div>
                     </div>
-                </div>
+                </section>
             </div>
             
             <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar">
@@ -3196,36 +3641,97 @@
                 </div>
                 <div id="group-detail-content" class="flex-grow overflow-y-auto no-scrollbar">
                 </div>
-                <nav id="group-detail-nav" class="bg-gray-800 border-t border-gray-700 grid grid-cols-5 sticky bottom-0">
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors active" data-subpage="home">
-                        <i class="fas fa-home"></i>
-                        <p class="text-xs mt-1">Home</p>
+                <nav id="group-detail-nav" class="nav-glass grid grid-cols-5 sticky bottom-0">
+                    <button class="group-nav-item flex flex-col items-center justify-center py-2 active" type="button" data-subpage="home">
+                        <span class="nav-icon">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9.5Z" />
+                            </svg>
+                        </span>
+                        <span class="nav-label">Home</span>
                     </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="attendance">
-                        <i class="fas fa-calendar-check"></i>
-                        <p class="text-xs mt-1">Attendance</p>
+                    <button class="group-nav-item flex flex-col items-center justify-center py-2" type="button" data-subpage="attendance">
+                        <span class="nav-icon">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 9h14v11a2 2 0 01-2 2H7a2 2 0 01-2-2V9Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-6 4h3" />
+                            </svg>
+                        </span>
+                        <span class="nav-label">Attendance</span>
                     </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="rankings">
-                        <i class="fas fa-chart-bar"></i>
-                        <p class="text-xs mt-1">Rankings</p>
+                    <button class="group-nav-item flex flex-col items-center justify-center py-2" type="button" data-subpage="rankings">
+                        <span class="nav-icon">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 15h3v5H4zM10 11h3v9h-3zM16 7h3v13h-3z" />
+                            </svg>
+                        </span>
+                        <span class="nav-label">Rankings</span>
                     </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="advanced">
-                        <i class="fas fa-bell"></i>
-                        <p class="text-xs mt-1">Advanced</p>
+                    <button class="group-nav-item flex flex-col items-center justify-center py-2" type="button" data-subpage="advanced">
+                        <span class="nav-icon">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1" />
+                            </svg>
+                        </span>
+                        <span class="nav-label">Advanced</span>
                     </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="chat">
-                        <i class="fas fa-comments"></i>
-                        <p class="text-xs mt-1">Chat</p>
+                    <button class="group-nav-item flex flex-col items-center justify-center py-2" type="button" data-subpage="chat">
+                        <span class="nav-icon">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h6" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 12c0 4.418-4.03 8-9 8a9.57 9.57 0 01-3.21-.54L3 21l1.63-4.356A7.937 7.937 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z" />
+                            </svg>
+                        </span>
+                        <span class="nav-label">Chat</span>
                     </button>
                 </nav>
             </div>
         </main>
-        <nav id="main-nav" class="bg-gray-800 border-t border-gray-700 grid grid-cols-5 sticky bottom-0">
-            <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors active" data-page="timer"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p class="text-xs mt-1">Timer</p></button>
-            <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="stats"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg><p class="text-xs mt-1">Stats</p></button>
-            <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="ranking"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg><p class="text-xs mt-1">Ranking</p></button>
-            <button class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="planner"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg><p class="text-xs mt-1">Planner</p></button>
-            <button id="add-subject-btn" class="p-3 flex flex-col items-center justify-center text-sky-400 hover:bg-gray-700 transition-colors"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p class="text-xs mt-1">Add Subject</p></button>
+        <nav id="main-nav" class="nav-glass grid grid-cols-5 sticky bottom-0">
+            <button class="nav-item flex flex-col items-center justify-center py-2 active" type="button" data-page="timer">
+                <span class="nav-icon">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </span>
+                <span class="nav-label">Timer</span>
+            </button>
+            <button class="nav-item flex flex-col items-center justify-center py-2" type="button" data-page="stats">
+                <span class="nav-icon">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 15h3v5H4zM10 9h3v11h-3zM16 5h3v15h-3z" />
+                    </svg>
+                </span>
+                <span class="nav-label">Stats</span>
+            </button>
+            <button class="nav-item flex flex-col items-center justify-center py-2" type="button" data-page="ranking">
+                <span class="nav-icon">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 7h7v7" />
+                    </svg>
+                </span>
+                <span class="nav-label">Ranking</span>
+            </button>
+            <button class="nav-item flex flex-col items-center justify-center py-2" type="button" data-page="planner">
+                <span class="nav-icon">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V4m8 3V4M5 9h14M6 21h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.5v2m-9-2H6A2 2 0 004 7v12a2 2 0 002 2Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h3m-3 4h6" />
+                    </svg>
+                </span>
+                <span class="nav-label">Planner</span>
+            </button>
+            <button id="add-subject-btn" class="nav-item flex flex-col items-center justify-center py-2" type="button">
+                <span class="nav-icon">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v8m4-4H8" />
+                    </svg>
+                </span>
+                <span class="nav-label">Add</span>
+            </button>
         </nav>
     </div>
 
@@ -4685,8 +5191,8 @@
         pomodoroWorker.onmessage = (e) => {
             const { type, timeLeft } = e.data;
             if (type === 'tick' && sessionTimerDisplay) {
-                // Update the timer display on every tick from the worker
-                sessionTimerDisplay.textContent = formatPomodoroTime(timeLeft);
+                setSessionTimerText(formatPomodoroTime(timeLeft), { tick: true });
+                updateTimerProgress(currentPomodoroDurationSeconds, timeLeft);
             } else if (type === 'phase_ended') {
                 if (skipNextLocalPhaseEnd) {
                     skipNextLocalPhaseEnd = false;
@@ -4878,6 +5384,15 @@
                 document.getElementById('pause-btn').classList.add('hidden');
                 setPomodoroWakeLockActive(false);
                 pomodoroStatusDisplay.textContent = `Ready for ${newState.replace('_', ' ')}`;
+                const upcomingDuration = newState === 'work'
+                    ? pomodoroSettings.work * 60
+                    : (newState === 'short_break' ? pomodoroSettings.short_break * 60 : pomodoroSettings.long_break * 60);
+                currentPomodoroDurationSeconds = upcomingDuration;
+                setTimerPhase('idle', upcomingDuration);
+                timerPhaseState.phase = newState === 'work' ? 'focus' : 'break';
+                setTimerAccent(computeTimerAccent({ phase: timerPhaseState.phase, totalSeconds: upcomingDuration, remainingSeconds: upcomingDuration }));
+                updateTimerProgress(upcomingDuration, upcomingDuration);
+                setSessionTimerText(formatPomodoroTime(upcomingDuration));
             }
         }
         // --- FIX END ---
@@ -5273,7 +5788,8 @@ function scheduleServerFinalTrigger({ groupKey, sendAtMs, notificationPayload })
             pomodoroState = oldState;
 
             if (sessionTimerDisplay) {
-                sessionTimerDisplay.textContent = formatPomodoroTime(0);
+                setSessionTimerText(formatPomodoroTime(0));
+                updateTimerProgress(currentPomodoroDurationSeconds, 0);
             }
 
             handlePomodoroPhaseEnd({ oldState, newState, source: 'push', session });
@@ -5331,6 +5847,7 @@ let pauseStartTime = 0;
         let timerMode = 'normal'; // 'normal' or 'pomodoro'
         let pomodoroState = 'idle'; // 'work', 'short_break', 'long_break', 'idle'
         let nextPomodoroPhase = null; // To store the next phase for manual start
+        let currentPomodoroDurationSeconds = null;
         let pomodoroSettings = {
             work: 25,
             short_break: 5,
@@ -5524,6 +6041,183 @@ let pauseStartTime = 0;
         const totalBreakTimeDisplay = document.getElementById('total-break-time-display');
         const activeSubjectDisplay = document.getElementById('active-subject-display');
         const pomodoroStatusDisplay = document.getElementById('pomodoro-status');
+        const timerCard = document.getElementById('timer-visual-card');
+        const timerBackgroundGlow = document.getElementById('timer-background-glow');
+        const timerModeSwitch = document.getElementById('timer-mode-switch');
+        const timerSwitchIndicator = document.getElementById('timer-switch-indicator');
+        const timerProgressRing = document.getElementById('timer-progress-ring');
+
+        let timerRingCircumference = 0;
+        let timerTickTimeoutId = null;
+        let timerPhaseState = { phase: 'idle', totalSeconds: null };
+        const rootComputedStyles = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
+        const TIMER_ACCENT_DEFAULT = rootComputedStyles?.getPropertyValue('--focusflow-accent').trim() || '#38bdf8';
+        const TIMER_ACCENT_GREEN = rootComputedStyles?.getPropertyValue('--focusflow-accent-green').trim() || '#34d399';
+        const TIMER_ACCENT_RED = rootComputedStyles?.getPropertyValue('--focusflow-accent-red').trim() || '#f87171';
+        const TIMER_ACCENT_BREAK = rootComputedStyles?.getPropertyValue('--focusflow-accent-break').trim() || '#fbbf24';
+
+        function initializeTimerRing() {
+            if (!timerProgressRing) return;
+            const radius = timerProgressRing.r?.baseVal?.value || 0;
+            if (!radius) return;
+            timerRingCircumference = 2 * Math.PI * radius;
+            timerProgressRing.style.strokeDasharray = `${timerRingCircumference}`;
+            timerProgressRing.style.strokeDashoffset = `${timerRingCircumference}`;
+        }
+
+        function setTimerAccent(color) {
+            if (timerCard && color) {
+                timerCard.style.setProperty('--timer-accent', color);
+            }
+        }
+
+        function computeTimerAccent({ phase, totalSeconds, remainingSeconds }) {
+            if (phase === 'break') {
+                return TIMER_ACCENT_BREAK;
+            }
+            if (!Number.isFinite(totalSeconds) || totalSeconds <= 0 || !Number.isFinite(remainingSeconds)) {
+                return TIMER_ACCENT_DEFAULT;
+            }
+            const ratio = Math.max(0, Math.min(1, remainingSeconds / totalSeconds));
+            if (ratio > 0.66) return TIMER_ACCENT_DEFAULT;
+            if (ratio > 0.33) return TIMER_ACCENT_GREEN;
+            return TIMER_ACCENT_RED;
+        }
+
+        function resetTimerProgress() {
+            if (timerProgressRing && timerRingCircumference) {
+                timerProgressRing.style.strokeDashoffset = `${timerRingCircumference}`;
+            }
+        }
+
+        function updateTimerProgress(totalSeconds, remainingSeconds) {
+            if (!timerProgressRing) return;
+            const effectiveTotal = Number.isFinite(totalSeconds) && totalSeconds > 0
+                ? totalSeconds
+                : (Number.isFinite(timerPhaseState.totalSeconds) ? timerPhaseState.totalSeconds : null);
+
+            if (!Number.isFinite(effectiveTotal) || effectiveTotal <= 0 || !Number.isFinite(remainingSeconds)) {
+                if (timerCard) timerCard.classList.add('is-indeterminate');
+                resetTimerProgress();
+                setTimerAccent(computeTimerAccent({ phase: timerPhaseState.phase, totalSeconds: effectiveTotal, remainingSeconds }));
+                return;
+            }
+
+            if (timerCard) timerCard.classList.remove('is-indeterminate');
+            const safeRemaining = Math.max(0, Math.min(effectiveTotal, remainingSeconds));
+            const elapsed = effectiveTotal - safeRemaining;
+            const progress = Math.min(1, Math.max(0, elapsed / effectiveTotal));
+            if (timerRingCircumference) {
+                const offset = timerRingCircumference * (1 - progress);
+                timerProgressRing.style.strokeDashoffset = `${offset}`;
+            }
+
+            const accent = computeTimerAccent({
+                phase: timerPhaseState.phase,
+                totalSeconds: effectiveTotal,
+                remainingSeconds: safeRemaining
+            });
+            setTimerAccent(accent);
+        }
+
+        function setTimerPhase(phase = 'idle', totalSeconds = null) {
+            timerPhaseState = {
+                phase,
+                totalSeconds: Number.isFinite(totalSeconds) && totalSeconds > 0 ? totalSeconds : null
+            };
+            if (timerCard) {
+                timerCard.classList.toggle('is-running', phase !== 'idle');
+                timerCard.classList.toggle('is-break', phase === 'break');
+            }
+            if (timerBackgroundGlow) {
+                timerBackgroundGlow.classList.toggle('active', phase !== 'idle');
+            }
+            if (!timerPhaseState.totalSeconds) {
+                if (timerCard) timerCard.classList.add('is-indeterminate');
+                resetTimerProgress();
+                setTimerAccent(computeTimerAccent({ phase, totalSeconds: totalSeconds ?? null, remainingSeconds: totalSeconds ?? null }));
+            } else {
+                if (timerCard) timerCard.classList.remove('is-indeterminate');
+                updateTimerProgress(timerPhaseState.totalSeconds, timerPhaseState.totalSeconds);
+            }
+        }
+
+        function triggerTimerTickAnimation() {
+            if (!sessionTimerDisplay) return;
+            sessionTimerDisplay.classList.remove('timer-digit-tick');
+            if (timerTickTimeoutId) {
+                clearTimeout(timerTickTimeoutId);
+                timerTickTimeoutId = null;
+            }
+            // Force reflow for animation restart
+            void sessionTimerDisplay.offsetWidth;
+            sessionTimerDisplay.classList.add('timer-digit-tick');
+            if (timerCard) {
+                timerCard.classList.add('timer-card-pulse');
+                setTimeout(() => timerCard && timerCard.classList.remove('timer-card-pulse'), 220);
+            }
+            timerTickTimeoutId = setTimeout(() => {
+                sessionTimerDisplay.classList.remove('timer-digit-tick');
+                timerTickTimeoutId = null;
+            }, 220);
+        }
+
+        function setSessionTimerText(text, { tick = false } = {}) {
+            if (!sessionTimerDisplay) return;
+            sessionTimerDisplay.textContent = text;
+            if (tick) {
+                triggerTimerTickAnimation();
+            }
+        }
+
+        function animateTimerModeChange() {
+            if (!sessionTimerDisplay) return;
+            sessionTimerDisplay.classList.add('timer-mode-change');
+            setTimeout(() => sessionTimerDisplay.classList.remove('timer-mode-change'), 360);
+        }
+
+        function updateTimerSwitchIndicator() {
+            if (!timerModeSwitch || !timerSwitchIndicator) return;
+            const activeBtn = timerModeSwitch.querySelector('.timer-switch-btn.active');
+            if (!activeBtn) return;
+            const width = activeBtn.offsetWidth;
+            const offset = activeBtn.offsetLeft;
+            timerSwitchIndicator.style.width = `${width}px`;
+            timerSwitchIndicator.style.transform = `translateX(${offset}px)`;
+        }
+
+        initializeTimerRing();
+        requestAnimationFrame(() => updateTimerSwitchIndicator());
+        window.addEventListener('resize', () => updateTimerSwitchIndicator());
+        if (window.ResizeObserver && timerModeSwitch) {
+            const switchObserver = new ResizeObserver(() => updateTimerSwitchIndicator());
+            switchObserver.observe(timerModeSwitch);
+        }
+
+        const startStudyingBtn = document.getElementById('start-studying-btn');
+        if (startStudyingBtn) {
+            startStudyingBtn.addEventListener('pointerdown', event => {
+                const rect = startStudyingBtn.getBoundingClientRect();
+                const rippleX = event.clientX - rect.left;
+                const rippleY = event.clientY - rect.top;
+                startStudyingBtn.style.setProperty('--ripple-x', `${rippleX}px`);
+                startStudyingBtn.style.setProperty('--ripple-y', `${rippleY}px`);
+                startStudyingBtn.classList.remove('rippling');
+                void startStudyingBtn.offsetWidth;
+                startStudyingBtn.classList.add('rippling');
+                setTimeout(() => startStudyingBtn.classList.remove('rippling'), 450);
+            });
+            startStudyingBtn.addEventListener('keydown', event => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                const rect = startStudyingBtn.getBoundingClientRect();
+                startStudyingBtn.style.setProperty('--ripple-x', `${rect.width / 2}px`);
+                startStudyingBtn.style.setProperty('--ripple-y', `${rect.height / 2}px`);
+                startStudyingBtn.classList.remove('rippling');
+                void startStudyingBtn.offsetWidth;
+                startStudyingBtn.classList.add('rippling');
+                setTimeout(() => startStudyingBtn.classList.remove('rippling'), 450);
+            });
+        }
 
         function closeImageViewer() {
             const modal = document.getElementById('image-view-modal');
@@ -7361,21 +8055,31 @@ let pauseStartTime = 0;
 
             if (timerMode === 'normal') {
                 sessionStartTime = Date.now();
-                sessionTimerDisplay.textContent = activeTaskTargetSeconds
-                    ? formatTime(activeTaskTargetSeconds)
-                    : formatTime(0);
-                timerInterval = setInterval(() => {
+                if (activeTaskTargetSeconds) {
+                    setTimerPhase('focus', activeTaskTargetSeconds);
+                    setSessionTimerText(formatTime(activeTaskTargetSeconds));
+                } else {
+                    setTimerPhase('focus', null);
+                    setSessionTimerText(formatTime(0));
+                    updateTimerProgress(null, null);
+                }
+                const normalTick = () => {
                     const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
                     if (activeTaskTargetSeconds) {
                         const remainingSeconds = activeTaskTargetSeconds - elapsedSeconds;
-                        sessionTimerDisplay.textContent = formatTime(Math.max(remainingSeconds, 0));
+                        const safeRemaining = Math.max(remainingSeconds, 0);
+                        setSessionTimerText(formatTime(safeRemaining), { tick: true });
+                        updateTimerProgress(activeTaskTargetSeconds, safeRemaining);
                         if (remainingSeconds <= 0) {
                             stopTimer().catch(err => console.error('Failed to auto-stop timer', err));
                         }
                     } else {
-                        sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
+                        setSessionTimerText(formatTime(elapsedSeconds), { tick: true });
+                        updateTimerProgress(null, null);
                     }
-                }, 1000);
+                };
+                normalTick();
+                timerInterval = setInterval(normalTick, 1000);
             } else { // Pomodoro Mode
                 pomodoroState = 'work';
                 playSound(pomodoroSounds.start, pomodoroSounds.volume);
@@ -7394,6 +8098,10 @@ let pauseStartTime = 0;
                 pomodoroStatusDisplay.style.color = '#3b82f6';
 
                 const workDurationSeconds = pomodoroSettings.work * 60;
+                currentPomodoroDurationSeconds = workDurationSeconds;
+                setTimerPhase('focus', workDurationSeconds);
+                setSessionTimerText(formatPomodoroTime(workDurationSeconds));
+                updateTimerProgress(workDurationSeconds, workDurationSeconds);
                 await ensurePushSubscription();
                 cancelSWAlarm(POMODORO_HEADS_UP_TAG);
                 const workPhaseStartMs = Date.now();
@@ -7491,9 +8199,17 @@ let pauseStartTime = 0;
             activeTaskTargetSeconds = null;
             activeTaskRemainingPomodoros = null;
             activeSubjectDisplay.textContent = '';
-            sessionTimerDisplay.textContent = timerMode === 'pomodoro'
-                ? formatPomodoroTime(pomodoroSettings.work * 60)
-                : formatTime(0);
+            if (timerMode === 'pomodoro') {
+                currentPomodoroDurationSeconds = pomodoroSettings.work * 60;
+                setTimerPhase('idle', currentPomodoroDurationSeconds);
+                setSessionTimerText(formatPomodoroTime(currentPomodoroDurationSeconds));
+                updateTimerProgress(currentPomodoroDurationSeconds, currentPomodoroDurationSeconds);
+            } else {
+                currentPomodoroDurationSeconds = null;
+                setTimerPhase('idle', null);
+                setSessionTimerText(formatTime(0));
+                updateTimerProgress(null, null);
+            }
             pomodoroStatusDisplay.textContent = timerMode === 'pomodoro' ? 'Ready for Pomodoro' : '';
             pomodoroStatusDisplay.style.color = '#9ca3af';
 
@@ -7530,10 +8246,23 @@ let pauseStartTime = 0;
             if (timerMode === 'normal' && isPaused) {
                 const pauseDuration = Date.now() - pauseStartTime;
                 sessionStartTime += pauseDuration;
-                timerInterval = setInterval(() => {
+                const resumeTick = () => {
                     const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
-                    sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
-                }, 1000);
+                    if (activeTaskTargetSeconds) {
+                        const remainingSeconds = activeTaskTargetSeconds - elapsedSeconds;
+                        const safeRemaining = Math.max(remainingSeconds, 0);
+                        setSessionTimerText(formatTime(safeRemaining), { tick: true });
+                        updateTimerProgress(activeTaskTargetSeconds, safeRemaining);
+                        if (remainingSeconds <= 0) {
+                            stopTimer().catch(err => console.error('Failed to auto-stop timer', err));
+                        }
+                    } else {
+                        setSessionTimerText(formatTime(elapsedSeconds), { tick: true });
+                        updateTimerProgress(null, null);
+                    }
+                };
+                resumeTick();
+                timerInterval = setInterval(resumeTick, 1000);
                 isPaused = false;
                 pauseStartTime = 0;
                 document.getElementById('pause-btn').classList.remove('hidden');
@@ -7572,6 +8301,9 @@ let pauseStartTime = 0;
                 statusText = state.replace('_', ' ');
             }
 
+            currentPomodoroDurationSeconds = durationSeconds;
+            setTimerPhase(state === 'work' ? 'focus' : 'break', durationSeconds);
+
             const providedSession = options.session && typeof options.session === 'object' ? options.session : null;
             const providedStartMs = coerceEpochMilliseconds(
                 options.phaseStartMs ??
@@ -7588,10 +8320,11 @@ let pauseStartTime = 0;
             pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds, startedAt: phaseStartMs });
             setPomodoroWakeLockActive(true);
             if (sessionTimerDisplay) {
-                sessionTimerDisplay.textContent = formatPomodoroTime(initialTimeLeftSeconds);
+                setSessionTimerText(formatPomodoroTime(initialTimeLeftSeconds));
+                updateTimerProgress(durationSeconds, initialTimeLeftSeconds);
             }
             pomodoroStatusDisplay.textContent = statusText;
-            pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e' : '#3b82f6';
+            pomodoroStatusDisplay.style.color = state.includes('break') ? '#f59e0b' : '#3b82f6';
 
             // Cycle count is now managed in handlePomodoroPhaseEnd to avoid race conditions.
             if (state === 'work') {
@@ -7635,14 +8368,16 @@ let pauseStartTime = 0;
         function updateBreakTimerDisplay() {
             if (breakStartTime === 0) return;
             const elapsedSeconds = Math.floor((Date.now() - breakStartTime) / 1000);
-            sessionTimerDisplay.textContent = formatTime(elapsedSeconds); // Show break time on main timer display
+            setTimerPhase('break', null);
+            setSessionTimerText(formatTime(elapsedSeconds), { tick: true });
+            updateTimerProgress(null, null);
             pomodoroStatusDisplay.textContent = 'On Break'; // Indicate break status
             pomodoroStatusDisplay.style.color = '#f59e0b'; // Break color
         }
         
         function updateTotalTimeDisplay() {
-            totalTimeDisplay.textContent = `Total Today: ${formatTime(totalTimeTodayInSeconds)}`;
-            totalBreakTimeDisplay.textContent = `Total Break: ${formatTime(totalBreakTimeTodayInSeconds)}`;
+            totalTimeDisplay.textContent = formatTime(totalTimeTodayInSeconds);
+            totalBreakTimeDisplay.textContent = formatTime(totalBreakTimeTodayInSeconds);
         }
 
         async function saveSession(subject, durationSeconds, sessionType = 'study') { // Default to 'study'
@@ -13494,7 +14229,10 @@ if (achievementsGrid) {
                 }
                 currentUserData = { ...currentUserData, pomodoro_settings: newSettings };
                 if (timerMode === 'pomodoro' && pomodoroState === 'idle') {
-                    sessionTimerDisplay.textContent = formatPomodoroTime(length * 60);
+                    currentPomodoroDurationSeconds = length * 60;
+                    setTimerPhase('idle', currentPomodoroDurationSeconds);
+                    setSessionTimerText(formatPomodoroTime(currentPomodoroDurationSeconds));
+                    updateTimerProgress(currentPomodoroDurationSeconds, currentPomodoroDurationSeconds);
                 }
             }
 
@@ -13914,17 +14652,24 @@ if (achievementsGrid) {
             timerMode = mode;
             document.getElementById('normal-timer-btn').classList.toggle('active', mode === 'normal');
             document.getElementById('pomodoro-timer-btn').classList.toggle('active', mode === 'pomodoro');
+            animateTimerModeChange();
+            updateTimerSwitchIndicator();
 
             if (mode !== 'pomodoro') {
                 setPomodoroWakeLockActive(false);
             }
 
             if (mode === 'pomodoro') {
-                sessionTimerDisplay.textContent = formatPomodoroTime(pomodoroSettings.work * 60);
+                const defaultPomodoroSeconds = pomodoroSettings.work * 60;
+                currentPomodoroDurationSeconds = defaultPomodoroSeconds;
+                setTimerPhase('idle', defaultPomodoroSeconds);
+                setSessionTimerText(formatPomodoroTime(defaultPomodoroSeconds));
                 pomodoroStatusDisplay.textContent = 'Ready for Pomodoro';
                 pomodoroStatusDisplay.style.color = '#9ca3af';
             } else { // 'normal'
-                sessionTimerDisplay.textContent = formatTime(0);
+                currentPomodoroDurationSeconds = null;
+                setTimerPhase('idle', null);
+                setSessionTimerText(formatTime(0));
                 pomodoroStatusDisplay.textContent = '';
             }
         }
