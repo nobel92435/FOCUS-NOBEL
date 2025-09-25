@@ -1,23 +1,23 @@
-<svg width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="premium-bg" x1="18" y1="12" x2="96" y2="102" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FACC15"/>
+    <radialGradient id="premium-ring" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(40 28) rotate(45) scale(126 120)">
+      <stop stop-color="#FDE68A"/>
       <stop offset="1" stop-color="#F59E0B"/>
-    </linearGradient>
-    <linearGradient id="premium-cup" x1="30" y1="32" x2="78" y2="88" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFF7D6"/>
+    </radialGradient>
+    <linearGradient id="premium-cup" x1="32" y1="36" x2="92" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8DC"/>
       <stop offset="1" stop-color="#FFE08A"/>
     </linearGradient>
-    <linearGradient id="premium-stem" x1="44" y1="74" x2="64" y2="96" gradientUnits="userSpaceOnUse">
+    <linearGradient id="premium-stem" x1="48" y1="78" x2="72" y2="108" gradientUnits="userSpaceOnUse">
       <stop stop-color="#B45309" stop-opacity="0.6"/>
       <stop offset="1" stop-color="#78350F" stop-opacity="0.9"/>
     </linearGradient>
   </defs>
-  <circle cx="54" cy="54" r="54" fill="url(#premium-bg)"/>
-  <path d="M28 32H80L74 56C71.7909 64.8636 64.5485 72 54 72C43.4515 72 36.2091 64.8636 34 56L28 32Z" fill="url(#premium-cup)"/>
-  <path d="M24 32H38V42C38 48.6274 32.6274 54 26 54H22L24 32Z" fill="#FDE68A"/>
-  <path d="M70 32H84L86 54H82C75.3726 54 70 48.6274 70 42V32Z" fill="#FDE68A"/>
-  <path d="M44 72H64V84C64 88.4183 60.4183 92 56 92H52C47.5817 92 44 88.4183 44 84V72Z" fill="url(#premium-stem)"/>
-  <rect x="36" y="84" width="36" height="8" rx="4" fill="#A16207"/>
-  <path d="M54 28L58.4721 35.0557L66.1803 36.618L60.5 42.1082L61.5549 49.882L54 46.24L46.4451 49.882L47.5 42.1082L41.8197 36.618L49.5279 35.0557L54 28Z" fill="#F59E0B" stroke="#D97706" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="60" cy="60" r="60" fill="url(#premium-ring)"/>
+  <path d="M30 34H90L84 60C81.2952 72.3182 71.0167 82 60 82C48.9833 82 38.7048 72.3182 36 60L30 34Z" fill="url(#premium-cup)"/>
+  <path d="M26 34H40V46C40 52.6274 34.6274 58 28 58H24L26 34Z" fill="#FDE68A"/>
+  <path d="M80 34H94L96 58H92C85.3726 58 80 52.6274 80 46V34Z" fill="#FDE68A"/>
+  <path d="M48 82H72V92C72 97.5228 67.5228 102 62 102H58C52.4772 102 48 97.5228 48 92V82Z" fill="url(#premium-stem)"/>
+  <rect x="38" y="96" width="44" height="10" rx="5" fill="#A16207"/>
+  <path d="M60 26L64.4721 33.0557L72.1803 34.618L66.5 40.1082L67.5549 47.882L60 44.24L52.4451 47.882L53.5 40.1082L47.8197 34.618L55.5279 33.0557L60 26Z" fill="#F59E0B" stroke="#D97706" stroke-width="2" stroke-linejoin="round"/>
 </svg>
