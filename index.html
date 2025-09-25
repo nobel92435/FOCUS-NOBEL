@@ -33,39 +33,64 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .nav-item.active, .group-nav-item.active {
-            background: linear-gradient(to top, rgba(20, 184, 166, 0.2), transparent);
+            background-color: rgba(129, 140, 248, 0.25);
         }
-        .nav-item.active svg, .nav-item.active img, .nav-item.active p, .group-nav-item.active i, .group-nav-item.active p {
-            color: #14b8a6; /* Teal-500 */
+        .nav-item.active span, .group-nav-item.active span {
+            color: #f8fafc;
         }
 
-        /* Bottom navigation icon styling */
-        #main-nav .nav-item {
+        .sidebar-nav ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .sidebar-nav .nav-link {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
             text-decoration: none;
-        }
-        #main-nav .nav-item .nav-icon {
-            width: 28px;
-            height: 28px;
-            margin-bottom: 0.25rem;
-            transition: transform 0.2s ease, filter 0.2s ease;
-        }
-        #main-nav .nav-item p {
             color: #cbd5f5;
-            transition: color 0.2s ease;
+            border-radius: 0.75rem;
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, transform 0.2s ease-in-out;
         }
-        #main-nav .nav-item:hover .nav-icon {
-            transform: translateY(-2px);
+
+        .sidebar-nav .nav-link.nav-link--stacked {
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            gap: 0.35rem;
         }
-        #main-nav .nav-item:hover p {
-            color: #e6edf3;
+
+        .sidebar-nav .nav-link span {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: inherit;
         }
-        #main-nav .nav-item.active .nav-icon {
-            transform: scale(1.1);
-            filter: drop-shadow(0 6px 12px rgba(20, 184, 166, 0.25));
+
+        .sidebar-nav .nav-link.nav-link--stacked span {
+            font-size: 0.75rem;
         }
-        #main-nav .nav-item.active p {
-            color: #14b8a6;
+
+        .sidebar-nav .nav-link img {
+            width: 24px;
+            height: 24px;
+        }
+
+        .sidebar-nav .nav-link:hover {
+            background-color: rgba(129, 140, 248, 0.18);
+        }
+
+        .sidebar-nav .nav-link.active {
+            background-color: rgba(129, 140, 248, 0.3);
+            color: #f8fafc;
             font-weight: 600;
+        }
+
+        .sidebar-nav .nav-link.active img {
+            transform: scale(1.1);
         }
 
         /* Page and container visibility */
@@ -2956,14 +2981,12 @@
                          <span class="text-2xl font-bold ml-2 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
                      </div>
                      <div class="flex items-center space-x-4">
-                         <button id="groups-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition">
-                             <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                 <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                             </svg>
-                         </button>
-                         <button id="premium-btn" class="w-10 h-10 rounded-full bg-yellow-900/50 border border-yellow-800 flex items-center justify-center text-yellow-400 hover:bg-yellow-800/60 transition" title="Premium Features">
-                             <i class="fas fa-star"></i>
-                         </button>
+                        <button id="groups-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition">
+                            <img src="assets/icons/groups.svg" alt="Groups" class="w-6 h-6">
+                        </button>
+                        <button id="premium-btn" class="w-10 h-10 rounded-full bg-yellow-900/50 border border-yellow-800 flex items-center justify-center text-yellow-400 hover:bg-yellow-800/60 transition" title="Premium Features">
+                            <img src="assets/icons/premium.svg" alt="Premium" class="w-6 h-6">
+                        </button>
                          <button id="profile-btn" class="w-10 h-10 rounded-full bg-sky-900/50 border border-sky-800 flex items-center justify-center text-gray-400 hover:bg-sky-800/60 transition overflow-hidden">
                              <div id="header-avatar" class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">U</div>
                          </button>
@@ -3225,27 +3248,39 @@
                 </div>
                 <div id="group-detail-content" class="flex-grow overflow-y-auto no-scrollbar">
                 </div>
-                <nav id="group-detail-nav" class="bg-gray-800 border-t border-gray-700 grid grid-cols-5 sticky bottom-0">
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors active" data-subpage="home">
-                        <i class="fas fa-home"></i>
-                        <p class="text-xs mt-1">Home</p>
-                    </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="attendance">
-                        <i class="fas fa-calendar-check"></i>
-                        <p class="text-xs mt-1">Attendance</p>
-                    </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="rankings">
-                        <i class="fas fa-chart-bar"></i>
-                        <p class="text-xs mt-1">Rankings</p>
-                    </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="advanced">
-                        <i class="fas fa-bell"></i>
-                        <p class="text-xs mt-1">Advanced</p>
-                    </button>
-                    <button class="group-nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-subpage="chat">
-                        <i class="fas fa-comments"></i>
-                        <p class="text-xs mt-1">Chat</p>
-                    </button>
+                <nav id="group-detail-nav" class="sidebar-nav bg-gray-800 border-t border-gray-700 sticky bottom-0">
+                    <ul class="grid grid-cols-5">
+                        <li>
+                            <a href="#group-home" class="nav-link nav-link--stacked group-nav-item active" data-subpage="home">
+                                <img src="assets/icons/home.svg" alt="Home">
+                                <span>Home</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#group-attendance" class="nav-link nav-link--stacked group-nav-item" data-subpage="attendance">
+                                <img src="assets/icons/attendance.svg" alt="Attendance">
+                                <span>Attendance</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#group-rankings" class="nav-link nav-link--stacked group-nav-item" data-subpage="rankings">
+                                <img src="assets/icons/rankings.svg" alt="Rankings">
+                                <span>Rankings</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#group-advanced" class="nav-link nav-link--stacked group-nav-item" data-subpage="advanced">
+                                <img src="assets/icons/advanced.svg" alt="Advanced features">
+                                <span>Advanced</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#group-chat" class="nav-link nav-link--stacked group-nav-item" data-subpage="chat">
+                                <img src="assets/icons/chat.svg" alt="Chat">
+                                <span>Chat</span>
+                            </a>
+                        </li>
+                    </ul>
                 </nav>
             </div>
             
@@ -3266,27 +3301,39 @@
                 </div>
             </div>
         </main>
-        <nav id="main-nav" class="bg-gray-800 border-t border-gray-700 grid grid-cols-5 sticky bottom-0">
-            <a href="#timer" class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors active" data-page="timer">
-                <img src="assets/icons/timer.svg" alt="Timer" class="nav-icon">
-                <p class="text-xs mt-1">Timer</p>
-            </a>
-            <a href="#stats" class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="stats">
-                <img src="assets/icons/stats.svg" alt="Stats" class="nav-icon">
-                <p class="text-xs mt-1">Stats</p>
-            </a>
-            <a href="#ranking" class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="ranking">
-                <img src="assets/icons/rankings.svg" alt="Ranking" class="nav-icon">
-                <p class="text-xs mt-1">Ranking</p>
-            </a>
-            <a href="#planner" class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="planner">
-                <img src="assets/icons/planner.svg" alt="Planner" class="nav-icon">
-                <p class="text-xs mt-1">Planner</p>
-            </a>
-            <a href="#pulse-forum" class="nav-item p-3 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-700 transition-colors" data-page="pulse-forum">
-                <img src="assets/icons/pulseforum.svg" alt="PulseForum" class="nav-icon">
-                <p class="text-xs mt-1">PulseForum</p>
-            </a>
+        <nav id="main-nav" class="sidebar-nav bg-gray-800 border-t border-gray-700 sticky bottom-0">
+            <ul class="grid grid-cols-5">
+                <li>
+                    <a href="#timer" class="nav-link nav-link--stacked nav-item active" data-page="timer">
+                        <img src="assets/icons/timer.svg" alt="Timer">
+                        <span>Timer</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#stats" class="nav-link nav-link--stacked nav-item" data-page="stats">
+                        <img src="assets/icons/stats.svg" alt="Stats">
+                        <span>Stats</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#ranking" class="nav-link nav-link--stacked nav-item" data-page="ranking">
+                        <img src="assets/icons/rankings.svg" alt="Ranking">
+                        <span>Ranking</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#planner" class="nav-link nav-link--stacked nav-item" data-page="planner">
+                        <img src="assets/icons/planner.svg" alt="Planner">
+                        <span>Planner</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#pulse-forum" class="nav-link nav-link--stacked nav-item" data-page="pulse-forum">
+                        <img src="assets/icons/pulseforum.svg" alt="PulseForum">
+                        <span>PulseForum</span>
+                    </a>
+                </li>
+            </ul>
         </nav>
     </div>
 
@@ -13779,9 +13826,8 @@ if (achievementsGrid) {
         document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', function(event) {
             event.preventDefault();
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            const clickedLink = event.currentTarget;
-            clickedLink.classList.add('active');
-            const pageName = clickedLink.dataset.page;
+            this.classList.add('active');
+            const pageName = this.dataset.page;
             showPage(`page-${pageName}`);
         }));
 
@@ -14890,9 +14936,12 @@ if (achievementsGrid) {
 
         ael('group-detail-nav', 'click', (e) => {
             const navItem = e.target.closest('.group-nav-item');
-            if (navItem && !navItem.classList.contains('active')) {
-                const subpage = navItem.dataset.subpage;
-                renderGroupSubPage(subpage);
+            if (navItem) {
+                e.preventDefault();
+                if (!navItem.classList.contains('active')) {
+                    const subpage = navItem.dataset.subpage;
+                    renderGroupSubPage(subpage);
+                }
             }
         });
         
