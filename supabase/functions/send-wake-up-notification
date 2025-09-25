@@ -15,11 +15,16 @@ const allowedOrigins = new Set([
 function buildCorsHeaders(req: Request) {
   const origin = req.headers.get("origin");
   const allowOrigin = origin && allowedOrigins.has(origin) ? origin : "https://nobel92435.github.io";
+  const requestHeaders = req.headers.get("Access-Control-Request-Headers");
+
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": requestHeaders
+      ? `${requestHeaders}, authorization, x-client-info, apikey, content-type`
+      : "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Max-Age": "86400"
+    "Access-Control-Max-Age": "86400",
+    "Access-Control-Allow-Credentials": "true"
   };
 }
 
@@ -151,7 +156,7 @@ Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
 
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
