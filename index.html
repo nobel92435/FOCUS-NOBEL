@@ -25,17 +25,17 @@
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
-            background-color: #0d1117; /* Darker, modern background */
-            background-image: radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15), transparent 60%);
-            color: #e6edf3; /* Brighter default text */
+            background-color: #F8F9FD; /* Light, cool-toned background */
+            background-image: none;
+            color: #0F172A; /* Crisp dark text for readability */
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .nav-item.active {
-            background-color: rgb(255, 255, 255);
+            background-color: rgba(249, 115, 22, 0.14);
         }
         .nav-item.active span {
-            color: #f8fafc;
+            color: #F97316;
         }
         .group-nav-item {
             color: #475569;
@@ -66,7 +66,7 @@
             gap: 0.75rem;
             padding: 0.75rem 1rem;
             text-decoration: none;
-            color: #cbd5f5;
+            color: #475569;
             border-radius: 0.75rem;
             transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, transform 0.2s ease-in-out;
         }
@@ -94,17 +94,31 @@
         }
 
         .sidebar-nav .nav-link:hover {
-            background-color: rgb(255, 255, 255);
+            background-color: rgba(148, 163, 184, 0.18);
         }
 
         .sidebar-nav .nav-link.active {
-            background-color: rgb(255, 255, 255);
-            color: #f8fafc;
+            background-color: rgba(249, 115, 22, 0.14);
+            color: #F97316;
             font-weight: 600;
         }
 
         .sidebar-nav .nav-link.active img {
             transform: scale(1.1);
+        }
+
+        #main-nav {
+            background-color: #FFFFFF !important;
+            border-top: 1px solid #E2E8F0 !important;
+            box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        #main-nav .nav-link {
+            color: #475569;
+        }
+
+        #main-nav .nav-link span {
+            color: inherit;
         }
 
         /* New Timer Page Styles */
@@ -233,10 +247,9 @@
             width: 90%;
             padding: 32px 28px 28px;
             border-radius: 28px;
-            border: none;
-            background: radial-gradient(circle at top, rgba(248, 113, 113, 0.12), transparent 55%),
-                        linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 12, 20, 0.92) 100%);
-            box-shadow: 0 35px 60px rgba(8, 47, 73, 0.45);
+            border: 1px solid #E2E8F0;
+            background: #FFFFFF;
+            box-shadow: 0 35px 60px rgba(15, 23, 42, 0.18);
         }
         #pomodoro-setup-modal .modal-header {
             justify-content: center;
@@ -246,7 +259,7 @@
         #pomodoro-setup-modal .modal-title {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #e2e8f0;
+            color: #1F2937;
         }
         #pomodoro-setup-modal .modal-header .close-modal {
             position: absolute;
@@ -258,12 +271,12 @@
         }
         .pomodoro-setup-summary {
             font-size: 0.95rem;
-            color: #94a3b8;
+            color: #475569;
             text-align: center;
             margin-bottom: 24px;
         }
         .pomodoro-setup-summary span {
-            color: #f87171;
+            color: #F97316;
             font-weight: 600;
         }
         .pomodoro-setup-grid {
@@ -276,9 +289,10 @@
             border-radius: 26px;
             padding: 26px 10px 22px;
             text-align: center;
-            background: linear-gradient(180deg, rgba(148, 163, 184, 0.12) 0%, rgba(30, 41, 59, 0.4) 100%);
-            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
+            border: 1px solid #E2E8F0;
             overflow: hidden;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
         }
         .pomodoro-picker::before,
         .pomodoro-picker::after {
@@ -291,11 +305,11 @@
         }
         .pomodoro-picker::before {
             top: 18px;
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0) 100%);
+            background: linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(248, 250, 252, 0) 100%);
         }
         .pomodoro-picker::after {
             bottom: 42px;
-            background: linear-gradient(0deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0) 100%);
+            background: linear-gradient(0deg, rgba(248, 250, 252, 0.95) 0%, rgba(248, 250, 252, 0) 100%);
         }
         .pomodoro-picker-wheel {
             display: flex;
@@ -308,14 +322,14 @@
         }
         .picker-value-muted {
             font-size: 1.45rem;
-            color: rgba(148, 163, 184, 0.45);
+            color: #94A3B8;
             transition: color 0.2s ease;
             min-height: 1.45rem;
         }
         .picker-value-current {
             font-size: 2.6rem;
             font-weight: 700;
-            color: #f87171;
+            color: #F97316;
             transition: color 0.2s ease, transform 0.2s ease;
         }
         .picker-value-hidden {
@@ -326,7 +340,7 @@
             font-size: 0.85rem;
             text-transform: uppercase;
             letter-spacing: 0.06em;
-            color: #cbd5f5;
+            color: #64748B;
         }
         .picker-overlay {
             position: absolute;
@@ -348,15 +362,15 @@
             flex: 1;
             padding: 12px 0;
             border-radius: 18px;
-            border: 1px solid rgba(148, 163, 184, 0.35);
-            background: transparent;
-            color: #94a3b8;
+            border: 1px solid #CBD5E1;
+            background: #F1F5F9;
+            color: #475569;
             font-weight: 600;
             transition: all 0.2s ease;
         }
         #pomodoro-setup-cancel:hover {
-            color: #e2e8f0;
-            border-color: rgba(248, 113, 113, 0.45);
+            color: #1F2937;
+            border-color: #94A3B8;
         }
         #pomodoro-setup-done {
             flex: 1;
@@ -2388,6 +2402,51 @@
         .close-modal:hover {
             color: #1F2937;
         }
+
+        #advanced-features-modal .modal-content {
+            background: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            box-shadow: 0 35px 60px rgba(15, 23, 42, 0.18);
+            color: #1F2937;
+        }
+        #advanced-features-modal .modal-content h2,
+        #advanced-features-modal .modal-content h3,
+        #advanced-features-modal .modal-content h4 {
+            color: #0F172A !important;
+        }
+        #advanced-features-modal .modal-content p,
+        #advanced-features-modal .modal-content span,
+        #advanced-features-modal .modal-content li {
+            color: #475569 !important;
+        }
+        #advanced-features-modal .modal-content .bg-gray-900,
+        #advanced-features-modal .modal-content .bg-gray-900\/95,
+        #advanced-features-modal .modal-content .bg-gray-900\/40,
+        #advanced-features-modal .modal-content .bg-gray-800 {
+            background-color: #FFFFFF !important;
+            border-color: #E2E8F0 !important;
+        }
+        #advanced-features-modal .modal-content .text-white,
+        #advanced-features-modal .modal-content .text-gray-200,
+        #advanced-features-modal .modal-content .text-gray-300,
+        #advanced-features-modal .modal-content .text-gray-400 {
+            color: #1F2937 !important;
+        }
+        #advanced-features-modal .modal-content .text-sky-100,
+        #advanced-features-modal .modal-content .text-sky-300 {
+            color: #0284C7 !important;
+        }
+        #advanced-features-modal .modal-content .text-emerald-100 {
+            color: #059669 !important;
+        }
+        #advanced-features-modal .modal-content .text-amber-100 {
+            color: #D97706 !important;
+        }
+        #advanced-features-modal .modal-content .border-sky-500\/20,
+        #advanced-features-modal .modal-content .border-emerald-500\/20,
+        #advanced-features-modal .modal-content .border-amber-500\/20 {
+            border-color: #E2E8F0 !important;
+        }
         
         /* Profile Settings */
         .profile-container { padding: 20px; }
@@ -2809,11 +2868,12 @@
         #image-view-modal .modal-content {
             max-width: min(900px, 92vw);
             width: auto;
-            background: rgba(8, 14, 24, 0.92);
+            background: #FFFFFF;
             border-radius: 24px;
             padding: 1.25rem 1.5rem 1.5rem;
-            border: 1px solid rgba(59, 130, 246, 0.25);
+            border: 1px solid #E2E8F0;
             position: relative;
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
         }
         #image-view-modal .close-modal {
             position: absolute;
@@ -2822,14 +2882,14 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: rgba(15, 23, 42, 0.8);
-            color: #e2e8f0;
+            background: #F1F5F9;
+            color: #475569;
         }
         #fullscreen-image {
             max-width: calc(90vw - 3rem);
             max-height: 70vh;
             border-radius: 18px;
-            box-shadow: 0 24px 45px rgba(8, 47, 73, 0.55);
+            box-shadow: 0 24px 45px rgba(15, 23, 42, 0.12);
             object-fit: contain;
         }
         .image-viewer-actions {
@@ -2841,27 +2901,28 @@
         .image-viewer-actions button {
             padding: 0.55rem 1.1rem;
             border-radius: 9999px;
-            background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.5));
-            color: #f8fafc;
+            background: rgba(59, 130, 246, 0.12);
+            color: #1D4ED8;
             font-weight: 600;
-            border: 1px solid rgba(56, 189, 248, 0.35);
+            border: 1px solid rgba(59, 130, 246, 0.25);
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
         .image-viewer-actions button:hover {
-            background: linear-gradient(135deg, rgba(56, 189, 248, 0.45), rgba(14, 165, 233, 0.65));
+            background: rgba(59, 130, 246, 0.2);
         }
         #image-crop-modal .modal-content {
             max-width: 540px;
             width: 92%;
-            background: linear-gradient(160deg, rgba(15, 23, 42, 0.98), rgba(8, 15, 28, 0.98));
+            background: #FFFFFF;
             border-radius: 24px;
-            border: 1px solid rgba(59, 130, 246, 0.2);
+            border: 1px solid #E2E8F0;
             padding: 1.5rem;
             display: flex;
             flex-direction: column;
             gap: 1rem;
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
         }
         #image-crop-modal .modal-title {
             font-size: 1.2rem;
@@ -2879,9 +2940,9 @@
             width: 42px;
             height: 42px;
             border-radius: 50%;
-            border: 1px solid rgba(148, 163, 184, 0.25);
-            background: rgba(15, 23, 42, 0.85);
-            color: rgba(226, 232, 240, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            background: #F1F5F9;
+            color: #475569;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2889,7 +2950,7 @@
         }
         .cropper-toolbar button:hover {
             transform: translateY(-2px);
-            background: rgba(30, 41, 59, 0.95);
+            background: #E2E8F0;
         }
         .cropper-actions {
             display: flex;
@@ -2902,16 +2963,18 @@
             border-radius: 9999px;
             font-weight: 600;
             border: 1px solid transparent;
-            background: rgba(51, 65, 85, 0.9);
-            color: #e2e8f0;
+            background: #F1F5F9;
+            color: #1F2937;
         }
         .cropper-actions button.primary {
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(14, 165, 233, 0.92));
             border-color: rgba(56, 189, 248, 0.4);
+            color: #FFFFFF;
         }
         .cropper-actions button.destructive {
-            background: rgba(100, 116, 139, 0.3);
-            border-color: rgba(148, 163, 184, 0.3);
+            background: #FFF7ED;
+            border-color: rgba(249, 115, 22, 0.4);
+            color: #C2410C;
         }
         .cropper-actions button:hover {
             filter: brightness(1.05);
@@ -3995,15 +4058,15 @@
         <div class="modal-content"><div class="modal-header"><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form"><div class="mb-4"><label for="study-goal-input" class="block text-gray-300 mb-2">Daily Study Goal (hours)</label><input type="number" id="study-goal-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required min="1" max="24"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Set Goal</button></form></div></div>
 
     <div id="advanced-features-modal" class="modal">
-        <div class="modal-content max-w-4xl w-full bg-gray-900/95 border border-sky-500/20 shadow-2xl backdrop-blur-xl">
+        <div class="modal-content max-w-4xl w-full shadow-[0_35px_60px_rgba(15,23,42,0.18)]">
             <div class="modal-header items-start">
                 <div class="flex items-start gap-3">
-                    <div class="w-12 h-12 rounded-2xl bg-sky-500/20 text-sky-300 flex items-center justify-center text-xl">
+                    <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-500 flex items-center justify-center text-xl">
                         <i class="fas fa-bell"></i>
                     </div>
                     <div>
-                        <h2 class="text-2xl font-bold text-white">Advanced Group Suite</h2>
-                        <p class="text-sm text-gray-400">Advanced Group Analytics · Custom Group Goals · Group Rewards / Streak Protection</p>
+                        <h2 class="text-2xl font-bold text-slate-900">Advanced Group Suite</h2>
+                        <p class="text-sm text-slate-500">Advanced Group Analytics · Custom Group Goals · Group Rewards / Streak Protection</p>
                     </div>
                 </div>
                 <button class="close-modal text-gray-500 text-2xl leading-none">&times;</button>
@@ -4012,79 +4075,79 @@
                 <section class="space-y-4">
                     <div>
                         <p class="advanced-section-label">Advanced Group Analytics</p>
-                        <h3 class="text-xl font-semibold text-white mt-1">Deep-dive into your team's rhythm</h3>
-                        <p class="text-sm text-gray-400 mt-2">Visualize when the group studies most, balance subjects, and compare focus vs break time.</p>
+                        <h3 class="text-xl font-semibold text-slate-900 mt-1">Deep-dive into your team's rhythm</h3>
+                        <p class="text-sm text-slate-500 mt-2">Visualize when the group studies most, balance subjects, and compare focus vs break time.</p>
                     </div>
-                    <div class="bg-gray-900 rounded-2xl border border-sky-500/20 p-4 space-y-4">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 shadow-sm">
                         <div class="flex items-center justify-between">
-                            <h4 class="text-lg font-semibold text-sky-100">Productivity Heatmap</h4>
-                            <span id="advanced-modal-heatmap-summary" class="text-xs uppercase tracking-wide text-gray-400">Loading…</span>
+                            <h4 class="text-lg font-semibold text-slate-900">Productivity Heatmap</h4>
+                            <span id="advanced-modal-heatmap-summary" class="text-xs uppercase tracking-wide text-slate-500">Loading…</span>
                         </div>
                         <div id="advanced-modal-heatmap" class="overflow-x-auto">
                             <div id="advanced-modal-heatmap-grid" class="advanced-heatmap-grid"></div>
-                            <p class="text-xs text-gray-500 mt-3">Based on the last 7 days of group study activity.</p>
+                            <p class="text-xs text-slate-500 mt-3">Based on the last 7 days of group study activity.</p>
                         </div>
                     </div>
-                    <div class="bg-gray-900 rounded-2xl border border-emerald-500/20 p-4 space-y-4">
+                    <div class="bg-white rounded-2xl border border-emerald-200 p-4 space-y-4 shadow-sm">
                         <div class="flex items-center justify-between">
-                            <h4 class="text-lg font-semibold text-emerald-100">Subject Mix</h4>
-                            <span id="advanced-modal-subject-summary" class="text-xs uppercase tracking-wide text-gray-400">Loading…</span>
+                            <h4 class="text-lg font-semibold text-emerald-600">Subject Mix</h4>
+                            <span id="advanced-modal-subject-summary" class="text-xs uppercase tracking-wide text-slate-500">Loading…</span>
                         </div>
                         <div id="advanced-modal-subject-mix" class="space-y-3"></div>
                     </div>
-                    <div class="bg-gray-900 rounded-2xl border border-amber-500/20 p-4 space-y-4">
+                    <div class="bg-white rounded-2xl border border-amber-200 p-4 space-y-4 shadow-sm">
                         <div class="flex items-center justify-between">
-                            <h4 class="text-lg font-semibold text-amber-100">Completion Ratio</h4>
-                            <span id="advanced-modal-ratio-label" class="text-xs uppercase tracking-wide text-gray-400">Loading…</span>
+                            <h4 class="text-lg font-semibold text-amber-600">Completion Ratio</h4>
+                            <span id="advanced-modal-ratio-label" class="text-xs uppercase tracking-wide text-slate-500">Loading…</span>
                         </div>
-                        <div class="w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+                        <div class="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
                             <div id="advanced-modal-ratio-focus-bar" class="h-full bg-amber-400" style="width:0%"></div>
                         </div>
-                        <p id="advanced-modal-ratio-description" class="text-sm text-gray-300">Gathering focus vs break data…</p>
+                        <p id="advanced-modal-ratio-description" class="text-sm text-slate-600">Gathering focus vs break data…</p>
                     </div>
                 </section>
                 <section class="space-y-4">
                     <div>
                         <p class="advanced-section-label">Custom Group Goals</p>
-                        <h3 class="text-xl font-semibold text-white mt-1">Align the squad around shared targets</h3>
-                        <p class="text-sm text-gray-400 mt-2">Set a monthly focus goal. Hitting it unlocks pro badges for the entire team.</p>
+                        <h3 class="text-xl font-semibold text-slate-900 mt-1">Align the squad around shared targets</h3>
+                        <p class="text-sm text-slate-500 mt-2">Set a monthly focus goal. Hitting it unlocks pro badges for the entire team.</p>
                     </div>
-                    <form id="advanced-goal-form" class="space-y-3 bg-gray-900 rounded-2xl border border-sky-500/20 p-4">
+                    <form id="advanced-goal-form" class="space-y-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
                         <div class="grid md:grid-cols-2 gap-3">
                             <div>
-                                <label for="advanced-goal-label-input" class="text-xs uppercase tracking-wide text-gray-400">Goal Label</label>
-                                <input id="advanced-goal-label-input" type="text" class="mt-1 w-full bg-gray-800 rounded-lg border border-gray-700 p-3 text-white" placeholder="Study 50h this month">
+                                <label for="advanced-goal-label-input" class="text-xs uppercase tracking-wide text-slate-500">Goal Label</label>
+                                <input id="advanced-goal-label-input" type="text" class="mt-1 w-full bg-white rounded-lg border border-slate-200 p-3 text-slate-900 shadow-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400" placeholder="Study 50h this month">
                             </div>
                             <div>
-                                <label for="advanced-goal-hours-input" class="text-xs uppercase tracking-wide text-gray-400">Target Hours</label>
-                                <input id="advanced-goal-hours-input" type="number" min="1" max="500" step="0.5" class="mt-1 w-full bg-gray-800 rounded-lg border border-gray-700 p-3 text-white" placeholder="50">
+                                <label for="advanced-goal-hours-input" class="text-xs uppercase tracking-wide text-slate-500">Target Hours</label>
+                                <input id="advanced-goal-hours-input" type="number" min="1" max="500" step="0.5" class="mt-1 w-full bg-white rounded-lg border border-slate-200 p-3 text-slate-900 shadow-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400" placeholder="50">
                             </div>
                         </div>
                         <div class="flex flex-wrap items-center gap-3">
                             <button type="submit" class="px-4 py-2 bg-sky-500 hover:bg-sky-600 transition rounded-full font-semibold text-sm text-white flex items-center gap-2"><i class="fas fa-rocket"></i> Save Goal</button>
-                            <button type="button" id="advanced-goal-clear-btn" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 transition rounded-full font-semibold text-sm text-gray-300">Clear Goal</button>
+                            <button type="button" id="advanced-goal-clear-btn" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 transition rounded-full font-semibold text-sm text-slate-600">Clear Goal</button>
                         </div>
                         <div>
-                            <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                            <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                                 <div id="advanced-modal-goal-progress" class="h-full bg-sky-400" style="width:0%"></div>
                             </div>
-                            <p id="advanced-modal-goal-status" class="text-sm text-gray-300 mt-2">No group goal set yet.</p>
+                            <p id="advanced-modal-goal-status" class="text-sm text-slate-600 mt-2">No group goal set yet.</p>
                         </div>
                     </form>
                 </section>
                 <section class="space-y-4">
                     <div>
                         <p class="advanced-section-label">Group Rewards / Streak Protection</p>
-                        <h3 class="text-xl font-semibold text-white mt-1">Keep streak multipliers alive</h3>
-                        <p class="text-sm text-gray-400 mt-2">If all members study daily → streak protected. Missed day breaks it. Gamify the grind together.</p>
+                        <h3 class="text-xl font-semibold text-slate-900 mt-1">Keep streak multipliers alive</h3>
+                        <p class="text-sm text-slate-500 mt-2">If all members study daily → streak protected. Missed day breaks it. Gamify the grind together.</p>
                     </div>
-                    <div class="bg-gray-900 rounded-2xl border border-purple-500/20 p-4 space-y-3">
+                    <div class="bg-white rounded-2xl border border-purple-200 p-4 space-y-3 shadow-sm">
                         <div class="flex items-center justify-between">
-                            <span class="text-lg font-semibold text-purple-100">Streak Status</span>
-                            <span id="advanced-modal-streak-status" class="text-xs uppercase tracking-wide text-gray-400">Checking…</span>
+                            <span class="text-lg font-semibold text-purple-600">Streak Status</span>
+                            <span id="advanced-modal-streak-status" class="text-xs uppercase tracking-wide text-slate-500">Checking…</span>
                         </div>
-                        <p id="advanced-modal-streak-summary" class="text-sm text-gray-200">Crunching streak multipliers…</p>
-                        <p id="advanced-modal-streak-detail" class="text-xs text-gray-500">Track the daily streak to keep rewards unlocked.</p>
+                        <p id="advanced-modal-streak-summary" class="text-sm text-slate-600">Crunching streak multipliers…</p>
+                        <p id="advanced-modal-streak-detail" class="text-xs text-slate-500">Track the daily streak to keep rewards unlocked.</p>
                     </div>
                 </section>
             </div>
@@ -4177,7 +4240,7 @@
                 <div class="modal-title">Adjust Image</div>
                 <button class="close-modal" type="button">&times;</button>
             </div>
-            <div class="overflow-hidden rounded-2xl bg-gray-900/40 border border-gray-800">
+            <div class="overflow-hidden rounded-2xl bg-slate-100 border border-slate-200">
                 <img id="cropper-image" src="" alt="Crop preview">
             </div>
             <div class="cropper-toolbar">
