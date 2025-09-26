@@ -2733,8 +2733,9 @@
 
         /* New Dashboard Styles */
         #insights-container {
-            background-color: #0f172a; /* slate-900 */
-            color: #f1f5f9; /* slate-100 */
+            background-color: #F8F9FD;
+            color: #1f2937;
+            min-height: 100%;
         }
         .card {
             background-color: #1e293b; /* slate-800 */
@@ -2746,6 +2747,32 @@
         .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 20px rgba(45, 212, 191, 0.1);
+        }
+        #page-stats {
+            background-color: #F8F9FD;
+            color: #1f2937;
+        }
+        #page-stats .card {
+            background-color: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+        }
+        #page-stats .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+        }
+        #page-stats .session-log-item {
+            background-color: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        #page-stats .session-log-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 30px rgba(15, 23, 42, 0.12);
+        }
+        #page-stats .log-options-btn {
+            transition: background-color 0.2s ease, color 0.2s ease;
         }
         .nav-btn {
             padding: 0.5rem 1.5rem;
@@ -2786,9 +2813,10 @@
             position: absolute;
             right: 1rem;
             top: 2.5rem;
-            background-color: #334155;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            background-color: #FFFFFF;
+            border-radius: 0.75rem;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
             z-index: 20;
             overflow: hidden;
         }
@@ -2800,10 +2828,17 @@
             width: 100%;
             padding: 0.5rem 1rem;
             text-align: left;
-            color: #f1f5f9;
+            color: #0f172a;
         }
         .log-options-menu button:hover {
-            background-color: #475569;
+            background-color: #F1F5F9;
+        }
+        .log-options-menu .log-delete-btn {
+            color: #B91C1C;
+        }
+        .log-options-menu .log-delete-btn:hover {
+            background-color: #FEE2E2;
+            color: #991B1B;
         }
         #pull-to-refresh {
             text-align: center;
@@ -3065,16 +3100,16 @@
             </div>
             
             <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-200 sticky top-0 bg-white shadow-sm">
+                    <button class="back-button p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1 class="text-xl font-bold text-gray-100">Stats & Insights</h1>
-                    <div class="w-6"></div> 
+                    <h1 class="text-xl font-bold text-slate-900">Stats & Insights</h1>
+                    <div class="w-6"></div>
                 </header>
-                <div id="insights-container" class="p-4 md:p-6 bg-[#0d1117]">
+                <div id="insights-container" class="p-4 md:p-6 bg-[#F8F9FD]">
                     </div>
             </div>
             
@@ -10670,13 +10705,13 @@ if (achievementsGrid) {
           if (!insightsContainer) return;
         
           insightsContainer.innerHTML = `
-            <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+            <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 w-full max-w-7xl mx-auto">
               <div>
-                <h1 class="text-4xl font-bold text-white">Study Insights</h1>
-                <p class="text-slate-400 mt-1">Welcome back, let's analyze your progress.</p>
+                <h1 class="text-4xl font-bold text-slate-900">Study Insights</h1>
+                <p class="text-slate-600 mt-1">Welcome back, let's analyze your progress.</p>
               </div>
             </header>
-            <main>
+            <main class="w-full max-w-7xl mx-auto">
               <div id="day-view" class="space-y-6"></div>
             </main>
           `;
@@ -10759,6 +10794,11 @@ if (achievementsGrid) {
           indigo: 'rgba(129, 140, 248, 1)',
           pink:   'rgba(244, 114, 182, 1)',
           orange: 'rgba(251, 146, 60, 1)',
+        };
+        const CHART_AXES = {
+          grid: '#E2E8F0',
+          tick: '#475569',
+          legend: '#1F2937',
         };
         const COLOR_LIST = Object.values(CHART_COLORS);
         const withDataLabels = (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [];
@@ -10942,60 +10982,60 @@ if (achievementsGrid) {
           el.innerHTML = `
             <!-- Today's Snapshot -->
             <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Total Time Today</h3><p id="day-total-time" class="text-4xl font-bold text-cyan-400 mt-2">--:--:--</p></div>
-              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Sessions Today</h3><p id="day-session-count" class="text-4xl font-bold text-cyan-400 mt-2">--</p></div>
-              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Avg. Session</h3><p id="day-avg-session" class="text-4xl font-bold text-cyan-400 mt-2">--m</p></div>
+              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-600 text-lg font-medium">Total Time Today</h3><p id="day-total-time" class="text-4xl font-bold text-sky-600 mt-2">--:--:--</p></div>
+              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-600 text-lg font-medium">Sessions Today</h3><p id="day-session-count" class="text-4xl font-bold text-indigo-600 mt-2">--</p></div>
+              <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-600 text-lg font-medium">Avg. Session</h3><p id="day-avg-session" class="text-4xl font-bold text-purple-600 mt-2">--m</p></div>
               <div class="card bg-gradient-to-br from-sky-500 to-indigo-600 p-6"><h3 class="text-white text-lg font-medium flex items-center"><i data-lucide="brain-circuit" class="mr-2"></i>AI Insight (Today)</h3><p id="day-ai-insight-text" class="text-white mt-2 text-sm">Analyzing today's patterns...</p></div>
             </section>
             
-            <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Today's Analysis</h2>
+            <h2 class="text-2xl font-semibold text-slate-900 mt-8 mb-4">Today's Analysis</h2>
             <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Today's Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="day-subject-ratio-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Time Per Hour Today</h3><div class="chart-container" style="height:250px;"><canvas id="day-time-per-hour-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Today's Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="day-subject-ratio-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Time Per Hour Today</h3><div class="chart-container" style="height:250px;"><canvas id="day-time-per-hour-chart"></canvas></div></div>
             </section>
             <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Study vs. Break</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-break-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Study Time by Subject</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-time-by-subject-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Start/End Times</h3><div class="chart-container" style="height:250px;"><canvas id="day-start-end-distribution-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Study vs. Break</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-break-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Study Time by Subject</h3><div class="chart-container" style="height:250px;"><canvas id="day-study-time-by-subject-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Start/End Times</h3><div class="chart-container" style="height:250px;"><canvas id="day-start-end-distribution-chart"></canvas></div></div>
             </section>
 
-            <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Last 7 Days Performance</h2>
+            <h2 class="text-2xl font-semibold text-slate-900 mt-8 mb-4">Last 7 Days Performance</h2>
             <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Study vs. Break</h3><div class="chart-container" style="height:250px;"><canvas id="7d-study-break-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="7d-subject-ratio-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Start/End Times</h3><div class="chart-container" style="height:250px;"><canvas id="7d-start-end-distribution-chart"></canvas></div></div>
-              <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Study Time by Subject</h3><div class="chart-container"><canvas id="7d-study-time-by-subject-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Time Per Day</h3><div class="chart-container"><canvas id="7d-time-per-day-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Study vs. Break</h3><div class="chart-container" style="height:250px;"><canvas id="7d-study-break-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Subject Ratio</h3><div class="chart-container" style="height:250px;"><canvas id="7d-subject-ratio-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Start/End Times</h3><div class="chart-container" style="height:250px;"><canvas id="7d-start-end-distribution-chart"></canvas></div></div>
+              <div class="card lg:col-span-2"><h3 class="font-semibold text-xl text-slate-900 mb-4">Study Time by Subject</h3><div class="chart-container"><canvas id="7d-study-time-by-subject-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Time Per Day</h3><div class="chart-container"><canvas id="7d-time-per-day-chart"></canvas></div></div>
             </section>
 
-            <h2 class="text-2xl font-semibold text-white mt-8 mb-4">This Month's Breakdown</h2>
+            <h2 class="text-2xl font-semibold text-slate-900 mt-8 mb-4">This Month's Breakdown</h2>
             <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Study vs. Break</h3><div class="chart-container" style="height:250px;"><canvas id="month-study-break-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Study Time by Subject</h3><div class="chart-container"><canvas id="month-study-time-by-subject-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Start/End Time Distribution</h3><div class="chart-container"><canvas id="month-start-end-distribution-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Study vs. Break</h3><div class="chart-container" style="height:250px;"><canvas id="month-study-break-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Study Time by Subject</h3><div class="chart-container"><canvas id="month-study-time-by-subject-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Start/End Time Distribution</h3><div class="chart-container"><canvas id="month-start-end-distribution-chart"></canvas></div></div>
             </section>
 
-            <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Historical Performance (Last 28 Days)</h2>
+            <h2 class="text-2xl font-semibold text-slate-900 mt-8 mb-4">Historical Performance (Last 28 Days)</h2>
             <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Total Time (28d)</h3><p id="28d-total-time" class="text-4xl font-bold text-pink-400 mt-2">--:--:--</p></div>
-                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Daily Average (28d)</h3><p id="28d-daily-avg" class="text-4xl font-bold text-pink-400 mt-2">--:--:--</p></div>
-                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-400 text-lg font-medium">Focus Score</h3><p id="28d-focus-score" class="text-4xl font-bold text-pink-400 mt-2">--</p></div>
+                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-600 text-lg font-medium">Total Time (28d)</h3><p id="28d-total-time" class="text-4xl font-bold text-rose-600 mt-2">--:--:--</p></div>
+                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-600 text-lg font-medium">Daily Average (28d)</h3><p id="28d-daily-avg" class="text-4xl font-bold text-rose-600 mt-2">--:--:--</p></div>
+                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-600 text-lg font-medium">Focus Score</h3><p id="28d-focus-score" class="text-4xl font-bold text-rose-600 mt-2">--</p></div>
                 <div class="card bg-gradient-to-br from-pink-500 to-rose-600 p-6"><h3 class="text-white text-lg font-medium flex items-center"><i data-lucide="brain-circuit" class="mr-2"></i>AI Insight (28d)</h3><p id="28d-ai-insight-text" class="text-white mt-2 text-sm">Analyzing historical patterns...</p></div>
             </section>
             <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-              <div class="card lg:col-span-2"><h3 class="font-semibold text-xl mb-4">Cumulative Study Time (Last 28 Days)</h3><div class="chart-container" style="height:250px;"><canvas id="28d-cumulative-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Subject Ratio (28d)</h3><div class="chart-container" style="height:250px;"><canvas id="28d-subject-ratio-chart"></canvas></div></div>
-              <div class="card lg:col-span-3"><h3 class="font-semibold text-xl mb-4">Time Per Day (28d)</h3><div class="chart-container"><canvas id="28d-time-per-day-chart"></canvas></div></div>
+              <div class="card lg:col-span-2"><h3 class="font-semibold text-xl text-slate-900 mb-4">Cumulative Study Time (Last 28 Days)</h3><div class="chart-container" style="height:250px;"><canvas id="28d-cumulative-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Subject Ratio (28d)</h3><div class="chart-container" style="height:250px;"><canvas id="28d-subject-ratio-chart"></canvas></div></div>
+              <div class="card lg:col-span-3"><h3 class="font-semibold text-xl text-slate-900 mb-4">Time Per Day (28d)</h3><div class="chart-container"><canvas id="28d-time-per-day-chart"></canvas></div></div>
             </section>
             
-            <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Trends & Forecasts</h2>
+            <h2 class="text-2xl font-semibold text-slate-900 mt-8 mb-4">Trends & Forecasts</h2>
             <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Study Time Regularity</h3><div class="chart-container"><canvas id="regularity-chart"></canvas></div></div>
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Performance Forecast</h3><div class="chart-container"><canvas id="forecast-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Study Time Regularity</h3><div class="chart-container"><canvas id="regularity-chart"></canvas></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Performance Forecast</h3><div class="chart-container"><canvas id="forecast-chart"></canvas></div></div>
             </section>
             
             <section class="grid grid-cols-1 gap-6 mt-8">
-              <div class="card"><h3 class="font-semibold text-xl mb-4">Recent Session Log</h3><div id="session-log-container-recent" class="max-h-80 overflow-y-auto pr-2"></div></div>
+              <div class="card"><h3 class="font-semibold text-xl text-slate-900 mb-4">Recent Session Log</h3><div id="session-log-container-recent" class="max-h-80 overflow-y-auto pr-2"></div></div>
             </section>
           `;
 
@@ -11025,8 +11065,8 @@ if (achievementsGrid) {
           const subjToday = todayStudyData.reduce((a,s)=> (a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
           __stats.charts['day-subject-ratio-chart'] = new Chart(document.getElementById('day-subject-ratio-chart'), {
             type:'pie', plugins: withDataLabels,
-            data:{ labels:Object.keys(subjToday), datasets:[{ data:Object.values(subjToday), backgroundColor: __palette(Object.keys(subjToday).length), borderColor:'#1e293b', borderWidth:4 }] },
-            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:'#cbd5e1' } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
+            data:{ labels:Object.keys(subjToday), datasets:[{ data:Object.values(subjToday), backgroundColor: __palette(Object.keys(subjToday).length), borderColor:'#F8F9FD', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:CHART_AXES.legend } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
           
           const perHour = Array(24).fill(0);
@@ -11034,29 +11074,29 @@ if (achievementsGrid) {
           __stats.charts['day-time-per-hour-chart'] = new Chart(document.getElementById('day-time-per-hour-chart'), {
             type:'bar',
             data:{ labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets:[{ label:'Minutes Studied', data:perHour, backgroundColor: CHART_COLORS.sky, borderRadius:5 }] },
-            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8', maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
           });
 
           const todayStudyMin = todayAllData.filter(s=>s.type==='study').reduce((sum,s)=>sum+s.duration,0);
           const todayBreakMin = todayAllData.filter(s=>s.type==='break').reduce((sum,s)=>sum+s.duration,0);
           __stats.charts['day-study-break-chart'] = new Chart(document.getElementById('day-study-break-chart'), {
             type:'doughnut', plugins: withDataLabels,
-            data:{ labels:['Study','Break'], datasets:[{ data:[todayStudyMin,todayBreakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#1e293b', borderWidth:4 }] },
-            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ color:'#cbd5e1' }}, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
+            data:{ labels:['Study','Break'], datasets:[{ data:[todayStudyMin,todayBreakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#F8F9FD', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ color:CHART_AXES.legend }}, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
           
           const bySubjectToday = todayStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
           __stats.charts['day-study-time-by-subject-chart'] = new Chart(document.getElementById('day-study-time-by-subject-chart'), {
             type:'bar',
             data:{ labels:Object.keys(bySubjectToday), datasets:[{ label:'Minutes Studied', data:Object.values(bySubjectToday), backgroundColor: __palette(Object.keys(bySubjectToday).length) }] },
-            options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
+            options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} } }, plugins:{ legend:{ display:false } } }
           });
           
           const distToday = todayStudyData.map(s => ({ x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, yEnd: s.endTime.getHours()+s.endTime.getMinutes()/60 }));
           __stats.charts['day-start-end-distribution-chart'] = new Chart(document.getElementById('day-start-end-distribution-chart'), {
             type:'scatter',
             data:{ datasets:[ { label:'Session Span', data: distToday.map(d=>({x:d.x,y:[d.y,d.yEnd]})), backgroundColor: CHART_COLORS.sky } ]},
-            options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'hour' }, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ min:0, max:24, grid:{color:'#334155'}, ticks:{color:'#94a3b8', stepSize:4, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ display:false } } }
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'hour' }, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ min:0, max:24, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, stepSize:4, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ display:false } } }
           });
 
           // --- Last 7 Days Charts ---
@@ -11064,29 +11104,29 @@ if (achievementsGrid) {
           const sevenDayBreakMin = last7DaysAllData.filter(s=>s.type==='break').reduce((sum,s)=>sum+s.duration,0);
           __stats.charts['7d-study-break-chart'] = new Chart(document.getElementById('7d-study-break-chart'), {
             type:'doughnut', plugins: withDataLabels,
-            data:{ labels:['Study','Break'], datasets:[{ data:[sevenDayStudyMin,sevenDayBreakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#1e293b', borderWidth:4 }] },
-            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ color:'#cbd5e1' }}, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
+            data:{ labels:['Study','Break'], datasets:[{ data:[sevenDayStudyMin,sevenDayBreakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#F8F9FD', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ color:CHART_AXES.legend }}, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
 
           const subjAgg7d = last7DaysStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
           __stats.charts['7d-subject-ratio-chart'] = new Chart(document.getElementById('7d-subject-ratio-chart'), {
             type:'pie', plugins: withDataLabels,
-            data:{ labels:Object.keys(subjAgg7d), datasets:[{ data:Object.values(subjAgg7d), backgroundColor: __palette(Object.keys(subjAgg7d).length), borderColor:'#1e293b', borderWidth:4 }] },
-            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:'#cbd5e1' } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
+            data:{ labels:Object.keys(subjAgg7d), datasets:[{ data:Object.values(subjAgg7d), backgroundColor: __palette(Object.keys(subjAgg7d).length), borderColor:'#F8F9FD', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:CHART_AXES.legend } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
 
           const dist7d = last7DaysStudyData.map(s => ({ x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, yEnd: s.endTime.getHours()+s.endTime.getMinutes()/60 }));
           __stats.charts['7d-start-end-distribution-chart'] = new Chart(document.getElementById('7d-start-end-distribution-chart'), {
             type:'scatter',
             data:{ datasets:[{ label:'Start Time', data: dist7d.map(d=>({x:d.x,y:d.y})), backgroundColor: CHART_COLORS.sky }, { label:'End Time', data: dist7d.map(d=>({x:d.x,y:d.yEnd})), backgroundColor: CHART_COLORS.pink }]},
-            options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'day' }, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ min:0, max:24, grid:{color:'#334155'}, ticks:{color:'#94a3b8', stepSize:4, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ labels:{color:'#cbd5e1'} } } }
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'day' }, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ min:0, max:24, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, stepSize:4, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ labels:{color:CHART_AXES.legend} } } }
           });
 
           const bySubject7d = last7DaysStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
           __stats.charts['7d-study-time-by-subject-chart'] = new Chart(document.getElementById('7d-study-time-by-subject-chart'), {
             type:'bar',
             data:{ labels:Object.keys(bySubject7d), datasets:[{ label:'Minutes Studied', data:Object.values(bySubject7d), backgroundColor: __palette(Object.keys(bySubject7d).length) }] },
-            options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
+            options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} } }, plugins:{ legend:{ display:false } } }
           });
 
           const perDay7d = Array(7).fill(0);
@@ -11095,7 +11135,7 @@ if (achievementsGrid) {
           __stats.charts['7d-time-per-day-chart'] = new Chart(document.getElementById('7d-time-per-day-chart'), {
             type:'bar',
             data:{ labels: labels7d, datasets:[{ label:'Minutes Studied', data: perDay7d, backgroundColor: CHART_COLORS.pink, borderRadius:5 }] },
-            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} } }, plugins:{ legend:{ display:false } } }
           });
 
           // --- This Month's Charts ---
@@ -11103,22 +11143,22 @@ if (achievementsGrid) {
           const monthBreakMin = thisMonthAllData.filter(s=>s.type==='break').reduce((sum,s)=>sum+s.duration,0);
           __stats.charts['month-study-break-chart'] = new Chart(document.getElementById('month-study-break-chart'), {
             type:'doughnut', plugins: withDataLabels,
-            data:{ labels:['Study','Break'], datasets:[{ data:[monthStudyMin,monthBreakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#1e293b', borderWidth:4 }] },
-            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ color:'#cbd5e1' }}, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(1))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
+            data:{ labels:['Study','Break'], datasets:[{ data:[monthStudyMin,monthBreakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#F8F9FD', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ color:CHART_AXES.legend }}, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(1))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
 
           const bySubjectMonth = thisMonthStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
           __stats.charts['month-study-time-by-subject-chart'] = new Chart(document.getElementById('month-study-time-by-subject-chart'), {
             type:'bar',
             data:{ labels:Object.keys(bySubjectMonth), datasets:[{ label:'Minutes Studied', data:Object.values(bySubjectMonth), backgroundColor: __palette(Object.keys(bySubjectMonth).length) }] },
-            options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
+            options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} } }, plugins:{ legend:{ display:false } } }
           });
           
           const distMonth = thisMonthStudyData.map(s => ({ x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, yEnd: s.endTime.getHours()+s.endTime.getMinutes()/60 }));
           __stats.charts['month-start-end-distribution-chart'] = new Chart(document.getElementById('month-start-end-distribution-chart'), {
             type:'scatter',
             data:{ datasets:[ { label:'Start Time', data: distMonth.map(d=>({x:d.x,y:d.y})), backgroundColor: CHART_COLORS.sky }, { label:'End Time', data: distMonth.map(d=>({x:d.x,y:d.yEnd})), backgroundColor: CHART_COLORS.pink }]},
-            options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'day' }, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ min:0, max:24, grid:{color:'#334155'}, ticks:{color:'#94a3b8', stepSize:4, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ labels:{ color:'#cbd5e1' } } } }
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'day' }, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ min:0, max:24, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, stepSize:4, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ labels:{ color:CHART_AXES.legend } } } }
           });
 
           // --- 28-Day and Trend Charts ---
@@ -11143,8 +11183,8 @@ if (achievementsGrid) {
           const subjAgg28d = last28DaysStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a),{});
           __stats.charts['28d-subject-ratio-chart'] = new Chart(document.getElementById('28d-subject-ratio-chart'), {
             type:'doughnut', plugins: withDataLabels,
-            data:{ labels:Object.keys(subjAgg28d), datasets:[{ data:Object.values(subjAgg28d), backgroundColor: __palette(Object.keys(subjAgg28d).length), borderColor:'#1e293b', borderWidth:4 }] },
-            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:'#cbd5e1' } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(1))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
+            data:{ labels:Object.keys(subjAgg28d), datasets:[{ data:Object.values(subjAgg28d), backgroundColor: __palette(Object.keys(subjAgg28d).length), borderColor:'#F8F9FD', borderWidth:4 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:CHART_AXES.legend } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(1))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
 
           const perDay28d = Array(28).fill(0);
@@ -11153,7 +11193,7 @@ if (achievementsGrid) {
           __stats.charts['28d-time-per-day-chart'] = new Chart(document.getElementById('28d-time-per-day-chart'), {
             type:'bar',
             data:{ labels: labels28d, datasets:[{ label:'Minutes Studied', data: perDay28d, backgroundColor: CHART_COLORS.pink, borderRadius:5 }] },
-            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8', maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
           });
           
           const cumulativePerDay = perDay28d.reduce((acc, val) => {
@@ -11177,8 +11217,8 @@ if (achievementsGrid) {
                   responsive: true,
                   maintainAspectRatio: false,
                   scales: {
-                      y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                      x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                      y: { beginAtZero: true, grid: { color: CHART_AXES.grid }, ticks: { color: CHART_AXES.tick } },
+                      x: { grid: { color: CHART_AXES.grid }, ticks: { color: CHART_AXES.tick } }
                   },
                   plugins: { legend: { display: false } }
               }
@@ -11188,7 +11228,7 @@ if (achievementsGrid) {
           __stats.charts['regularity-chart'] = new Chart(document.getElementById('regularity-chart'), {
             type:'bubble',
             data:{ datasets:[{ label:'Study Session', data: reg, backgroundColor: CHART_COLORS.indigo }] },
-            options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'day' }, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, y:{ min:6, max:24, grid:{color:'#334155'}, ticks:{color:'#94a3b8', stepSize:3, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ display:false } } }
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'day' }, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ min:6, max:24, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, stepSize:3, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ display:false } } }
           });
           
           const last14 = Array(14).fill(0);
@@ -11201,7 +11241,7 @@ if (achievementsGrid) {
           __stats.charts['forecast-chart'] = new Chart(document.getElementById('forecast-chart'), {
             type:'line',
             data:{ labels: forecastLabels, datasets:[{ label:'Projected Study Minutes', data: forecastData, borderColor: CHART_BORDERS.orange, backgroundColor: CHART_COLORS.orange, borderDash:[5,5], tension:0.2 }] },
-            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:'#334155'}, ticks:{color:'#94a3b8'} }, x:{ grid:{color:'#334155'}, ticks:{color:'#94a3b8'} } }, plugins:{ legend:{ display:false } } }
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} } }, plugins:{ legend:{ display:false } } }
           });
           
           // --- Render Logs ---
@@ -11216,15 +11256,15 @@ if (achievementsGrid) {
           wrap.innerHTML = '';
           list.forEach(s => {
             const item = document.createElement('div');
-            item.className = 'session-log-item p-3 mb-2 bg-slate-700/50 rounded-lg flex justify-between items-center';
+            item.className = 'session-log-item p-4 mb-3 rounded-xl flex justify-between items-center';
             item.innerHTML = `
               <div>
-                <p class="font-semibold text-white">${s.subject} <span class="text-sm text-gray-500">(${s.type})</span></p>
-                <p class="text-sm text-slate-400">${s.startTime.toLocaleString()}</p>
+                <p class="font-semibold text-slate-900">${s.subject} <span class="text-sm text-slate-500">(${s.type})</span></p>
+                <p class="text-sm text-slate-500">${s.startTime.toLocaleString()}</p>
               </div>
               <div class="flex items-center">
-                <div class="text-lg font-bold text-sky-400 mr-4">${s.duration.toFixed(0)} min</div>
-                <button class="log-options-btn p-2 rounded-full hover:bg-slate-600"
+                <div class="text-lg font-bold text-sky-600 mr-4">${s.duration.toFixed(0)} min</div>
+                <button class="log-options-btn p-2 rounded-full text-slate-500 hover:bg-slate-100"
                         data-session-id="${s.id}"
                         data-session-subject="${escapeAttribute(s.subject)}"
                         data-duration-seconds="${s.durationSeconds}"
