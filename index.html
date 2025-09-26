@@ -2755,27 +2755,43 @@
             box-shadow: 0 10px 20px rgba(45, 212, 191, 0.1);
         }
         #page-stats {
-            background-color: #F8F9FD;
-            color: #1f2937;
+            background:
+                radial-gradient(circle at 15% 20%, rgba(56, 189, 248, 0.14), transparent 55%),
+                radial-gradient(circle at 85% 10%, rgba(129, 140, 248, 0.12), transparent 50%),
+                radial-gradient(circle at 80% 90%, rgba(168, 85, 247, 0.1), transparent 55%),
+                #F7F9FE;
+            color: #0f172a;
+        }
+        #page-stats header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.7);
         }
         #page-stats .card {
-            background-color: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(244, 247, 255, 0.98) 100%);
+            border: 1px solid rgba(224, 231, 255, 0.9);
+            box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12);
         }
         #page-stats .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+            transform: translateY(-6px);
+            box-shadow: 0 24px 44px rgba(56, 189, 248, 0.18);
+        }
+        #page-stats h2,
+        #page-stats h3 {
+            color: #0f172a;
+        }
+        #page-stats .card .text-slate-600 {
+            color: #1e293b;
         }
         #page-stats .session-log-item {
-            background-color: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(243, 244, 255, 0.98) 100%);
+            border: 1px solid rgba(224, 231, 255, 0.85);
+            box-shadow: 0 12px 26px rgba(15, 23, 42, 0.1);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         #page-stats .session-log-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 18px 30px rgba(15, 23, 42, 0.12);
+            transform: translateY(-3px);
+            box-shadow: 0 20px 34px rgba(56, 189, 248, 0.2);
         }
         #page-stats .log-options-btn {
             transition: background-color 0.2s ease, color 0.2s ease;
@@ -2810,6 +2826,15 @@
             position: relative;
             height: 300px;
             width: 100%;
+            padding: 1.25rem;
+            border-radius: 1rem;
+            background: linear-gradient(135deg, rgba(248, 250, 255, 0.96) 0%, rgba(238, 242, 255, 0.96) 100%);
+            border: 1px solid rgba(224, 231, 255, 0.7);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+        .chart-container canvas {
+            border-radius: 0.75rem;
+            background-color: rgba(255, 255, 255, 0.92);
         }
         .session-log-item {
             position: relative;
@@ -10819,25 +10844,37 @@ if (achievementsGrid) {
         /* ---------------- internals ---------------- */
         
         const CHART_COLORS = {
-          cyan:   'rgba(34, 211, 238, 0.6)',
-          sky:    'rgba(56, 189, 248, 0.6)',
-          indigo: 'rgba(129, 140, 248, 0.6)',
-          pink:   'rgba(244, 114, 182, 0.6)',
-          orange: 'rgba(251, 146, 60, 0.6)',
+          cyan:   'rgba(56, 189, 248, 0.85)',
+          sky:    'rgba(99, 102, 241, 0.85)',
+          indigo: 'rgba(55, 48, 163, 0.85)',
+          pink:   'rgba(168, 85, 247, 0.85)',
+          orange: 'rgba(56, 189, 248, 0.18)',
         };
         const CHART_BORDERS = {
-          cyan:   'rgba(34, 211, 238, 1)',
-          sky:    'rgba(56, 189, 248, 1)',
-          indigo: 'rgba(129, 140, 248, 1)',
-          pink:   'rgba(244, 114, 182, 1)',
-          orange: 'rgba(251, 146, 60, 1)',
+          cyan:   'rgba(56, 189, 248, 1)',
+          sky:    'rgba(99, 102, 241, 1)',
+          indigo: 'rgba(55, 48, 163, 1)',
+          pink:   'rgba(168, 85, 247, 1)',
+          orange: 'rgba(56, 189, 248, 0.9)',
+        };
+        const CHART_NEUTRALS = {
+          slate: 'rgba(148, 163, 184, 0.55)',
+          border: '#F7F9FE',
         };
         const CHART_AXES = {
-          grid: '#E2E8F0',
-          tick: '#475569',
-          legend: '#1F2937',
+          grid: 'rgba(226, 232, 240, 0.65)',
+          tick: '#1E293B',
+          legend: '#0F172A',
         };
-        const COLOR_LIST = Object.values(CHART_COLORS);
+        const COLOR_LIST = [
+          'rgba(56, 189, 248, 0.92)',
+          'rgba(99, 102, 241, 0.9)',
+          'rgba(124, 58, 237, 0.9)',
+          'rgba(139, 92, 246, 0.9)',
+          'rgba(165, 105, 255, 0.9)',
+          'rgba(192, 132, 252, 0.9)',
+          'rgba(221, 214, 254, 0.9)'
+        ];
         const withDataLabels = (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [];
         
         function __palette(n){ const out=[]; for(let i=0;i<n;i++) out.push(COLOR_LIST[i%COLOR_LIST.length]); return out; }
@@ -11102,7 +11139,7 @@ if (achievementsGrid) {
           const subjToday = todayStudyData.reduce((a,s)=> (a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
           __stats.charts['day-subject-ratio-chart'] = new Chart(document.getElementById('day-subject-ratio-chart'), {
             type:'pie', plugins: withDataLabels,
-            data:{ labels:Object.keys(subjToday), datasets:[{ data:Object.values(subjToday), backgroundColor: __palette(Object.keys(subjToday).length), borderColor:'#F8F9FD', borderWidth:4 }] },
+            data:{ labels:Object.keys(subjToday), datasets:[{ data:Object.values(subjToday), backgroundColor: __palette(Object.keys(subjToday).length), borderColor:CHART_NEUTRALS.border, borderWidth:4 }] },
             options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:CHART_AXES.legend } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
           
@@ -11110,7 +11147,7 @@ if (achievementsGrid) {
           todayStudyData.forEach(s => { perHour[s.startTime.getHours()] += s.duration; });
           __stats.charts['day-time-per-hour-chart'] = new Chart(document.getElementById('day-time-per-hour-chart'), {
             type:'bar',
-            data:{ labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets:[{ label:'Minutes Studied', data:perHour, backgroundColor: CHART_COLORS.sky, borderRadius:5 }] },
+            data:{ labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets:[{ label:'Minutes Studied', data:perHour, backgroundColor: CHART_COLORS.sky, borderColor: CHART_BORDERS.sky, borderWidth: 1.5, borderRadius: 10, borderSkipped: false }] },
             options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
           });
 
@@ -11118,7 +11155,7 @@ if (achievementsGrid) {
           const todayBreakMin = todayAllData.filter(s=>s.type==='break').reduce((sum,s)=>sum+s.duration,0);
           __stats.charts['day-study-break-chart'] = new Chart(document.getElementById('day-study-break-chart'), {
             type:'doughnut', plugins: withDataLabels,
-            data:{ labels:['Study','Break'], datasets:[{ data:[todayStudyMin,todayBreakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#F8F9FD', borderWidth:4 }] },
+            data:{ labels:['Study','Break'], datasets:[{ data:[todayStudyMin,todayBreakMin], backgroundColor:[CHART_COLORS.indigo, CHART_NEUTRALS.slate], borderColor:CHART_NEUTRALS.border, borderWidth:4 }] },
             options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ color:CHART_AXES.legend }}, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
           
@@ -11141,14 +11178,14 @@ if (achievementsGrid) {
           const sevenDayBreakMin = last7DaysAllData.filter(s=>s.type==='break').reduce((sum,s)=>sum+s.duration,0);
           __stats.charts['7d-study-break-chart'] = new Chart(document.getElementById('7d-study-break-chart'), {
             type:'doughnut', plugins: withDataLabels,
-            data:{ labels:['Study','Break'], datasets:[{ data:[sevenDayStudyMin,sevenDayBreakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#F8F9FD', borderWidth:4 }] },
+            data:{ labels:['Study','Break'], datasets:[{ data:[sevenDayStudyMin,sevenDayBreakMin], backgroundColor:[CHART_COLORS.indigo, CHART_NEUTRALS.slate], borderColor:CHART_NEUTRALS.border, borderWidth:4 }] },
             options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ color:CHART_AXES.legend }}, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
 
           const subjAgg7d = last7DaysStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
           __stats.charts['7d-subject-ratio-chart'] = new Chart(document.getElementById('7d-subject-ratio-chart'), {
             type:'pie', plugins: withDataLabels,
-            data:{ labels:Object.keys(subjAgg7d), datasets:[{ data:Object.values(subjAgg7d), backgroundColor: __palette(Object.keys(subjAgg7d).length), borderColor:'#F8F9FD', borderWidth:4 }] },
+            data:{ labels:Object.keys(subjAgg7d), datasets:[{ data:Object.values(subjAgg7d), backgroundColor: __palette(Object.keys(subjAgg7d).length), borderColor:CHART_NEUTRALS.border, borderWidth:4 }] },
             options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:CHART_AXES.legend } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
 
@@ -11171,7 +11208,7 @@ if (achievementsGrid) {
           const labels7d = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(6-i)); return `${d.getMonth()+1}/${d.getDate()}`; });
           __stats.charts['7d-time-per-day-chart'] = new Chart(document.getElementById('7d-time-per-day-chart'), {
             type:'bar',
-            data:{ labels: labels7d, datasets:[{ label:'Minutes Studied', data: perDay7d, backgroundColor: CHART_COLORS.pink, borderRadius:5 }] },
+            data:{ labels: labels7d, datasets:[{ label:'Minutes Studied', data: perDay7d, backgroundColor: CHART_COLORS.pink, borderColor: CHART_BORDERS.pink, borderWidth: 1.5, borderRadius:10, borderSkipped: false }] },
             options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} } }, plugins:{ legend:{ display:false } } }
           });
 
@@ -11180,7 +11217,7 @@ if (achievementsGrid) {
           const monthBreakMin = thisMonthAllData.filter(s=>s.type==='break').reduce((sum,s)=>sum+s.duration,0);
           __stats.charts['month-study-break-chart'] = new Chart(document.getElementById('month-study-break-chart'), {
             type:'doughnut', plugins: withDataLabels,
-            data:{ labels:['Study','Break'], datasets:[{ data:[monthStudyMin,monthBreakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#F8F9FD', borderWidth:4 }] },
+            data:{ labels:['Study','Break'], datasets:[{ data:[monthStudyMin,monthBreakMin], backgroundColor:[CHART_COLORS.indigo, CHART_NEUTRALS.slate], borderColor:CHART_NEUTRALS.border, borderWidth:4 }] },
             options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ color:CHART_AXES.legend }}, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(1))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
 
@@ -11220,7 +11257,7 @@ if (achievementsGrid) {
           const subjAgg28d = last28DaysStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a),{});
           __stats.charts['28d-subject-ratio-chart'] = new Chart(document.getElementById('28d-subject-ratio-chart'), {
             type:'doughnut', plugins: withDataLabels,
-            data:{ labels:Object.keys(subjAgg28d), datasets:[{ data:Object.values(subjAgg28d), backgroundColor: __palette(Object.keys(subjAgg28d).length), borderColor:'#F8F9FD', borderWidth:4 }] },
+            data:{ labels:Object.keys(subjAgg28d), datasets:[{ data:Object.values(subjAgg28d), backgroundColor: __palette(Object.keys(subjAgg28d).length), borderColor:CHART_NEUTRALS.border, borderWidth:4 }] },
             options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:CHART_AXES.legend } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(1))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
 
@@ -11229,7 +11266,7 @@ if (achievementsGrid) {
           const labels28d = Array.from({length:28},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(27-i)); return `${d.getMonth()+1}/${d.getDate()}`; });
           __stats.charts['28d-time-per-day-chart'] = new Chart(document.getElementById('28d-time-per-day-chart'), {
             type:'bar',
-            data:{ labels: labels28d, datasets:[{ label:'Minutes Studied', data: perDay28d, backgroundColor: CHART_COLORS.pink, borderRadius:5 }] },
+            data:{ labels: labels28d, datasets:[{ label:'Minutes Studied', data: perDay28d, backgroundColor: CHART_COLORS.pink, borderColor: CHART_BORDERS.pink, borderWidth: 1.5, borderRadius:10, borderSkipped: false }] },
             options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
           });
           
@@ -11245,7 +11282,8 @@ if (achievementsGrid) {
                       label: 'Cumulative Minutes Studied',
                       data: cumulativePerDay,
                       borderColor: CHART_BORDERS.cyan,
-                      backgroundColor: CHART_COLORS.cyan,
+                      backgroundColor: CHART_COLORS.orange,
+                      pointBackgroundColor: CHART_BORDERS.cyan,
                       fill: true,
                       tension: 0.1
                   }]
