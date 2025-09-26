@@ -2739,8 +2739,8 @@
 
         /* New Dashboard Styles */
         #insights-container {
-            background-color: #F8F9FD;
-            color: #1f2937;
+            background: linear-gradient(180deg, #f8faff 0%, #eef2ff 100%);
+            color: #0f172a;
             min-height: 100%;
         }
         .card {
@@ -2755,30 +2755,73 @@
             box-shadow: 0 10px 20px rgba(45, 212, 191, 0.1);
         }
         #page-stats {
-            background-color: #F8F9FD;
-            color: #1f2937;
+            background: linear-gradient(180deg, #f8faff 0%, #eef2ff 100%);
+            color: #0f172a;
         }
         #page-stats .card {
-            background-color: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+            position: relative;
+            z-index: 0;
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            box-shadow: 0 24px 45px -30px rgba(79, 70, 229, 0.35);
+            color: #0f172a;
+        }
+        #page-stats .card > * {
+            position: relative;
+            z-index: 1;
+        }
+        #page-stats .card:not([class*="bg-gradient"])::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            background: radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 55%);
         }
         #page-stats .card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+            box-shadow: 0 32px 60px -28px rgba(79, 70, 229, 0.4);
+        }
+        #page-stats .card h3 {
+            color: #1e1b4b;
         }
         #page-stats .session-log-item {
-            background-color: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+            background-color: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            box-shadow: 0 20px 40px -28px rgba(37, 99, 235, 0.35);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            color: #0f172a;
         }
         #page-stats .session-log-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 18px 30px rgba(15, 23, 42, 0.12);
+            transform: translateY(-4px);
+            box-shadow: 0 28px 56px -24px rgba(37, 99, 235, 0.4);
         }
         #page-stats .log-options-btn {
             transition: background-color 0.2s ease, color 0.2s ease;
+            color: #4338ca;
+        }
+        #page-stats .log-options-btn:hover {
+            background-color: rgba(14, 165, 233, 0.1);
+            color: #1f2937;
+        }
+        #page-stats .chart-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            border-radius: 1rem;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at top right, rgba(34, 211, 238, 0.12), transparent 55%),
+                rgba(248, 250, 252, 0.95);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+        #page-stats .chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
         }
         .nav-btn {
             padding: 0.5rem 1.5rem;
@@ -10819,28 +10862,48 @@ if (achievementsGrid) {
         /* ---------------- internals ---------------- */
         
         const CHART_COLORS = {
-          cyan:   'rgba(34, 211, 238, 0.6)',
-          sky:    'rgba(56, 189, 248, 0.6)',
-          indigo: 'rgba(129, 140, 248, 0.6)',
-          pink:   'rgba(244, 114, 182, 0.6)',
-          orange: 'rgba(251, 146, 60, 0.6)',
+          cyan:   'rgba(56, 189, 248, 0.85)',
+          sky:    'rgba(14, 165, 233, 0.85)',
+          indigo: 'rgba(79, 70, 229, 0.85)',
+          pink:   'rgba(124, 58, 237, 0.85)',
+          orange: 'rgba(99, 102, 241, 0.85)',
         };
         const CHART_BORDERS = {
-          cyan:   'rgba(34, 211, 238, 1)',
-          sky:    'rgba(56, 189, 248, 1)',
-          indigo: 'rgba(129, 140, 248, 1)',
-          pink:   'rgba(244, 114, 182, 1)',
-          orange: 'rgba(251, 146, 60, 1)',
+          cyan:   'rgba(56, 189, 248, 1)',
+          sky:    'rgba(14, 165, 233, 1)',
+          indigo: 'rgba(67, 56, 202, 1)',
+          pink:   'rgba(124, 58, 237, 1)',
+          orange: 'rgba(99, 102, 241, 1)',
         };
         const CHART_AXES = {
-          grid: '#E2E8F0',
-          tick: '#475569',
-          legend: '#1F2937',
+          grid: 'rgba(148, 163, 184, 0.25)',
+          tick: '#0f172a',
+          legend: '#1e1b4b',
         };
+        const CHART_NEUTRAL = 'rgba(148, 163, 184, 0.35)';
+        const CHART_NEUTRAL_BORDER = 'rgba(226, 232, 240, 1)';
         const COLOR_LIST = Object.values(CHART_COLORS);
+        const COLOR_BORDER_LIST = Object.values(CHART_BORDERS);
         const withDataLabels = (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [];
-        
+
+        if (typeof Chart !== 'undefined') {
+          Chart.defaults.font.family = "'Inter', sans-serif";
+          Chart.defaults.color = '#0f172a';
+          if (Chart.defaults?.plugins?.legend?.labels) {
+            Chart.defaults.plugins.legend.labels.usePointStyle = true;
+            Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
+            Chart.defaults.plugins.legend.labels.boxWidth = 10;
+          }
+          if (Chart.defaults?.elements?.arc) {
+            Chart.defaults.elements.arc.borderWidth = 3;
+          }
+          if (Chart.defaults?.datasets?.bar) {
+            Chart.defaults.datasets.bar.borderRadius = 12;
+          }
+        }
+
         function __palette(n){ const out=[]; for(let i=0;i<n;i++) out.push(COLOR_LIST[i%COLOR_LIST.length]); return out; }
+        function __paletteBorders(n){ const out=[]; for(let i=0;i<n;i++) out.push(COLOR_BORDER_LIST[i%COLOR_BORDER_LIST.length]); return out; }
         function __toDateSafe(v){ if(!v) return null; const d=(v instanceof Date)?v:new Date(v); return isNaN(d.getTime())?null:d; }
         function __today(){ return new Date(); }
         function __fmtHMS(minutes){
@@ -11054,10 +11117,10 @@ if (achievementsGrid) {
 
             <h2 class="text-2xl font-semibold text-slate-900 mt-8 mb-4">Historical Performance (Last 28 Days)</h2>
             <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-600 text-lg font-medium">Total Time (28d)</h3><p id="28d-total-time" class="text-4xl font-bold text-rose-600 mt-2">--:--:--</p></div>
-                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-600 text-lg font-medium">Daily Average (28d)</h3><p id="28d-daily-avg" class="text-4xl font-bold text-rose-600 mt-2">--:--:--</p></div>
-                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-600 text-lg font-medium">Focus Score</h3><p id="28d-focus-score" class="text-4xl font-bold text-rose-600 mt-2">--</p></div>
-                <div class="card bg-gradient-to-br from-pink-500 to-rose-600 p-6"><h3 class="text-white text-lg font-medium flex items-center"><i data-lucide="brain-circuit" class="mr-2"></i>AI Insight (28d)</h3><p id="28d-ai-insight-text" class="text-white mt-2 text-sm">Analyzing historical patterns...</p></div>
+                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-600 text-lg font-medium">Total Time (28d)</h3><p id="28d-total-time" class="text-4xl font-bold text-cyan-600 mt-2">--:--:--</p></div>
+                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-600 text-lg font-medium">Daily Average (28d)</h3><p id="28d-daily-avg" class="text-4xl font-bold text-indigo-600 mt-2">--:--:--</p></div>
+                <div class="card flex flex-col justify-center items-center p-6"><h3 class="text-slate-600 text-lg font-medium">Focus Score</h3><p id="28d-focus-score" class="text-4xl font-bold text-purple-600 mt-2">--</p></div>
+                <div class="card bg-gradient-to-br from-indigo-500 to-purple-600 p-6"><h3 class="text-white text-lg font-medium flex items-center"><i data-lucide="brain-circuit" class="mr-2"></i>AI Insight (28d)</h3><p id="28d-ai-insight-text" class="text-white mt-2 text-sm">Analyzing historical patterns...</p></div>
             </section>
             <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
               <div class="card lg:col-span-2"><h3 class="font-semibold text-xl text-slate-900 mb-4">Cumulative Study Time (Last 28 Days)</h3><div class="chart-container" style="height:250px;"><canvas id="28d-cumulative-chart"></canvas></div></div>
@@ -11100,9 +11163,13 @@ if (achievementsGrid) {
 
           // --- Today's Charts ---
           const subjToday = todayStudyData.reduce((a,s)=> (a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
+          const subjTodayLabels = Object.keys(subjToday);
+          const subjTodayValues = Object.values(subjToday);
+          const subjTodayPalette = __palette(subjTodayLabels.length);
+          const subjTodayBorderPalette = __paletteBorders(subjTodayLabels.length);
           __stats.charts['day-subject-ratio-chart'] = new Chart(document.getElementById('day-subject-ratio-chart'), {
             type:'pie', plugins: withDataLabels,
-            data:{ labels:Object.keys(subjToday), datasets:[{ data:Object.values(subjToday), backgroundColor: __palette(Object.keys(subjToday).length), borderColor:'#F8F9FD', borderWidth:4 }] },
+            data:{ labels:subjTodayLabels, datasets:[{ data:subjTodayValues, backgroundColor: subjTodayPalette, borderColor: subjTodayBorderPalette, borderWidth:3, hoverOffset: 12 }] },
             options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:CHART_AXES.legend } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
           
@@ -11110,7 +11177,7 @@ if (achievementsGrid) {
           todayStudyData.forEach(s => { perHour[s.startTime.getHours()] += s.duration; });
           __stats.charts['day-time-per-hour-chart'] = new Chart(document.getElementById('day-time-per-hour-chart'), {
             type:'bar',
-            data:{ labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets:[{ label:'Minutes Studied', data:perHour, backgroundColor: CHART_COLORS.sky, borderRadius:5 }] },
+            data:{ labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets:[{ label:'Minutes Studied', data:perHour, backgroundColor: CHART_COLORS.sky, borderColor: CHART_BORDERS.sky, borderWidth:2, hoverBackgroundColor: CHART_BORDERS.sky }] },
             options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
           });
 
@@ -11118,21 +11185,23 @@ if (achievementsGrid) {
           const todayBreakMin = todayAllData.filter(s=>s.type==='break').reduce((sum,s)=>sum+s.duration,0);
           __stats.charts['day-study-break-chart'] = new Chart(document.getElementById('day-study-break-chart'), {
             type:'doughnut', plugins: withDataLabels,
-            data:{ labels:['Study','Break'], datasets:[{ data:[todayStudyMin,todayBreakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#F8F9FD', borderWidth:4 }] },
+            data:{ labels:['Study','Break'], datasets:[{ data:[todayStudyMin,todayBreakMin], backgroundColor:[CHART_COLORS.indigo, CHART_NEUTRAL], borderColor:[CHART_BORDERS.indigo, CHART_NEUTRAL_BORDER], borderWidth:3, hoverOffset: 10 }] },
             options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ color:CHART_AXES.legend }}, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
           
           const bySubjectToday = todayStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
+          const bySubjectTodayLabels = Object.keys(bySubjectToday);
+          const bySubjectTodayValues = Object.values(bySubjectToday);
           __stats.charts['day-study-time-by-subject-chart'] = new Chart(document.getElementById('day-study-time-by-subject-chart'), {
             type:'bar',
-            data:{ labels:Object.keys(bySubjectToday), datasets:[{ label:'Minutes Studied', data:Object.values(bySubjectToday), backgroundColor: __palette(Object.keys(bySubjectToday).length) }] },
+            data:{ labels:bySubjectTodayLabels, datasets:[{ label:'Minutes Studied', data:bySubjectTodayValues, backgroundColor: __palette(bySubjectTodayLabels.length), borderColor: __paletteBorders(bySubjectTodayLabels.length), borderWidth:2 }] },
             options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} } }, plugins:{ legend:{ display:false } } }
           });
           
           const distToday = todayStudyData.map(s => ({ x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, yEnd: s.endTime.getHours()+s.endTime.getMinutes()/60 }));
           __stats.charts['day-start-end-distribution-chart'] = new Chart(document.getElementById('day-start-end-distribution-chart'), {
             type:'scatter',
-            data:{ datasets:[ { label:'Session Span', data: distToday.map(d=>({x:d.x,y:[d.y,d.yEnd]})), backgroundColor: CHART_COLORS.sky } ]},
+            data:{ datasets:[ { label:'Session Span', data: distToday.map(d=>({x:d.x,y:[d.y,d.yEnd]})), backgroundColor: CHART_COLORS.cyan, borderColor: CHART_BORDERS.cyan, pointRadius: 6, pointHoverRadius: 8, borderWidth:2 } ]},
             options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'hour' }, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ min:0, max:24, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, stepSize:4, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ display:false } } }
           });
 
@@ -11141,28 +11210,34 @@ if (achievementsGrid) {
           const sevenDayBreakMin = last7DaysAllData.filter(s=>s.type==='break').reduce((sum,s)=>sum+s.duration,0);
           __stats.charts['7d-study-break-chart'] = new Chart(document.getElementById('7d-study-break-chart'), {
             type:'doughnut', plugins: withDataLabels,
-            data:{ labels:['Study','Break'], datasets:[{ data:[sevenDayStudyMin,sevenDayBreakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#F8F9FD', borderWidth:4 }] },
+            data:{ labels:['Study','Break'], datasets:[{ data:[sevenDayStudyMin,sevenDayBreakMin], backgroundColor:[CHART_COLORS.indigo, CHART_NEUTRAL], borderColor:[CHART_BORDERS.indigo, CHART_NEUTRAL_BORDER], borderWidth:3, hoverOffset: 10 }] },
             options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ color:CHART_AXES.legend }}, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
 
           const subjAgg7d = last7DaysStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
+          const subjAgg7dLabels = Object.keys(subjAgg7d);
+          const subjAgg7dValues = Object.values(subjAgg7d);
+          const subjAgg7dPalette = __palette(subjAgg7dLabels.length);
+          const subjAgg7dBorders = __paletteBorders(subjAgg7dLabels.length);
           __stats.charts['7d-subject-ratio-chart'] = new Chart(document.getElementById('7d-subject-ratio-chart'), {
             type:'pie', plugins: withDataLabels,
-            data:{ labels:Object.keys(subjAgg7d), datasets:[{ data:Object.values(subjAgg7d), backgroundColor: __palette(Object.keys(subjAgg7d).length), borderColor:'#F8F9FD', borderWidth:4 }] },
+            data:{ labels:subjAgg7dLabels, datasets:[{ data:subjAgg7dValues, backgroundColor: subjAgg7dPalette, borderColor: subjAgg7dBorders, borderWidth:3, hoverOffset: 12 }] },
             options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:CHART_AXES.legend } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(0))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
 
           const dist7d = last7DaysStudyData.map(s => ({ x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, yEnd: s.endTime.getHours()+s.endTime.getMinutes()/60 }));
           __stats.charts['7d-start-end-distribution-chart'] = new Chart(document.getElementById('7d-start-end-distribution-chart'), {
             type:'scatter',
-            data:{ datasets:[{ label:'Start Time', data: dist7d.map(d=>({x:d.x,y:d.y})), backgroundColor: CHART_COLORS.sky }, { label:'End Time', data: dist7d.map(d=>({x:d.x,y:d.yEnd})), backgroundColor: CHART_COLORS.pink }]},
+            data:{ datasets:[{ label:'Start Time', data: dist7d.map(d=>({x:d.x,y:d.y})), backgroundColor: CHART_COLORS.cyan, borderColor: CHART_BORDERS.cyan, pointRadius: 5, pointHoverRadius: 7, borderWidth:2 }, { label:'End Time', data: dist7d.map(d=>({x:d.x,y:d.yEnd})), backgroundColor: CHART_COLORS.pink, borderColor: CHART_BORDERS.pink, pointRadius: 5, pointHoverRadius: 7, borderWidth:2 }]},
             options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'day' }, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ min:0, max:24, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, stepSize:4, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ labels:{color:CHART_AXES.legend} } } }
           });
 
-          const bySubject7d = last7DaysStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
-          __stats.charts['7d-study-time-by-subject-chart'] = new Chart(document.getElementById('7d-study-time-by-subject-chart'), {
-            type:'bar',
-            data:{ labels:Object.keys(bySubject7d), datasets:[{ label:'Minutes Studied', data:Object.values(bySubject7d), backgroundColor: __palette(Object.keys(bySubject7d).length) }] },
+            const bySubject7d = last7DaysStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
+            const bySubject7dLabels = Object.keys(bySubject7d);
+            const bySubject7dValues = Object.values(bySubject7d);
+            __stats.charts['7d-study-time-by-subject-chart'] = new Chart(document.getElementById('7d-study-time-by-subject-chart'), {
+              type:'bar',
+              data:{ labels:bySubject7dLabels, datasets:[{ label:'Minutes Studied', data:bySubject7dValues, backgroundColor: __palette(bySubject7dLabels.length), borderColor: __paletteBorders(bySubject7dLabels.length), borderWidth:2 }] },
             options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} } }, plugins:{ legend:{ display:false } } }
           });
 
@@ -11171,7 +11246,7 @@ if (achievementsGrid) {
           const labels7d = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(6-i)); return `${d.getMonth()+1}/${d.getDate()}`; });
           __stats.charts['7d-time-per-day-chart'] = new Chart(document.getElementById('7d-time-per-day-chart'), {
             type:'bar',
-            data:{ labels: labels7d, datasets:[{ label:'Minutes Studied', data: perDay7d, backgroundColor: CHART_COLORS.pink, borderRadius:5 }] },
+            data:{ labels: labels7d, datasets:[{ label:'Minutes Studied', data: perDay7d, backgroundColor: CHART_COLORS.pink, borderColor: CHART_BORDERS.pink, borderWidth:2, hoverBackgroundColor: CHART_BORDERS.pink }] },
             options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} } }, plugins:{ legend:{ display:false } } }
           });
 
@@ -11180,21 +11255,23 @@ if (achievementsGrid) {
           const monthBreakMin = thisMonthAllData.filter(s=>s.type==='break').reduce((sum,s)=>sum+s.duration,0);
           __stats.charts['month-study-break-chart'] = new Chart(document.getElementById('month-study-break-chart'), {
             type:'doughnut', plugins: withDataLabels,
-            data:{ labels:['Study','Break'], datasets:[{ data:[monthStudyMin,monthBreakMin], backgroundColor:[CHART_COLORS.indigo, '#475569'], borderColor:'#F8F9FD', borderWidth:4 }] },
+            data:{ labels:['Study','Break'], datasets:[{ data:[monthStudyMin,monthBreakMin], backgroundColor:[CHART_COLORS.indigo, CHART_NEUTRAL], borderColor:[CHART_BORDERS.indigo, CHART_NEUTRAL_BORDER], borderWidth:3, hoverOffset: 10 }] },
             options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ color:CHART_AXES.legend }}, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(1))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
 
           const bySubjectMonth = thisMonthStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a), {});
+          const bySubjectMonthLabels = Object.keys(bySubjectMonth);
+          const bySubjectMonthValues = Object.values(bySubjectMonth);
           __stats.charts['month-study-time-by-subject-chart'] = new Chart(document.getElementById('month-study-time-by-subject-chart'), {
             type:'bar',
-            data:{ labels:Object.keys(bySubjectMonth), datasets:[{ label:'Minutes Studied', data:Object.values(bySubjectMonth), backgroundColor: __palette(Object.keys(bySubjectMonth).length) }] },
+            data:{ labels:bySubjectMonthLabels, datasets:[{ label:'Minutes Studied', data:bySubjectMonthValues, backgroundColor: __palette(bySubjectMonthLabels.length), borderColor: __paletteBorders(bySubjectMonthLabels.length), borderWidth:2 }] },
             options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} } }, plugins:{ legend:{ display:false } } }
           });
           
           const distMonth = thisMonthStudyData.map(s => ({ x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, yEnd: s.endTime.getHours()+s.endTime.getMinutes()/60 }));
           __stats.charts['month-start-end-distribution-chart'] = new Chart(document.getElementById('month-start-end-distribution-chart'), {
             type:'scatter',
-            data:{ datasets:[ { label:'Start Time', data: distMonth.map(d=>({x:d.x,y:d.y})), backgroundColor: CHART_COLORS.sky }, { label:'End Time', data: distMonth.map(d=>({x:d.x,y:d.yEnd})), backgroundColor: CHART_COLORS.pink }]},
+            data:{ datasets:[ { label:'Start Time', data: distMonth.map(d=>({x:d.x,y:d.y})), backgroundColor: CHART_COLORS.cyan, borderColor: CHART_BORDERS.cyan, pointRadius:5, pointHoverRadius:7, borderWidth:2 }, { label:'End Time', data: distMonth.map(d=>({x:d.x,y:d.yEnd})), backgroundColor: CHART_COLORS.pink, borderColor: CHART_BORDERS.pink, pointRadius:5, pointHoverRadius:7, borderWidth:2 }]},
             options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'day' }, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ min:0, max:24, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, stepSize:4, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ labels:{ color:CHART_AXES.legend } } } }
           });
 
@@ -11218,10 +11295,12 @@ if (achievementsGrid) {
           document.getElementById('28d-focus-score').textContent = focusScore;
           
           const subjAgg28d = last28DaysStudyData.reduce((a,s)=>(a[s.subject]=(a[s.subject]||0)+s.duration, a),{});
+          const subjAgg28dLabels = Object.keys(subjAgg28d);
+          const subjAgg28dValues = Object.values(subjAgg28d);
           __stats.charts['28d-subject-ratio-chart'] = new Chart(document.getElementById('28d-subject-ratio-chart'), {
             type:'doughnut', plugins: withDataLabels,
-            data:{ labels:Object.keys(subjAgg28d), datasets:[{ data:Object.values(subjAgg28d), backgroundColor: __palette(Object.keys(subjAgg28d).length), borderColor:'#F8F9FD', borderWidth:4 }] },
-            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:CHART_AXES.legend } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1; return s > 0 ? ((v*100/s).toFixed(1))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
+            data:{ labels:subjAgg28dLabels, datasets:[{ data:subjAgg28dValues, backgroundColor: __palette(subjAgg28dLabels.length), borderColor: __paletteBorders(subjAgg28dLabels.length), borderWidth:3, hoverOffset: 12 }] },
+            options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:CHART_AXES.legend } }, datalabels: withDataLabels.length ? { formatter:(v,ctx)=>{ const s=(ctx.dataset.data||[]).reduce((a,b)=>a+b,0)||1;return s > 0 ? ((v*100/s).toFixed(1))+'%' : '0%'; }, color:'#fff', font:{weight:'bold'} } : undefined } }
           });
 
           const perDay28d = Array(28).fill(0);
@@ -11229,7 +11308,7 @@ if (achievementsGrid) {
           const labels28d = Array.from({length:28},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(27-i)); return `${d.getMonth()+1}/${d.getDate()}`; });
           __stats.charts['28d-time-per-day-chart'] = new Chart(document.getElementById('28d-time-per-day-chart'), {
             type:'bar',
-            data:{ labels: labels28d, datasets:[{ label:'Minutes Studied', data: perDay28d, backgroundColor: CHART_COLORS.pink, borderRadius:5 }] },
+            data:{ labels: labels28d, datasets:[{ label:'Minutes Studied', data: perDay28d, backgroundColor: CHART_COLORS.pink, borderColor: CHART_BORDERS.pink, borderWidth:2, hoverBackgroundColor: CHART_BORDERS.pink }] },
             options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, maxRotation:90, minRotation:45} } }, plugins:{ legend:{ display:false } } }
           });
           
@@ -11264,7 +11343,7 @@ if (achievementsGrid) {
           const reg = appData.filter(s=>s.type==='study').slice(-50).map(s => ({ x: s.startTime, y: s.startTime.getHours()+s.startTime.getMinutes()/60, r: Math.max(3, s.duration/10) }));
           __stats.charts['regularity-chart'] = new Chart(document.getElementById('regularity-chart'), {
             type:'bubble',
-            data:{ datasets:[{ label:'Study Session', data: reg, backgroundColor: CHART_COLORS.indigo }] },
+            data:{ datasets:[{ label:'Study Session', data: reg, backgroundColor: CHART_COLORS.indigo, borderColor: CHART_BORDERS.indigo, hoverBackgroundColor: CHART_BORDERS.indigo, borderWidth:1 }] },
             options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ type:'time', time:{ unit:'day' }, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, y:{ min:6, max:24, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick, stepSize:3, callback:(v)=>`${v}:00` } } }, plugins:{ legend:{ display:false } } }
           });
           
@@ -11277,7 +11356,7 @@ if (achievementsGrid) {
           const forecastLabels = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()+i+1); return `${d.getMonth()+1}/${d.getDate()}`; });
           __stats.charts['forecast-chart'] = new Chart(document.getElementById('forecast-chart'), {
             type:'line',
-            data:{ labels: forecastLabels, datasets:[{ label:'Projected Study Minutes', data: forecastData, borderColor: CHART_BORDERS.orange, backgroundColor: CHART_COLORS.orange, borderDash:[5,5], tension:0.2 }] },
+            data:{ labels: forecastLabels, datasets:[{ label:'Projected Study Minutes', data: forecastData, borderColor: CHART_BORDERS.orange, backgroundColor: CHART_COLORS.orange, borderDash:[5,5], tension:0.2, borderWidth:3, pointBackgroundColor: CHART_BORDERS.orange, pointBorderColor: '#fff' }] },
             options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} }, x:{ grid:{color:CHART_AXES.grid}, ticks:{color:CHART_AXES.tick} } }, plugins:{ legend:{ display:false } } }
           });
           
