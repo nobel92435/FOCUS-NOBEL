@@ -31,11 +31,26 @@
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .nav-item.active, .group-nav-item.active {
+        .nav-item.active {
             background-color: rgb(255, 255, 255);
         }
-        .nav-item.active span, .group-nav-item.active span {
+        .nav-item.active span {
             color: #f8fafc;
+        }
+        .group-nav-item {
+            color: #475569;
+        }
+        .group-nav-item span {
+            color: inherit;
+        }
+        .group-nav-item.active {
+            background-color: rgba(249, 115, 22, 0.14);
+        }
+        .group-nav-item.active span {
+            color: #F97316;
+        }
+        #group-detail-nav .nav-link:hover {
+            background-color: rgba(148, 163, 184, 0.18);
         }
 
         .sidebar-nav ul {
@@ -467,18 +482,18 @@
 
         /* Group study styles */
         .group-card {
-            background: #161b22; /* Darker secondary bg */
-            border: 1px solid #30363d; /* Subtle border */
-            border-radius: 12px;
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 16px;
             overflow: hidden;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
             cursor: pointer;
         }
         .group-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(45, 212, 191, 0.1); /* Teal glow */
-            border-color: #2dd4bf;
+            transform: translateY(-6px);
+            box-shadow: 0 16px 40px rgba(249, 115, 22, 0.15);
+            border-color: #F97316;
         }
         .group-header {
             padding: 16px;
@@ -521,9 +536,9 @@
         .group-goal {
             margin-bottom: 12px;
             padding-bottom: 12px;
-            border-bottom: 1px solid #374151;
+            border-bottom: 1px solid #E2E8F0;
         }
-        .goal-text { font-weight: 600; color: white; margin-bottom: 6px; }
+        .goal-text { font-weight: 600; color: #0F172A; margin-bottom: 6px; }
         .leader {
             display: flex;
             align-items: center;
@@ -544,40 +559,26 @@
         .group-meta {
             display: flex;
             justify-content: space-between;
-            color: #9CA3AF;
-            font-size: 0.8rem;
+            color: #64748B;
+            font-size: 0.85rem;
             margin-top: 12px;
         }
         .join-btn {
             display: block;
             width: 100%;
             padding: 10px;
-            background: #38bdf8; /* Sky-400 */
-            color: white;
+            background: #F97316;
+            color: #FFFFFF;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             margin-top: 12px;
+            box-shadow: 0 10px 20px rgba(249, 115, 22, 0.25);
         }
-        .join-btn:hover { background: #2dd4bf; }
-        .join-btn:disabled { background: #6c757d; cursor: not-allowed; }
-        .joined-badge {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            background: #2dd4bf; /* Teal-400 */
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 12px;
-        }
-        .join-btn:hover { background: #4895ef; }
-        .join-btn:disabled { background: #6c757d; cursor: not-allowed; }
+        .join-btn:hover { background: #EA580C; box-shadow: 0 12px 24px rgba(234, 88, 12, 0.3); }
+        .join-btn:disabled { background: #CBD5F5; color: #475569; cursor: not-allowed; box-shadow: none; }
         .joined-badge {
             display: block;
             width: 100%;
@@ -585,7 +586,7 @@
             background: #3B82F6;
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-weight: 600;
             text-align: center;
             margin-top: 12px;
@@ -593,26 +594,29 @@
         .empty-group {
             text-align: center;
             padding: 40px 20px;
-            color: #9CA3AF;
+            color: #64748B;
         }
-        .empty-group i { font-size: 3rem; color: #30363d; margin-bottom: 16px; }
-        .empty-group h3 { font-size: 1.5rem; margin-bottom: 12px; color: white; }
+        .empty-group i { font-size: 3rem; color: #CBD5F5; margin-bottom: 16px; }
+        .empty-group h3 { font-size: 1.5rem; margin-bottom: 12px; color: #0F172A; }
         .empty-group p { font-size: 1rem; max-width: 500px; margin: 0 auto 20px; }
         .category-option, .time-option {
             padding: 12px;
             text-align: center;
-            background: #21262d;
-            border-radius: 8px;
+            background: #FFFFFF;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
-            border: 2px solid transparent;
+            border: 2px solid #E2E8F0;
             font-weight: 600;
+            color: #1E293B;
+            box-shadow: 0 6px 18px rgba(148, 163, 184, 0.12);
         }
-        .category-option:hover, .time-option:hover { background: #30363d; }
+        .category-option:hover, .time-option:hover { background: #F8FAFC; border-color: #CBD5E1; }
         .category-option.selected, .time-option.selected {
-            background: #2dd4bf;
-            color: white;
-            border-color: #14b8a6;
+            background: #F97316;
+            color: #FFFFFF;
+            border-color: #EA580C;
+            box-shadow: 0 10px 24px rgba(249, 115, 22, 0.25);
         }
         .create-group-btn {
             position: fixed;
@@ -637,22 +641,44 @@
         .group-filter-btn {
             padding: 6px 12px;
             background-color: transparent;
-            border-radius: 6px;
-            font-weight: 500;
-            color: #9CA3AF;
-            transition: all 0.2s;
+            border-radius: 9999px;
+            font-weight: 600;
+            color: #475569;
+            transition: all 0.2s ease;
         }
         .group-filter-btn.active {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8);
-            color: white;
-            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+            background-color: #F97316;
+            color: #FFFFFF;
+            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.28);
         }
         .group-card.ranking {
             cursor: default;
         }
         .group-card.ranking:hover {
             transform: none;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+        }
+
+        #page-my-groups,
+        #page-find-groups,
+        #page-create-group,
+        #page-group-detail {
+            background-color: #F8F9FD;
+            color: #0F172A;
+        }
+
+        #groups-btn {
+            transition: all 0.3s ease;
+        }
+
+        #groups-btn.active {
+            background-color: #F97316;
+            border-color: #F97316;
+            color: #FFFFFF;
+            box-shadow: 0 12px 28px rgba(249, 115, 22, 0.35);
+        }
+        #groups-btn.active img {
+            filter: brightness(0) invert(1);
         }
         
         /* Stats page styles */
@@ -3712,47 +3738,47 @@
             </div>
 
             <div id="page-my-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white/90 backdrop-blur">
+                    <button class="back-button text-slate-500 hover:text-slate-700" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1 class="text-xl font-bold text-gray-100">My Groups</h1>
-                    <button id="go-to-find-groups-btn" class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-700 hover:bg-gray-600">
+                    <h1 class="text-xl font-bold text-slate-900">My Groups</h1>
+                    <button id="go-to-find-groups-btn" class="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 transition">
                         <i class="fas fa-search"></i>
                     </button>
                 </header>
                 <div id="my-groups-list" class="p-4"></div>
             </div>
-            
+
             <div id="page-find-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button text-gray-400 hover:text-white" data-target="my-groups">
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white/90 backdrop-blur">
+                    <button class="back-button text-slate-500 hover:text-slate-700" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1 class="text-xl font-bold text-gray-100">Group Rankings</h1>
+                    <h1 class="text-xl font-bold text-slate-900">Group Rankings</h1>
                     <div class="w-10"></div>
                 </header>
-                <div class="p-4 border-b border-gray-800 bg-gray-900 z-10">
-                    <div class="flex space-x-1 bg-gray-800 p-1 rounded-lg mb-4" id="group-ranking-sort-tabs">
+                <div class="p-4 border-b border-slate-200 bg-white/90 backdrop-blur z-10">
+                    <div class="flex space-x-1 bg-slate-100 p-1 rounded-full mb-4" id="group-ranking-sort-tabs">
                         <button class="group-filter-btn flex-1" data-sort="new">New</button>
                         <button class="group-filter-btn flex-1" data-sort="attendance">Attendance</button>
                         <button class="group-filter-btn flex-1 active" data-sort="studytime">Studytime</button>
                     </div>
-                    <div class="flex items-center justify-center space-x-6 text-sm" id="group-ranking-filters">
+                    <div class="flex items-center justify-center space-x-6 text-sm text-slate-600" id="group-ranking-filters">
                         <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" data-filter="private" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
+                            <input type="checkbox" data-filter="private" class="w-4 h-4 bg-white rounded border-slate-300 text-orange-500 focus:ring-orange-400">
                             <span>Private</span>
                         </label>
                         <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" data-filter="available" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
+                            <input type="checkbox" data-filter="available" class="w-4 h-4 bg-white rounded border-slate-300 text-orange-500 focus:ring-orange-400">
                             <span>Available</span>
                         </label>
                         <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" data-filter="public" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
+                            <input type="checkbox" data-filter="public" class="w-4 h-4 bg-white rounded border-slate-300 text-orange-500 focus:ring-orange-400">
                             <span>Public</span>
                         </label>
                     </div>
@@ -3764,30 +3790,64 @@
             </div>
             
             <div id="page-create-group" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button text-gray-400 hover:text-white" data-target="find-groups">
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white/90 backdrop-blur">
+                    <button class="back-button text-slate-500 hover:text-slate-700" data-target="find-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1 class="text-xl font-bold text-gray-100">Create New Group</h1>
-                    <button id="create-group-done-btn" class="px-4 py-2 bg-gradient-to-r from-teal-500 to-sky-500 rounded-lg font-semibold text-white transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Done</button>
+                    <h1 class="text-xl font-bold text-slate-900">Create New Group</h1>
+                    <button id="create-group-done-btn" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-lg font-semibold text-white transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/30 hover:scale-105">Done</button>
                 </header>
                 <div class="p-4 md:p-6">
                     <form id="create-group-form" class="space-y-6">
-                        <div><label class="block mb-2 font-semibold">Group Name</label><input id="group-name-input" type="text" class="w-full bg-gray-700 rounded-lg p-3" placeholder="e.g., University Calculus" required></div>
-                        <div><label class="block mb-2 font-semibold">Password (optional)</label><input id="group-password-input" type="text" class="w-full bg-gray-700 rounded-lg p-3" placeholder="Leave blank for public group"></div>
-                        <div><label class="block mb-2 font-semibold">Category</label><div class="grid grid-cols-2 gap-2"><div class="category-option selected">General study</div><div class="category-option">Language study</div><div class="category-option">Secondary School</div><div class="category-option">University</div></div></div>
-                        <div><label class="block mb-2 font-semibold">Time Goal</label><div class="grid grid-cols-3 gap-2"><div class="time-option selected">1</div><div class="time-option">2</div><div class="time-option">3</div><div class="time-option">4</div><div class="time-option">5</div><div class="time-option">6</div></div></div>
-                        <div><label class="block mb-2 font-semibold">Capacity</label><div class="flex items-center justify-center bg-gray-700 rounded-lg p-3"><button type="button" id="decrease-capacity" class="px-4 text-xl">-</button><div id="capacity-value" class="flex-grow text-center font-bold text-lg">15</div><button type="button" id="increase-capacity" class="px-4 text-xl">+</button></div></div>
-                        <div><label class="block mb-2 font-semibold">Description</label><textarea id="group-description-input" class="w-full bg-gray-700 rounded-lg p-3 h-24" placeholder="Describe your group's purpose" required></textarea></div>
+                        <div>
+                            <label class="block mb-2 font-semibold text-slate-700">Group Name</label>
+                            <input id="group-name-input" type="text" class="w-full bg-white border border-slate-200 rounded-lg p-3 shadow-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400" placeholder="e.g., University Calculus" required>
+                        </div>
+                        <div>
+                            <label class="block mb-2 font-semibold text-slate-700">Password (optional)</label>
+                            <input id="group-password-input" type="text" class="w-full bg-white border border-slate-200 rounded-lg p-3 shadow-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400" placeholder="Leave blank for public group">
+                        </div>
+                        <div>
+                            <label class="block mb-2 font-semibold text-slate-700">Category</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="category-option selected">General study</div>
+                                <div class="category-option">Language study</div>
+                                <div class="category-option">Secondary School</div>
+                                <div class="category-option">University</div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block mb-2 font-semibold text-slate-700">Time Goal</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="time-option selected">1</div>
+                                <div class="time-option">2</div>
+                                <div class="time-option">3</div>
+                                <div class="time-option">4</div>
+                                <div class="time-option">5</div>
+                                <div class="time-option">6</div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block mb-2 font-semibold text-slate-700">Capacity</label>
+                            <div class="flex items-center justify-center bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+                                <button type="button" id="decrease-capacity" class="px-4 text-xl text-slate-600">-</button>
+                                <div id="capacity-value" class="flex-grow text-center font-bold text-lg text-slate-900">15</div>
+                                <button type="button" id="increase-capacity" class="px-4 text-xl text-slate-600">+</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block mb-2 font-semibold text-slate-700">Description</label>
+                            <textarea id="group-description-input" class="w-full bg-white border border-slate-200 rounded-lg p-3 h-24 shadow-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400" placeholder="Describe your group's purpose" required></textarea>
+                        </div>
                     </form>
                 </div>
             </div>
             
             <div id="page-group-detail" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button text-gray-400 hover:text-white" data-target="my-groups">
+                <header class="p-4 md:p-6 flex items-center z-20 border-b border-slate-200 sticky top-0 bg-white/90 backdrop-blur">
+                    <button class="back-button text-slate-500 hover:text-slate-700" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>
@@ -3796,23 +3856,23 @@
                          <select id="group-selector"></select>
                     </div>
                     
-                    <button id="group-rules-header-btn" class="ml-2 text-gray-400 hover:text-white p-2 rounded-full flex items-center justify-center hover:bg-gray-700 transition" title="Group Rules">
+                    <button id="group-rules-header-btn" class="ml-2 text-slate-500 hover:text-slate-700 p-2 rounded-full flex items-center justify-center hover:bg-slate-100 transition" title="Group Rules">
                         <i class="fas fa-gavel"></i>
                     </button>
 
                     <div class="ml-auto flex items-center gap-2">
-                        <div id="ranking-scope-switch" class="hidden timer-switch-container bg-gray-800 p-1">
+                        <div id="ranking-scope-switch" class="hidden timer-switch-container bg-slate-100 p-1">
                             <button id="group-ranking-scope-btn" class="timer-switch-btn text-xs px-3 py-1 active">Group</button>
                             <button id="global-ranking-scope-btn" class="timer-switch-btn text-xs px-3 py-1">Global</button>
                         </div>
 
                         <div id="group-desktop-controls" class="hidden">
                             <div class="hidden md:flex items-center gap-2">
-                                <div id="group-view-switch" class="timer-switch-container bg-gray-800 p-1">
+                                <div id="group-view-switch" class="timer-switch-container bg-slate-100 p-1">
                                     <button id="realtime-view-btn" data-view-target="realtime" class="timer-switch-btn text-xs px-3 py-1 active">Realtime</button>
                                     <button id="studicon-view-btn" data-view-target="studicon" class="timer-switch-btn text-xs px-3 py-1">Studicon</button>
                                 </div>
-                                <button id="studicon-store-btn" class="text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700">
+                                <button id="studicon-store-btn" class="text-slate-500 hover:text-slate-700 w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100">
                                     <i class="fas fa-store"></i>
                                 </button>
                                 <div id="group-settings-btn-container" class="w-10 h-10"></div>
@@ -3820,13 +3880,13 @@
                         </div>
                     </div>
                 </header>
-                <div id="group-mobile-controls" class="md:hidden sticky top-[73px] bg-gray-900 z-10 border-b border-gray-800 p-2 flex items-center justify-between hidden">
-                    <div id="group-view-switch-mobile" class="timer-switch-container bg-gray-800 p-1 m-0">
+                <div id="group-mobile-controls" class="md:hidden sticky top-[73px] bg-white/90 backdrop-blur z-10 border-b border-slate-200 p-2 flex items-center justify-between hidden">
+                    <div id="group-view-switch-mobile" class="timer-switch-container bg-slate-100 p-1 m-0">
                         <button id="realtime-view-btn-mobile" data-view-target="realtime" class="timer-switch-btn text-xs px-3 py-1 active">Realtime</button>
                         <button id="studicon-view-btn-mobile" data-view-target="studicon" class="timer-switch-btn text-xs px-3 py-1">Studicon</button>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button id="studicon-store-btn-mobile" class="text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700">
+                        <button id="studicon-store-btn-mobile" class="text-slate-500 hover:text-slate-700 w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100">
                             <i class="fas fa-store"></i>
                         </button>
                         <div id="group-settings-btn-container-mobile" class="w-10 h-10">
@@ -3835,7 +3895,7 @@
                 </div>
                 <div id="group-detail-content" class="flex-grow overflow-y-auto no-scrollbar">
                 </div>
-                <nav id="group-detail-nav" class="sidebar-nav bg-gray-800 border-t border-gray-700 sticky bottom-0">
+                <nav id="group-detail-nav" class="sidebar-nav bg-white border-t border-slate-200 sticky bottom-0 shadow-[0_-10px_30px_rgba(15,23,42,0.08)]">
                     <ul class="grid grid-cols-5">
                         <li>
                             <a href="#group-home" class="nav-link nav-link--stacked group-nav-item active" data-subpage="home">
@@ -3928,7 +3988,7 @@
     <div id="add-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div id="add-subject-modal-title" class="modal-title">Add New Subject</div><button class="close-modal">&times;</button></div><form id="add-subject-form"><input type="hidden" id="edit-subject-id"><div class="mb-4"><label for="add-subject-name" class="block text-gray-300 mb-2">Subject Name</label><input type="text" id="add-subject-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div class="mb-4"><label class="block text-gray-300 mb-2">Color</label><div class="subject-color-picker"><div class="color-dot bg-red-500" data-color="bg-red-500"></div><div class="color-dot bg-blue-500 selected" data-color="bg-blue-500"></div><div class="color-dot bg-green-500" data-color="bg-green-500"></div><div class="color-dot bg-yellow-500" data-color="bg-yellow-500"></div><div class="color-dot bg-purple-500" data-color="bg-purple-500"></div><div class="color-dot bg-pink-500" data-color="bg-pink-500"></div><div class="color-dot bg-indigo-500" data-color="bg-indigo-500"></div><div class="color-dot bg-teal-500" data-color="bg-teal-500"></div><div class="color-dot bg-orange-500" data-color="bg-orange-500"></div><div class="color-dot bg-cyan-500" data-color="bg-cyan-500"></div><div class="color-dot bg-lime-500" data-color="bg-lime-500"></div><div class="color-dot bg-fuchsia-500" data-color="bg-fuchsia-500"></div><div class="color-dot bg-rose-500" data-color="bg-rose-500"></div><div class="color-dot bg-sky-500" data-color="bg-sky-500"></div><div class="color-dot bg-emerald-500" data-color="bg-emerald-500"></div><div class="color-dot bg-amber-500" data-color="bg-amber-500"></div><div class="color-dot bg-violet-500" data-color="bg-violet-500"></div></div></div><button type="submit" id="add-subject-submit-btn" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Add Subject</button></form></div></div>
     <div id="start-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Start New Session</div><button id="close-start-session-modal" class="close-modal">&times;</button></div><form id="start-session-form"><div class="mb-6"><div class="selection-section-title">Subjects</div><div id="subject-selection-list" class="max-h-60 overflow-y-auto space-y-2"></div></div><div class="mb-6"><div class="selection-section-title">Tasks</div><div id="task-selection-list" class="max-h-60 overflow-y-auto space-y-2"></div></div><div class="flex items-center gap-4 mt-4"><button type="button" id="open-add-subject-modal-from-start" class="w-full text-center py-3 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium transition">Add New Subject</button><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Timer</button></div></form></div></div>
     <div id="add-task-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Task</div><button class="close-modal">&times;</button></div><form id="add-task-form"><div class="mb-4"><label for="add-task-name" class="block text-gray-300 mb-2">Task Description</label><input type="text" id="add-task-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div class="mb-4"><label for="add-task-date" class="block text-gray-300 mb-2">Date</label><input type="date" id="add-task-date" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Add Task</button></form></div></div>
-    <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form"><input type="password" id="group-password-prompt-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required><div class="flex gap-2 mt-4"><button type="button" class="close-modal w-full py-2 bg-gray-600 rounded-lg">Cancel</button><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Submit</button></div></form></div></div>
+    <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form"><input type="password" id="group-password-prompt-input" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400" required><div class="flex gap-2 mt-4"><button type="button" class="close-modal w-full py-2 bg-slate-100 text-slate-600 rounded-lg border border-slate-200">Cancel</button><button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 rounded-lg transition-all duration-300 shadow-md hover:shadow-orange-500/30">Submit</button></div></form></div></div>
     <div id="confirmation-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 id="confirmation-modal-title" class="modal-title">Are you sure?</h2><button class="close-modal">&times;</button></div><p id="confirmation-modal-message">This action cannot be undone.</p><div id="confirmation-modal-buttons"><button id="cancel-btn">Cancel</button><button id="confirm-btn">Confirm</button></div></div></div>
     
     <div id="study-goal-modal" class="modal">
@@ -4097,8 +4157,8 @@
         </div>
     </div>
     <div id="studicon-store-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Choose Your Studicon</div><button class="close-modal">&times;</button></div><div><div id="studicon-category-tabs" class="flex space-x-1 border-b border-gray-700 mb-4"></div><div id="studicon-picker" class="avatar-picker max-h-60 overflow-y-auto"></div><button id="save-studicon-btn" class="w-full mt-4 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save</button></div></div></div>
-    <div id="edit-group-info-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Group Information</div><button class="close-modal">&times;</button></div><form id="edit-group-info-form" class="space-y-4"><input type="hidden" id="edit-group-id-input"><div><label class="block text-sm font-medium text-gray-300">Group Name</label><input id="edit-group-name" type="text" class="w-full bg-gray-700 rounded-lg p-2 mt-1" required></div><div><label class="block text-sm font-medium text-gray-300">Description</label><textarea id="edit-group-description" class="w-full bg-gray-700 rounded-lg p-2 mt-1 h-24" required></textarea></div><div><label class="block text-sm font-medium text-gray-300">Category</label><select id="edit-group-category" class="w-full bg-gray-700 rounded-lg p-2 mt-1"><option>General study</option><option>Language study</option><option>Secondary School</option><option>University</option></select></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-300">Time Goal (h)</label><input id="edit-group-goal" type="number" min="1" max="10" class="w-full bg-gray-700 rounded-lg p-2 mt-1"></div><div><label class="block text-sm font-medium text-gray-300">Capacity</label><input id="edit-group-capacity" type="number" min="2" max="100" class="w-full bg-gray-700 rounded-lg p-2 mt-1"></div></div><div><label class="block text-sm font-medium text-gray-300">Password (optional)</label><input id="edit-group-password" type="text" class="w-full bg-gray-700 rounded-lg p-2 mt-1" placeholder="Leave blank for public"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
-    <div id="group-rules-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Group Rules</div><div id="group-rules-controls"></div><button class="close-modal">&times;</button></div><div id="group-rules-display" class="text-gray-300 whitespace-pre-wrap"></div><div id="group-rules-edit-container" class="hidden"><textarea id="group-rules-textarea" class="w-full bg-gray-700 rounded-lg p-3 h-48"></textarea><button id="save-group-rules-btn" class="w-full mt-2 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg">Save Rules</button></div></div></div>
+    <div id="edit-group-info-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Group Information</div><button class="close-modal">&times;</button></div><form id="edit-group-info-form" class="space-y-4"><input type="hidden" id="edit-group-id-input"><div><label class="block text-sm font-medium text-slate-700">Group Name</label><input id="edit-group-name" type="text" class="w-full bg-white border border-slate-200 rounded-lg p-3 mt-1 shadow-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400" required></div><div><label class="block text-sm font-medium text-slate-700">Description</label><textarea id="edit-group-description" class="w-full bg-white border border-slate-200 rounded-lg p-3 mt-1 h-24 shadow-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400" required></textarea></div><div><label class="block text-sm font-medium text-slate-700">Category</label><select id="edit-group-category" class="w-full bg-white border border-slate-200 rounded-lg p-3 mt-1 shadow-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400"><option>General study</option><option>Language study</option><option>Secondary School</option><option>University</option></select></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-slate-700">Time Goal (h)</label><input id="edit-group-goal" type="number" min="1" max="10" class="w-full bg-white border border-slate-200 rounded-lg p-3 mt-1 shadow-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400"></div><div><label class="block text-sm font-medium text-slate-700">Capacity</label><input id="edit-group-capacity" type="number" min="2" max="100" class="w-full bg-white border border-slate-200 rounded-lg p-3 mt-1 shadow-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400"></div></div><div><label class="block text-sm font-medium text-slate-700">Password (optional)</label><input id="edit-group-password" type="text" class="w-full bg-white border border-slate-200 rounded-lg p-3 mt-1 shadow-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400" placeholder="Leave blank for public"></div><button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition-all duration-300 shadow-md hover:shadow-orange-500/30">Save Changes</button></form></div></div>
+    <div id="group-rules-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Group Rules</div><div id="group-rules-controls"></div><button class="close-modal">&times;</button></div><div id="group-rules-display" class="text-slate-600 whitespace-pre-wrap"></div><div id="group-rules-edit-container" class="hidden"><textarea id="group-rules-textarea" class="w-full bg-white border border-slate-200 rounded-lg p-3 h-48 shadow-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400"></textarea><button id="save-group-rules-btn" class="w-full mt-2 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 rounded-lg transition-all duration-300 shadow-md hover:shadow-orange-500/30">Save Rules</button></div></div></div>
     <div id="image-view-modal" class="modal">
         <div class="modal-content">
             <button class="close-modal" type="button">&times;</button>
@@ -7935,6 +7995,16 @@ let pauseStartTime = 0;
             
             if (pageId === 'page-stats') {
                 renderStatsPage(userSessions);
+            }
+
+            const groupPages = ['page-my-groups', 'page-find-groups', 'page-create-group', 'page-group-detail'];
+            const groupsBtn = document.getElementById('groups-btn');
+            if (groupsBtn) {
+                if (groupPages.includes(pageId)) {
+                    groupsBtn.classList.add('active');
+                } else {
+                    groupsBtn.classList.remove('active');
+                }
             }
         }
 
@@ -12000,25 +12070,25 @@ if (achievementsGrid) {
                     const timeGoal = pick(group.timeGoal, group.time_goal, 0);
         
                     return `
-                        <div class="group-card bg-gray-800 rounded-2xl overflow-hidden shadow-lg cursor-pointer" data-group-id="${group.id}">
+                        <div class="group-card rounded-2xl overflow-hidden cursor-pointer" data-group-id="${group.id}">
                           <div class="p-5">
                             <div class="flex justify-between items-start">
                               <div>
-                                <div class="text-xs uppercase text-blue-400 font-semibold">${category}</div>
-                                <h3 class="text-xl font-bold text-white truncate">${group.name}</h3>
-                                <div class="text-sm text-gray-400 mt-1">Goal: ${timeGoal} hours/day</div>
+                                <div class="text-xs uppercase tracking-wide text-orange-500 font-semibold">${category}</div>
+                                <h3 class="text-xl font-bold text-slate-900 truncate">${group.name}</h3>
+                                <div class="text-sm text-slate-500 mt-1">Goal: ${timeGoal} hours/day</div>
                               </div>
-                              <div class="text-xs text-gray-500 text-right flex-shrink-0 ml-2">Leader: ${leader}</div>
+                              <div class="text-xs text-slate-500 text-right flex-shrink-0 ml-2">Leader: ${leader}</div>
                             </div>
                             <div class="mt-4 grid grid-cols-3 gap-4 text-center">
-                              <div><div class="text-2xl font-bold text-green-400">${group.attendance}%</div><div class="text-xs text-gray-400">Attendance</div></div>
-                              <div><div class="text-2xl font-bold text-cyan-400">${formatTime(group.avgTime, false)}</div><div class="text-xs text-gray-400">Avg. Time</div></div>
-                              <div><div class="text-2xl font-bold text-white">${group.membersCount}/${group.capacity}</div><div class="text-xs text-gray-400">Members</div></div>
+                              <div><div class="text-2xl font-bold text-emerald-500">${group.attendance}%</div><div class="text-xs text-slate-500">Attendance</div></div>
+                              <div><div class="text-2xl font-bold text-indigo-500">${formatTime(group.avgTime, false)}</div><div class="text-xs text-slate-500">Avg. Time</div></div>
+                              <div><div class="text-2xl font-bold text-slate-900">${group.membersCount}/${group.capacity}</div><div class="text-xs text-slate-500">Members</div></div>
                             </div>
                           </div>
-                          <div class="bg-gray-700/50 px-5 py-3 flex justify-between items-center text-sm">
-                            <span class="text-gray-400">Started: ${started.toLocaleDateString()}</span>
-                            ${group.newMessages > 0 ? `<span class="flex items-center gap-2 text-blue-400 animate-pulse"><i class="fas fa-comment-dots"></i> ${group.newMessages} new</span>` : `<span class="text-gray-500">No new messages</span>`}
+                          <div class="bg-slate-100 px-5 py-3 flex justify-between items-center text-sm">
+                            <span class="text-slate-500">Started: ${started.toLocaleDateString()}</span>
+                            ${group.newMessages > 0 ? `<span class="flex items-center gap-2 text-indigo-500 font-medium"><i class="fas fa-comment-dots"></i> ${group.newMessages} new</span>` : `<span class="text-slate-400">No new messages</span>`}
                           </div>
                         </div>`;
                 }).join('') + '</div>';
@@ -12177,27 +12247,27 @@ if (achievementsGrid) {
                     const timeGoal = pick(g.timeGoal, g.time_goal, 0);
 
                     return `
-                        <div class="group-card ranking bg-gray-800 rounded-xl overflow-hidden shadow-lg" data-group-id="${g.id}">
+                        <div class="group-card ranking rounded-xl overflow-hidden" data-group-id="${g.id}">
                           <div class="p-4">
-                            <div class="flex justify-between items-center text-xs text-gray-400 mb-2">
-                              <span class="font-bold text-base ${rank===1?'text-yellow-400':rank===2?'text-gray-300':rank===3?'text-yellow-600':'text-blue-400'}">
-                                Ranked #${rank} <span class="text-white">${category.substring(0,2).toUpperCase()}</span>
+                            <div class="flex justify-between items-center text-xs text-slate-500 mb-2">
+                              <span class="font-bold text-base ${rank===1?'text-amber-500':rank===2?'text-slate-500':rank===3?'text-amber-700':'text-indigo-500'}">
+                                Ranked #${rank} <span class="text-slate-900">${category.substring(0,2).toUpperCase()}</span>
                               </span>
                               <span class="flex items-center gap-2">
                                 <span>${timeSince(createdDate)} ago</span>
                               </span>
                             </div>
-                            <h3 class="text-lg font-bold truncate mb-2 text-white">${g.name}</h3>
-                            <div class="grid grid-cols-3 gap-x-2 gap-y-1 text-xs mb-3">
-                              <span class="text-gray-400">Goal <b class="text-white">${timeGoal}h</b></span>
-                              <span class="text-gray-400 col-span-2">Members <b class="text-white">${g.membersCount}/${g.capacity} people</b></span>
-                              <span class="text-gray-400 col-span-3">Leader <b class="text-white">${leaderName}</b></span>
-                              <span class="text-gray-400">Attendance <b class="text-white">${g.attendance}%</b></span>
-                              <span class="text-gray-400 col-span-2">Time <b class="text-white">${formatTime(g.avgTime, false)}</b></span>
-                              <span class="text-gray-400 col-span-3">Started <b class="text-white">${createdDate.toLocaleDateString()}</b></span>
+                            <h3 class="text-lg font-bold truncate mb-2 text-slate-900">${g.name}</h3>
+                            <div class="grid grid-cols-3 gap-x-2 gap-y-1 text-xs mb-3 text-slate-500">
+                              <span>Goal <b class="text-slate-900">${timeGoal}h</b></span>
+                              <span class="col-span-2">Members <b class="text-slate-900">${g.membersCount}/${g.capacity} people</b></span>
+                              <span class="col-span-3">Leader <b class="text-slate-900">${leaderName}</b></span>
+                              <span>Attendance <b class="text-emerald-500">${g.attendance}%</b></span>
+                              <span class="col-span-2">Time <b class="text-indigo-500">${formatTime(g.avgTime, false)}</b></span>
+                              <span class="col-span-3">Started <b class="text-slate-900">${createdDate.toLocaleDateString()}</b></span>
                             </div>
-                            <p class="text-gray-400 text-sm mb-3 h-8 overflow-hidden">${g.description || ''}</p>
-                            <button class="join-btn w-full mt-2 ${isJoined ? 'bg-blue-600' : 'bg-green-500 hover:bg-green-600'}" data-id="${g.id}" data-private="${!!g.password}" ${isFull && !isJoined ? 'disabled' : ''}>
+                            <p class="text-slate-500 text-sm mb-3 h-8 overflow-hidden">${g.description || ''}</p>
+                            <button class="join-btn w-full mt-2 ${isJoined ? 'bg-slate-300 text-slate-600 cursor-default shadow-none' : ''}" data-id="${g.id}" data-private="${!!g.password}" ${(isFull || isJoined) ? 'disabled' : ''}>
                               ${isJoined ? 'Joined' : (isFull ? 'Group Full' : 'Join Group')}
                             </button>
                           </div>
@@ -12490,9 +12560,9 @@ if (achievementsGrid) {
 
             // Settings icons (no change here)
             const settingsBtnContainer = document.getElementById('group-settings-btn-container');
-            if (settingsBtnContainer) settingsBtnContainer.innerHTML = `<button id="group-settings-btn" class="text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700"><i class=\"fas fa-cog\"></i></button>`;
+            if (settingsBtnContainer) settingsBtnContainer.innerHTML = `<button id="group-settings-btn" class="text-slate-500 hover:text-slate-700 w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100"><i class=\"fas fa-cog\"></i></button>`;
             const settingsBtnContainerMobile = document.getElementById('group-settings-btn-container-mobile');
-            if (settingsBtnContainerMobile) settingsBtnContainerMobile.innerHTML = `<button id="group-settings-btn-mobile" class="text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700"><i class=\"fas fa-cog\"></i></button>`;
+            if (settingsBtnContainerMobile) settingsBtnContainerMobile.innerHTML = `<button id="group-settings-btn-mobile" class="text-slate-500 hover:text-slate-700 w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100"><i class=\"fas fa-cog\"></i></button>`;
 
             // NO MORE REAL-TIME CHANNEL CREATION HERE
 
