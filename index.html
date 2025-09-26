@@ -672,39 +672,108 @@
         }
         
         /* Ranking page styles */
-        .ranking-list { padding: 20px; }
+        #page-ranking {
+            background-color: #F8F9FD;
+            color: #0F172A;
+        }
+        #page-ranking header {
+            background-color: #FFFFFF;
+            border-bottom: 1px solid #E2E8F0;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+        }
+        #page-ranking header h1 {
+            color: #0F172A;
+        }
+        #page-ranking header .back-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            border-radius: 9999px;
+            color: #64748B;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        #page-ranking header .back-button:hover {
+            background-color: rgba(148, 163, 184, 0.2);
+            color: #0F172A;
+        }
+        .ranking-tabs {
+            display: flex;
+            width: 100%;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 9999px;
+            background-color: #E2E8F0;
+        }
+        #ranking-period-tabs {
+            max-width: 720px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .ranking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1.5rem 1rem 2.5rem;
+        }
+        #page-ranking .ranking-list {
+            max-width: 720px;
+            margin: 0 auto;
+            width: 100%;
+        }
         .ranking-item {
             display: flex;
             align-items: center;
-            padding: 15px;
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 10px;
-            margin-bottom: 10px;
+            gap: 1rem;
+            padding: 1.1rem 1.25rem;
+            background: #FFFFFF;
+            border-radius: 1rem;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 12px 30px rgba(148, 163, 184, 0.18);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .ranking-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 40px rgba(148, 163, 184, 0.22);
+        }
+        .ranking-item.is-current-user {
+            border-color: #2563EB;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15), 0 18px 40px rgba(148, 163, 184, 0.24);
         }
         .rank {
-            font-weight: 700;
-            margin-right: 15px;
-            width: 30px;
+            width: 42px;
             text-align: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: #1E293B;
         }
-        .rank-1 { color: gold; }
-        .rank-2 { color: silver; }
-        .rank-3 { color: #cd7f32; }
+        .rank-1 { color: #F59E0B; }
+        .rank-2 { color: #94A3B8; }
+        .rank-3 { color: #D97706; }
         .user-avatar {
-            width: 40px;
-            height: 40px;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
-            background: #30363d;
-            margin-right: 15px;
+            background: linear-gradient(135deg, #E0E7FF, #F5F3FF);
+            color: #312E81;
+            font-weight: 700;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
+            font-size: 1.1rem;
+            overflow: hidden;
+            box-shadow: inset 0 0 0 1px rgba(79, 70, 229, 0.15);
         }
         .user-info { flex-grow: 1; }
-        .user-name { font-weight: 600; }
-        .user-time { color: #9CA3AF; font-size: 0.9rem; }
+        .user-name {
+            font-weight: 600;
+            color: #0F172A;
+        }
+        .user-time {
+            color: #475569;
+            font-size: 0.95rem;
+            margin-top: 0.2rem;
+        }
         .ranking-tab-btn {
             background-color: transparent;
             border-bottom: 2px solid transparent;
@@ -714,6 +783,26 @@
         .ranking-tab-btn.active {
             color: #2dd4bf;
             border-bottom: 2px solid #2dd4bf;
+        }
+        #page-ranking .ranking-tab-btn,
+        #group-ranking-period-tabs .ranking-tab-btn {
+            border-bottom: none;
+            border-radius: 9999px;
+            padding: 0.65rem 1rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+        #page-ranking .ranking-tab-btn:hover,
+        #group-ranking-period-tabs .ranking-tab-btn:hover {
+            color: #0F172A;
+        }
+        #page-ranking .ranking-tab-btn.active,
+        #group-ranking-period-tabs .ranking-tab-btn.active {
+            background-color: #FFFFFF;
+            color: #0F172A;
+            box-shadow: 0 10px 25px rgba(148, 163, 184, 0.25);
+            border: none;
         }
         
         /* Planner page styles */
@@ -3176,19 +3265,20 @@
             </div>
             
             <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
+                    <button class="back-button" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1 class="text-xl font-bold text-gray-100">Leaderboard</h1>
-                    <div class="w-6"></div> </header>
+                    <h1 class="text-xl font-bold text-slate-900">Leaderboard</h1>
+                    <div class="w-6"></div>
+                </header>
                 <div class="px-4 pt-4">
-                    <div class="flex space-x-1" id="ranking-period-tabs">
-                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm" data-period="daily">Daily</button>
-                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm active" data-period="weekly">Last 7 Days</button>
-                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm" data-period="monthly">Last 30 Days</button>
+                    <div class="ranking-tabs" id="ranking-period-tabs">
+                        <button class="ranking-tab-btn" data-period="daily">Daily</button>
+                        <button class="ranking-tab-btn active" data-period="weekly">Last 7 Days</button>
+                        <button class="ranking-tab-btn" data-period="monthly">Last 30 Days</button>
                     </div>
                 </div>
                 <div id="ranking-list" class="ranking-list">
@@ -10689,9 +10779,9 @@ if (achievementsGrid) {
                         : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                     return `
-                        <div class="ranking-item ${currentUser.id === user.id ? 'bg-blue-900/30' : ''}" data-user-id="${user.id}">
+                        <div class="ranking-item ${currentUser.id === user.id ? 'is-current-user' : ''}" data-user-id="${user.id}">
                             <div class="rank ${rankClass}">${rank}</div>
-                            <div class="user-avatar bg-gray-600 overflow-hidden">${avatarHTML}</div>
+                            <div class="user-avatar overflow-hidden">${avatarHTML}</div>
                             <div class="user-info">
                                 <div class="user-name">${user.username}</div>
                                 <div class="user-time">${formatTime(user.total_study_seconds, false)} ${periodText}</div>
@@ -12860,10 +12950,10 @@ if (achievementsGrid) {
                 case 'rankings':
                     container.innerHTML = `
                         <div class="px-4 pt-4">
-                            <div class="flex space-x-1" id="group-ranking-period-tabs">
-                                <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm active" data-period="weekly">Last 7 Days</button>
-                                <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm" data-period="daily">Daily</button>
-                                <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm" data-period="monthly">Last 30 Days</button>
+                            <div class="ranking-tabs" id="group-ranking-period-tabs">
+                                <button class="ranking-tab-btn active" data-period="weekly">Last 7 Days</button>
+                                <button class="ranking-tab-btn" data-period="daily">Daily</button>
+                                <button class="ranking-tab-btn" data-period="monthly">Last 30 Days</button>
                             </div>
                         </div>
                         <div id="group-ranking-list" class="ranking-list"></div>
@@ -13106,9 +13196,9 @@ if (achievementsGrid) {
                         : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
 
                     return `
-                        <div class="ranking-item ${currentUser.id === user.id ? 'bg-blue-900/30' : ''}" data-user-id="${user.id}">
+                        <div class="ranking-item ${currentUser.id === user.id ? 'is-current-user' : ''}" data-user-id="${user.id}">
                             <div class="rank ${rankClass}">${rank}</div>
-                            <div class="user-avatar bg-gray-600 overflow-hidden">${avatarHTML}</div>
+                            <div class="user-avatar overflow-hidden">${avatarHTML}</div>
                             <div class="user-info">
                                 <div class="user-name">${user.username}</div>
                                 <div class="user-time">${formatTime(user.total_study_seconds, false)} ${periodText}</div>
