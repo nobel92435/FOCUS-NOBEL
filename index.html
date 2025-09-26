@@ -634,27 +634,52 @@
         .create-group-btn:hover { background: #2dd4bf; transform: scale(1.05); }
 
         /* Group Ranking Styles */
-        .group-filter-btn {
+        #page-find-groups {
+            background-color: #F8F9FD;
+            color: #0F172A;
+        }
+        #page-find-groups header {
+            background-color: #F8F9FD !important;
+            border-color: #E2E8F0 !important;
+            color: inherit;
+        }
+        #page-find-groups .rankings-toolbar {
+            background-color: #F8F9FD;
+            border-color: #E2E8F0;
+        }
+        #page-find-groups .group-filter-btn {
             padding: 6px 12px;
             background-color: transparent;
-            border-radius: 6px;
-            font-weight: 500;
-            color: #9CA3AF;
+            border-radius: 9999px;
+            font-weight: 600;
+            color: #475569;
             transition: all 0.2s;
         }
-        .group-filter-btn.active {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8);
-            color: white;
-            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+        #page-find-groups .group-filter-btn.active {
+            background-image: linear-gradient(135deg, #2563EB, #7C3AED);
+            color: #FFFFFF;
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.25);
         }
-        .group-card.ranking {
+        #page-find-groups .group-card.ranking {
             cursor: default;
+            background-color: #FFFFFF !important;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 18px 32px rgba(15, 23, 42, 0.08);
         }
-        .group-card.ranking:hover {
-            transform: none;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        #page-find-groups .group-card.ranking:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 24px 40px rgba(15, 23, 42, 0.12);
         }
-        
+        #page-find-groups .rankings-meta {
+            color: #64748B;
+        }
+        #page-find-groups .rankings-title {
+            color: #0F172A;
+        }
+        #page-find-groups .rankings-subtitle {
+            color: #475569;
+        }
+
         /* Stats page styles */
         .stats-container { padding: 20px; }
         .stat-card {
@@ -677,8 +702,8 @@
             display: flex;
             align-items: center;
             padding: 15px;
-            background: #161b22;
-            border: 1px solid #30363d;
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
             border-radius: 10px;
             margin-bottom: 10px;
         }
@@ -688,32 +713,33 @@
             width: 30px;
             text-align: center;
         }
-        .rank-1 { color: gold; }
-        .rank-2 { color: silver; }
-        .rank-3 { color: #cd7f32; }
+        .rank-1 { color: #F59E0B; }
+        .rank-2 { color: #94A3B8; }
+        .rank-3 { color: #C084FC; }
         .user-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: #30363d;
+            background: #E2E8F0;
             margin-right: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
+            color: #0F172A;
         }
         .user-info { flex-grow: 1; }
-        .user-name { font-weight: 600; }
-        .user-time { color: #9CA3AF; font-size: 0.9rem; }
+        .user-name { font-weight: 600; color: #0F172A; }
+        .user-time { color: #475569; font-size: 0.9rem; }
         .ranking-tab-btn {
             background-color: transparent;
             border-bottom: 2px solid transparent;
-            color: #9CA3AF;
+            color: #94A3B8;
             transition: all 0.2s;
         }
         .ranking-tab-btn.active {
-            color: #2dd4bf;
-            border-bottom: 2px solid #2dd4bf;
+            color: #1D4ED8;
+            border-bottom: 2px solid #1D4ED8;
         }
         
         /* Planner page styles */
@@ -3284,32 +3310,32 @@
             </div>
             
             <div id="page-find-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button text-gray-400 hover:text-white" data-target="my-groups">
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-200 sticky top-0 bg-[#F8F9FD]">
+                    <button class="back-button text-gray-500 hover:text-gray-900" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1 class="text-xl font-bold text-gray-100">Group Rankings</h1>
+                    <h1 class="text-xl font-bold text-gray-900">Group Rankings</h1>
                     <div class="w-10"></div>
                 </header>
-                <div class="p-4 border-b border-gray-800 bg-gray-900 z-10">
-                    <div class="flex space-x-1 bg-gray-800 p-1 rounded-lg mb-4" id="group-ranking-sort-tabs">
+                <div class="rankings-toolbar p-4 border-b border-gray-200 bg-[#F8F9FD] z-10">
+                    <div class="flex space-x-1 bg-white p-1 rounded-full mb-4 shadow-sm" id="group-ranking-sort-tabs">
                         <button class="group-filter-btn flex-1" data-sort="new">New</button>
                         <button class="group-filter-btn flex-1" data-sort="attendance">Attendance</button>
                         <button class="group-filter-btn flex-1 active" data-sort="studytime">Studytime</button>
                     </div>
-                    <div class="flex items-center justify-center space-x-6 text-sm" id="group-ranking-filters">
+                    <div class="flex items-center justify-center space-x-6 text-sm text-slate-600" id="group-ranking-filters">
                         <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" data-filter="private" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
+                            <input type="checkbox" data-filter="private" class="w-4 h-4 rounded border border-slate-300 text-blue-600 focus:ring-blue-500">
                             <span>Private</span>
                         </label>
                         <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" data-filter="available" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
+                            <input type="checkbox" data-filter="available" class="w-4 h-4 rounded border border-slate-300 text-blue-600 focus:ring-blue-500">
                             <span>Available</span>
                         </label>
                         <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" data-filter="public" class="w-4 h-4 bg-gray-700 rounded text-blue-500 focus:ring-blue-500 border-gray-600">
+                            <input type="checkbox" data-filter="public" class="w-4 h-4 rounded border border-slate-300 text-blue-600 focus:ring-blue-500">
                             <span>Public</span>
                         </label>
                     </div>
@@ -11685,26 +11711,29 @@ if (achievementsGrid) {
                     const timeGoal = pick(g.timeGoal, g.time_goal, 0);
 
                     return `
-                        <div class="group-card ranking bg-gray-800 rounded-xl overflow-hidden shadow-lg" data-group-id="${g.id}">
-                          <div class="p-4">
-                            <div class="flex justify-between items-center text-xs text-gray-400 mb-2">
-                              <span class="font-bold text-base ${rank===1?'text-yellow-400':rank===2?'text-gray-300':rank===3?'text-yellow-600':'text-blue-400'}">
-                                Ranked #${rank} <span class="text-white">${category.substring(0,2).toUpperCase()}</span>
+                        <div class="group-card ranking rounded-xl overflow-hidden shadow-lg" data-group-id="${g.id}">
+                          <div class="p-5">
+                            <div class="flex justify-between items-center text-xs rankings-meta mb-3">
+                              <span class="flex items-center gap-3">
+                                <span class="text-lg font-black text-slate-900">Rank #${rank}</span>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-[0.65rem] font-semibold ${rank===1?'bg-amber-100 text-amber-700':rank===2?'bg-slate-100 text-slate-600':rank===3?'bg-purple-100 text-purple-700':'bg-blue-100 text-blue-700'}">
+                                  ${category.substring(0,2).toUpperCase()}
+                                </span>
                               </span>
-                              <span class="flex items-center gap-2">
+                              <span class="flex items-center gap-2 rankings-meta">
                                 <span>${timeSince(createdDate)} ago</span>
                               </span>
                             </div>
-                            <h3 class="text-lg font-bold truncate mb-2 text-white">${g.name}</h3>
-                            <div class="grid grid-cols-3 gap-x-2 gap-y-1 text-xs mb-3">
-                              <span class="text-gray-400">Goal <b class="text-white">${timeGoal}h</b></span>
-                              <span class="text-gray-400 col-span-2">Members <b class="text-white">${g.membersCount}/${g.capacity} people</b></span>
-                              <span class="text-gray-400 col-span-3">Leader <b class="text-white">${leaderName}</b></span>
-                              <span class="text-gray-400">Attendance <b class="text-white">${g.attendance}%</b></span>
-                              <span class="text-gray-400 col-span-2">Time <b class="text-white">${formatTime(g.avgTime, false)}</b></span>
-                              <span class="text-gray-400 col-span-3">Started <b class="text-white">${createdDate.toLocaleDateString()}</b></span>
+                            <h3 class="text-xl font-bold truncate mb-4 rankings-title">${g.name}</h3>
+                            <div class="grid grid-cols-3 gap-x-3 gap-y-2 text-xs mb-4 rankings-meta">
+                              <span>Goal <b class="text-slate-900">${timeGoal}h</b></span>
+                              <span class="col-span-2">Members <b class="text-slate-900">${g.membersCount}/${g.capacity} people</b></span>
+                              <span class="col-span-3">Leader <b class="text-slate-900">${leaderName}</b></span>
+                              <span>Attendance <b class="text-slate-900">${g.attendance}%</b></span>
+                              <span class="col-span-2">Time <b class="text-slate-900">${formatTime(g.avgTime, false)}</b></span>
+                              <span class="col-span-3">Started <b class="text-slate-900">${createdDate.toLocaleDateString()}</b></span>
                             </div>
-                            <p class="text-gray-400 text-sm mb-3 h-8 overflow-hidden">${g.description || ''}</p>
+                            <p class="text-sm rankings-subtitle mb-4 h-12 overflow-hidden">${g.description || ''}</p>
                             <button class="join-btn w-full mt-2 ${isJoined ? 'bg-blue-600' : 'bg-green-500 hover:bg-green-600'}" data-id="${g.id}" data-private="${!!g.password}" ${isFull && !isJoined ? 'disabled' : ''}>
                               ${isJoined ? 'Joined' : (isFull ? 'Group Full' : 'Join Group')}
                             </button>
