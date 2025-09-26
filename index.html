@@ -25,17 +25,16 @@
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
-            background-color: #0d1117; /* Darker, modern background */
-            background-image: radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15), transparent 60%);
-            color: #e6edf3; /* Brighter default text */
+            background-color: #F8F9FD;
+            color: #0F172A;
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .nav-item.active {
-            background-color: rgb(255, 255, 255);
+            background-color: #F97316;
         }
         .nav-item.active span {
-            color: #f8fafc;
+            color: #FFFFFF;
         }
         .group-nav-item {
             color: #475569;
@@ -59,6 +58,12 @@
             padding: 0;
         }
 
+        .sidebar-nav {
+            background-color: rgba(255, 255, 255, 0.94);
+            border-top: 1px solid #E2E8F0;
+            backdrop-filter: blur(12px);
+        }
+
         .sidebar-nav .nav-link {
             display: flex;
             align-items: center;
@@ -66,7 +71,7 @@
             gap: 0.75rem;
             padding: 0.75rem 1rem;
             text-decoration: none;
-            color: #cbd5f5;
+            color: #475569;
             border-radius: 0.75rem;
             transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, transform 0.2s ease-in-out;
         }
@@ -94,12 +99,13 @@
         }
 
         .sidebar-nav .nav-link:hover {
-            background-color: rgb(255, 255, 255);
+            background-color: #F1F5F9;
+            color: #F97316;
         }
 
         .sidebar-nav .nav-link.active {
-            background-color: rgb(255, 255, 255);
-            color: #f8fafc;
+            background-color: #F97316;
+            color: #FFFFFF;
             font-weight: 600;
         }
 
@@ -111,8 +117,8 @@
         #page-timer.active {
             position: relative;
             overflow: hidden;
-            background-color: #ffffff; /* Clean white background */
-            color: #f97316; /* High-contrast bold orange for text */
+            background-color: #F8F9FD;
+            color: #0F172A;
         }
         #page-timer.active::before,
         #page-timer.active::after {
@@ -138,7 +144,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
         /* UI element styles */
-        .timer-text { font-weight: 900; letter-spacing: -0.05em; }
+        .timer-text { font-weight: 900; letter-spacing: -0.05em; color: #0F172A; }
 
         .advanced-heatmap-grid {
             display: grid;
@@ -3665,17 +3671,17 @@
             </div>
             
             <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white/90 backdrop-blur">
+                    <button class="back-button text-slate-500 hover:text-slate-700" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
                      <div class="flex items-center gap-2">
-                         <button id="planner-menu-toggle" class="p-2 rounded-full hover:bg-gray-700 md:hidden"><i class="fas fa-bars"></i></button>
-                         <h1 id="planner-header-title" class="text-xl font-bold text-gray-100">Planner</h1>
+                         <button id="planner-menu-toggle" class="p-2 rounded-full text-slate-500 hover:bg-slate-200 md:hidden"><i class="fas fa-bars"></i></button>
+                         <h1 id="planner-header-title" class="text-xl font-bold text-slate-900">Planner</h1>
                      </div>
-                    <div id="planner-view-controls" class="flex items-center bg-gray-700 rounded-md p-1">
+                    <div id="planner-view-controls" class="flex items-center bg-slate-100 rounded-md p-1">
                          <button data-view="list" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-list mr-1"></i>List</button>
                          <button data-view="board" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-grip-horizontal mr-1"></i>Board</button>
                          <button data-view="calendar" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-calendar-alt mr-1"></i>Calendar</button>
@@ -3932,23 +3938,23 @@
             </div>
             
             <div id="page-pulse-forum" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white/90 backdrop-blur">
+                    <button class="back-button text-slate-500 hover:text-slate-700" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1 class="text-xl font-bold text-gray-100">PulseForum</h1>
+                    <h1 class="text-xl font-bold text-slate-900">PulseForum</h1>
                     <div class="w-6"></div> 
                 </header>
-                <div class="flex-grow flex flex-col items-center justify-center p-4 text-center">
+                <div class="flex-grow flex flex-col items-center justify-center p-4 text-center text-slate-600">
                     <i class="fas fa-comments text-6xl text-sky-500 mb-4"></i>
-                    <h2 class="text-3xl font-bold text-white">Welcome to PulseForum!</h2>
-                    <p class="text-gray-400 mt-2 max-w-md">This is a place for the community to connect, share tips, and motivate each other. This feature is currently under development. Stay tuned!</p>
+                    <h2 class="text-3xl font-bold text-slate-900">Welcome to PulseForum!</h2>
+                    <p class="mt-2 max-w-md">This is a place for the community to connect, share tips, and motivate each other. This feature is currently under development. Stay tuned!</p>
                 </div>
             </div>
         </main>
-        <nav id="main-nav" class="sidebar-nav bg-gray-800 border-t border-gray-700 sticky bottom-0">
+        <nav id="main-nav" class="sidebar-nav sticky bottom-0">
             <ul class="grid grid-cols-5">
                 <li>
                     <a href="#timer" class="nav-link nav-link--stacked nav-item active" data-page="timer">
@@ -3995,96 +4001,96 @@
         <div class="modal-content"><div class="modal-header"><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form"><div class="mb-4"><label for="study-goal-input" class="block text-gray-300 mb-2">Daily Study Goal (hours)</label><input type="number" id="study-goal-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required min="1" max="24"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Set Goal</button></form></div></div>
 
     <div id="advanced-features-modal" class="modal">
-        <div class="modal-content max-w-4xl w-full bg-gray-900/95 border border-sky-500/20 shadow-2xl backdrop-blur-xl">
-            <div class="modal-header items-start">
+        <div class="modal-content max-w-4xl w-full shadow-2xl">
+            <div class="modal-header items-start border-b border-slate-200 pb-4">
                 <div class="flex items-start gap-3">
-                    <div class="w-12 h-12 rounded-2xl bg-sky-500/20 text-sky-300 flex items-center justify-center text-xl">
+                    <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-500 flex items-center justify-center text-xl">
                         <i class="fas fa-bell"></i>
                     </div>
                     <div>
-                        <h2 class="text-2xl font-bold text-white">Advanced Group Suite</h2>
-                        <p class="text-sm text-gray-400">Advanced Group Analytics · Custom Group Goals · Group Rewards / Streak Protection</p>
+                        <h2 class="text-2xl font-bold text-slate-900">Advanced Group Suite</h2>
+                        <p class="text-sm text-slate-600">Advanced Group Analytics · Custom Group Goals · Group Rewards / Streak Protection</p>
                     </div>
                 </div>
-                <button class="close-modal text-gray-500 text-2xl leading-none">&times;</button>
+                <button class="close-modal text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
             </div>
             <div class="space-y-8 max-h-[75vh] overflow-y-auto pr-2">
                 <section class="space-y-4">
                     <div>
                         <p class="advanced-section-label">Advanced Group Analytics</p>
-                        <h3 class="text-xl font-semibold text-white mt-1">Deep-dive into your team's rhythm</h3>
-                        <p class="text-sm text-gray-400 mt-2">Visualize when the group studies most, balance subjects, and compare focus vs break time.</p>
+                        <h3 class="text-xl font-semibold text-slate-900 mt-1">Deep-dive into your team's rhythm</h3>
+                        <p class="text-sm text-slate-600 mt-2">Visualize when the group studies most, balance subjects, and compare focus vs break time.</p>
                     </div>
-                    <div class="bg-gray-900 rounded-2xl border border-sky-500/20 p-4 space-y-4">
+                    <div class="rounded-2xl border border-slate-200 p-4 space-y-4 bg-white shadow-sm">
                         <div class="flex items-center justify-between">
-                            <h4 class="text-lg font-semibold text-sky-100">Productivity Heatmap</h4>
-                            <span id="advanced-modal-heatmap-summary" class="text-xs uppercase tracking-wide text-gray-400">Loading…</span>
+                            <h4 class="text-lg font-semibold text-sky-600">Productivity Heatmap</h4>
+                            <span id="advanced-modal-heatmap-summary" class="text-xs uppercase tracking-wide text-slate-500">Loading…</span>
                         </div>
                         <div id="advanced-modal-heatmap" class="overflow-x-auto">
                             <div id="advanced-modal-heatmap-grid" class="advanced-heatmap-grid"></div>
-                            <p class="text-xs text-gray-500 mt-3">Based on the last 7 days of group study activity.</p>
+                            <p class="text-xs text-slate-500 mt-3">Based on the last 7 days of group study activity.</p>
                         </div>
                     </div>
-                    <div class="bg-gray-900 rounded-2xl border border-emerald-500/20 p-4 space-y-4">
+                    <div class="rounded-2xl border border-slate-200 p-4 space-y-4 bg-white shadow-sm">
                         <div class="flex items-center justify-between">
-                            <h4 class="text-lg font-semibold text-emerald-100">Subject Mix</h4>
-                            <span id="advanced-modal-subject-summary" class="text-xs uppercase tracking-wide text-gray-400">Loading…</span>
+                            <h4 class="text-lg font-semibold text-emerald-600">Subject Mix</h4>
+                            <span id="advanced-modal-subject-summary" class="text-xs uppercase tracking-wide text-slate-500">Loading…</span>
                         </div>
                         <div id="advanced-modal-subject-mix" class="space-y-3"></div>
                     </div>
-                    <div class="bg-gray-900 rounded-2xl border border-amber-500/20 p-4 space-y-4">
+                    <div class="rounded-2xl border border-slate-200 p-4 space-y-4 bg-white shadow-sm">
                         <div class="flex items-center justify-between">
-                            <h4 class="text-lg font-semibold text-amber-100">Completion Ratio</h4>
-                            <span id="advanced-modal-ratio-label" class="text-xs uppercase tracking-wide text-gray-400">Loading…</span>
+                            <h4 class="text-lg font-semibold text-amber-600">Completion Ratio</h4>
+                            <span id="advanced-modal-ratio-label" class="text-xs uppercase tracking-wide text-slate-500">Loading…</span>
                         </div>
-                        <div class="w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+                        <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                             <div id="advanced-modal-ratio-focus-bar" class="h-full bg-amber-400" style="width:0%"></div>
                         </div>
-                        <p id="advanced-modal-ratio-description" class="text-sm text-gray-300">Gathering focus vs break data…</p>
+                        <p id="advanced-modal-ratio-description" class="text-sm text-slate-600">Gathering focus vs break data…</p>
                     </div>
                 </section>
                 <section class="space-y-4">
                     <div>
                         <p class="advanced-section-label">Custom Group Goals</p>
-                        <h3 class="text-xl font-semibold text-white mt-1">Align the squad around shared targets</h3>
-                        <p class="text-sm text-gray-400 mt-2">Set a monthly focus goal. Hitting it unlocks pro badges for the entire team.</p>
+                        <h3 class="text-xl font-semibold text-slate-900 mt-1">Align the squad around shared targets</h3>
+                        <p class="text-sm text-slate-600 mt-2">Set a monthly focus goal. Hitting it unlocks pro badges for the entire team.</p>
                     </div>
-                    <form id="advanced-goal-form" class="space-y-3 bg-gray-900 rounded-2xl border border-sky-500/20 p-4">
+                    <form id="advanced-goal-form" class="space-y-3 rounded-2xl border border-slate-200 p-4 bg-white shadow-sm">
                         <div class="grid md:grid-cols-2 gap-3">
                             <div>
-                                <label for="advanced-goal-label-input" class="text-xs uppercase tracking-wide text-gray-400">Goal Label</label>
-                                <input id="advanced-goal-label-input" type="text" class="mt-1 w-full bg-gray-800 rounded-lg border border-gray-700 p-3 text-white" placeholder="Study 50h this month">
+                                <label for="advanced-goal-label-input" class="text-xs uppercase tracking-wide text-slate-500">Goal Label</label>
+                                <input id="advanced-goal-label-input" type="text" class="mt-1 w-full bg-white rounded-lg border border-slate-200 p-3 text-slate-900 focus:ring-2 focus:ring-orange-300 focus:border-orange-300" placeholder="Study 50h this month">
                             </div>
                             <div>
-                                <label for="advanced-goal-hours-input" class="text-xs uppercase tracking-wide text-gray-400">Target Hours</label>
-                                <input id="advanced-goal-hours-input" type="number" min="1" max="500" step="0.5" class="mt-1 w-full bg-gray-800 rounded-lg border border-gray-700 p-3 text-white" placeholder="50">
+                                <label for="advanced-goal-hours-input" class="text-xs uppercase tracking-wide text-slate-500">Target Hours</label>
+                                <input id="advanced-goal-hours-input" type="number" min="1" max="500" step="0.5" class="mt-1 w-full bg-white rounded-lg border border-slate-200 p-3 text-slate-900 focus:ring-2 focus:ring-orange-300 focus:border-orange-300" placeholder="50">
                             </div>
                         </div>
                         <div class="flex flex-wrap items-center gap-3">
                             <button type="submit" class="px-4 py-2 bg-sky-500 hover:bg-sky-600 transition rounded-full font-semibold text-sm text-white flex items-center gap-2"><i class="fas fa-rocket"></i> Save Goal</button>
-                            <button type="button" id="advanced-goal-clear-btn" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 transition rounded-full font-semibold text-sm text-gray-300">Clear Goal</button>
+                            <button type="button" id="advanced-goal-clear-btn" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 transition rounded-full font-semibold text-sm text-slate-600">Clear Goal</button>
                         </div>
                         <div>
-                            <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                            <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                                 <div id="advanced-modal-goal-progress" class="h-full bg-sky-400" style="width:0%"></div>
                             </div>
-                            <p id="advanced-modal-goal-status" class="text-sm text-gray-300 mt-2">No group goal set yet.</p>
+                            <p id="advanced-modal-goal-status" class="text-sm text-slate-600 mt-2">No group goal set yet.</p>
                         </div>
                     </form>
                 </section>
                 <section class="space-y-4">
                     <div>
                         <p class="advanced-section-label">Group Rewards / Streak Protection</p>
-                        <h3 class="text-xl font-semibold text-white mt-1">Keep streak multipliers alive</h3>
-                        <p class="text-sm text-gray-400 mt-2">If all members study daily → streak protected. Missed day breaks it. Gamify the grind together.</p>
+                        <h3 class="text-xl font-semibold text-slate-900 mt-1">Keep streak multipliers alive</h3>
+                        <p class="text-sm text-slate-600 mt-2">If all members study daily → streak protected. Missed day breaks it. Gamify the grind together.</p>
                     </div>
-                    <div class="bg-gray-900 rounded-2xl border border-purple-500/20 p-4 space-y-3">
+                    <div class="rounded-2xl border border-slate-200 p-4 space-y-3 bg-white shadow-sm">
                         <div class="flex items-center justify-between">
-                            <span class="text-lg font-semibold text-purple-100">Streak Status</span>
-                            <span id="advanced-modal-streak-status" class="text-xs uppercase tracking-wide text-gray-400">Checking…</span>
+                            <span class="text-lg font-semibold text-purple-600">Streak Status</span>
+                            <span id="advanced-modal-streak-status" class="text-xs uppercase tracking-wide text-slate-500">Checking…</span>
                         </div>
-                        <p id="advanced-modal-streak-summary" class="text-sm text-gray-200">Crunching streak multipliers…</p>
-                        <p id="advanced-modal-streak-detail" class="text-xs text-gray-500">Track the daily streak to keep rewards unlocked.</p>
+                        <p id="advanced-modal-streak-summary" class="text-sm text-slate-600">Crunching streak multipliers…</p>
+                        <p id="advanced-modal-streak-detail" class="text-xs text-slate-500">Track the daily streak to keep rewards unlocked.</p>
                     </div>
                 </section>
             </div>
