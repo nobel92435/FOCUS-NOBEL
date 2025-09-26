@@ -2816,8 +2816,8 @@
 
         /* New Group Study Button */
         #group-study-timer-btn {
-            background-color: #1f2937;
-            color: #9ca3af;
+            background-image: linear-gradient(to right, #a855f7, #ec4899); /* Vibrant purple to pink */
+            color: white; /* Clear, non-blurry text */
             font-weight: 600;
             border-radius: 9999px;
             cursor: pointer;
@@ -2828,11 +2828,13 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            border: none;
+            box-shadow: 0 4px 15px rgba(236, 72, 153, 0.2);
         }
         #group-study-timer-btn:hover {
-            background-image: linear-gradient(to right, #2dd4bf, #38bdf8);
-            color: white;
-            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(236, 72, 153, 0.3);
+            filter: brightness(1.1);
         }
 
         /* Group Detail Header Dropdown */
@@ -2904,6 +2906,28 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* Striped text for total time displays */
+        #total-time-display, #total-break-time-display {
+            background-image: repeating-linear-gradient(
+                45deg,
+                #ec4899, /* Tailwind pink-500 */
+                #ec4899 10px,
+                #3b82f6 10px, /* Tailwind blue-500 */
+                #3b82f6 20px
+            );
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: stripe-flow 10s linear infinite;
+        }
+
+        @keyframes stripe-flow {
+            to {
+                background-position: 200% center;
+            }
         }
 
     </style>
@@ -3022,13 +3046,13 @@
                             <button id="pomodoro-timer-btn" class="timer-switch-btn">Pomodoro</button>
                         </div>
                         <button id="group-study-timer-btn" class="text-sm">
-                            <i class="fas fa-users-line"></i> Group Study
+                            <i data-lucide="users" class="w-4 h-4"></i> Group Study
                         </button>
                         <p id="active-subject-display" class="text-xl font-semibold h-7 mb-2"></p>
                         <p id="pomodoro-status" class="font-semibold"></p>
                         <h2 id="session-timer" class="text-7xl md:text-8xl timer-text">00:00:00</h2>
-                        <p id="total-time-display" class="mt-2 font-bold text-pink-500">Total Today: 00:00:00</p>
-                        <p id="total-break-time-display" class="mt-1 font-bold text-pink-500">Total Break: 00:00:00</p>
+                        <p id="total-time-display" class="mt-2 font-bold">Total Today: 00:00:00</p>
+                        <p id="total-break-time-display" class="mt-1 font-bold">Total Break: 00:00:00</p>
                         <div id="timer-controls" class="mt-8">
                             <button id="start-studying-btn" class="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/40 hover:scale-105">Start working</button>
                             <button id="stop-studying-btn" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 px-10 rounded-full text-lg transition-transform transform hover:scale-105">Stop</button>
@@ -16249,3 +16273,4 @@ async function updateUsername(newName) {
 
 </body>
 </html>
+
