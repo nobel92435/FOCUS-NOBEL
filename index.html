@@ -21,8 +21,8 @@
 
     <style>
         /* Base styles */
-        body { 
-            font-family: 'Inter', sans-serif; 
+        body {
+            font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
             background-color: #0d1117; /* Darker, modern background */
@@ -672,48 +672,218 @@
         }
         
         /* Ranking page styles */
-        .ranking-list { padding: 20px; }
+        #page-ranking {
+            background-color: #F8F9FD;
+            color: #0F172A;
+        }
+        #page-ranking header {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid #E2E8F0;
+        }
+        .ranking-list {
+            padding: 24px 20px 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
         .ranking-item {
             display: flex;
             align-items: center;
-            padding: 15px;
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 10px;
-            margin-bottom: 10px;
+            gap: 16px;
+            row-gap: 12px;
+            flex-wrap: wrap;
+            padding: 18px 20px;
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 16px;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .ranking-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 35px rgba(15, 23, 42, 0.1);
+        }
+        .ranking-item.current-user {
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 22px 40px rgba(37, 99, 235, 0.18);
         }
         .rank {
-            font-weight: 700;
-            margin-right: 15px;
-            width: 30px;
+            font-weight: 800;
+            margin-right: 4px;
+            width: 36px;
             text-align: center;
+            font-size: 1.125rem;
+            color: #1E293B;
         }
-        .rank-1 { color: gold; }
-        .rank-2 { color: silver; }
-        .rank-3 { color: #cd7f32; }
+        .rank-1 { color: #F59E0B; }
+        .rank-2 { color: #94A3B8; }
+        .rank-3 { color: #C08457; }
+        .rank-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 72px;
+        }
+        .rank-icon-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .rank-trophy {
+            width: 32px;
+            height: 32px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            box-shadow: 0 12px 22px rgba(15, 23, 42, 0.12);
+        }
+        .rank-trophy.trophy-gold {
+            background: linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%);
+            color: #92400E;
+        }
+        .rank-trophy.trophy-silver {
+            background: linear-gradient(135deg, #E2E8F0 0%, #94A3B8 100%);
+            color: #1E293B;
+        }
+        .rank-trophy.trophy-bronze {
+            background: linear-gradient(135deg, #F3E8FF 0%, #C08457 100%);
+            color: #7C2D12;
+        }
+        .rank-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .rank-badge.badge-platinum {
+            background: linear-gradient(135deg, #E0EAFF 0%, #F8FAFC 100%);
+            color: #1E293B;
+        }
+        .rank-badge.badge-diamond {
+            background: linear-gradient(135deg, #C7D2FE 0%, #EEF2FF 100%);
+            color: #1E3A8A;
+        }
+        .rank-badge.badge-gold {
+            background: linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%);
+            color: #78350F;
+        }
         .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #30363d;
-            margin-right: 15px;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: #E2E8F0;
+            margin-right: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
+            font-weight: 700;
+            color: #334155;
+            overflow: hidden;
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.4);
         }
+        /* START: New styles for ranking badges */
+        .ranking-avatar-wrapper {
+            position: relative;
+            width: 48px;
+            height: 48px;
+            flex-shrink: 0;
+        }
+        .user-avatar.top-rank {
+            border-radius: 50%; /* Make it circular like the screenshot */
+            box-shadow: 0 0 0 3px #6ee7b7, inset 0 0 0 1px rgba(148, 163, 184, 0.4);
+        }
+        .ranking-crown {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+            font-size: 1.25rem;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .ranking-crown.rank-1 { color: #F59E0B; } /* gold */
+        .ranking-crown.rank-2 { color: #9CA3AF; } /* silver */
+        .ranking-crown.rank-3 { color: #A16207; } /* bronze */
+        /* END: New styles for ranking badges */
         .user-info { flex-grow: 1; }
-        .user-name { font-weight: 600; }
-        .user-time { color: #9CA3AF; font-size: 0.9rem; }
+        .user-name {
+            font-weight: 600;
+            color: #0F172A;
+            font-size: 1rem;
+        }
+        .user-time {
+            color: #475569;
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+        .user-study-time {
+            margin-left: auto;
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+        }
+        .user-study-time .label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #94A3B8;
+        }
+        .user-study-time .value {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #EF4444;
+        }
+        @media (max-width: 480px) {
+            .user-study-time {
+                width: 100%;
+                align-items: flex-start;
+                text-align: left;
+                margin-left: 0;
+                padding-top: 8px;
+            }
+        }
         .ranking-tab-btn {
             background-color: transparent;
-            border-bottom: 2px solid transparent;
-            color: #9CA3AF;
-            transition: all 0.2s;
+            border: none;
+            color: #64748B;
+            transition: all 0.2s ease;
+            border-radius: 9999px;
+            padding: 0.6rem 1rem;
         }
         .ranking-tab-btn.active {
-            color: #2dd4bf;
-            border-bottom: 2px solid #2dd4bf;
+            background-image: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
+            color: #FFFFFF;
+            box-shadow: 0 12px 22px rgba(79, 70, 229, 0.25);
+        }
+        #page-ranking .empty-group {
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 40px 24px;
+            box-shadow: 0 18px 30px rgba(15, 23, 42, 0.08);
+            color: #0F172A;
+        }
+        #page-ranking .empty-group h3 {
+            color: #1E293B;
+        }
+        #page-ranking .empty-group p {
+            color: #475569;
+        }
+        #page-ranking .empty-group i {
+            color: #2563EB;
         }
         
         /* Planner page styles */
@@ -3176,19 +3346,20 @@
             </div>
             
             <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
+                    <button class="back-button p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1 class="text-xl font-bold text-gray-100">Leaderboard</h1>
-                    <div class="w-6"></div> </header>
-                <div class="px-4 pt-4">
-                    <div class="flex space-x-1" id="ranking-period-tabs">
-                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm" data-period="daily">Daily</button>
-                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm active" data-period="weekly">Last 7 Days</button>
-                        <button class="ranking-tab-btn flex-1 py-2 px-4 rounded-t-lg font-semibold text-sm" data-period="monthly">Last 30 Days</button>
+                    <h1 class="text-xl font-bold text-slate-900">Leaderboard</h1>
+                    <div class="w-6"></div>
+                </header>
+                <div class="px-4 pt-6">
+                    <div class="flex space-x-2 bg-white border border-slate-200 rounded-full p-1 shadow-sm" id="ranking-period-tabs">
+                        <button class="ranking-tab-btn flex-1 font-semibold text-sm" data-period="daily">Daily</button>
+                        <button class="ranking-tab-btn flex-1 font-semibold text-sm active" data-period="weekly">Last 7 Days</button>
+                        <button class="ranking-tab-btn flex-1 font-semibold text-sm" data-period="monthly">Last 30 Days</button>
                     </div>
                 </div>
                 <div id="ranking-list" class="ranking-list">
@@ -10639,6 +10810,31 @@ if (achievementsGrid) {
             limit: 25
         };
 
+        const TOP_RANK_DETAILS = {
+            1: { trophyClass: 'trophy-gold', badgeClass: 'badge-platinum', badgeLabel: 'Platinum' },
+            2: { trophyClass: 'trophy-silver', badgeClass: 'badge-diamond', badgeLabel: 'Diamond' },
+            3: { trophyClass: 'trophy-bronze', badgeClass: 'badge-gold', badgeLabel: 'Gold' }
+        };
+
+        function buildRankColumn(rank, rankClass = '') {
+            const rankNumberClass = ['rank', rankClass].filter(Boolean).join(' ');
+            const config = TOP_RANK_DETAILS[rank];
+
+            if (!config) {
+                return `<div class="${rankNumberClass}">${rank}</div>`;
+            }
+
+            return `
+                <div class="rank-block">
+                    <div class="rank-icon-row">
+                        <div class="${rankNumberClass}">${rank}</div>
+                        <span class="rank-trophy ${config.trophyClass}"><i class="fas fa-trophy"></i></span>
+                    </div>
+                    <span class="rank-badge ${config.badgeClass}">${config.badgeLabel}</span>
+                </div>
+            `;
+        }
+
         function handleLeaderboardScroll() {
             if (rankingPageContainer.scrollTop + rankingPageContainer.clientHeight >= rankingPageContainer.scrollHeight - 200) {
                 loadMoreLeaderboardUsers();
@@ -10684,17 +10880,41 @@ if (achievementsGrid) {
                     if (rank === 2) rankClass = 'rank-2';
                     if (rank === 3) rankClass = 'rank-3';
 
+                    const rankColumnHtml = buildRankColumn(rank, rankClass);
+
+                    const isTopRank = rank <= 3;
+                    let crownHTML = '';
+                    if (isTopRank) {
+                        crownHTML = `<i class="fas fa-crown ranking-crown rank-${rank}"></i>`;
+                    }
+
                     const avatarHTML = user.photo_url
                         ? `<img src="${user.photo_url}" class="w-full h-full object-cover">`
                         : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
 
+                    const isCurrentUser = currentUser && currentUser.id === user.id;
+
+                    const studyHours = (user.total_study_seconds || 0) / 3600;
+                    const roundedHours = Math.round(studyHours * 10) / 10;
+                    const hoursFormatted = studyHours >= 100
+                        ? Math.round(studyHours).toString()
+                        : roundedHours.toFixed(1);
+                    const studyHoursDisplay = `${hoursFormatted.replace(/\.0$/, '')}h`;
+
                     return `
-                        <div class="ranking-item ${currentUser.id === user.id ? 'bg-blue-900/30' : ''}" data-user-id="${user.id}">
-                            <div class="rank ${rankClass}">${rank}</div>
-                            <div class="user-avatar bg-gray-600 overflow-hidden">${avatarHTML}</div>
+                        <div class="ranking-item ${isCurrentUser ? 'current-user' : ''}" data-user-id="${user.id}">
+                            ${rankColumnHtml}
+                            <div class="ranking-avatar-wrapper">
+                                ${crownHTML}
+                                <div class="user-avatar ${isTopRank ? 'top-rank' : ''}">${avatarHTML}</div>
+                            </div>
                             <div class="user-info">
                                 <div class="user-name">${user.username}</div>
-                                <div class="user-time">${formatTime(user.total_study_seconds, false)} ${periodText}</div>
+                                <div class="user-time">Study time ${periodText}</div>
+                            </div>
+                            <div class="user-study-time">
+                                <span class="label">Study time</span>
+                                <span class="value">${studyHoursDisplay}</span>
                             </div>
                         </div>
                     `;
@@ -13101,17 +13321,41 @@ if (achievementsGrid) {
                     if (rank === 2) rankClass = 'rank-2';
                     if (rank === 3) rankClass = 'rank-3';
 
+                    const rankColumnHtml = buildRankColumn(rank, rankClass);
+
+                    const isTopRank = rank <= 3;
+                    let crownHTML = '';
+                    if (isTopRank) {
+                        crownHTML = `<i class="fas fa-crown ranking-crown rank-${rank}"></i>`;
+                    }
+
                     const avatarHTML = user.photo_url
                         ? `<img src="${user.photo_url}" class="w-full h-full object-cover">`
                         : `<span>${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
 
+                    const isCurrentUser = currentUser && currentUser.id === user.id;
+
+                    const studyHours = (user.total_study_seconds || 0) / 3600;
+                    const roundedHours = Math.round(studyHours * 10) / 10;
+                    const hoursFormatted = studyHours >= 100
+                        ? Math.round(studyHours).toString()
+                        : roundedHours.toFixed(1);
+                    const studyHoursDisplay = `${hoursFormatted.replace(/\.0$/, '')}h`;
+
                     return `
-                        <div class="ranking-item ${currentUser.id === user.id ? 'bg-blue-900/30' : ''}" data-user-id="${user.id}">
-                            <div class="rank ${rankClass}">${rank}</div>
-                            <div class="user-avatar bg-gray-600 overflow-hidden">${avatarHTML}</div>
+                        <div class="ranking-item ${isCurrentUser ? 'current-user' : ''}" data-user-id="${user.id}">
+                            ${rankColumnHtml}
+                            <div class="ranking-avatar-wrapper">
+                                ${crownHTML}
+                                <div class="user-avatar ${isTopRank ? 'top-rank' : ''}">${avatarHTML}</div>
+                            </div>
                             <div class="user-info">
                                 <div class="user-name">${user.username}</div>
-                                <div class="user-time">${formatTime(user.total_study_seconds, false)} ${periodText}</div>
+                                <div class="user-time">Study time ${periodText}</div>
+                            </div>
+                            <div class="user-study-time">
+                                <span class="label">Study time</span>
+                                <span class="value">${studyHoursDisplay}</span>
                             </div>
                         </div>
                     `;
