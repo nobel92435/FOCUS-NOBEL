@@ -913,7 +913,8 @@
         /* New Planner Styles */
         #page-planner {
             /* The .active class handles display. This rule ensures the page is opaque and controls overflow. */
-            background-color: #0d1117;
+            background-color: #F8F9FD;
+            color: #0f172a;
             overflow: hidden;
         }
         .planner-main-layout {
@@ -924,8 +925,8 @@
         #planner-sidebar {
             width: 250px;
             flex-shrink: 0;
-            background-color: #0d1117;
-            border-right: 1px solid #30363d;
+            background-color: #ffffff;
+            border-right: 1px solid #e2e8f0;
             padding: 1rem;
             display: flex;
             flex-direction: column;
@@ -936,6 +937,25 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
+            color: #0f172a;
+        }
+        #planner-sidebar-header h2 {
+            color: #0f172a;
+        }
+        .planner-add-list-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #f1f5f9;
+            color: #0f172a;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .planner-add-list-btn:hover {
+            background: #2563eb;
+            color: #ffffff;
         }
         .planner-sidebar-item {
             display: flex;
@@ -943,25 +963,26 @@
             padding: 0.5rem 0.75rem;
             border-radius: 0.5rem;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, color 0.2s;
         }
         .planner-sidebar-item:hover {
-            background-color: #30363d;
+            background-color: #f1f5f9;
         }
         .planner-sidebar-item.active {
-            background-color: #2dd4bf;
-            color: white;
+            background-color: #f97316;
+            color: #ffffff;
         }
          #planner-main-content {
             flex-grow: 1;
             overflow-y: auto;
             padding: 1.5rem;
+            background-color: #F8F9FD;
         }
          #planner-task-details {
             width: 350px;
             flex-shrink: 0;
-            background-color: #0d1117;
-            border-left: 1px solid #30363d;
+            background-color: #ffffff;
+            border-left: 1px solid #e2e8f0;
             overflow-y: auto;
             transition: width 0.3s ease;
         }
@@ -974,6 +995,27 @@
         /* Task Item */
         .task-item {
             border-left-width: 4px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.9rem;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+            color: #0f172a;
+        }
+        .planner-task-default {
+            border-left-color: transparent;
+            transition: all 0.2s ease;
+        }
+        .planner-task-default:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+        }
+        .task-item.priority-high { border-left-color: #ef4444; }
+        .task-item.priority-medium { border-left-color: #f59e0b; }
+        .task-item.priority-low { border-left-color: #22d3ee; }
+        .planner-task-selected {
+            border-left-color: #2563eb;
+            box-shadow: 0 14px 30px rgba(37, 99, 235, 0.25);
+        }
         }
 
         /* Kanban Board (legacy) */
@@ -983,12 +1025,17 @@
             gap: 1rem;
         }
         .kanban-column {
-            background-color: #161b22;
-            border-radius: 0.75rem;
+            background-color: #ffffff;
+            border-radius: 0.9rem;
             padding: 0.75rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
         }
         .kanban-card {
-             background-color: #21262d;
+             background-color: #ffffff;
+             border: 1px solid #e2e8f0;
+             border-radius: 0.75rem;
+             box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
         }
 
         /* Folder Board */
@@ -1011,10 +1058,11 @@
         .folder-section-header h2 {
             font-size: 1.15rem;
             font-weight: 700;
+            color: #0f172a;
         }
         .folder-section-subtitle {
             font-size: 0.85rem;
-            color: #9ca3af;
+            color: #64748b;
         }
         .folder-grid {
             display: grid;
@@ -1022,13 +1070,14 @@
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
         }
         .folder-card {
-            background-color: #161b22;
-            border: 1px solid #1f2937;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 1rem;
             padding: 1rem;
             display: flex;
             flex-direction: column;
             gap: 1rem;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
         }
         .folder-card-header {
             display: flex;
@@ -1054,10 +1103,11 @@
         .folder-card-header h3 {
             font-weight: 600;
             font-size: 1rem;
+            color: #0f172a;
         }
         .folder-card-header p {
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: #64748b;
         }
         .folder-project-list {
             display: flex;
@@ -1071,16 +1121,17 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            background: #111827;
-            border: 1px solid #1f2937;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 0.85rem;
             padding: 0.6rem 0.75rem;
             cursor: pointer;
-            transition: border-color 0.2s ease, background-color 0.2s ease;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
         }
         .folder-project-item:hover {
-            border-color: #38bdf8;
-            background: rgba(56, 189, 248, 0.08);
+            border-color: #cbd5f5;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
         }
         .folder-project-meta {
             flex: 1;
@@ -1094,19 +1145,19 @@
         }
         .folder-project-count {
             font-size: 0.75rem;
-            color: #9ca3af;
+            color: #64748b;
         }
         .folder-project-options {
             background: none;
             border: none;
-            color: #9ca3af;
+            color: #64748b;
             padding: 0.35rem;
             border-radius: 9999px;
             transition: background-color 0.2s ease, color 0.2s ease;
         }
         .folder-project-options:hover {
-            background: rgba(56, 189, 248, 0.12);
-            color: #38bdf8;
+            background: rgba(37, 99, 235, 0.12);
+            color: #2563eb;
         }
         .folder-card-actions {
             display: flex;
@@ -1116,24 +1167,25 @@
         .folder-card-action-btn {
             background: none;
             border: none;
-            color: #94a3b8;
+            color: #64748b;
             padding: 0.35rem;
             border-radius: 9999px;
             transition: background-color 0.2s ease, color 0.2s ease;
         }
         .folder-card-action-btn:hover {
-            background: rgba(56, 189, 248, 0.12);
-            color: #38bdf8;
+            background: rgba(37, 99, 235, 0.12);
+            color: #2563eb;
         }
         .folder-card-empty,
         .folder-board-empty {
-            background: #111827;
-            border: 1px dashed #1f2937;
+            background: #ffffff;
+            border: 1px dashed #cbd5f5;
             border-radius: 0.85rem;
             padding: 1rem;
             font-size: 0.85rem;
-            color: #9ca3af;
+            color: #64748b;
             text-align: center;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
         }
         .folder-board-empty {
             border-radius: 1rem;
@@ -1240,6 +1292,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
             transition: background-color 0.2s;
+            color: #ffffff;
         }
         .calendar-task:hover {
             opacity: 0.8;
@@ -1312,7 +1365,7 @@
             display: flex;
             flex-direction: column;
             height: 100%;
-            background-color: #0d1117; /* Match page bg */
+            background-color: #F8F9FD;
         }
         .planner-search-bar {
             position: relative;
@@ -1327,16 +1380,17 @@
         }
         .planner-search-bar input {
             width: 100%;
-            background-color: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 0.5rem;
+            background-color: #ffffff;
+            border: 1px solid #d8e0f0;
+            border-radius: 0.75rem;
             padding: 0.75rem 1rem 0.75rem 2.75rem;
-            color: white;
+            color: #0f172a;
             font-size: 1rem;
             outline: none;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
         }
         .planner-search-bar input::placeholder {
-            color: #9ca3af;
+            color: #94a3b8;
         }
         .planner-list-section {
             flex-grow: 1;
@@ -1345,13 +1399,17 @@
         .planner-list-item {
             display: flex;
             align-items: center;
-            padding: 0.75rem 0.5rem;
-            border-radius: 0.5rem;
+            padding: 0.85rem 0.75rem;
+            border-radius: 0.85rem;
             cursor: pointer;
-            transition: background-color 0.2s;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .planner-list-item:hover {
-            background-color: #21262d;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
         }
         .planner-list-item .icon {
             width: 28px;
@@ -1373,17 +1431,40 @@
             font-size: 1rem;
         }
         .planner-list-item .counts {
-            color: #9ca3af;
-            font-size: 0.9rem;
+            color: #475569;
+            font-size: 0.95rem;
+            font-weight: 600;
         }
         .planner-actions {
             padding: 1rem 0.5rem 0;
-            border-top: 1px solid #30363d;
+            border-top: 1px solid #e2e8f0;
             display: flex;
             flex-wrap: wrap;
             gap: 0.75rem;
             justify-content: space-between;
             align-items: center;
+        }
+        .planner-count-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.75rem;
+            padding: 0.1rem 0.55rem;
+            border-radius: 9999px;
+            background: #e2e8f0;
+            color: #1f2937;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .planner-options-btn {
+            padding: 0.35rem;
+            border-radius: 9999px;
+            color: #64748b;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .planner-options-btn:hover {
+            background: rgba(37, 99, 235, 0.12);
+            color: #2563eb;
         }
         .planner-add-project-btn {
             background: none;
@@ -1408,27 +1489,49 @@
             gap: 0.5rem;
             flex-wrap: wrap;
         }
+        .planner-view-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border-radius: 9999px;
+            padding: 0.35rem 0.9rem;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #475569;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .planner-view-btn:hover {
+            background: rgba(15, 23, 42, 0.08);
+            color: #0f172a;
+        }
+        .planner-view-btn--active {
+            background: #f97316;
+            color: #ffffff;
+            box-shadow: 0 10px 22px rgba(249, 115, 22, 0.2);
+        }
         .planner-action-btn {
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            background-color: #161b22;
-            border: 1px solid #30363d;
-            color: #e5e7eb;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #0f172a;
             padding: 0.45rem 0.9rem;
             border-radius: 9999px;
             font-size: 0.85rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
         }
         .planner-action-btn i {
             font-size: 0.9rem;
         }
         .planner-action-btn:hover {
-            color: #38bdf8;
-            border-color: #38bdf8;
-            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1);
+            color: #2563eb;
+            border-color: #bfdbfe;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
         }
 
         /* New Planner Category View Styles */
@@ -1436,28 +1539,36 @@
             display: flex;
             flex-direction: column;
             height: 100%;
-            background-color: #0d1117;
+            background-color: #F8F9FD;
         }
         .category-view-header {
             display: flex;
             align-items: center;
             padding: 1rem;
-            border-bottom: 1px solid #30363d;
+            border-bottom: 1px solid #e2e8f0;
             flex-shrink: 0;
+            background-color: #ffffff;
         }
         .category-back-btn {
             margin-right: 1rem;
+            color: #64748b;
+            transition: color 0.2s ease;
+        }
+        .category-back-btn:hover {
+            color: #0f172a;
         }
         .category-view-title {
             font-size: 1.25rem;
             font-weight: 600;
+            color: #0f172a;
         }
         .category-stats-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 1rem;
             padding: 1rem;
-            border-bottom: 1px solid #30363d;
+            border-bottom: 1px solid #e2e8f0;
+            background-color: #F8F9FD;
             flex-shrink: 0;
         }
         @media (min-width: 640px) {
@@ -1467,15 +1578,19 @@
         }
         .category-stat-card {
             text-align: center;
+            background-color: #ffffff;
+            border-radius: 1rem;
+            padding: 1rem 0.75rem;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
         }
         .stat-value {
             font-size: 1.75rem;
             font-weight: 700;
-            color: #ef4444; /* Red color from image */
+            color: #2563eb;
         }
         .stat-label {
             font-size: 0.75rem;
-            color: #9ca3af;
+            color: #64748b;
             margin-top: 0.25rem;
         }
         .category-add-task-container {
@@ -1485,19 +1600,21 @@
         .add-task-input-wrapper {
             display: flex;
             align-items: center;
-            background-color: #161b22;
+            background-color: #ffffff;
             border-radius: 0.75rem;
             padding: 0.5rem 1rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
         }
         .add-task-input-wrapper i {
-            color: #9ca3af;
+            color: #94a3b8;
             margin-right: 0.75rem;
         }
         .category-add-task-input {
             background: transparent;
             border: none;
             outline: none;
-            color: white;
+            color: #0f172a;
             width: 100%;
             font-size: 1rem;
             padding: 0.5rem 0;
@@ -1510,7 +1627,7 @@
         .no-tasks-placeholder {
             text-align: center;
             padding: 3rem 1rem;
-            color: #6b7280;
+            color: #94a3b8;
         }
         .no-tasks-placeholder i {
             font-size: 3rem;
@@ -1519,20 +1636,22 @@
         .no-tasks-placeholder h3 {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #d1d5db;
+            color: #475569;
         }
         .category-task-item {
             display: flex;
             align-items: center;
-            background-color: #161b22;
-            border-radius: 0.75rem;
+            background-color: #ffffff;
+            border-radius: 0.9rem;
             padding: 1rem;
             margin-bottom: 0.75rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
         }
         .task-checkbox-category {
             width: 24px;
             height: 24px;
-            border: 2px solid #ef4444;
+            border: 2px solid #f97316;
             border-radius: 50%;
             margin-right: 1rem;
             cursor: pointer;
@@ -1540,24 +1659,25 @@
             transition: all 0.2s;
         }
         .task-checkbox-category.completed {
-            background-color: #ef4444;
-            border-color: #ef4444;
+            background-color: #f97316;
+            border-color: #f97316;
         }
         .category-task-item.completed .task-title-category {
             text-decoration: line-through;
-            color: #6b7280;
+            color: #94a3b8;
         }
         .task-title-category {
             flex-grow: 1;
             font-weight: 500;
+            color: #0f172a;
         }
         .task-play-btn {
             width: 32px;
             height: 32px;
             border-radius: 50%;
             background-color: transparent;
-            border: 2px solid #ef4444;
-            color: #ef4444;
+            border: 2px solid #2563eb;
+            color: #2563eb;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1565,14 +1685,14 @@
             transition: all 0.2s;
         }
         .task-play-btn:hover {
-            background-color: #ef4444;
-            color: white;
+            background-color: #2563eb;
+            color: #ffffff;
         }
         .completed-tasks-toggle {
             text-align: center;
             padding: 0.5rem;
             cursor: pointer;
-            color: #9ca3af;
+            color: #64748b;
             font-size: 0.875rem;
         }
 
@@ -1582,9 +1702,9 @@
             letter-spacing: 0.01em;
         }
         .planner-action-btn.is-active {
-            color: #38bdf8;
-            border-color: #38bdf8;
-            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+            color: #2563eb;
+            border-color: #bfdbfe;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
         }
         .project-color-dot {
             width: 12px;
@@ -1594,14 +1714,33 @@
             flex-shrink: 0;
             border: 1px solid rgba(0, 0, 0, 0.25);
         }
+        .task-checkbox-planner {
+            width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 9999px;
+            border: 2px solid #cbd5f5;
+            background: #ffffff;
+            accent-color: #2563eb;
+            transition: all 0.2s ease;
+        }
+        .task-checkbox-planner:checked {
+            border-color: #2563eb;
+        }
+        .subtask-checkbox {
+            width: 1rem;
+            height: 1rem;
+            accent-color: #2563eb;
+            border-radius: 0.375rem;
+        }
 
         /* Tag & Folder Sheet Styles */
         .sheet-modal .modal-content {
-            background: #0f172a;
+            background: #ffffff;
             border-radius: 24px;
             padding: 24px 20px 28px;
-            border: none;
-            box-shadow: 0 30px 50px rgba(8, 47, 73, 0.35);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.12);
+            color: #0f172a;
         }
         .sheet-form {
             display: flex;
@@ -1626,18 +1765,19 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(59, 130, 246, 0.05));
-            color: #38bdf8;
+            background: rgba(37, 99, 235, 0.1);
+            color: #2563eb;
             font-size: 1.1rem;
         }
         .sheet-title-text {
             font-weight: 600;
             font-size: 1.15rem;
+            color: #0f172a;
         }
         .sheet-done-btn {
             background: none;
             border: none;
-            color: #38bdf8;
+            color: #2563eb;
             font-weight: 600;
             font-size: 0.95rem;
             cursor: pointer;
@@ -1646,10 +1786,11 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            background: #111c30;
+            background: #ffffff;
             border-radius: 18px;
             padding: 0.9rem 1rem;
-            border: 1px solid transparent;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
         }
         .sheet-input i {
             color: #64748b;
@@ -1660,7 +1801,7 @@
             border: none;
             outline: none;
             flex-grow: 1;
-            color: #e2e8f0;
+            color: #0f172a;
             font-size: 0.95rem;
         }
         .sheet-input select {
@@ -1668,7 +1809,7 @@
             border: none;
             outline: none;
             flex-grow: 1;
-            color: #e2e8f0;
+            color: #0f172a;
             font-size: 0.95rem;
             appearance: none;
         }
@@ -1706,7 +1847,7 @@
             display: inline-flex;
             align-items: center;
             gap: 0.75rem;
-            color: #38bdf8;
+            color: #2563eb;
             font-weight: 600;
             cursor: pointer;
             font-size: 0.95rem;
@@ -1729,26 +1870,30 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: #111c30;
+            background: #ffffff;
             border-radius: 14px;
             padding: 0.6rem 0.9rem;
-            border: 1px solid transparent;
+            border: 1px solid #e2e8f0;
             cursor: pointer;
             transition: all 0.2s ease;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+            color: #0f172a;
         }
         .tag-chip:hover {
-            border-color: rgba(56, 189, 248, 0.4);
+            border-color: #bfdbfe;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
         }
         .tag-chip.selected {
-            border-color: #38bdf8;
-            background: rgba(56, 189, 248, 0.1);
+            border-color: #2563eb;
+            box-shadow: 0 10px 22px rgba(37, 99, 235, 0.2);
+            background: #eef2ff;
         }
         .tag-chip-color {
             width: 22px;
             height: 22px;
             border-radius: 50%;
             margin-right: 0.75rem;
-            border: 2px solid rgba(255,255,255,0.2);
+            border: 2px solid rgba(148, 163, 184, 0.35);
         }
         .tag-chip-label {
             flex-grow: 1;
@@ -1756,7 +1901,7 @@
             font-weight: 500;
         }
         .tag-chip-check {
-            color: #38bdf8;
+            color: #2563eb;
             font-size: 0.85rem;
             opacity: 0;
             transition: opacity 0.2s ease;
@@ -1766,8 +1911,8 @@
         }
         .create-tag-btn {
             background: none;
-            border: 1px dashed rgba(148, 163, 184, 0.4);
-            color: #38bdf8;
+            border: 1px dashed #cbd5f5;
+            color: #2563eb;
             border-radius: 14px;
             padding: 0.75rem;
             width: 100%;
@@ -1822,8 +1967,8 @@
             transition: background-color 0.2s ease, color 0.2s ease;
         }
         .tag-chip-action-btn:hover {
-            background: rgba(255, 255, 255, 0.08);
-            color: #38bdf8;
+            background: rgba(37, 99, 235, 0.12);
+            color: #2563eb;
         }
 
         /* Events View */
@@ -1918,7 +2063,7 @@
         }
         .events-column {
             position: relative;
-            border-left: 1px solid rgba(255,255,255,0.05);
+            border-left: 1px solid #e2e8f0;
             padding-left: 0.5rem;
             min-height: 600px;
         }
@@ -1926,8 +2071,8 @@
             margin-top: 0.75rem;
             padding: 0.75rem;
             border-radius: 12px;
-            background: rgba(148, 163, 184, 0.08);
-            color: #94a3b8;
+            background: rgba(148, 163, 184, 0.12);
+            color: #64748b;
             font-size: 0.8rem;
             text-align: center;
         }
@@ -1937,8 +2082,8 @@
             right: 0.5rem;
             border-radius: 16px;
             padding: 0.75rem;
-            color: white;
-            box-shadow: 0 12px 25px rgba(15, 118, 110, 0.25);
+            color: #0f172a;
+            box-shadow: 0 12px 25px rgba(15, 118, 110, 0.2);
             display: flex;
             flex-direction: column;
             gap: 0.35rem;
@@ -1960,7 +2105,7 @@
             display: flex;
             flex-direction: column;
             height: 100%;
-            background: #0d1117;
+            background: #F8F9FD;
         }
         .completed-groups {
             flex-grow: 1;
@@ -1979,25 +2124,26 @@
         }
         .completed-day-header span {
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: #64748b;
         }
         .completed-task-item {
             display: flex;
             align-items: center;
             gap: 0.85rem;
-            background: #111c30;
+            background: #ffffff;
             border-radius: 16px;
             padding: 0.85rem 1rem;
             margin-bottom: 0.75rem;
-            box-shadow: 0 12px 25px rgba(2, 6, 23, 0.4);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
             cursor: pointer;
         }
         .completed-task-icon {
             width: 34px;
             height: 34px;
             border-radius: 50%;
-            background: rgba(239, 68, 68, 0.12);
-            color: #ef4444;
+            background: rgba(34, 197, 94, 0.12);
+            color: #16a34a;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -2010,14 +2156,15 @@
             display: block;
             font-weight: 600;
             margin-bottom: 0.25rem;
+            color: #0f172a;
         }
         .completed-task-details span {
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: #64748b;
         }
         .completed-task-time {
             font-size: 0.8rem;
-            color: #e2e8f0;
+            color: #475569;
         }
         .completed-task-actions {
             display: flex;
@@ -2031,13 +2178,13 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: rgba(20, 184, 166, 0.15);
-            color: #2dd4bf;
+            background: rgba(37, 99, 235, 0.12);
+            color: #2563eb;
             transition: background 0.2s ease, color 0.2s ease;
         }
         .completed-task-restore:hover {
-            background: rgba(20, 184, 166, 0.3);
-            color: #5eead4;
+            background: rgba(37, 99, 235, 0.2);
+            color: #1d4ed8;
         }
         .completed-show-more {
             margin: 1.5rem auto 0;
@@ -2046,9 +2193,9 @@
             gap: 0.5rem;
             padding: 0.65rem 1.5rem;
             border-radius: 9999px;
-            border: 1px solid rgba(148, 163, 184, 0.4);
-            background: transparent;
-            color: #38bdf8;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #2563eb;
             cursor: pointer;
         }
 
@@ -2066,15 +2213,14 @@
         }
         .modal.active { display: flex; }
         .modal-content {
-            background: #0d1117;
-            border: 1px solid transparent;
-            border-image: linear-gradient(to bottom right, #14B8A6, #0EA5E9);
-            border-image-slice: 1;
-            box-shadow: 0 0 30px rgba(14, 165, 233, 0.1);
-            border-radius: 12px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.12);
+            border-radius: 16px;
             padding: 25px;
             width: 90%;
             max-width: 400px;
+            color: #0f172a;
         }
         .modal-header {
             display: flex;
@@ -2082,13 +2228,17 @@
             align-items: center;
             margin-bottom: 20px;
         }
-        .modal-title { font-size: 1.3rem; font-weight: 600; }
+        .modal-title { font-size: 1.3rem; font-weight: 600; color: #0f172a; }
         .close-modal {
             background: none;
             border: none;
-            color: #9CA3AF;
+            color: #64748b;
             font-size: 1.5rem;
             cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .close-modal:hover {
+            color: #0f172a;
         }
         
         /* Profile Settings */
@@ -3367,17 +3517,17 @@
             </div>
             
             <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-[#F8F9FD]">
+                    <button class="back-button planner-add-list-btn" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
                      <div class="flex items-center gap-2">
-                         <button id="planner-menu-toggle" class="p-2 rounded-full hover:bg-gray-700 md:hidden"><i class="fas fa-bars"></i></button>
-                         <h1 id="planner-header-title" class="text-xl font-bold text-gray-100">Planner</h1>
+                         <button id="planner-menu-toggle" class="planner-add-list-btn md:hidden"><i class="fas fa-bars"></i></button>
+                        <h1 id="planner-header-title" class="text-xl font-bold text-slate-900">Planner</h1>
                      </div>
-                    <div id="planner-view-controls" class="flex items-center bg-gray-700 rounded-md p-1">
+                    <div id="planner-view-controls" class="flex items-center bg-white border border-slate-200 rounded-full p-1 shadow-sm">
                          <button data-view="list" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-list mr-1"></i>List</button>
                          <button data-view="board" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-grip-horizontal mr-1"></i>Board</button>
                          <button data-view="calendar" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-calendar-alt mr-1"></i>Calendar</button>
@@ -9203,13 +9353,13 @@ if (achievementsGrid) {
             sidebar.innerHTML = `
               <div id="planner-sidebar-header">
                 <h2 class="text-lg font-bold">Projects</h2>
-                <button id="add-list-btn" class="p-1 rounded-full hover:bg-gray-700"><i class="fas fa-plus"></i></button>
+                <button id="add-list-btn" class="planner-add-list-btn"><i class="fas fa-plus"></i></button>
               </div>
               <nav class="flex-grow space-y-1">
                 <div class="planner-sidebar-item ${plannerState.activeListId === 'inbox' ? 'active' : ''}" data-list-id="inbox">
                   <span class="project-color-dot" style="background:${getProjectColor('inbox')}"></span>
                   <span class="flex-grow">Inbox</span>
-                  <span class="text-xs bg-gray-600 px-2 py-0.5 rounded-full">${inboxTasks}</span>
+                  <span class="planner-count-pill">${inboxTasks}</span>
                 </div>
                 ${plannerState.lists.map(list => {
                   const taskCount = plannerState.tasks.filter(t => t.list_id === list.id && !t.completed).length;
@@ -9217,8 +9367,8 @@ if (achievementsGrid) {
                     <div class="planner-sidebar-item relative ${plannerState.activeListId === list.id ? 'active' : ''}" data-list-id="${list.id}">
                       <span class="project-color-dot" style="background:${getProjectColor(list.id)}"></span>
                       <span class="flex-grow">${list.name}</span>
-                      <span class="text-xs bg-gray-600 px-2 py-0.5 rounded-full">${taskCount}</span>
-                      <button class="project-options-btn p-2 rounded-full hover:bg-gray-700/50 ml-2 -mr-1" data-list-id="${list.id}" data-list-name="${list.name}"><i class="fas fa-ellipsis-h text-xs pointer-events-none"></i></button>
+                      <span class="planner-count-pill">${taskCount}</span>
+                      <button class="project-options-btn planner-options-btn" data-list-id="${list.id}" data-list-name="${list.name}"><i class="fas fa-ellipsis-h text-xs pointer-events-none"></i></button>
                     </div>
                   `;
                 }).join('')}
@@ -9237,8 +9387,8 @@ if (achievementsGrid) {
             document.getElementById('planner-header-title').textContent = activeList?.name || 'Planner';
           
             document.querySelectorAll('.planner-view-btn').forEach(btn => {
-              btn.classList.toggle('bg-blue-600', btn.dataset.view === plannerState.currentView);
-              btn.classList.toggle('text-white', btn.dataset.view === plannerState.currentView);
+              const isActive = btn.dataset.view === plannerState.currentView;
+              btn.classList.toggle('planner-view-btn--active', isActive);
             });
           
             const tasksForCurrentList = plannerState.tasks.filter(t => {
@@ -9454,7 +9604,7 @@ if (achievementsGrid) {
             mainContent.innerHTML = `
                 <div class="planner-category-view">
                     <header class="category-view-header">
-                        <button class="category-back-btn text-gray-400 hover:text-white">
+                        <button class="category-back-btn">
                              <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                             </svg>
@@ -9598,7 +9748,7 @@ if (achievementsGrid) {
             mainContent.innerHTML = `
                 <div class="planner-events-view">
                     <header class="category-view-header events-header">
-                        <button class="category-back-btn text-gray-400 hover:text-white">
+                        <button class="category-back-btn">
                              <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                             </svg>
@@ -9639,7 +9789,7 @@ if (achievementsGrid) {
                 mainContent.innerHTML = `
                     <div class="planner-completed-view">
                         <header class="category-view-header">
-                            <button class="category-back-btn text-gray-400 hover:text-white">
+                            <button class="category-back-btn">
                                  <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                                 </svg>
@@ -9727,7 +9877,7 @@ if (achievementsGrid) {
             mainContent.innerHTML = `
                 <div class="planner-completed-view">
                     <header class="category-view-header">
-                        <button class="category-back-btn text-gray-400 hover:text-white">
+                        <button class="category-back-btn">
                              <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                             </svg>
@@ -9743,16 +9893,20 @@ if (achievementsGrid) {
         }
         
         function renderPlannerTaskItem(task) {
-            const priorityColors = { high: 'border-red-500', medium: 'border-yellow-500', low: 'border-blue-500', none: 'border-transparent' };
+            const priorityClasses = { high: 'priority-high', medium: 'priority-medium', low: 'priority-low', none: '' };
             const isSelected = plannerState.selectedTaskId === task.id;
+            const stateClass = isSelected ? 'planner-task-selected' : 'planner-task-default';
+            const priorityClass = priorityClasses[task.priority] || '';
+            const completedClass = task.completed ? 'line-through text-slate-400' : 'text-slate-800';
+            const dueDateLabel = task.due_date ? new Date(task.due_date).toLocaleDateString() : '';
             return `
-              <div class="task-item flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 ${priorityColors[task.priority] || 'border-l-transparent'} ${isSelected ? 'bg-blue-900/50' : 'bg-gray-800 hover:bg-gray-700'}" data-task-id="${task.id}">
-                <input type="checkbox" class="task-checkbox-planner w-5 h-5 bg-gray-700 rounded-full text-blue-500 focus:ring-blue-500 mr-4 flex-shrink-0" ${task.completed ? 'checked' : ''} />
-                <span class="flex-grow ${task.completed ? 'line-through text-gray-500' : ''}">${task.title}</span>
-                ${task.due_date ? `<span class="text-xs text-gray-400 ml-4">${new Date(task.due_date).toLocaleDateString()}</span>` : ''}
+              <div class="task-item ${stateClass} ${priorityClass} flex items-center p-3 cursor-pointer" data-task-id="${task.id}">
+                <input type="checkbox" class="task-checkbox-planner mr-4 flex-shrink-0" ${task.completed ? 'checked' : ''} />
+                <span class="flex-grow ${completedClass}">${task.title}</span>
+                ${dueDateLabel ? `<span class="text-xs text-slate-500 ml-4">${dueDateLabel}</span>` : ''}
               </div>
             `;
-          }          
+          }
 
         function renderPlannerBoardView() {
             const mainContent = document.getElementById('planner-main-content');
@@ -10086,7 +10240,7 @@ if (achievementsGrid) {
             };
             const priority = selectedTask.priority || 'none';
             const repeatText = selectedTask.repeat ? `Repeats ${selectedTask.repeat.type}` : 'None';
-            const repeatTextColor = selectedTask.repeat ? 'text-gray-300' : 'text-gray-500';
+            const repeatTextColor = selectedTask.repeat ? 'text-slate-600' : 'text-slate-400';
           
             const estimatedPomos = selectedTask.pomodoros_estimated || 1;
             const completedPomos = selectedTask.pomodoros_completed || 0;
@@ -10105,9 +10259,9 @@ if (achievementsGrid) {
                 if (!tagName) return '';
                 const libraryTag = (plannerState.tagLibrary || []).find(t => t.name.toLowerCase() === tagName.toLowerCase());
                 const color = libraryTag?.color || '#6366f1';
-                const textColor = '#e2e8f0';
+                const textColor = '#0f172a';
                 return `
-                    <span class="tag-chip-inline" style="background:${color}1a; color:${textColor}; border:1px solid ${color}55">
+                    <span class="tag-chip-inline" style="background:${color}1a; color:${textColor}; border:1px solid ${color}40">
                         <span class="tag-dot" style="background:${color}"></span>${tagName}
                     </span>
                 `;
@@ -10115,49 +10269,49 @@ if (achievementsGrid) {
 
             const subtasks = selectedTask.subtasks || [];
             const subtasksHtml = subtasks.map(subtask => `
-                <div class="flex items-center p-2 hover:bg-gray-700/50 rounded-md" data-subtask-id="${subtask.id}">
-                    <input type="checkbox" class="subtask-checkbox w-4 h-4 bg-gray-600 border-gray-500 rounded text-blue-500 focus:ring-blue-500 mr-3 flex-shrink-0" ${subtask.completed ? 'checked' : ''}>
-                    <span class="flex-grow text-sm ${subtask.completed ? 'line-through text-gray-500' : ''}">${subtask.title}</span>
-                    <button class="delete-subtask-btn text-gray-500 hover:text-red-400 ml-2 text-xs"><i class="fas fa-trash-alt"></i></button>
+                <div class="flex items-center p-2 hover:bg-slate-100 rounded-md" data-subtask-id="${subtask.id}">
+                    <input type="checkbox" class="subtask-checkbox mr-3 flex-shrink-0" ${subtask.completed ? 'checked' : ''}>
+                    <span class="flex-grow text-sm ${subtask.completed ? 'line-through text-slate-400' : 'text-slate-700'}">${subtask.title}</span>
+                    <button class="delete-subtask-btn text-slate-400 hover:text-rose-500 ml-2 text-xs"><i class="fas fa-trash-alt"></i></button>
                 </div>
             `).join('');
 
 
             detailsPanel.innerHTML = `
-              <div class="p-4 h-full flex flex-col bg-gray-800 text-white">
+              <div class="p-6 h-full flex flex-col bg-white text-slate-900">
                 <!-- Header -->
-                <div class="flex-shrink-0 flex items-center mb-4">
-                  <input type="checkbox" class="task-checkbox-planner w-6 h-6 bg-gray-700 rounded-full text-blue-500 focus:ring-blue-500 mr-4 flex-shrink-0" ${selectedTask.completed ? 'checked' : ''} />
-                  <button id="task-detail-start-btn" class="mr-2 text-green-400 hover:text-green-300 transition" title="Start Normal Timer"><i class="fas fa-play"></i></button>
-                  <input id="task-detail-title" class="text-xl font-semibold bg-transparent w-full border-none focus:ring-0 p-0" value="${selectedTask.title}">
+                <div class="flex-shrink-0 flex items-center gap-3 mb-6">
+                  <input type="checkbox" class="task-checkbox-planner w-6 h-6 mr-1 flex-shrink-0" ${selectedTask.completed ? 'checked' : ''} />
+                  <button id="task-detail-start-btn" class="text-emerald-500 hover:text-emerald-600 transition" title="Start Normal Timer"><i class="fas fa-play"></i></button>
+                  <input id="task-detail-title" class="text-xl font-semibold bg-transparent w-full border border-transparent focus:border-slate-300 focus:ring-0 rounded-md px-2 py-1" value="${selectedTask.title}">
                   <div class="relative">
                     <button id="task-detail-priority-btn" class="${priorityClasses[priority]} hover:opacity-80 transition" title="Set Priority">
                       <i class="fas fa-flag"></i>
                     </button>
-                    <div id="task-priority-menu" class="hidden absolute right-0 mt-2 w-32 bg-gray-700 rounded-md shadow-lg z-10">
-                      <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="high">High</a>
-                      <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="medium">Medium</a>
-                      <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="low">Low</a>
-                      <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="none">None</a>
+                    <div id="task-priority-menu" class="hidden absolute right-0 mt-2 w-36 bg-white border border-slate-200 rounded-md shadow-lg z-10">
+                      <a href="#" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100" data-priority="high">High</a>
+                      <a href="#" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100" data-priority="medium">Medium</a>
+                      <a href="#" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100" data-priority="low">Low</a>
+                      <a href="#" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100" data-priority="none">None</a>
                     </div>
                   </div>
-                  <button id="task-detail-flag-btn" class="${selectedTask.flagged ? 'text-yellow-400' : 'text-gray-500'} hover:opacity-80 transition ml-2" title="Flag Task">
+                  <button id="task-detail-flag-btn" class="${selectedTask.flagged ? 'text-amber-500' : 'text-slate-400'} hover:text-amber-600 transition ml-2" title="Flag Task">
                       <i class="${selectedTask.flagged ? 'fas' : 'far'} fa-flag"></i>
                   </button>
-                  <button id="close-task-details" class="ml-2 p-1 rounded-full hover:bg-gray-700">&times;</button>
+                  <button id="close-task-details" class="ml-2 p-2 rounded-full text-slate-400 hover:bg-slate-100">&times;</button>
                 </div>
-          
+
                 <!-- Main Content -->
-                <div class="flex-grow overflow-y-auto pr-2 text-sm">
-                  <button id="task-detail-tags-btn" class="border border-gray-600 rounded-full px-3 py-1 text-gray-400 mb-4 hover:bg-gray-700 flex items-center gap-2">
+                <div class="flex-grow overflow-y-auto pr-1 text-sm">
+                  <button id="task-detail-tags-btn" class="border border-slate-200 rounded-full px-3 py-1 text-slate-500 mb-4 hover:bg-slate-100 flex items-center gap-2">
                      <i class="fas fa-tags text-xs"></i>
                      <div class="flex items-center gap-1.5">${tagsHtml || '<span>+ Tags</span>'}</div>
                   </button>
-          
-                  <div class="space-y-3">
+
+                  <div class="space-y-4">
                     <div class="flex items-center">
-                      <div id="task-detail-pomodoro-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition flex-grow" title="Start Pomodoro Timer">
-                          <i class="fas fa-stopwatch text-gray-400 w-6 text-center mr-3"></i>
+                      <div id="task-detail-pomodoro-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-slate-100 transition flex-grow" title="Start Pomodoro Timer">
+                          <i class="fas fa-stopwatch text-slate-400 w-6 text-center mr-3"></i>
                           <span>Pomodoro</span>
                       </div>
                       <button type="button" id="open-pomodoro-setup-btn" class="pomodoro-summary-button">
@@ -10169,52 +10323,52 @@ if (achievementsGrid) {
                           <i class="fas fa-chevron-right"></i>
                       </button>
                     </div>
-          
+
                     <div class="flex items-center">
-                      <i class="fas fa-calendar-day text-gray-400 w-6 text-center mr-3"></i>
+                      <i class="fas fa-calendar-day text-slate-400 w-6 text-center mr-3"></i>
                       <span>Due Date</span>
                       <input
                         type="date"
                         id="task-detail-due-date"
-                        class="ml-auto bg-transparent text-right p-0 border-none focus:ring-0"
+                        class="ml-auto bg-white text-right p-0 border-b border-slate-200 focus:border-slate-400 focus:ring-0"
                         value="${selectedTask.due_date ? new Date(selectedTask.due_date).toISOString().split('T')[0] : ''}">
                     </div>
-          
-                    <div id="task-detail-project-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition">
-                      <i class="fas fa-tasks text-gray-400 w-6 text-center mr-3"></i>
+
+                    <div id="task-detail-project-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-slate-100 transition">
+                      <i class="fas fa-tasks text-slate-400 w-6 text-center mr-3"></i>
                       <span>Project</span>
-                      <span class="ml-auto text-gray-300">${listName}</span>
+                      <span class="ml-auto text-slate-600">${listName}</span>
                     </div>
-          
+
                     <div class="flex items-center">
-                      <i class="fas fa-bell text-gray-400 w-6 text-center mr-3"></i>
+                      <i class="fas fa-bell text-slate-400 w-6 text-center mr-3"></i>
                       <span>Reminder</span>
-                      <span class="ml-auto text-gray-500">None</span>
+                      <span class="ml-auto text-slate-400">None</span>
                     </div>
-          
-                    <div id="task-detail-repeat-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition">
-                      <i class="fas fa-redo text-gray-400 w-6 text-center mr-3"></i>
+
+                    <div id="task-detail-repeat-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-slate-100 transition">
+                      <i class="fas fa-redo text-slate-400 w-6 text-center mr-3"></i>
                       <span>Repeat</span>
                       <span class="ml-auto ${repeatTextColor}">${repeatText}</span>
                     </div>
-          
-                    <div class="text-gray-400">
+
+                    <div class="text-slate-500">
                         <div id="subtasks-container" class="mt-2 space-y-1">${subtasksHtml}</div>
                          <div class="flex items-center mt-1">
                             <i class="fas fa-plus w-6 text-center mr-3"></i>
-                            <input id="add-subtask-input" class="bg-transparent w-full border-none p-0 focus:ring-0" placeholder="Add a subtask...">
+                            <input id="add-subtask-input" class="bg-white w-full border-b border-slate-200 focus:border-slate-400 focus:ring-0 px-1 py-1" placeholder="Add a subtask...">
                         </div>
                     </div>
                   </div>
-          
-                  <textarea id="task-detail-notes" class="w-full bg-transparent p-0 mt-4 h-24 border-none focus:ring-0" placeholder="Add a note...">${selectedTask.notes || ''}</textarea>
+
+                  <textarea id="task-detail-notes" class="w-full bg-white border border-slate-200 rounded-lg p-3 mt-5 h-32 focus:ring-1 focus:ring-slate-300 focus:border-slate-300" placeholder="Add a note...">${selectedTask.notes || ''}</textarea>
                 </div>
-          
+
                 <!-- Footer -->
-                <div class="flex-shrink-0 pt-2 flex justify-between items-center text-xs text-gray-500">
-                  <button><i class="fas fa-arrow-left"></i></button>
+                <div class="flex-shrink-0 pt-4 mt-4 flex justify-between items-center text-xs text-slate-500 border-t border-slate-200">
+                  <button class="hover:text-slate-700"><i class="fas fa-arrow-left"></i></button>
                   <span>Created on ${createdDate}</span>
-                  <button id="delete-task-btn" class="text-gray-400 hover:text-red-500 text-base"><i class="fas fa-trash-alt"></i></button>
+                  <button id="delete-task-btn" class="text-rose-500 hover:text-rose-600 text-base"><i class="fas fa-trash-alt"></i></button>
                 </div>
               </div>
             `;
