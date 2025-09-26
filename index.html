@@ -890,11 +890,11 @@
         .planner-container { padding: 20px; }
         .planner-day {
             background: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 15px;
             margin-bottom: 15px;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
         }
         .day-header {
             font-weight: 600;
@@ -916,37 +916,8 @@
         #page-planner {
             /* The .active class handles display. This rule ensures the page is opaque and controls overflow. */
             background-color: #F8F9FD;
-            color: #1E293B;
+            color: #0F172A;
             overflow: hidden;
-        }
-        #page-planner > header {
-            background: #F8F9FD;
-            border-bottom: 1px solid #E2E8F0;
-            color: #1F2937;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-        }
-        #page-planner > header h1 {
-            color: #1F2937;
-        }
-        #page-planner > header .back-button {
-            color: #64748B;
-            background: transparent;
-            border-radius: 9999px;
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
-        #page-planner > header .back-button:hover {
-            background-color: rgba(148, 163, 184, 0.2);
-            color: #1F2937;
-        }
-        #planner-menu-toggle {
-            color: #1F2937;
-            background: transparent;
-            border-radius: 9999px;
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
-        #planner-menu-toggle:hover {
-            background: rgba(148, 163, 184, 0.2);
-            color: #1F2937;
         }
         .planner-main-layout {
             display: flex;
@@ -958,23 +929,11 @@
             flex-shrink: 0;
             background-color: #FFFFFF;
             border-right: 1px solid #E2E8F0;
-            padding: 1rem;
+            padding: 1.25rem 1rem;
             display: flex;
             flex-direction: column;
             transition: transform 0.3s ease-in-out;
-            box-shadow: 4px 0 16px rgba(15, 23, 42, 0.04);
-        }
-        #planner-sidebar-header h2 {
-            color: #1F2937;
-        }
-        #planner-sidebar-header button {
-            color: #1F2937;
-            background: rgba(148, 163, 184, 0.15);
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
-        #planner-sidebar-header button:hover {
-            background: rgba(249, 115, 22, 0.15);
-            color: #F97316;
+            box-shadow: 12px 0 32px rgba(15, 23, 42, 0.04);
         }
          #planner-sidebar-header {
             display: flex;
@@ -985,76 +944,26 @@
         .planner-sidebar-item {
             display: flex;
             align-items: center;
-            padding: 0.5rem 0.75rem;
+            padding: 0.625rem 0.75rem;
             border-radius: 0.75rem;
             cursor: pointer;
-            transition: background-color 0.2s, box-shadow 0.2s;
-            color: #1F2937;
+            transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+            color: #334155;
+            font-weight: 500;
         }
         .planner-sidebar-item:hover {
             background-color: #EEF2FF;
-            box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.18);
+            box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.15);
         }
         .planner-sidebar-item.active {
-            background-color: #F97316;
+            background-color: #2563EB;
             color: #FFFFFF;
-            box-shadow: 0 10px 24px rgba(249, 115, 22, 0.25);
-        }
-        #planner-sidebar .bg-gray-600 {
-            background-color: #E2E8F0 !important;
-            color: #1F2937 !important;
-        }
-        .planner-sidebar-item.active .bg-gray-600 {
-            background-color: rgba(255, 255, 255, 0.2) !important;
-            color: #FFFFFF !important;
-        }
-        .planner-sidebar-item .project-options-btn {
-            color: #64748B;
-            background: transparent;
-            border-radius: 9999px;
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
-        .planner-sidebar-item .project-options-btn:hover {
-            background: rgba(148, 163, 184, 0.2);
-            color: #1F2937;
-        }
-        .planner-sidebar-item.active .project-options-btn {
-            color: #FFFFFF;
-        }
-        .planner-sidebar-item.active .project-options-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        #planner-view-controls {
-            background: #E2E8F0;
-            border-radius: 0.75rem;
-            padding: 0.25rem;
-            gap: 0.25rem;
-            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.45);
-        }
-        .planner-view-btn {
-            color: #1F2937;
-            font-weight: 600;
-            border-radius: 0.6rem;
-            padding: 0.4rem 0.85rem;
-            transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-        .planner-view-btn:hover {
-            background: #FFFFFF;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-        }
-        .planner-view-btn-active {
-            background: #F97316;
-            color: #FFFFFF;
-            box-shadow: 0 12px 24px rgba(249, 115, 22, 0.25);
+            box-shadow: 0 10px 18px rgba(37, 99, 235, 0.22);
         }
          #planner-main-content {
             flex-grow: 1;
             overflow-y: auto;
-            padding: 1.5rem;
-            background-color: #F8F9FD;
+            padding: 1.75rem;
         }
          #planner-task-details {
             width: 350px;
@@ -1063,63 +972,7 @@
             border-left: 1px solid #E2E8F0;
             overflow-y: auto;
             transition: width 0.3s ease;
-            box-shadow: -4px 0 16px rgba(15, 23, 42, 0.04);
-            color: #1F2937;
-        }
-        #planner-task-details .bg-gray-800,
-        #planner-task-details .bg-gray-900,
-        #planner-task-details .bg-gray-700 {
-            background-color: #FFFFFF !important;
-        }
-        #planner-task-details .bg-gray-700\/50 {
-            background-color: rgba(226, 232, 240, 0.6) !important;
-        }
-        #planner-task-details .hover\:bg-gray-700:hover,
-        #planner-task-details .hover\:bg-gray-700\/50:hover {
-            background-color: #F1F5F9 !important;
-        }
-        #planner-task-details .text-white,
-        #planner-task-details .text-gray-200,
-        #planner-task-details .text-gray-300 {
-            color: #1F2937 !important;
-        }
-        #planner-task-details .text-gray-400,
-        #planner-task-details .text-gray-500,
-        #planner-task-details .text-gray-600 {
-            color: #475569 !important;
-        }
-        #planner-task-details .border-gray-600,
-        #planner-task-details .border-gray-500,
-        #planner-task-details .border-gray-700 {
-            border-color: #E2E8F0 !important;
-        }
-        #planner-task-details input,
-        #planner-task-details textarea {
-            background: transparent;
-        }
-        #planner-task-details textarea::placeholder,
-        #planner-task-details input::placeholder {
-            color: #94A3B8;
-        }
-        #planner-task-details .subtask-checkbox {
-            border: 2px solid #CBD5F5;
-            background: #FFFFFF;
-        }
-        #planner-task-details .subtask-checkbox:checked {
-            background: #2563EB;
-            border-color: #2563EB;
-        }
-        #task-priority-menu {
-            background: #FFFFFF !important;
-            border: 1px solid #E2E8F0;
-            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
-        }
-        #task-priority-menu a {
-            color: #475569;
-        }
-        #task-priority-menu a:hover {
-            background: #F1F5F9 !important;
-            color: #1F2937 !important;
+            box-shadow: -12px 0 32px rgba(15, 23, 42, 0.05);
         }
         #planner-task-details.hidden {
             width: 0;
@@ -1130,30 +983,6 @@
         /* Task Item */
         .task-item {
             border-left-width: 4px;
-            background: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-radius: 0.75rem;
-            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-            transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-            color: #1F2937;
-        }
-        .task-item:hover {
-            background: #F8FAFC;
-            box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
-        }
-        .task-item--selected {
-            background: #FFF4E6;
-            border-color: #FDBA74;
-            box-shadow: 0 18px 36px rgba(249, 115, 22, 0.25);
-        }
-        .task-checkbox-planner {
-            border: 2px solid #CBD5F5;
-            background: #FFFFFF;
-            transition: background-color 0.2s ease, border-color 0.2s ease;
-        }
-        .task-checkbox-planner:checked {
-            background-color: #2563EB;
-            border-color: #2563EB;
         }
 
         /* Kanban Board (legacy) */
@@ -1164,16 +993,16 @@
         }
         .kanban-column {
             background-color: #FFFFFF;
+            border-radius: 1rem;
+            padding: 1rem;
             border: 1px solid #E2E8F0;
-            border-radius: 0.75rem;
-            padding: 0.75rem;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+            box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
         }
         .kanban-card {
              background-color: #FFFFFF;
+             border-radius: 0.9rem;
              border: 1px solid #E2E8F0;
-             border-radius: 0.75rem;
-             box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+             box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
         }
 
         /* Folder Board */
@@ -1209,12 +1038,12 @@
         .folder-card {
             background-color: #FFFFFF;
             border: 1px solid #E2E8F0;
-            border-radius: 1rem;
-            padding: 1rem;
+            border-radius: 1.25rem;
+            padding: 1.25rem;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            gap: 1.1rem;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
         }
         .folder-card-header {
             display: flex;
@@ -1257,17 +1086,17 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            background: #F8FAFC;
+            background: #F8FAFF;
             border: 1px solid #E2E8F0;
-            border-radius: 0.85rem;
-            padding: 0.6rem 0.75rem;
+            border-radius: 0.9rem;
+            padding: 0.7rem 0.85rem;
             cursor: pointer;
             transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
         }
         .folder-project-item:hover {
-            border-color: #60A5FA;
-            background: #FFFFFF;
-            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.15);
+            border-color: #93C5FD;
+            background: #EEF2FF;
+            box-shadow: 0 12px 24px rgba(59, 130, 246, 0.18);
         }
         .folder-project-meta {
             flex: 1;
@@ -1286,14 +1115,14 @@
         .folder-project-options {
             background: none;
             border: none;
-            color: #64748B;
+            color: #94A3B8;
             padding: 0.35rem;
             border-radius: 9999px;
             transition: background-color 0.2s ease, color 0.2s ease;
         }
         .folder-project-options:hover {
-            background: rgba(99, 102, 241, 0.12);
-            color: #1E293B;
+            background: rgba(59, 130, 246, 0.12);
+            color: #2563EB;
         }
         .folder-card-actions {
             display: flex;
@@ -1303,39 +1132,25 @@
         .folder-card-action-btn {
             background: none;
             border: none;
-            color: #64748B;
-            padding: 0.35rem;
+            color: #94A3B8;
+            padding: 0.4rem;
             border-radius: 9999px;
             transition: background-color 0.2s ease, color 0.2s ease;
         }
         .folder-card-action-btn:hover {
-            background: rgba(249, 115, 22, 0.12);
-            color: #F97316;
+            background: rgba(59, 130, 246, 0.12);
+            color: #2563EB;
         }
         .folder-card-empty,
         .folder-board-empty {
             background: #FFFFFF;
             border: 1px dashed #CBD5F5;
-            border-radius: 0.85rem;
-            padding: 1rem;
-            font-size: 0.85rem;
-            color: #475569;
-            text-align: center;
-            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
-        }
-        .folder-board-empty {
             border-radius: 1rem;
-        }
-        #board-create-folder-btn {
-            background: linear-gradient(135deg, #f97316, #fb923c);
-            color: #FFFFFF;
-            border: none;
-            box-shadow: 0 15px 30px rgba(249, 115, 22, 0.25);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        #board-create-folder-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 20px 40px rgba(249, 115, 22, 0.3);
+            padding: 1.25rem;
+            font-size: 0.9rem;
+            color: #94A3B8;
+            text-align: center;
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
         }
         .folder-tags {
             display: flex;
@@ -1370,17 +1185,17 @@
         .calendar-nav-btn {
             background-color: #FFFFFF;
             border: 1px solid #E2E8F0;
-            color: #1F2937;
-            padding: 0.5rem 1rem;
+            color: #1E293B;
+            padding: 0.55rem 1.1rem;
             border-radius: 0.75rem;
             cursor: pointer;
-            transition: background-color 0.2s ease, box-shadow 0.2s ease;
-            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+            transition: all 0.2s ease;
+            box-shadow: 0 10px 24px rgba(148, 163, 184, 0.14);
         }
         .calendar-nav-btn:hover {
-            background-color: #F97316;
-            color: #FFFFFF;
-            box-shadow: 0 12px 24px rgba(249, 115, 22, 0.2);
+            background-color: #EEF2FF;
+            border-color: #93C5FD;
+            color: #1D4ED8;
         }
         .calendar-grid {
             display: grid;
@@ -1388,18 +1203,20 @@
             flex-grow: 1;
             border-top: 1px solid #E2E8F0;
             border-left: 1px solid #E2E8F0;
+            background-color: #FFFFFF;
         }
         .calendar-day-header, .calendar-day-cell {
-            padding: 0.5rem;
+            padding: 0.65rem;
             border-right: 1px solid #E2E8F0;
             border-bottom: 1px solid #E2E8F0;
-            background: #FFFFFF;
         }
         .calendar-day-header {
             text-align: center;
-            font-weight: 500;
-            color: #64748B;
+            font-weight: 600;
+            color: #475569;
             font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
         .calendar-day-cell {
             min-height: 120px;
@@ -1407,20 +1224,16 @@
             flex-direction: column;
             transition: background-color 0.2s;
         }
-        .calendar-day-cell.other-month {
-            background: #F1F5F9;
-        }
         .calendar-day-cell:not(.other-month):hover {
-            background-color: #F8FAFC;
+            background-color: #F1F5F9;
         }
         .day-number {
             font-weight: 500;
             margin-bottom: 0.25rem;
-            color: #1F2937;
         }
         .day-number.today {
-            background: linear-gradient(to right, #fb923c, #f97316);
-            color: #FFFFFF;
+            background: linear-gradient(to right, #2dd4bf, #38bdf8);
+            color: white;
             width: 28px;
             height: 28px;
             border-radius: 50%;
@@ -1429,7 +1242,7 @@
             justify-content: center;
         }
         .calendar-day-cell.other-month .day-number {
-            color: #CBD5F5;
+            color: #94A3B8;
         }
         .calendar-tasks-container {
             flex-grow: 1;
@@ -1515,11 +1328,12 @@
 
         /* New Planner List View Styles */
         #planner-list-view-container {
-            padding: 1rem;
+            padding: 1.5rem;
             display: flex;
             flex-direction: column;
             height: 100%;
-            background-color: #F8F9FD;
+            background-color: transparent;
+            gap: 1.25rem;
         }
         .planner-search-bar {
             position: relative;
@@ -1537,11 +1351,16 @@
             background-color: #FFFFFF;
             border: 1px solid #CBD5F5;
             border-radius: 0.75rem;
-            padding: 0.75rem 1rem 0.75rem 2.75rem;
-            color: #1F2937;
+            padding: 0.9rem 1.1rem 0.9rem 2.9rem;
+            color: #0F172A;
             font-size: 1rem;
             outline: none;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+            box-shadow: 0 10px 25px rgba(100, 116, 139, 0.08);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .planner-search-bar input:focus {
+            border-color: #6366F1;
+            box-shadow: 0 15px 30px rgba(79, 70, 229, 0.15);
         }
         .planner-search-bar input::placeholder {
             color: #94A3B8;
@@ -1553,18 +1372,18 @@
         .planner-list-item {
             display: flex;
             align-items: center;
-            padding: 0.75rem 0.5rem;
-            border-radius: 0.75rem;
+            padding: 0.85rem 0.75rem;
+            border-radius: 0.85rem;
             cursor: pointer;
-            transition: background-color 0.2s, box-shadow 0.2s;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
         }
         .planner-list-item:hover {
-            background-color: #FFFFFF;
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+            background-color: #EEF2FF;
+            box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.1);
         }
         .planner-list-item .icon {
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -1572,32 +1391,51 @@
             margin-right: 1rem;
             color: white;
             flex-shrink: 0;
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
         }
         .planner-list-item .icon i {
             font-size: 0.9rem;
         }
         .planner-list-item .text {
             flex-grow: 1;
-            font-weight: 500;
+            font-weight: 600;
             font-size: 1rem;
+            color: #1E293B;
         }
         .planner-list-item .counts {
             color: #64748B;
             font-size: 0.9rem;
         }
         .planner-actions {
-            padding: 1rem 0.5rem 0;
+            padding: 1.25rem 0.75rem 0;
             border-top: 1px solid #E2E8F0;
             display: flex;
             flex-wrap: wrap;
-            gap: 0.75rem;
+            gap: 0.85rem;
             justify-content: space-between;
             align-items: center;
+        }
+        .planner-view-btn {
+            color: #475569;
+            transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .planner-view-btn:hover {
+            background-color: #EEF2FF;
+            color: #1E293B;
+            box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.18);
+        }
+        .planner-view-btn.active {
+            background: linear-gradient(135deg, #2563EB, #6366F1);
+            color: #FFFFFF;
+            box-shadow: 0 12px 24px rgba(79, 70, 229, 0.25);
         }
         .planner-add-project-btn {
             background: none;
             border: none;
-            color: #f97316;
+            color: #F97316;
             font-weight: 600;
             display: flex;
             align-items: center;
@@ -1610,7 +1448,7 @@
             font-size: 1.1rem;
         }
         .planner-add-project-btn:hover {
-            color: #fb923c;
+            color: #EA580C;
         }
         .planner-actions .action-icons {
             display: flex;
@@ -1620,25 +1458,26 @@
         .planner-action-btn {
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.45rem;
             background-color: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            color: #1F2937;
-            padding: 0.45rem 0.9rem;
+            border: 1px solid #CBD5F5;
+            color: #1E293B;
+            padding: 0.5rem 1rem;
             border-radius: 9999px;
             font-size: 0.85rem;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+            box-shadow: 0 8px 18px rgba(148, 163, 184, 0.15);
         }
         .planner-action-btn i {
-            font-size: 0.9rem;
+            font-size: 0.95rem;
         }
         .planner-action-btn:hover {
-            color: #F97316;
-            border-color: #F97316;
-            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.18);
+            color: #1D4ED8;
+            border-color: #93C5FD;
+            box-shadow: 0 12px 24px rgba(59, 130, 246, 0.18);
+            background-color: #EFF6FF;
         }
 
         /* New Planner Category View Styles */
@@ -1647,26 +1486,18 @@
             flex-direction: column;
             height: 100%;
             background-color: #F8F9FD;
-            color: #1F2937;
         }
         .category-view-header {
             display: flex;
             align-items: center;
-            padding: 1rem;
+            padding: 1.25rem;
             border-bottom: 1px solid #E2E8F0;
             flex-shrink: 0;
-            background: #FFFFFF;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            background-color: #FFFFFF;
+            box-shadow: 0 12px 24px rgba(148, 163, 184, 0.12);
         }
         .category-back-btn {
             margin-right: 1rem;
-            color: #64748B;
-            border-radius: 9999px;
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
-        .category-back-btn:hover {
-            color: #1F2937;
-            background: rgba(148, 163, 184, 0.2);
         }
         .category-view-title {
             font-size: 1.25rem;
@@ -1676,9 +1507,10 @@
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 1rem;
-            padding: 1rem;
+            padding: 1.25rem;
             border-bottom: 1px solid #E2E8F0;
             flex-shrink: 0;
+            background-color: #FFFFFF;
         }
         @media (min-width: 640px) {
             .category-stats-grid {
@@ -1687,11 +1519,11 @@
         }
         .category-stat-card {
             text-align: center;
-            background: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-radius: 0.75rem;
             padding: 1rem;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+            border-radius: 1rem;
+            background: linear-gradient(135deg, rgba(96, 165, 250, 0.12), rgba(129, 140, 248, 0.08));
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
         }
         .stat-value {
             font-size: 1.75rem;
@@ -1704,17 +1536,19 @@
             margin-top: 0.25rem;
         }
         .category-add-task-container {
-            padding: 1rem;
+            padding: 1.25rem;
             flex-shrink: 0;
+            background-color: #FFFFFF;
+            border-bottom: 1px solid #E2E8F0;
+            box-shadow: 0 8px 20px rgba(148, 163, 184, 0.12);
         }
         .add-task-input-wrapper {
             display: flex;
             align-items: center;
-            background-color: #FFFFFF;
+            background-color: #F8FAFC;
+            border-radius: 0.9rem;
+            padding: 0.75rem 1.25rem;
             border: 1px solid #E2E8F0;
-            border-radius: 0.75rem;
-            padding: 0.5rem 1rem;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
         }
         .add-task-input-wrapper i {
             color: #94A3B8;
@@ -1724,20 +1558,21 @@
             background: transparent;
             border: none;
             outline: none;
-            color: #1F2937;
+            color: #0F172A;
             width: 100%;
             font-size: 1rem;
-            padding: 0.5rem 0;
+            padding: 0.25rem 0;
         }
         .category-task-list-container {
             flex-grow: 1;
             overflow-y: auto;
-            padding: 0 1rem 1rem;
+            padding: 1.5rem;
+            background-color: #F8F9FD;
         }
         .no-tasks-placeholder {
             text-align: center;
             padding: 3rem 1rem;
-            color: #64748B;
+            color: #94A3B8;
         }
         .no-tasks-placeholder i {
             font-size: 3rem;
@@ -1746,48 +1581,48 @@
         .no-tasks-placeholder h3 {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #1F2937;
+            color: #1E293B;
         }
         .category-task-item {
             display: flex;
             align-items: center;
             background-color: #FFFFFF;
+            border-radius: 1rem;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.9rem;
             border: 1px solid #E2E8F0;
-            border-radius: 0.75rem;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
         }
         .task-checkbox-category {
             width: 24px;
             height: 24px;
-            border: 2px solid #F97316;
+            border: 2px solid #ef4444;
             border-radius: 50%;
             margin-right: 1rem;
             cursor: pointer;
             flex-shrink: 0;
             transition: all 0.2s;
-            background: #FFFFFF;
         }
         .task-checkbox-category.completed {
-            background-color: #F97316;
-            border-color: #F97316;
+            background-color: #ef4444;
+            border-color: #ef4444;
         }
         .category-task-item.completed .task-title-category {
             text-decoration: line-through;
-            color: #6b7280;
+            color: #94A3B8;
         }
         .task-title-category {
             flex-grow: 1;
-            font-weight: 500;
+            font-weight: 600;
+            color: #0F172A;
         }
         .task-play-btn {
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            background-color: #FFF7ED;
-            border: 2px solid #F97316;
-            color: #F97316;
+            background-color: transparent;
+            border: 2px solid #ef4444;
+            color: #ef4444;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1795,16 +1630,15 @@
             transition: all 0.2s;
         }
         .task-play-btn:hover {
-            background-color: #F97316;
-            color: #FFFFFF;
+            background-color: #ef4444;
+            color: white;
         }
         .completed-tasks-toggle {
             text-align: center;
-            padding: 0.5rem;
+            padding: 0.75rem;
             cursor: pointer;
-            color: #F97316;
+            color: #64748B;
             font-size: 0.875rem;
-            font-weight: 600;
         }
 
         /* Planner Action Helpers */
@@ -1813,9 +1647,9 @@
             letter-spacing: 0.01em;
         }
         .planner-action-btn.is-active {
-            color: #F97316;
-            border-color: #F97316;
-            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.2);
+            color: #1D4ED8;
+            border-color: #93C5FD;
+            box-shadow: 0 0 0 4px rgba(147, 197, 253, 0.35);
         }
         .project-color-dot {
             width: 12px;
@@ -1823,17 +1657,24 @@
             border-radius: 9999px;
             margin-right: 0.5rem;
             flex-shrink: 0;
-            border: 1px solid rgba(15, 23, 42, 0.15);
+            border: 1px solid rgba(0, 0, 0, 0.25);
+        }
+        .project-options-btn {
+            color: #94A3B8;
+            transition: color 0.2s ease, background-color 0.2s ease;
+        }
+        .project-options-btn:hover {
+            color: #1D4ED8;
+            background-color: #E2E8F0;
         }
 
         /* Tag & Folder Sheet Styles */
         .sheet-modal .modal-content {
             background: #FFFFFF;
             border-radius: 24px;
-            padding: 24px 20px 28px;
+            padding: 28px 24px 32px;
             border: 1px solid #E2E8F0;
-            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.18);
-            color: #1F2937;
+            box-shadow: 0 35px 65px rgba(15, 23, 42, 0.2);
         }
         .sheet-form {
             display: flex;
@@ -1858,8 +1699,8 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(249, 146, 60, 0.08));
-            color: #F97316;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.16), rgba(129, 140, 248, 0.1));
+            color: #2563EB;
             font-size: 1.1rem;
         }
         .sheet-title-text {
@@ -1869,38 +1710,40 @@
         .sheet-done-btn {
             background: none;
             border: none;
-            color: #F97316;
+            color: #2563EB;
             font-weight: 600;
             font-size: 0.95rem;
             cursor: pointer;
-        }
-        .sheet-done-btn:hover {
-            color: #EA580C;
         }
         .sheet-input {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            background: #FFFFFF;
+            background: #F8FAFF;
             border-radius: 18px;
             padding: 0.9rem 1rem;
             border: 1px solid #E2E8F0;
-            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
         }
         .sheet-input i {
-            color: #94A3B8;
+            color: #64748B;
             font-size: 0.95rem;
         }
-        .sheet-input input,
+        .sheet-input input {
+            background: transparent;
+            border: none;
+            outline: none;
+            flex-grow: 1;
+            color: #0F172A;
+            font-size: 0.95rem;
+        }
         .sheet-input select {
             background: transparent;
             border: none;
             outline: none;
             flex-grow: 1;
-            color: #1F2937;
+            color: #0F172A;
             font-size: 0.95rem;
-        }
-        .sheet-input select {
             appearance: none;
         }
         .sheet-color-grid {
@@ -1937,13 +1780,10 @@
             display: inline-flex;
             align-items: center;
             gap: 0.75rem;
-            color: #F97316;
+            color: #38bdf8;
             font-weight: 600;
             cursor: pointer;
             font-size: 0.95rem;
-        }
-        .sheet-footer-link:hover {
-            color: #EA580C;
         }
         .sheet-footer-link i {
             font-size: 1rem;
@@ -1963,28 +1803,26 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: #FFFFFF;
+            background: #111c30;
             border-radius: 14px;
             padding: 0.6rem 0.9rem;
-            border: 1px solid #E2E8F0;
+            border: 1px solid transparent;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
         }
         .tag-chip:hover {
-            border-color: rgba(249, 115, 22, 0.35);
-            box-shadow: 0 12px 28px rgba(249, 115, 22, 0.18);
+            border-color: rgba(56, 189, 248, 0.4);
         }
         .tag-chip.selected {
-            border-color: #F97316;
-            background: rgba(249, 115, 22, 0.12);
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.1);
         }
         .tag-chip-color {
             width: 22px;
             height: 22px;
             border-radius: 50%;
             margin-right: 0.75rem;
-            border: 2px solid rgba(148, 163, 184, 0.25);
+            border: 2px solid rgba(255,255,255,0.2);
         }
         .tag-chip-label {
             flex-grow: 1;
@@ -1992,7 +1830,7 @@
             font-weight: 500;
         }
         .tag-chip-check {
-            color: #F97316;
+            color: #38bdf8;
             font-size: 0.85rem;
             opacity: 0;
             transition: opacity 0.2s ease;
@@ -2001,9 +1839,9 @@
             opacity: 1;
         }
         .create-tag-btn {
-            background: #FFFFFF;
-            border: 1px dashed rgba(249, 115, 22, 0.45);
-            color: #F97316;
+            background: none;
+            border: 1px dashed rgba(148, 163, 184, 0.4);
+            color: #38bdf8;
             border-radius: 14px;
             padding: 0.75rem;
             width: 100%;
@@ -2013,11 +1851,6 @@
             align-items: center;
             gap: 0.6rem;
             cursor: pointer;
-            transition: background-color 0.2s ease, box-shadow 0.2s ease;
-        }
-        .create-tag-btn:hover {
-            background: rgba(249, 115, 22, 0.08);
-            box-shadow: 0 6px 16px rgba(249, 115, 22, 0.18);
         }
         .tag-chip-inline {
             display: inline-flex;
@@ -2029,9 +1862,8 @@
             font-weight: 600;
             margin-right: 0.4rem;
             margin-bottom: 0.4rem;
-            background: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            color: #1F2937;
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.4);
         }
         .tag-chip-inline .tag-dot {
             width: 10px;
@@ -2064,8 +1896,8 @@
             transition: background-color 0.2s ease, color 0.2s ease;
         }
         .tag-chip-action-btn:hover {
-            background: rgba(249, 115, 22, 0.12);
-            color: #F97316;
+            background: rgba(255, 255, 255, 0.08);
+            color: #38bdf8;
         }
 
         /* Events View */
@@ -2073,14 +1905,11 @@
             display: flex;
             flex-direction: column;
             height: 100%;
-            background: #F8F9FD;
-            color: #1F2937;
+            background: #0d1117;
         }
         .events-header {
-            border-bottom: 1px solid #E2E8F0;
+            border-bottom: 1px solid #30363d;
             padding: 1rem;
-            background: #FFFFFF;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
         }
         .events-header .events-title {
             display: flex;
@@ -2094,7 +1923,7 @@
             display: inline-flex;
             align-items: center;
             gap: 0.75rem;
-            color: #64748B;
+            color: #94a3b8;
         }
         .events-week-nav button {
             background: none;
@@ -2108,7 +1937,7 @@
             grid-template-columns: repeat(7, 1fr);
             gap: 0.5rem;
             padding: 1rem 1.25rem;
-            border-bottom: 1px solid #E2E8F0;
+            border-bottom: 1px solid #1f2937;
         }
         .events-weekday {
             text-align: center;
@@ -2120,25 +1949,20 @@
         .events-weekday span {
             display: block;
             font-size: 0.75rem;
-            color: #94A3B8;
+            color: #9ca3af;
         }
         .events-weekday strong {
             display: block;
             font-size: 1.05rem;
             font-weight: 600;
             margin-top: 0.25rem;
-            color: #1F2937;
         }
         .events-weekday.active {
-            background: linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(249, 115, 22, 0.08));
-            color: #1F2937;
-            box-shadow: 0 8px 18px rgba(249, 115, 22, 0.18);
-        }
-        .events-weekday.active span {
-            color: #1F2937;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(14, 165, 233, 0.05));
+            color: #e2e8f0;
         }
         .events-weekday.today {
-            border: 1px solid rgba(249, 115, 22, 0.35);
+            border: 1px solid rgba(56, 189, 248, 0.4);
         }
         .events-timeline {
             flex-grow: 1;
@@ -2168,35 +1992,23 @@
         }
         .events-column {
             position: relative;
+            border-left: 1px solid rgba(255,255,255,0.05);
+            padding-left: 0.5rem;
             min-height: 600px;
-            background: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-radius: 0.75rem;
-            padding: 0.75rem;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-        }
-        .events-column::before {
-            content: '';
-            position: absolute;
-            top: 0.75rem;
-            bottom: 0.75rem;
-            left: 0.75rem;
-            width: 1px;
-            background: #E2E8F0;
         }
         .events-column-empty {
             margin-top: 0.75rem;
             padding: 0.75rem;
             border-radius: 12px;
-            background: #F8FAFC;
-            color: #64748B;
+            background: rgba(148, 163, 184, 0.08);
+            color: #94a3b8;
             font-size: 0.8rem;
             text-align: center;
         }
         .event-block {
             position: absolute;
-            left: 1.25rem;
-            right: 0.75rem;
+            left: 0.5rem;
+            right: 0.5rem;
             border-radius: 16px;
             padding: 0.75rem;
             color: white;
@@ -2223,12 +2035,11 @@
             flex-direction: column;
             height: 100%;
             background: #F8F9FD;
-            color: #1F2937;
         }
         .completed-groups {
             flex-grow: 1;
             overflow-y: auto;
-            padding: 0 1rem 1.5rem;
+            padding: 0 1.25rem 1.75rem;
         }
         .completed-day-group {
             margin-top: 1.25rem;
@@ -2237,7 +2048,7 @@
             display: flex;
             align-items: baseline;
             justify-content: space-between;
-            color: #1F2937;
+            color: #1E293B;
             margin-bottom: 0.75rem;
         }
         .completed-day-header span {
@@ -2249,19 +2060,19 @@
             align-items: center;
             gap: 0.85rem;
             background: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-radius: 16px;
-            padding: 0.85rem 1rem;
-            margin-bottom: 0.75rem;
-            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+            border-radius: 18px;
+            padding: 0.95rem 1.15rem;
+            margin-bottom: 0.9rem;
+            box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
             cursor: pointer;
+            border: 1px solid #E2E8F0;
         }
         .completed-task-icon {
             width: 34px;
             height: 34px;
             border-radius: 50%;
-            background: rgba(34, 197, 94, 0.12);
-            color: #16A34A;
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -2277,11 +2088,11 @@
         }
         .completed-task-details span {
             font-size: 0.75rem;
-            color: #64748B;
+            color: #94A3B8;
         }
         .completed-task-time {
             font-size: 0.8rem;
-            color: #475569;
+            color: #64748B;
         }
         .completed-task-actions {
             display: flex;
@@ -2295,26 +2106,26 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: rgba(14, 165, 233, 0.15);
-            color: #0284C7;
+            background: rgba(59, 130, 246, 0.12);
+            color: #2563EB;
             transition: background 0.2s ease, color 0.2s ease;
         }
         .completed-task-restore:hover {
-            background: rgba(14, 165, 233, 0.25);
-            color: #0C4A6E;
+            background: rgba(59, 130, 246, 0.2);
+            color: #1D4ED8;
         }
         .completed-show-more {
             margin: 1.5rem auto 0;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.65rem 1.5rem;
+            padding: 0.7rem 1.6rem;
             border-radius: 9999px;
-            border: 1px solid rgba(249, 115, 22, 0.35);
+            border: 1px solid rgba(148, 163, 184, 0.4);
             background: #FFFFFF;
-            color: #F97316;
+            color: #2563EB;
             cursor: pointer;
-            box-shadow: 0 6px 16px rgba(249, 115, 22, 0.15);
+            box-shadow: 0 12px 24px rgba(148, 163, 184, 0.18);
         }
 
 
@@ -2322,8 +2133,8 @@
         .modal {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(6px);
+            background: rgba(13, 17, 23, 0.7); /* Darker backdrop */
+            backdrop-filter: blur(5px);
             display: none;
             align-items: center;
             justify-content: center;
@@ -2333,12 +2144,12 @@
         .modal-content {
             background: #FFFFFF;
             border: 1px solid #E2E8F0;
-            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
-            border-radius: 16px;
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.18);
+            border-radius: 18px;
             padding: 28px;
             width: 90%;
             max-width: 420px;
-            color: #1F2937;
+            color: #0F172A;
         }
         .modal-header {
             display: flex;
@@ -2346,11 +2157,7 @@
             align-items: center;
             margin-bottom: 20px;
         }
-        .modal-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: #1F2937;
-        }
+        .modal-title { font-size: 1.3rem; font-weight: 600; }
         .close-modal {
             background: none;
             border: none;
@@ -2360,7 +2167,7 @@
             transition: color 0.2s ease;
         }
         .close-modal:hover {
-            color: #1F2937;
+            color: #1D4ED8;
         }
         
         /* Profile Settings */
@@ -3639,20 +3446,20 @@
             </div>
             
             <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar">
-                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
-                    <button class="back-button text-gray-400 hover:text-white" data-target="timer">
+                <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-[#F8F9FD]">
+                    <button class="back-button p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
                      <div class="flex items-center gap-2">
-                         <button id="planner-menu-toggle" class="p-2 rounded-full hover:bg-gray-700 md:hidden"><i class="fas fa-bars"></i></button>
-                         <h1 id="planner-header-title" class="text-xl font-bold text-gray-100">Planner</h1>
+                         <button id="planner-menu-toggle" class="p-2 rounded-full text-slate-600 hover:bg-slate-200 md:hidden"><i class="fas fa-bars"></i></button>
+                         <h1 id="planner-header-title" class="text-xl font-bold text-slate-900">Planner</h1>
                      </div>
-                    <div id="planner-view-controls" class="flex items-center bg-gray-700 rounded-md p-1">
-                         <button data-view="list" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-list mr-1"></i>List</button>
-                         <button data-view="board" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-grip-horizontal mr-1"></i>Board</button>
-                         <button data-view="calendar" class="planner-view-btn p-1 px-2 rounded text-sm"><i class="fas fa-calendar-alt mr-1"></i>Calendar</button>
+                    <div id="planner-view-controls" class="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                         <button data-view="list" class="planner-view-btn px-3 py-1.5 rounded-lg text-sm font-medium"><i class="fas fa-list mr-2"></i>List</button>
+                         <button data-view="board" class="planner-view-btn px-3 py-1.5 rounded-lg text-sm font-medium"><i class="fas fa-grip-horizontal mr-2"></i>Board</button>
+                         <button data-view="calendar" class="planner-view-btn px-3 py-1.5 rounded-lg text-sm font-medium"><i class="fas fa-calendar-alt mr-2"></i>Calendar</button>
                     </div>
                 </header>
                 <div class="planner-main-layout">
@@ -9474,14 +9281,14 @@ if (achievementsGrid) {
           
             sidebar.innerHTML = `
               <div id="planner-sidebar-header">
-                <h2 class="text-lg font-bold">Projects</h2>
-                <button id="add-list-btn" class="p-1 rounded-full hover:bg-gray-700"><i class="fas fa-plus"></i></button>
+                <h2 class="text-lg font-bold text-slate-800">Projects</h2>
+                <button id="add-list-btn" class="p-1 rounded-full text-slate-500 hover:bg-slate-200"><i class="fas fa-plus"></i></button>
               </div>
               <nav class="flex-grow space-y-1">
                 <div class="planner-sidebar-item ${plannerState.activeListId === 'inbox' ? 'active' : ''}" data-list-id="inbox">
                   <span class="project-color-dot" style="background:${getProjectColor('inbox')}"></span>
                   <span class="flex-grow">Inbox</span>
-                  <span class="text-xs bg-gray-600 px-2 py-0.5 rounded-full">${inboxTasks}</span>
+                  <span class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">${inboxTasks}</span>
                 </div>
                 ${plannerState.lists.map(list => {
                   const taskCount = plannerState.tasks.filter(t => t.list_id === list.id && !t.completed).length;
@@ -9489,8 +9296,8 @@ if (achievementsGrid) {
                     <div class="planner-sidebar-item relative ${plannerState.activeListId === list.id ? 'active' : ''}" data-list-id="${list.id}">
                       <span class="project-color-dot" style="background:${getProjectColor(list.id)}"></span>
                       <span class="flex-grow">${list.name}</span>
-                      <span class="text-xs bg-gray-600 px-2 py-0.5 rounded-full">${taskCount}</span>
-                      <button class="project-options-btn p-2 rounded-full hover:bg-gray-700/50 ml-2 -mr-1" data-list-id="${list.id}" data-list-name="${list.name}"><i class="fas fa-ellipsis-h text-xs pointer-events-none"></i></button>
+                      <span class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">${taskCount}</span>
+                      <button class="project-options-btn p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 ml-2 -mr-1" data-list-id="${list.id}" data-list-name="${list.name}"><i class="fas fa-ellipsis-h text-xs pointer-events-none"></i></button>
                     </div>
                   `;
                 }).join('')}
@@ -9509,7 +9316,7 @@ if (achievementsGrid) {
             document.getElementById('planner-header-title').textContent = activeList?.name || 'Planner';
           
             document.querySelectorAll('.planner-view-btn').forEach(btn => {
-              btn.classList.toggle('planner-view-btn-active', btn.dataset.view === plannerState.currentView);
+              btn.classList.toggle('active', btn.dataset.view === plannerState.currentView);
             });
           
             const tasksForCurrentList = plannerState.tasks.filter(t => {
@@ -10014,13 +9821,12 @@ if (achievementsGrid) {
         }
         
         function renderPlannerTaskItem(task) {
-            const priorityColors = { high: 'border-red-500', medium: 'border-yellow-500', low: 'border-blue-500', none: 'border-transparent' };
+            const priorityColors = { high: 'border-red-400', medium: 'border-amber-400', low: 'border-sky-400', none: 'border-transparent' };
             const isSelected = plannerState.selectedTaskId === task.id;
-            const selectionClass = isSelected ? 'task-item--selected' : '';
             return `
-              <div class="task-item flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 ${priorityColors[task.priority] || 'border-l-transparent'} ${selectionClass}" data-task-id="${task.id}">
-                <input type="checkbox" class="task-checkbox-planner w-5 h-5 rounded-full text-blue-500 focus:ring-blue-500 mr-4 flex-shrink-0" ${task.completed ? 'checked' : ''} />
-                <span class="flex-grow ${task.completed ? 'line-through text-slate-400' : ''}">${task.title}</span>
+              <div class="task-item flex items-center p-4 rounded-xl cursor-pointer transition-all duration-200 border ${priorityColors[task.priority] || 'border-l-transparent'} ${isSelected ? 'bg-sky-50 border-sky-200 ring-2 ring-blue-500 shadow-lg' : 'bg-white hover:bg-slate-50 border-slate-200 shadow-sm'}" data-task-id="${task.id}">
+                <input type="checkbox" class="task-checkbox-planner w-5 h-5 bg-white border border-slate-300 rounded-full text-blue-500 focus:ring-blue-500 mr-4 flex-shrink-0" ${task.completed ? 'checked' : ''} />
+                <span class="flex-grow font-medium text-slate-800 ${task.completed ? 'line-through text-slate-400' : ''}">${task.title}</span>
                 ${task.due_date ? `<span class="text-xs text-slate-500 ml-4">${new Date(task.due_date).toLocaleDateString()}</span>` : ''}
               </div>
             `;
@@ -10221,7 +10027,7 @@ if (achievementsGrid) {
                         const color = tag?.color || '#38bdf8';
                         const tagId = tag?.id ? String(tag.id) : '';
                         return `
-                            <div class="tag-chip-inline tag-chip-manageable" style="background:${color}14;border:1px solid ${color}33;color:${color};" data-tag-name="${tagName}" data-tag-color="${color}" data-tag-id="${tagId}">
+                            <div class="tag-chip-inline tag-chip-manageable" style="background:${color}12;border:1px solid ${color}33;color:#0F172A;" data-tag-name="${tagName}" data-tag-color="${color}" data-tag-id="${tagId}">
                                 <span class="tag-dot" style="background:${color}"></span>
                                 <span class="tag-chip-label">${tagName}</span>
                                 <div class="tag-chip-actions">
@@ -10351,14 +10157,14 @@ if (achievementsGrid) {
               : 'Today';
           
             const priorityClasses = {
-              high: 'text-red-500',
-              medium: 'text-yellow-500',
-              low: 'text-blue-500',
-              none: 'text-gray-400'
+              high: 'text-rose-500',
+              medium: 'text-amber-500',
+              low: 'text-sky-500',
+              none: 'text-slate-400'
             };
             const priority = selectedTask.priority || 'none';
             const repeatText = selectedTask.repeat ? `Repeats ${selectedTask.repeat.type}` : 'None';
-            const repeatTextColor = selectedTask.repeat ? 'text-gray-300' : 'text-gray-500';
+            const repeatTextColor = selectedTask.repeat ? 'text-sky-600 font-medium' : 'text-slate-400';
           
             const estimatedPomos = selectedTask.pomodoros_estimated || 1;
             const completedPomos = selectedTask.pomodoros_completed || 0;
@@ -10377,9 +10183,9 @@ if (achievementsGrid) {
                 if (!tagName) return '';
                 const libraryTag = (plannerState.tagLibrary || []).find(t => t.name.toLowerCase() === tagName.toLowerCase());
                 const color = libraryTag?.color || '#6366f1';
-                const textColor = color;
+                const textColor = '#0F172A';
                 return `
-                    <span class="tag-chip-inline" style="background:${color}14; color:${textColor}; border:1px solid ${color}33">
+                    <span class="tag-chip-inline" style="background:${color}1a; color:${textColor}; border:1px solid ${color}55">
                         <span class="tag-dot" style="background:${color}"></span>${tagName}
                     </span>
                 `;
@@ -10387,52 +10193,50 @@ if (achievementsGrid) {
 
             const subtasks = selectedTask.subtasks || [];
             const subtasksHtml = subtasks.map(subtask => `
-                <div class="flex items-center p-2 hover:bg-gray-700/50 rounded-md" data-subtask-id="${subtask.id}">
-                    <input type="checkbox" class="subtask-checkbox w-4 h-4 bg-gray-600 border-gray-500 rounded text-blue-500 focus:ring-blue-500 mr-3 flex-shrink-0" ${subtask.completed ? 'checked' : ''}>
-                    <span class="flex-grow text-sm ${subtask.completed ? 'line-through text-gray-500' : ''}">${subtask.title}</span>
-                    <button class="delete-subtask-btn text-gray-500 hover:text-red-400 ml-2 text-xs"><i class="fas fa-trash-alt"></i></button>
+                <div class="flex items-center p-2 hover:bg-slate-100 rounded-lg" data-subtask-id="${subtask.id}">
+                    <input type="checkbox" class="subtask-checkbox w-4 h-4 bg-white border border-slate-300 rounded text-blue-500 focus:ring-blue-500 mr-3 flex-shrink-0" ${subtask.completed ? 'checked' : ''}>
+                    <span class="flex-grow text-sm ${subtask.completed ? 'line-through text-slate-400' : 'text-slate-700'}">${subtask.title}</span>
+                    <button class="delete-subtask-btn text-slate-400 hover:text-rose-500 ml-2 text-xs"><i class="fas fa-trash-alt"></i></button>
                 </div>
             `).join('');
 
 
             detailsPanel.innerHTML = `
-              <div class="p-4 h-full flex flex-col bg-gray-800 text-white">
-                <!-- Header -->
-                <div class="flex-shrink-0 flex items-center mb-4">
-                  <input type="checkbox" class="task-checkbox-planner w-6 h-6 bg-gray-700 rounded-full text-blue-500 focus:ring-blue-500 mr-4 flex-shrink-0" ${selectedTask.completed ? 'checked' : ''} />
-                  <button id="task-detail-start-btn" class="mr-2 text-green-400 hover:text-green-300 transition" title="Start Normal Timer"><i class="fas fa-play"></i></button>
-                  <input id="task-detail-title" class="text-xl font-semibold bg-transparent w-full border-none focus:ring-0 p-0" value="${selectedTask.title}">
+              <div class="p-6 h-full flex flex-col bg-white text-slate-900">
+                <div class="flex-shrink-0 flex items-center gap-3 mb-6">
+                  <input type="checkbox" class="task-checkbox-planner w-6 h-6 bg-white border border-slate-300 rounded-full text-blue-500 focus:ring-blue-500 flex-shrink-0" ${selectedTask.completed ? 'checked' : ''} />
+                  <button id="task-detail-start-btn" class="text-emerald-500 hover:text-emerald-600 transition" title="Start Normal Timer"><i class="fas fa-play"></i></button>
+                  <input id="task-detail-title" class="text-xl font-semibold bg-transparent w-full border-none focus:ring-0 p-0 text-slate-900" value="${selectedTask.title}">
                   <div class="relative">
                     <button id="task-detail-priority-btn" class="${priorityClasses[priority]} hover:opacity-80 transition" title="Set Priority">
                       <i class="fas fa-flag"></i>
                     </button>
-                    <div id="task-priority-menu" class="hidden absolute right-0 mt-2 w-32 bg-gray-700 rounded-md shadow-lg z-10">
-                      <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="high">High</a>
-                      <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="medium">Medium</a>
-                      <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="low">Low</a>
-                      <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-priority="none">None</a>
+                    <div id="task-priority-menu" class="hidden absolute right-0 mt-2 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-10">
+                      <a href="#" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-100" data-priority="high">High</a>
+                      <a href="#" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-100" data-priority="medium">Medium</a>
+                      <a href="#" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-100" data-priority="low">Low</a>
+                      <a href="#" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-100" data-priority="none">None</a>
                     </div>
                   </div>
-                  <button id="task-detail-flag-btn" class="${selectedTask.flagged ? 'text-yellow-400' : 'text-gray-500'} hover:opacity-80 transition ml-2" title="Flag Task">
+                  <button id="task-detail-flag-btn" class="${selectedTask.flagged ? 'text-amber-500' : 'text-slate-400'} hover:text-amber-600 transition" title="Flag Task">
                       <i class="${selectedTask.flagged ? 'fas' : 'far'} fa-flag"></i>
                   </button>
-                  <button id="close-task-details" class="ml-2 p-1 rounded-full hover:bg-gray-700">&times;</button>
+                  <button id="close-task-details" class="ml-2 p-2 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-700">&times;</button>
                 </div>
-          
-                <!-- Main Content -->
-                <div class="flex-grow overflow-y-auto pr-2 text-sm">
-                  <button id="task-detail-tags-btn" class="border border-gray-600 rounded-full px-3 py-1 text-gray-400 mb-4 hover:bg-gray-700 flex items-center gap-2">
+
+                <div class="flex-grow overflow-y-auto pr-2 text-sm text-slate-600">
+                  <button id="task-detail-tags-btn" class="border border-slate-200 rounded-full px-3 py-1 text-slate-600 mb-4 hover:bg-slate-50 flex items-center gap-2 bg-white shadow-sm">
                      <i class="fas fa-tags text-xs"></i>
-                     <div class="flex items-center gap-1.5">${tagsHtml || '<span>+ Tags</span>'}</div>
+                     <div class="flex items-center gap-1.5">${tagsHtml || '<span class="text-slate-400">+ Tags</span>'}</div>
                   </button>
-          
-                  <div class="space-y-3">
-                    <div class="flex items-center">
-                      <div id="task-detail-pomodoro-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition flex-grow" title="Start Pomodoro Timer">
-                          <i class="fas fa-stopwatch text-gray-400 w-6 text-center mr-3"></i>
-                          <span>Pomodoro</span>
+
+                  <div class="space-y-4">
+                    <div class="flex items-center gap-2">
+                      <div id="task-detail-pomodoro-btn" class="flex items-center cursor-pointer p-3 -ml-1 rounded-xl hover:bg-slate-100 transition flex-grow" title="Start Pomodoro Timer">
+                          <i class="fas fa-stopwatch text-slate-400 w-6 text-center mr-3"></i>
+                          <span class="text-slate-700">Pomodoro</span>
                       </div>
-                      <button type="button" id="open-pomodoro-setup-btn" class="pomodoro-summary-button">
+                      <button type="button" id="open-pomodoro-setup-btn" class="pomodoro-summary-button bg-slate-900 text-white hover:bg-slate-800">
                           <div class="numbers">
                               <div class="estimate">${pomodoroEquation}</div>
                               <div class="duration">= ${formattedEstimatedTime}</div>
@@ -10441,52 +10245,51 @@ if (achievementsGrid) {
                           <i class="fas fa-chevron-right"></i>
                       </button>
                     </div>
-          
-                    <div class="flex items-center">
-                      <i class="fas fa-calendar-day text-gray-400 w-6 text-center mr-3"></i>
-                      <span>Due Date</span>
+
+                    <div class="flex items-center gap-2">
+                      <i class="fas fa-calendar-day text-slate-400 w-6 text-center"></i>
+                      <span class="text-slate-700">Due Date</span>
                       <input
                         type="date"
                         id="task-detail-due-date"
-                        class="ml-auto bg-transparent text-right p-0 border-none focus:ring-0"
+                        class="ml-auto bg-white text-right p-0 border-none focus:ring-0 text-slate-700"
                         value="${selectedTask.due_date ? new Date(selectedTask.due_date).toISOString().split('T')[0] : ''}">
                     </div>
-          
-                    <div id="task-detail-project-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition">
-                      <i class="fas fa-tasks text-gray-400 w-6 text-center mr-3"></i>
-                      <span>Project</span>
-                      <span class="ml-auto text-gray-300">${listName}</span>
+
+                    <div id="task-detail-project-btn" class="flex items-center cursor-pointer p-3 -ml-1 rounded-xl hover:bg-slate-100 transition">
+                      <i class="fas fa-tasks text-slate-400 w-6 text-center mr-3"></i>
+                      <span class="text-slate-700">Project</span>
+                      <span class="ml-auto text-slate-500">${listName}</span>
                     </div>
-          
-                    <div class="flex items-center">
-                      <i class="fas fa-bell text-gray-400 w-6 text-center mr-3"></i>
-                      <span>Reminder</span>
-                      <span class="ml-auto text-gray-500">None</span>
+
+                    <div class="flex items-center gap-2">
+                      <i class="fas fa-bell text-slate-400 w-6 text-center"></i>
+                      <span class="text-slate-700">Reminder</span>
+                      <span class="ml-auto text-slate-400">None</span>
                     </div>
-          
-                    <div id="task-detail-repeat-btn" class="flex items-center cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-700 transition">
-                      <i class="fas fa-redo text-gray-400 w-6 text-center mr-3"></i>
-                      <span>Repeat</span>
+
+                    <div id="task-detail-repeat-btn" class="flex items-center cursor-pointer p-3 -ml-1 rounded-xl hover:bg-slate-100 transition">
+                      <i class="fas fa-redo text-slate-400 w-6 text-center mr-3"></i>
+                      <span class="text-slate-700">Repeat</span>
                       <span class="ml-auto ${repeatTextColor}">${repeatText}</span>
                     </div>
-          
-                    <div class="text-gray-400">
+
+                    <div class="text-slate-600">
                         <div id="subtasks-container" class="mt-2 space-y-1">${subtasksHtml}</div>
-                         <div class="flex items-center mt-1">
-                            <i class="fas fa-plus w-6 text-center mr-3"></i>
-                            <input id="add-subtask-input" class="bg-transparent w-full border-none p-0 focus:ring-0" placeholder="Add a subtask...">
+                        <div class="flex items-center mt-2 gap-2">
+                            <i class="fas fa-plus w-6 text-center text-slate-400"></i>
+                            <input id="add-subtask-input" class="bg-transparent w-full border-none p-0 focus:ring-0 text-slate-600 placeholder-slate-400" placeholder="Add a subtask...">
                         </div>
                     </div>
                   </div>
-          
-                  <textarea id="task-detail-notes" class="w-full bg-transparent p-0 mt-4 h-24 border-none focus:ring-0" placeholder="Add a note...">${selectedTask.notes || ''}</textarea>
+
+                  <textarea id="task-detail-notes" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 mt-4 h-28 focus:ring-2 focus:ring-slate-300 text-slate-700 placeholder-slate-400" placeholder="Add a note...">${selectedTask.notes || ''}</textarea>
                 </div>
-          
-                <!-- Footer -->
-                <div class="flex-shrink-0 pt-2 flex justify-between items-center text-xs text-gray-500">
-                  <button><i class="fas fa-arrow-left"></i></button>
+
+                <div class="flex-shrink-0 pt-4 flex justify-between items-center text-xs text-slate-500 border-t border-slate-200 mt-4">
+                  <button class="hover:text-slate-700"><i class="fas fa-arrow-left"></i></button>
                   <span>Created on ${createdDate}</span>
-                  <button id="delete-task-btn" class="text-gray-400 hover:text-red-500 text-base"><i class="fas fa-trash-alt"></i></button>
+                  <button id="delete-task-btn" class="text-rose-500 hover:text-rose-600 text-base"><i class="fas fa-trash-alt"></i></button>
                 </div>
               </div>
             `;
