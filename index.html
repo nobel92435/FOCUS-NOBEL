@@ -25,17 +25,22 @@
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden; /* Prevent horizontal scrolling on the entire body */
-            background-color: #0d1117; /* Darker, modern background */
-            background-image: radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15), transparent 60%);
-            color: #e6edf3; /* Brighter default text */
+            background-color: #F8F9FD; /* Soft neutral backdrop */
+            background-image: none;
+            color: #0F172A; /* High-contrast base text */
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .nav-item.active {
-            background-color: rgb(255, 255, 255);
+            background-color: #F97316;
+            color: #FFFFFF;
+            box-shadow: 0 10px 24px rgba(249, 115, 22, 0.25);
         }
         .nav-item.active span {
-            color: #f8fafc;
+            color: inherit;
+        }
+        .nav-item.active img {
+            filter: brightness(0) invert(1);
         }
         .group-nav-item {
             color: #475569;
@@ -66,7 +71,7 @@
             gap: 0.75rem;
             padding: 0.75rem 1rem;
             text-decoration: none;
-            color: #cbd5f5;
+            color: #475569;
             border-radius: 0.75rem;
             transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, transform 0.2s ease-in-out;
         }
@@ -94,12 +99,10 @@
         }
 
         .sidebar-nav .nav-link:hover {
-            background-color: rgb(255, 255, 255);
+            background-color: rgba(148, 163, 184, 0.18);
         }
 
         .sidebar-nav .nav-link.active {
-            background-color: rgb(255, 255, 255);
-            color: #f8fafc;
             font-weight: 600;
         }
 
@@ -665,6 +668,20 @@
         #page-group-detail {
             background-color: #F8F9FD;
             color: #0F172A;
+        }
+
+        #main-nav {
+            background-color: #FFFFFF !important;
+            border-top: 1px solid #E2E8F0;
+            box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.06);
+        }
+
+        #main-nav .nav-link {
+            color: #475569;
+        }
+
+        #main-nav .nav-link span {
+            color: inherit;
         }
 
         #groups-btn {
