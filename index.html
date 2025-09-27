@@ -2334,6 +2334,9 @@
             z-index: 1000;
         }
         .modal.active { display: flex; }
+        #confirmation-modal {
+            z-index: 2000;
+        }
         .modal-content {
             background: #FFFFFF;
             border: 1px solid #E2E8F0;
@@ -2343,6 +2346,34 @@
             width: 90%;
             max-width: 420px;
             color: #1F2937;
+        }
+
+        #kick-member-modal .modal-content {
+            max-height: min(80vh, 560px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #kick-member-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+            margin-right: -0.25rem;
+            scrollbar-width: thin;
+        }
+
+        #kick-member-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #kick-member-list::-webkit-scrollbar-thumb {
+            background-color: rgba(100, 116, 139, 0.4);
+            border-radius: 9999px;
+        }
+
+        #kick-member-list::-webkit-scrollbar-track {
+            background-color: transparent;
         }
 
         .kick-member-btn {
@@ -3377,7 +3408,7 @@
             border-radius: 0.75rem;
             border: 1px solid #E2E8F0;
             box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
-            z-index: 20;
+            z-index: 1500;
             overflow: hidden;
         }
         .log-options-menu.active {
