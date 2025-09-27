@@ -3514,7 +3514,7 @@
     <input type="file" id="image-upload-input" class="hidden" accept="image/*">
     <input type="file" id="profile-picture-upload" class="hidden" accept="image/*">
 
-    <div id="auth-screen" class="active flex-col items-center justify-center h-full p-4 fade-in">
+    <div id="auth-screen" data-route="auth" class="active flex-col items-center justify-center h-full p-4 fade-in">
         <div class="w-full max-w-sm text-center">
              <div class="flex items-center justify-center mb-6">
                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -3571,7 +3571,7 @@
         </div>
     </div>
 
-    <div id="page-username-setup" class="page flex-col items-center justify-center h-full p-4 fade-in">
+    <div id="page-username-setup" class="page flex-col items-center justify-center h-full p-4 fade-in" data-route="username-setup">
         <div class="w-full max-w-sm text-center">
             <h1 class="text-3xl font-bold text-white mb-2">Welcome to FocusFlow!</h1>
             <p class="text-gray-400 mb-8">Let's set up your profile.</p>
@@ -3589,7 +3589,7 @@
 
     <div id="app-container" class="flex-col h-screen">
         <main id="main" class="flex-grow overflow-y-auto no-scrollbar">
-            <div id="page-timer" class="page active flex-col h-full">
+            <div id="page-timer" class="page active flex-col h-full" data-route="timer">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20">
                      <div class="flex items-center">
                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -3641,7 +3641,7 @@
                 </div>
             </div>
             
-            <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="stats">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3655,7 +3655,7 @@
                     </div>
             </div>
             
-            <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="ranking">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
                     <button class="back-button p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3676,7 +3676,7 @@
                                     </div>
             </div>
             
-            <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="planner">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3702,7 +3702,7 @@
                 </div>
             </div>
 
-            <div id="page-profile" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-profile" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="profile">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3749,7 +3749,7 @@
                     </div>
             </div>
 
-            <div id="page-my-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-my-groups" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="my-groups">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button text-slate-500 hover:text-slate-700" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3764,7 +3764,7 @@
                 <div id="my-groups-list" class="p-4 space-y-4"></div>
             </div>
 
-            <div id="page-find-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-find-groups" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="find-groups">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button text-slate-500 hover:text-slate-700" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3801,7 +3801,7 @@
                 </button>
             </div>
 
-            <div id="page-create-group" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-create-group" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="create-group">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button text-slate-500 hover:text-slate-700" data-target="find-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3823,7 +3823,7 @@
                 </div>
             </div>
 
-            <div id="page-group-detail" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-group-detail" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="group-detail">
                 <header class="p-4 md:p-6 flex items-center z-20 border-b border-slate-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button text-slate-500 hover:text-slate-700" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3909,7 +3909,7 @@
                 </nav>
             </div>
             
-            <div id="page-pulse-forum" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-pulse-forum" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="pulse-forum">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3929,31 +3929,31 @@
         <nav id="main-nav" class="sidebar-nav bg-white border-t border-slate-200 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] sticky bottom-0">
             <ul class="grid grid-cols-5">
                 <li>
-                    <a href="#timer" class="nav-link nav-link--stacked nav-item active" data-page="timer">
+                    <a href="#/timer" class="nav-link nav-link--stacked nav-item active" data-page="timer" data-route="timer">
                         <img src="assets/icons/timer.svg" alt="Timer">
                         <span>Timer</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#stats" class="nav-link nav-link--stacked nav-item" data-page="stats">
+                    <a href="#/stats" class="nav-link nav-link--stacked nav-item" data-page="stats" data-route="stats">
                         <img src="assets/icons/stats.svg" alt="Stats">
                         <span>Stats</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#ranking" class="nav-link nav-link--stacked nav-item" data-page="ranking">
+                    <a href="#/ranking" class="nav-link nav-link--stacked nav-item" data-page="ranking" data-route="ranking">
                         <img src="assets/icons/rankings.svg" alt="Ranking">
                         <span>Ranking</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#planner" class="nav-link nav-link--stacked nav-item" data-page="planner">
+                    <a href="#/planner" class="nav-link nav-link--stacked nav-item" data-page="planner" data-route="planner">
                         <img src="assets/icons/planner.svg" alt="Planner">
                         <span>Planner</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#pulse-forum" class="nav-link nav-link--stacked nav-item" data-page="pulse-forum">
+                    <a href="#/pulse-forum" class="nav-link nav-link--stacked nav-item" data-page="pulse-forum" data-route="pulse-forum">
                         <img src="assets/icons/pulseforum.svg" alt="PulseForum">
                         <span>PulseForum</span>
                     </a>
@@ -8221,9 +8221,93 @@ let pauseStartTime = 0;
         }
 
         // --- Page Navigation ---
-        function showPage(pageId) {
+        const ROUTE_PREFIX = '#/';
+        const DEFAULT_ROUTE_KEY = 'timer';
+        const mainNavItems = Array.from(document.querySelectorAll('.nav-item'));
+        const mainNavRoutes = new Set(mainNavItems.map(item => item.dataset.route || item.dataset.page));
+        let lastMainNavRoute = null;
+
+        const initialActiveNavItem = mainNavItems.find(item => item.classList.contains('active'));
+        if (initialActiveNavItem) {
+            lastMainNavRoute = initialActiveNavItem.dataset.route || initialActiveNavItem.dataset.page || DEFAULT_ROUTE_KEY;
+        }
+
+        function formatRouteHash(routeKey) {
+            return `${ROUTE_PREFIX}${routeKey}`;
+        }
+
+        function setRouteHash(routeKey, { replace = false } = {}) {
+            if (!routeKey) return;
+            const normalizedRoute = routeKey.trim();
+            if (!normalizedRoute) return;
+            const targetHash = formatRouteHash(normalizedRoute);
+            if (window.location.hash === targetHash) return;
+            if (replace) {
+                window.history.replaceState(null, '', targetHash);
+            } else {
+                window.location.hash = targetHash;
+            }
+        }
+
+        function updateMainNavActive(routeKey) {
+            if (!mainNavItems.length) return;
+            const isMainNavRoute = routeKey && mainNavRoutes.has(routeKey);
+            if (isMainNavRoute) {
+                mainNavItems.forEach(item => {
+                    const itemRoute = item.dataset.route || item.dataset.page;
+                    item.classList.toggle('active', itemRoute === routeKey);
+                });
+                lastMainNavRoute = routeKey;
+            } else if (lastMainNavRoute) {
+                mainNavItems.forEach(item => {
+                    const itemRoute = item.dataset.route || item.dataset.page;
+                    item.classList.toggle('active', itemRoute === lastMainNavRoute);
+                });
+            }
+        }
+
+        function getRouteTarget(routeKey) {
+            if (!routeKey) return null;
+            return document.querySelector(`[data-route="${routeKey}"]`);
+        }
+
+        function handleRouteChange() {
+            const hash = window.location.hash;
+            if (hash && hash.startsWith(ROUTE_PREFIX)) {
+                const routeKey = decodeURIComponent(hash.slice(ROUTE_PREFIX.length));
+                const target = getRouteTarget(routeKey);
+                if (target?.id) {
+                    showPage(target.id, { skipRouteUpdate: true });
+                    return;
+                }
+            }
+
+            const fallbackRoute = (lastMainNavRoute && getRouteTarget(lastMainNavRoute))
+                ? lastMainNavRoute
+                : DEFAULT_ROUTE_KEY;
+            const fallbackTarget = getRouteTarget(fallbackRoute);
+            if (fallbackTarget?.id) {
+                showPage(fallbackTarget.id, { skipRouteUpdate: true });
+                setRouteHash(fallbackTarget.dataset.route, { replace: true });
+            }
+        }
+
+        function initializeRouting() {
+            const activeTarget = document.querySelector('[data-route].active');
+            if (!window.location.hash && activeTarget?.dataset.route) {
+                setRouteHash(activeTarget.dataset.route, { replace: true });
+                updateMainNavActive(activeTarget.dataset.route);
+            } else {
+                handleRouteChange();
+            }
+        }
+
+        function showPage(pageId, options = {}) {
             if (!pageId) return;
-            
+            const { skipRouteUpdate = false } = options;
+            const targetElement = document.getElementById(pageId);
+            const routeKey = targetElement?.dataset.route || null;
+
             if (pageId === 'page-planner') {
                 plannerState.calendarYear = new Date().getFullYear();
                 plannerState.calendarMonth = new Date().getMonth();
@@ -8240,16 +8324,14 @@ let pauseStartTime = 0;
             document.getElementById('auth-screen').classList.remove('active');
             document.getElementById('app-container').classList.remove('active', 'flex');
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            
+
             if (pageId.startsWith('page-')) {
                  document.getElementById('app-container').classList.add('active', 'flex');
-                 const targetPage = document.getElementById(pageId);
-                 if(targetPage) targetPage.classList.add('active');
-            } else {
-                 const targetScreen = document.getElementById(pageId);
-                 if(targetScreen) targetScreen.classList.add('active');
+                 if (targetElement) targetElement.classList.add('active');
+            } else if (targetElement) {
+                 targetElement.classList.add('active');
             }
-            
+
             const mainNav = document.getElementById('main-nav');
             const groupNav = document.getElementById('group-detail-nav');
             const mainNavPages = ['page-timer', 'page-stats', 'page-ranking', 'page-planner'];
@@ -8262,10 +8344,15 @@ let pauseStartTime = 0;
             } else if (pageId === 'page-group-detail') {
                 if (groupNav) groupNav.style.display = 'grid';
             }
-            
+
             if (pageId === 'page-stats') {
                 renderStatsPage(userSessions);
             }
+
+            if (!skipRouteUpdate && routeKey) {
+                setRouteHash(routeKey);
+            }
+            updateMainNavActive(routeKey);
         }
 
         function formatTime(seconds, includeSeconds = true) {
@@ -14872,12 +14959,14 @@ if (achievementsGrid) {
 
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', function(event) {
+            const routeKey = this.dataset.route || this.dataset.page;
+            if (!routeKey) return;
             event.preventDefault();
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            this.classList.add('active');
-            const pageName = this.dataset.page;
-            showPage(`page-${pageName}`);
+            setRouteHash(routeKey);
         }));
+
+        window.addEventListener('hashchange', handleRouteChange);
+        initializeRouting();
 
         document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function() {
             const targetPage = this.getAttribute('data-target');
