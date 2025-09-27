@@ -3973,96 +3973,96 @@
         <div class="modal-content"><div class="modal-header"><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form"><div class="mb-4"><label for="study-goal-input" class="block text-gray-300 mb-2">Daily Study Goal (hours)</label><input type="number" id="study-goal-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required min="1" max="24"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Set Goal</button></form></div></div>
 
     <div id="advanced-features-modal" class="modal">
-        <div class="modal-content max-w-4xl w-full bg-gray-900/95 border border-sky-500/20 shadow-2xl backdrop-blur-xl">
+        <div class="modal-content max-w-4xl w-full bg-white border border-slate-200 shadow-2xl">
             <div class="modal-header items-start">
                 <div class="flex items-start gap-3">
-                    <div class="w-12 h-12 rounded-2xl bg-sky-500/20 text-sky-300 flex items-center justify-center text-xl">
+                    <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-500 flex items-center justify-center text-xl">
                         <i class="fas fa-bell"></i>
                     </div>
                     <div>
-                        <h2 class="text-2xl font-bold text-white">Advanced Group Suite</h2>
-                        <p class="text-sm text-gray-400">Advanced Group Analytics · Custom Group Goals · Group Rewards / Streak Protection</p>
+                        <h2 class="text-2xl font-bold text-slate-900">Advanced Group Suite</h2>
+                        <p class="text-sm text-slate-600">Advanced Group Analytics · Custom Group Goals · Group Rewards / Streak Protection</p>
                     </div>
                 </div>
-                <button class="close-modal text-gray-500 text-2xl leading-none">&times;</button>
+                <button class="close-modal text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
             </div>
-            <div class="space-y-8 max-h-[75vh] overflow-y-auto pr-2">
+            <div class="space-y-8 max-h-[75vh] overflow-y-auto pr-2 text-slate-600">
                 <section class="space-y-4">
                     <div>
                         <p class="advanced-section-label">Advanced Group Analytics</p>
-                        <h3 class="text-xl font-semibold text-white mt-1">Deep-dive into your team's rhythm</h3>
-                        <p class="text-sm text-gray-400 mt-2">Visualize when the group studies most, balance subjects, and compare focus vs break time.</p>
+                        <h3 class="text-xl font-semibold text-slate-900 mt-1">Deep-dive into your team's rhythm</h3>
+                        <p class="text-sm text-slate-600 mt-2">Visualize when the group studies most, balance subjects, and compare focus vs break time.</p>
                     </div>
-                    <div class="bg-gray-900 rounded-2xl border border-sky-500/20 p-4 space-y-4">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 shadow-sm">
                         <div class="flex items-center justify-between">
-                            <h4 class="text-lg font-semibold text-sky-100">Productivity Heatmap</h4>
-                            <span id="advanced-modal-heatmap-summary" class="text-xs uppercase tracking-wide text-gray-400">Loading…</span>
+                            <h4 class="text-lg font-semibold text-slate-900">Productivity Heatmap</h4>
+                            <span id="advanced-modal-heatmap-summary" class="text-xs uppercase tracking-wide text-slate-500">Loading…</span>
                         </div>
                         <div id="advanced-modal-heatmap" class="overflow-x-auto">
                             <div id="advanced-modal-heatmap-grid" class="advanced-heatmap-grid"></div>
-                            <p class="text-xs text-gray-500 mt-3">Based on the last 7 days of group study activity.</p>
+                            <p class="text-xs text-slate-500 mt-3">Based on the last 7 days of group study activity.</p>
                         </div>
                     </div>
-                    <div class="bg-gray-900 rounded-2xl border border-emerald-500/20 p-4 space-y-4">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 shadow-sm">
                         <div class="flex items-center justify-between">
-                            <h4 class="text-lg font-semibold text-emerald-100">Subject Mix</h4>
-                            <span id="advanced-modal-subject-summary" class="text-xs uppercase tracking-wide text-gray-400">Loading…</span>
+                            <h4 class="text-lg font-semibold text-slate-900">Subject Mix</h4>
+                            <span id="advanced-modal-subject-summary" class="text-xs uppercase tracking-wide text-slate-500">Loading…</span>
                         </div>
-                        <div id="advanced-modal-subject-mix" class="space-y-3"></div>
+                        <div id="advanced-modal-subject-mix" class="space-y-3 text-slate-600"></div>
                     </div>
-                    <div class="bg-gray-900 rounded-2xl border border-amber-500/20 p-4 space-y-4">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 shadow-sm">
                         <div class="flex items-center justify-between">
-                            <h4 class="text-lg font-semibold text-amber-100">Completion Ratio</h4>
-                            <span id="advanced-modal-ratio-label" class="text-xs uppercase tracking-wide text-gray-400">Loading…</span>
+                            <h4 class="text-lg font-semibold text-slate-900">Completion Ratio</h4>
+                            <span id="advanced-modal-ratio-label" class="text-xs uppercase tracking-wide text-slate-500">Loading…</span>
                         </div>
-                        <div class="w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+                        <div class="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
                             <div id="advanced-modal-ratio-focus-bar" class="h-full bg-amber-400" style="width:0%"></div>
                         </div>
-                        <p id="advanced-modal-ratio-description" class="text-sm text-gray-300">Gathering focus vs break data…</p>
+                        <p id="advanced-modal-ratio-description" class="text-sm text-slate-600">Gathering focus vs break data…</p>
                     </div>
                 </section>
                 <section class="space-y-4">
                     <div>
                         <p class="advanced-section-label">Custom Group Goals</p>
-                        <h3 class="text-xl font-semibold text-white mt-1">Align the squad around shared targets</h3>
-                        <p class="text-sm text-gray-400 mt-2">Set a monthly focus goal. Hitting it unlocks pro badges for the entire team.</p>
+                        <h3 class="text-xl font-semibold text-slate-900 mt-1">Align the squad around shared targets</h3>
+                        <p class="text-sm text-slate-600 mt-2">Set a monthly focus goal. Hitting it unlocks pro badges for the entire team.</p>
                     </div>
-                    <form id="advanced-goal-form" class="space-y-3 bg-gray-900 rounded-2xl border border-sky-500/20 p-4">
+                    <form id="advanced-goal-form" class="space-y-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
                         <div class="grid md:grid-cols-2 gap-3">
                             <div>
-                                <label for="advanced-goal-label-input" class="text-xs uppercase tracking-wide text-gray-400">Goal Label</label>
-                                <input id="advanced-goal-label-input" type="text" class="mt-1 w-full bg-gray-800 rounded-lg border border-gray-700 p-3 text-white" placeholder="Study 50h this month">
+                                <label for="advanced-goal-label-input" class="text-xs uppercase tracking-wide text-slate-500">Goal Label</label>
+                                <input id="advanced-goal-label-input" type="text" class="mt-1 w-full rounded-lg border border-slate-300 p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Study 50h this month">
                             </div>
                             <div>
-                                <label for="advanced-goal-hours-input" class="text-xs uppercase tracking-wide text-gray-400">Target Hours</label>
-                                <input id="advanced-goal-hours-input" type="number" min="1" max="500" step="0.5" class="mt-1 w-full bg-gray-800 rounded-lg border border-gray-700 p-3 text-white" placeholder="50">
+                                <label for="advanced-goal-hours-input" class="text-xs uppercase tracking-wide text-slate-500">Target Hours</label>
+                                <input id="advanced-goal-hours-input" type="number" min="1" max="500" step="0.5" class="mt-1 w-full rounded-lg border border-slate-300 p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="50">
                             </div>
                         </div>
                         <div class="flex flex-wrap items-center gap-3">
-                            <button type="submit" class="px-4 py-2 bg-sky-500 hover:bg-sky-600 transition rounded-full font-semibold text-sm text-white flex items-center gap-2"><i class="fas fa-rocket"></i> Save Goal</button>
-                            <button type="button" id="advanced-goal-clear-btn" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 transition rounded-full font-semibold text-sm text-gray-300">Clear Goal</button>
+                            <button type="submit" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 transition rounded-full font-semibold text-sm text-white flex items-center gap-2 shadow-sm"><i class="fas fa-rocket"></i> Save Goal</button>
+                            <button type="button" id="advanced-goal-clear-btn" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 transition rounded-full font-semibold text-sm text-slate-700">Clear Goal</button>
                         </div>
                         <div>
-                            <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                            <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                                 <div id="advanced-modal-goal-progress" class="h-full bg-sky-400" style="width:0%"></div>
                             </div>
-                            <p id="advanced-modal-goal-status" class="text-sm text-gray-300 mt-2">No group goal set yet.</p>
+                            <p id="advanced-modal-goal-status" class="text-sm text-slate-600 mt-2">No group goal set yet.</p>
                         </div>
                     </form>
                 </section>
                 <section class="space-y-4">
                     <div>
                         <p class="advanced-section-label">Group Rewards / Streak Protection</p>
-                        <h3 class="text-xl font-semibold text-white mt-1">Keep streak multipliers alive</h3>
-                        <p class="text-sm text-gray-400 mt-2">If all members study daily → streak protected. Missed day breaks it. Gamify the grind together.</p>
+                        <h3 class="text-xl font-semibold text-slate-900 mt-1">Keep streak multipliers alive</h3>
+                        <p class="text-sm text-slate-600 mt-2">If all members study daily → streak protected. Missed day breaks it. Gamify the grind together.</p>
                     </div>
-                    <div class="bg-gray-900 rounded-2xl border border-purple-500/20 p-4 space-y-3">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 shadow-sm">
                         <div class="flex items-center justify-between">
-                            <span class="text-lg font-semibold text-purple-100">Streak Status</span>
-                            <span id="advanced-modal-streak-status" class="text-xs uppercase tracking-wide text-gray-400">Checking…</span>
+                            <span class="text-lg font-semibold text-purple-600">Streak Status</span>
+                            <span id="advanced-modal-streak-status" class="text-xs uppercase tracking-wide text-slate-500">Checking…</span>
                         </div>
-                        <p id="advanced-modal-streak-summary" class="text-sm text-gray-200">Crunching streak multipliers…</p>
-                        <p id="advanced-modal-streak-detail" class="text-xs text-gray-500">Track the daily streak to keep rewards unlocked.</p>
+                        <p id="advanced-modal-streak-summary" class="text-sm text-slate-600">Crunching streak multipliers…</p>
+                        <p id="advanced-modal-streak-detail" class="text-xs text-slate-500">Track the daily streak to keep rewards unlocked.</p>
                     </div>
                 </section>
             </div>
@@ -13884,19 +13884,19 @@ if (achievementsGrid) {
                 case 'advanced':
                     container.innerHTML = `
                         <div class="p-4 md:p-6 space-y-6">
-                            <div class="bg-gradient-to-br from-slate-900 to-slate-800 border border-sky-500/20 rounded-3xl p-6 shadow-lg">
+                            <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl">
                                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                     <div>
                                         <p class="advanced-section-label mb-1">Advanced Suite</p>
-                                        <h2 class="text-2xl font-bold text-white">Automate motivation for the entire group</h2>
-                                        <p class="text-sm text-gray-400 mt-2">Unlock deep analytics, shared focus goals, and streak protection rewards.</p>
+                                        <h2 class="text-2xl font-bold text-slate-900">Automate motivation for the entire group</h2>
+                                        <p class="text-sm text-slate-600 mt-2">Unlock deep analytics, shared focus goals, and streak protection rewards.</p>
                                     </div>
                                     <div class="flex flex-col items-start md:items-end gap-3">
-                                        <div class="flex items-center gap-2 bg-sky-500/10 text-sky-200 px-3 py-1 rounded-full text-xs font-semibold">
-                                            <i class="fas fa-bell"></i>
+                                        <div class="flex items-center gap-2 bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-semibold">
+                                            <i class="fas fa-bell text-orange-500"></i>
                                             Advanced Mode
                                         </div>
-                                        <button id="open-advanced-suite-btn" class="px-5 py-2 bg-sky-500 hover:bg-sky-600 rounded-full font-semibold text-sm text-white flex items-center gap-2 transition">
+                                        <button id="open-advanced-suite-btn" class="px-5 py-2 bg-orange-500 hover:bg-orange-600 rounded-full font-semibold text-sm text-white flex items-center gap-2 transition shadow-sm">
                                             <i class="fas fa-bell"></i>
                                             View Advanced Suite
                                         </button>
@@ -13904,53 +13904,53 @@ if (achievementsGrid) {
                                 </div>
                             </div>
                             <div class="advanced-preview-grid">
-                                <div class="bg-gray-900/70 border border-sky-500/20 rounded-2xl p-4 space-y-3">
+                                <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
                                     <div class="flex items-center justify-between">
-                                        <h3 class="text-lg font-semibold text-white">Productivity Heatmap</h3>
-                                        <span id="advanced-heatmap-summary" class="text-xs text-gray-400 uppercase tracking-wide">Loading…</span>
+                                        <h3 class="text-lg font-semibold text-slate-900">Productivity Heatmap</h3>
+                                        <span id="advanced-heatmap-summary" class="text-xs text-slate-500 uppercase tracking-wide">Loading…</span>
                                     </div>
                                     <div id="advanced-heatmap" class="overflow-x-auto">
                                         <div id="advanced-heatmap-grid" class="advanced-heatmap-grid"></div>
                                     </div>
                                 </div>
-                                <div class="bg-gray-900/70 border border-emerald-500/20 rounded-2xl p-4 space-y-3">
+                                <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
                                     <div class="flex items-center justify-between">
-                                        <h3 class="text-lg font-semibold text-white">Subject Mix</h3>
-                                        <span id="advanced-subject-summary" class="text-xs text-gray-400 uppercase tracking-wide">Loading…</span>
+                                        <h3 class="text-lg font-semibold text-slate-900">Subject Mix</h3>
+                                        <span id="advanced-subject-summary" class="text-xs text-slate-500 uppercase tracking-wide">Loading…</span>
                                     </div>
-                                    <div id="advanced-subject-mix" class="space-y-3 text-sm"></div>
+                                    <div id="advanced-subject-mix" class="space-y-3 text-sm text-slate-600"></div>
                                 </div>
-                                <div class="bg-gray-900/70 border border-amber-500/20 rounded-2xl p-4 space-y-3">
+                                <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
                                     <div class="flex items-center justify-between">
-                                        <h3 class="text-lg font-semibold text-white">Focus vs Break</h3>
-                                        <span id="advanced-ratio-label" class="text-xs text-gray-400 uppercase tracking-wide">Loading…</span>
+                                        <h3 class="text-lg font-semibold text-slate-900">Focus vs Break</h3>
+                                        <span id="advanced-ratio-label" class="text-xs text-slate-500 uppercase tracking-wide">Loading…</span>
                                     </div>
-                                    <div class="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                                    <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
                                         <div id="advanced-ratio-focus-bar" class="h-full bg-amber-400" style="width:0%"></div>
                                     </div>
-                                    <p id="advanced-ratio-description" class="text-sm text-gray-300">Measuring completion ratio…</p>
+                                    <p id="advanced-ratio-description" class="text-sm text-slate-600">Measuring completion ratio…</p>
                                 </div>
-                                <div class="bg-gray-900/70 border border-sky-500/20 rounded-2xl p-4 space-y-3">
+                                <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
                                     <div class="flex items-center justify-between">
-                                        <h3 class="text-lg font-semibold text-white">Custom Group Goal</h3>
-                                        <button id="advanced-edit-goal-btn" class="text-xs font-semibold text-sky-300 hover:text-sky-200 transition flex items-center gap-1">
+                                        <h3 class="text-lg font-semibold text-slate-900">Custom Group Goal</h3>
+                                        <button id="advanced-edit-goal-btn" class="text-xs font-semibold text-orange-600 hover:text-orange-700 transition flex items-center gap-1">
                                             <i class="fas fa-pen"></i>
                                             Edit
                                         </button>
                                     </div>
-                                    <p id="advanced-goal-label" class="text-sm text-gray-300">No group goal set yet.</p>
-                                    <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                                    <p id="advanced-goal-label" class="text-sm text-slate-600">No group goal set yet.</p>
+                                    <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                                         <div id="advanced-goal-progress" class="h-full bg-sky-400" style="width:0%"></div>
                                     </div>
-                                    <p id="advanced-goal-progress-label" class="text-xs text-gray-400 uppercase tracking-wide">0% complete</p>
+                                    <p id="advanced-goal-progress-label" class="text-xs text-slate-500 uppercase tracking-wide">0% complete</p>
                                 </div>
-                                <div class="bg-gray-900/70 border border-purple-500/20 rounded-2xl p-4 space-y-3 md:col-span-2">
+                                <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 md:col-span-2 shadow-sm">
                                     <div class="flex items-center justify-between">
-                                        <h3 class="text-lg font-semibold text-white">Group Rewards / Streak Protection</h3>
-                                        <span id="advanced-streak-status" class="text-xs text-purple-200 uppercase tracking-wide">Calculating…</span>
+                                        <h3 class="text-lg font-semibold text-slate-900">Group Rewards / Streak Protection</h3>
+                                        <span id="advanced-streak-status" class="text-xs text-purple-600 uppercase tracking-wide">Calculating…</span>
                                     </div>
-                                    <p id="advanced-streak-description" class="text-sm text-gray-300">Tracking group streak multipliers…</p>
-                                    <p class="text-xs text-gray-500">If all members study daily → streak protected. Missed day breaks it.</p>
+                                    <p id="advanced-streak-description" class="text-sm text-slate-600">Tracking group streak multipliers…</p>
+                                    <p class="text-xs text-slate-500">If all members study daily → streak protected. Missed day breaks it.</p>
                                 </div>
                             </div>
                         </div>
