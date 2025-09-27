@@ -219,10 +219,9 @@
             width: 90%;
             padding: 32px 28px 28px;
             border-radius: 28px;
-            border: none;
-            background: radial-gradient(circle at top, rgba(248, 113, 113, 0.12), transparent 55%),
-                        linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 12, 20, 0.92) 100%);
-            box-shadow: 0 35px 60px rgba(8, 47, 73, 0.45);
+            border: 1px solid #E2E8F0;
+            background: #FFFFFF;
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.18);
         }
         #pomodoro-setup-modal .modal-header {
             justify-content: center;
@@ -232,7 +231,7 @@
         #pomodoro-setup-modal .modal-title {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #e2e8f0;
+            color: #1f2937;
         }
         #pomodoro-setup-modal .modal-header .close-modal {
             position: absolute;
@@ -244,12 +243,12 @@
         }
         .pomodoro-setup-summary {
             font-size: 0.95rem;
-            color: #94a3b8;
+            color: #475569;
             text-align: center;
             margin-bottom: 24px;
         }
         .pomodoro-setup-summary span {
-            color: #f87171;
+            color: #f97316;
             font-weight: 600;
         }
         .pomodoro-setup-grid {
@@ -262,8 +261,8 @@
             border-radius: 26px;
             padding: 26px 10px 22px;
             text-align: center;
-            background: linear-gradient(180deg, rgba(148, 163, 184, 0.12) 0%, rgba(30, 41, 59, 0.4) 100%);
-            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: linear-gradient(180deg, rgba(148, 163, 184, 0.12) 0%, rgba(226, 232, 240, 0.6) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.25);
             overflow: hidden;
         }
         .pomodoro-picker::before,
@@ -277,11 +276,11 @@
         }
         .pomodoro-picker::before {
             top: 18px;
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0) 100%);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 100%);
         }
         .pomodoro-picker::after {
             bottom: 42px;
-            background: linear-gradient(0deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0) 100%);
+            background: linear-gradient(0deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 100%);
         }
         .pomodoro-picker-wheel {
             display: flex;
@@ -294,14 +293,14 @@
         }
         .picker-value-muted {
             font-size: 1.45rem;
-            color: rgba(148, 163, 184, 0.45);
+            color: rgba(100, 116, 139, 0.4);
             transition: color 0.2s ease;
             min-height: 1.45rem;
         }
         .picker-value-current {
             font-size: 2.6rem;
             font-weight: 700;
-            color: #f87171;
+            color: #f97316;
             transition: color 0.2s ease, transform 0.2s ease;
         }
         .picker-value-hidden {
@@ -312,7 +311,7 @@
             font-size: 0.85rem;
             text-transform: uppercase;
             letter-spacing: 0.06em;
-            color: #cbd5f5;
+            color: #64748b;
         }
         .picker-overlay {
             position: absolute;
@@ -335,14 +334,15 @@
             padding: 12px 0;
             border-radius: 18px;
             border: 1px solid rgba(148, 163, 184, 0.35);
-            background: transparent;
-            color: #94a3b8;
+            background: #f8fafc;
+            color: #475569;
             font-weight: 600;
             transition: all 0.2s ease;
         }
         #pomodoro-setup-cancel:hover {
-            color: #e2e8f0;
-            border-color: rgba(248, 113, 113, 0.45);
+            color: #0f172a;
+            background: #e2e8f0;
+            border-color: rgba(37, 99, 235, 0.35);
         }
         #pomodoro-setup-done {
             flex: 1;
@@ -367,13 +367,13 @@
             gap: 0.75rem;
             padding: 0.55rem 0.85rem;
             border-radius: 18px;
-            background: rgba(148, 163, 184, 0.16);
-            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(148, 163, 184, 0.12);
+            border: 1px solid rgba(148, 163, 184, 0.2);
             cursor: pointer;
             transition: all 0.2s ease;
         }
         .pomodoro-summary-button:hover {
-            background: rgba(148, 163, 184, 0.24);
+            background: rgba(148, 163, 184, 0.2);
             border-color: rgba(14, 165, 233, 0.35);
             transform: translateY(-1px);
         }
@@ -383,19 +383,19 @@
         }
         .pomodoro-summary-button .numbers .estimate {
             font-size: 0.95rem;
-            color: #f87171;
+            color: #f97316;
             font-weight: 600;
         }
         .pomodoro-summary-button .numbers .duration {
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: #64748b;
         }
         .pomodoro-summary-button .numbers .progress {
             font-size: 0.7rem;
-            color: #6ee7b7;
+            color: #0f766e;
         }
         .pomodoro-summary-button i {
-            color: #94a3b8;
+            color: #475569;
             font-size: 0.85rem;
         }
 
@@ -2445,28 +2445,31 @@
         }
         .subject-item {
             cursor: grab; /* Indicate draggable */
-            border: 2px solid #374151;
+            border: 2px solid #e2e8f0;
+            background-color: #ffffff;
             position: relative; /* For options menu positioning */
             transition: all 0.2s ease; /* Smooth transitions for drag feedback */
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
         }
         .subject-item.selected {
-            border-color: #3B82F6;
-            background-color: #2563eb30;
+            border-color: #2563eb;
+            background-color: rgba(37, 99, 235, 0.08);
+            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.12);
         }
         .subject-item.dragging {
             opacity: 0.5;
-            border: 2px dashed #3B82F6;
-            background-color: #2563eb10;
+            border: 2px dashed #2563eb;
+            background-color: rgba(37, 99, 235, 0.05);
         }
         .subject-item.drag-over {
             border: 2px solid #10B981; /* Green border for drag over target */
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
         }
         .selection-section-title {
             font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            color: #94a3b8;
+            color: #475569;
             margin-bottom: 0.5rem;
         }
         .task-selection-item {
@@ -2476,17 +2479,19 @@
             gap: 0.75rem;
             padding: 0.75rem 1rem;
             border-radius: 0.75rem;
-            background-color: #1f2937;
-            border: 1px solid transparent;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
             cursor: pointer;
             transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
         }
         .task-selection-item:hover {
-            background-color: #273449;
+            background-color: #f1f5f9;
         }
         .task-selection-item.selected {
             border-color: #38bdf8;
-            background: linear-gradient(to right, rgba(14, 165, 233, 0.12), rgba(56, 189, 248, 0.12));
+            background: linear-gradient(to right, rgba(14, 165, 233, 0.16), rgba(56, 189, 248, 0.16));
+            box-shadow: 0 8px 20px rgba(56, 189, 248, 0.2);
         }
         .subject-options-btn {
             position: absolute;
@@ -2501,10 +2506,10 @@
             position: absolute;
             right: 25px;
             top: 25px;
-            background-color: #0d1117;
-            border: 1px solid #30363d;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
             z-index: 10;
             overflow: hidden; /* Ensure buttons don't spill */
         }
@@ -2514,18 +2519,22 @@
         .subject-options-menu button {
             display: block;
             width: 100%;
-            padding: 8px 12px;
+            padding: 10px 14px;
             text-align: left;
             background: none;
             border: none;
-            color: white;
+            color: #1f2937;
+            font-weight: 500;
             cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
         }
         .subject-options-menu button:hover {
-            background-color: #30363d;
+            background-color: #f1f5f9;
+            color: #0f172a;
         }
         .subject-options-menu .delete-btn:hover {
-            background-color: #ef4444;
+            background-color: #fee2e2;
+            color: #b91c1c;
         }
         /* Group Detail Page */
         .member-list-card {
@@ -3529,27 +3538,27 @@
                  </svg>
                  <span class="text-4xl font-bold ml-3 bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-sky-400">FocusFlow</span>
              </div>
-             <p class="text-gray-400 mb-8">Your Ultimate Study Companion</p>
-             <div id="auth-form-container" class="bg-gray-800 p-8 rounded-2xl shadow-lg">
+             <p class="text-slate-500 mb-8">Your Ultimate Study Companion</p>
+             <div id="auth-form-container" class="bg-white border border-slate-200 p-8 rounded-2xl shadow-xl text-left">
                  <form id="login-form" class="space-y-4">
-                     <h2 class="text-2xl font-bold text-white mb-4">Login</h2>
-                     <input type="email" id="login-email" placeholder="Email" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required>
-                     <input type="password" id="login-password" placeholder="Password" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required>
+                     <h2 class="text-2xl font-bold text-slate-900 mb-4">Login</h2>
+                     <input type="email" id="login-email" placeholder="Email" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" required>
+                     <input type="password" id="login-password" placeholder="Password" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" required>
                      <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Sign In</button>
                  </form>
                  <form id="signup-form" class="hidden space-y-4">
-                     <h2 class="text-2xl font-bold text-white mb-4">Create Account</h2>
-                     <input type="email" id="signup-email" placeholder="Email" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required>
-                     <input type="password" id="signup-password" placeholder="Password (min. 6 characters)" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required minlength="6">
+                     <h2 class="text-2xl font-bold text-slate-900 mb-4">Create Account</h2>
+                     <input type="email" id="signup-email" placeholder="Email" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" required>
+                     <input type="password" id="signup-password" placeholder="Password (min. 6 characters)" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" required minlength="6">
                      <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Sign Up</button>
                  </form>
-                 <p id="auth-error" class="text-red-400 text-sm mt-4 h-5"></p>
+                 <p id="auth-error" class="text-rose-500 text-sm mt-4 h-5"></p>
                  <div class="flex items-center my-6">
-                     <hr class="flex-grow border-gray-600">
-                     <span class="mx-4 text-gray-500">OR</span>
-                     <hr class="flex-grow border-gray-600">
+                     <hr class="flex-grow border-slate-200">
+                     <span class="mx-4 text-slate-500">OR</span>
+                     <hr class="flex-grow border-slate-200">
                  </div>
-                 <button id="google-signin-btn" class="w-full bg-white text-gray-800 font-semibold py-3 rounded-lg flex items-center justify-center transition hover:bg-gray-200">
+                 <button id="google-signin-btn" class="w-full bg-white border border-slate-200 text-slate-800 font-semibold py-3 rounded-lg flex items-center justify-center transition hover:bg-slate-100">
                      <svg class="w-6 h-6 mr-3" viewBox="0 0 48 48">
                          <path fill="#4285F4" d="M43.611 20.083H24v8.838h11.002c-0.463 2.878-2.18 5.424-4.852 7.199l7.217 5.626C43.02 37.21 46 29.54 46 20.083z"/>
                          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.897-5.781l-7.217-5.626c-2.13 1.442-4.852 2.308-7.68 2.308-5.878 0-10.845-3.965-12.624-9.26l-7.42 5.781C6.383 39.04 14.46 48 24 48z"/>
@@ -3558,14 +3567,14 @@
                      </svg>
                      Sign in with Google
                  </button>
-                 
-                 <button id="anonymous-signin-btn" class="w-full mt-4 bg-gray-600 text-white font-semibold py-3 rounded-lg flex items-center justify-center transition hover:bg-gray-500">
+
+                 <button id="anonymous-signin-btn" class="w-full mt-4 bg-slate-100 border border-slate-200 text-slate-700 font-semibold py-3 rounded-lg flex items-center justify-center transition hover:bg-slate-200">
                     <i class="fas fa-user-secret mr-3"></i>
                     Continue as Guest
                  </button>
-                 <p class="mt-8 text-sm text-gray-400">
+                 <p class="mt-8 text-sm text-slate-600 text-center">
                      <span id="login-toggle-text">Don't have an account?</span>
-                     <button id="auth-toggle-btn" class="font-semibold text-blue-400 hover:text-blue-300">Sign Up</button>
+                     <button id="auth-toggle-btn" class="font-semibold text-sky-500 hover:text-sky-400">Sign Up</button>
                  </p>
              </div>
         </div>
@@ -3574,7 +3583,7 @@
     <div id="page-username-setup" class="page flex-col items-center justify-center h-full p-4 fade-in" data-route="username-setup">
         <div class="w-full max-w-sm text-center">
             <h1 class="text-3xl font-bold text-white mb-2">Welcome to FocusFlow!</h1>
-            <p class="text-gray-400 mb-8">Let's set up your profile.</p>
+            <p class="text-slate-500 mb-8">Let's set up your profile.</p>
             <div class="bg-gray-800 p-8 rounded-2xl shadow-lg">
                 <form id="username-setup-form" class="space-y-4">
                     <div class="avatar-picker" id="username-avatar-picker">
@@ -3963,14 +3972,14 @@
     </div>
 
     <div id="toast-container"></div>
-    <div id="add-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div id="add-subject-modal-title" class="modal-title">Add New Subject</div><button class="close-modal">&times;</button></div><form id="add-subject-form"><input type="hidden" id="edit-subject-id"><div class="mb-4"><label for="add-subject-name" class="block text-gray-300 mb-2">Subject Name</label><input type="text" id="add-subject-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div class="mb-4"><label class="block text-gray-300 mb-2">Color</label><div class="subject-color-picker"><div class="color-dot bg-red-500" data-color="bg-red-500"></div><div class="color-dot bg-blue-500 selected" data-color="bg-blue-500"></div><div class="color-dot bg-green-500" data-color="bg-green-500"></div><div class="color-dot bg-yellow-500" data-color="bg-yellow-500"></div><div class="color-dot bg-purple-500" data-color="bg-purple-500"></div><div class="color-dot bg-pink-500" data-color="bg-pink-500"></div><div class="color-dot bg-indigo-500" data-color="bg-indigo-500"></div><div class="color-dot bg-teal-500" data-color="bg-teal-500"></div><div class="color-dot bg-orange-500" data-color="bg-orange-500"></div><div class="color-dot bg-cyan-500" data-color="bg-cyan-500"></div><div class="color-dot bg-lime-500" data-color="bg-lime-500"></div><div class="color-dot bg-fuchsia-500" data-color="bg-fuchsia-500"></div><div class="color-dot bg-rose-500" data-color="bg-rose-500"></div><div class="color-dot bg-sky-500" data-color="bg-sky-500"></div><div class="color-dot bg-emerald-500" data-color="bg-emerald-500"></div><div class="color-dot bg-amber-500" data-color="bg-amber-500"></div><div class="color-dot bg-violet-500" data-color="bg-violet-500"></div></div></div><button type="submit" id="add-subject-submit-btn" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Add Subject</button></form></div></div>
-    <div id="start-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Start New Session</div><button id="close-start-session-modal" class="close-modal">&times;</button></div><form id="start-session-form"><div class="mb-6"><div class="selection-section-title">Subjects</div><div id="subject-selection-list" class="max-h-60 overflow-y-auto space-y-2"></div></div><div class="mb-6"><div class="selection-section-title">Tasks</div><div id="task-selection-list" class="max-h-60 overflow-y-auto space-y-2"></div></div><div class="flex items-center gap-4 mt-4"><button type="button" id="open-add-subject-modal-from-start" class="w-full text-center py-3 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium transition">Add New Subject</button><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Timer</button></div></form></div></div>
+    <div id="add-subject-modal" class="modal"><div class="modal-content"><div class="modal-header"><div id="add-subject-modal-title" class="modal-title">Add New Subject</div><button class="close-modal">&times;</button></div><form id="add-subject-form" class="space-y-5"><input type="hidden" id="edit-subject-id"><div><label for="add-subject-name" class="block text-sm font-medium text-slate-600 mb-2">Subject Name</label><input type="text" id="add-subject-name" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" required></div><div><label class="block text-sm font-medium text-slate-600 mb-2">Color</label><div class="subject-color-picker"><div class="color-dot bg-red-500" data-color="bg-red-500"></div><div class="color-dot bg-blue-500 selected" data-color="bg-blue-500"></div><div class="color-dot bg-green-500" data-color="bg-green-500"></div><div class="color-dot bg-yellow-500" data-color="bg-yellow-500"></div><div class="color-dot bg-purple-500" data-color="bg-purple-500"></div><div class="color-dot bg-pink-500" data-color="bg-pink-500"></div><div class="color-dot bg-indigo-500" data-color="bg-indigo-500"></div><div class="color-dot bg-teal-500" data-color="bg-teal-500"></div><div class="color-dot bg-orange-500" data-color="bg-orange-500"></div><div class="color-dot bg-cyan-500" data-color="bg-cyan-500"></div><div class="color-dot bg-lime-500" data-color="bg-lime-500"></div><div class="color-dot bg-fuchsia-500" data-color="bg-fuchsia-500"></div><div class="color-dot bg-rose-500" data-color="bg-rose-500"></div><div class="color-dot bg-sky-500" data-color="bg-sky-500"></div><div class="color-dot bg-emerald-500" data-color="bg-emerald-500"></div><div class="color-dot bg-amber-500" data-color="bg-amber-500"></div><div class="color-dot bg-violet-500" data-color="bg-violet-500"></div></div></div><button type="submit" id="add-subject-submit-btn" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Add Subject</button></form></div></div>
+    <div id="start-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Start New Session</div><button id="close-start-session-modal" class="close-modal">&times;</button></div><form id="start-session-form" class="space-y-6"><div><div class="selection-section-title">Subjects</div><div id="subject-selection-list" class="max-h-60 overflow-y-auto space-y-2"></div></div><div><div class="selection-section-title">Tasks</div><div id="task-selection-list" class="max-h-60 overflow-y-auto space-y-2"></div></div><div class="flex items-center gap-4 pt-2"><button type="button" id="open-add-subject-modal-from-start" class="w-full text-center py-3 bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 rounded-lg font-medium transition">Add New Subject</button><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Start Timer</button></div></form></div></div>
     <div id="add-task-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Add New Task</div><button class="close-modal">&times;</button></div><form id="add-task-form"><div class="mb-4"><label for="add-task-name" class="block text-gray-300 mb-2">Task Description</label><input type="text" id="add-task-name" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div class="mb-4"><label for="add-task-date" class="block text-gray-300 mb-2">Date</label><input type="date" id="add-task-date" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Add Task</button></form></div></div>
     <div id="password-prompt-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Enter Group Password</div><button class="close-modal">&times;</button></div><form id="password-prompt-form"><input type="password" id="group-password-prompt-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required><div class="flex gap-2 mt-4"><button type="button" class="close-modal w-full py-2 bg-gray-600 rounded-lg">Cancel</button><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Submit</button></div></form></div></div>
     <div id="confirmation-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 id="confirmation-modal-title" class="modal-title">Are you sure?</h2><button class="close-modal">&times;</button></div><p id="confirmation-modal-message">This action cannot be undone.</p><div id="confirmation-modal-buttons"><button id="cancel-btn">Cancel</button><button id="confirm-btn">Confirm</button></div></div></div>
     
     <div id="study-goal-modal" class="modal">
-        <div class="modal-content"><div class="modal-header"><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form"><div class="mb-4"><label for="study-goal-input" class="block text-gray-300 mb-2">Daily Study Goal (hours)</label><input type="number" id="study-goal-input" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required min="1" max="24"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Set Goal</button></form></div></div>
+        <div class="modal-content"><div class="modal-header"><div class="modal-title">Set Study Goal</div><button class="close-modal">&times;</button></div><form id="study-goal-form" class="space-y-5"><div><label for="study-goal-input" class="block text-sm font-medium text-slate-600 mb-2">Daily Study Goal (hours)</label><input type="number" id="study-goal-input" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" required min="1" max="24"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Set Goal</button></form></div></div>
 
     <div id="advanced-features-modal" class="modal">
         <div class="modal-content max-w-4xl w-full bg-white border border-slate-200 shadow-2xl backdrop-blur-xl">
@@ -4069,7 +4078,7 @@
         </div>
     </div>
 
-    <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-4"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-gray-300">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-gray-300">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-gray-300">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-gray-300">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white" min="2" required></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-gray-300">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-gray-300">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-gray-300">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-gray-300">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 mt-1 text-white"></select></div></div><hr class="border-gray-600 my-2"><h3 class="text-lg font-semibold text-gray-200">Automation</h3><div class="space-y-3"> <div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-gray-300">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105 mt-4">Save Settings</button></form></div></div>
+    <div id="pomodoro-settings-modal" class="modal"><div class="modal-content no-scrollbar"><div class="modal-header"><div class="modal-title">Pomodoro Settings</div><button class="close-modal">&times;</button></div><form id="pomodoro-settings-form" class="space-y-5"><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-work-duration" class="block text-sm font-medium text-slate-600">Focus Duration (minutes)</label><input type="number" id="pomodoro-work-duration" class="w-full bg-white border border-slate-200 rounded-lg p-2 mt-1 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" min="1" required></div><div><label for="pomodoro-short-break-duration" class="block text-sm font-medium text-slate-600">Short Break (minutes)</label><input type="number" id="pomodoro-short-break-duration" class="w-full bg-white border border-slate-200 rounded-lg p-2 mt-1 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" min="1" required></div><div><label for="pomodoro-long-break-duration" class="block text-sm font-medium text-slate-600">Long Break (minutes)</label><input type="number" id="pomodoro-long-break-duration" class="w-full bg-white border border-slate-200 rounded-lg p-2 mt-1 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" min="1" required></div><div><label for="pomodoro-long-break-interval" class="block text-sm font-medium text-slate-600">Long Break Interval (sessions)</label><input type="number" id="pomodoro-long-break-interval" class="w-full bg-white border border-slate-200 rounded-lg p-2 mt-1 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" min="2" required></div></div><hr class="border-slate-200 my-2"><h3 class="text-lg font-semibold text-slate-900">Alarms</h3><div class="grid grid-cols-1 gap-4"><div><label for="pomodoro-volume" class="block text-sm font-medium text-slate-600">Volume</label><input type="range" id="pomodoro-volume" min="0" max="1" step="0.1" class="w-full mt-1"></div><div><label for="pomodoro-start-sound" class="block text-sm font-medium text-slate-600">Starting Bell</label><select id="pomodoro-start-sound" class="w-full bg-white border border-slate-200 rounded-lg p-2 mt-1 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"></select></div><div><label for="pomodoro-focus-sound" class="block text-sm font-medium text-slate-600">Focus Alarm (End of Break)</label><select id="pomodoro-focus-sound" class="w-full bg-white border border-slate-200 rounded-lg p-2 mt-1 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"></select></div><div><label for="pomodoro-break-sound" class="block text-sm font-medium text-slate-600">Break Alarm (End of Focus)</label><select id="pomodoro-break-sound" class="w-full bg-white border border-slate-200 rounded-lg p-2 mt-1 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"></select></div></div><hr class="border-slate-200 my-2"><h3 class="text-lg font-semibold text-slate-900">Automation</h3><div class="space-y-3"><div class="flex items-center justify-between"><span class="text-sm font-medium text-slate-700">Auto-start next focus session?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-focus"><span class="slider"></span></label></div><div class="flex items-center justify-between"><span class="text-sm font-medium text-slate-700">Auto-start next break?</span><label class="toggle-switch"><input type="checkbox" id="pomodoro-auto-start-break"><span class="slider"></span></label></div></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/40 hover:scale-105">Save Settings</button></form></div></div>
     <div id="pomodoro-setup-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -4112,10 +4121,10 @@
             <div class="modal-header">
                 <div class="modal-title">Edit Profile</div><button class="close-modal">&times;</button>
             </div>
-            <form id="edit-profile-form">
-                <div class="mb-4">
-                    <label for="edit-username-input" class="block text-gray-300 mb-2">Username</label>
-                    <input type="text" id="edit-username-input" class="w-full bg-gray-700 rounded-lg p-3 text-white" required minlength="3">
+            <form id="edit-profile-form" class="space-y-5">
+                <div>
+                    <label for="edit-username-input" class="block text-sm font-medium text-slate-600 mb-2">Username</label>
+                    <input type="text" id="edit-username-input" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" required minlength="3">
                 </div>
                 <button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Profile</button>
             </form>
@@ -4130,13 +4139,13 @@
                 <button class="close-modal">&times;</button>
             </div>
             <div id="kick-member-list" class="space-y-3">
-                <p class="text-gray-400 text-sm">Select a member to remove from the group.</p>
+                <p class="text-slate-600 text-sm">Select a member to remove from the group.</p>
             </div>
         </div>
     </div>
     <div id="studicon-store-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Choose Your Studicon</div><button class="close-modal">&times;</button></div><div><div id="studicon-category-tabs" class="flex space-x-1 border-b border-gray-700 mb-4"></div><div id="studicon-picker" class="avatar-picker max-h-60 overflow-y-auto"></div><button id="save-studicon-btn" class="w-full mt-4 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save</button></div></div></div>
-    <div id="edit-group-info-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Group Information</div><button class="close-modal">&times;</button></div><form id="edit-group-info-form" class="space-y-4"><input type="hidden" id="edit-group-id-input"><div><label class="block text-sm font-medium text-gray-300">Group Name</label><input id="edit-group-name" type="text" class="w-full bg-gray-700 rounded-lg p-2 mt-1" required></div><div><label class="block text-sm font-medium text-gray-300">Description</label><textarea id="edit-group-description" class="w-full bg-gray-700 rounded-lg p-2 mt-1 h-24" required></textarea></div><div><label class="block text-sm font-medium text-gray-300">Category</label><select id="edit-group-category" class="w-full bg-gray-700 rounded-lg p-2 mt-1"><option>General study</option><option>Language study</option><option>Secondary School</option><option>University</option></select></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-300">Time Goal (h)</label><input id="edit-group-goal" type="number" min="1" max="10" class="w-full bg-gray-700 rounded-lg p-2 mt-1"></div><div><label class="block text-sm font-medium text-gray-300">Capacity</label><input id="edit-group-capacity" type="number" min="2" max="100" class="w-full bg-gray-700 rounded-lg p-2 mt-1"></div></div><div><label class="block text-sm font-medium text-gray-300">Password (optional)</label><input id="edit-group-password" type="text" class="w-full bg-gray-700 rounded-lg p-2 mt-1" placeholder="Leave blank for public"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
-    <div id="group-rules-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Group Rules</div><div id="group-rules-controls"></div><button class="close-modal">&times;</button></div><div id="group-rules-display" class="text-gray-300 whitespace-pre-wrap"></div><div id="group-rules-edit-container" class="hidden"><textarea id="group-rules-textarea" class="w-full bg-gray-700 rounded-lg p-3 h-48"></textarea><button id="save-group-rules-btn" class="w-full mt-2 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg">Save Rules</button></div></div></div>
+    <div id="edit-group-info-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Group Information</div><button class="close-modal">&times;</button></div><form id="edit-group-info-form" class="space-y-5"><input type="hidden" id="edit-group-id-input"><div><label class="block text-sm font-medium text-slate-600 mb-2">Group Name</label><input id="edit-group-name" type="text" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" required></div><div><label class="block text-sm font-medium text-slate-600 mb-2">Description</label><textarea id="edit-group-description" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 h-24" required></textarea></div><div><label class="block text-sm font-medium text-slate-600 mb-2">Category</label><select id="edit-group-category" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"><option>General study</option><option>Language study</option><option>Secondary School</option><option>University</option></select></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-slate-600 mb-2">Time Goal (h)</label><input id="edit-group-goal" type="number" min="1" max="10" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"></div><div><label class="block text-sm font-medium text-slate-600 mb-2">Capacity</label><input id="edit-group-capacity" type="number" min="2" max="100" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"></div></div><div><label class="block text-sm font-medium text-slate-600 mb-2">Password (optional)</label><input id="edit-group-password" type="text" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" placeholder="Leave blank for public"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
+    <div id="group-rules-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Group Rules</div><div id="group-rules-controls"></div><button class="close-modal">&times;</button></div><div id="group-rules-display" class="text-slate-700 whitespace-pre-wrap"></div><div id="group-rules-edit-container" class="hidden"><textarea id="group-rules-textarea" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 h-48 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"></textarea><button id="save-group-rules-btn" class="w-full mt-2 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg">Save Rules</button></div></div></div>
     <div id="image-view-modal" class="modal">
         <div class="modal-content">
             <button class="close-modal" type="button">&times;</button>
@@ -4172,7 +4181,7 @@
     </div>
     <div id="user-profile-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">User Profile</div><button class="close-modal">&times;</button></div><div id="user-profile-loading"><i class="fas fa-spinner fa-spin fa-2x"></i></div><div id="user-profile-details" class="hidden"><div class="flex items-center mb-4"><div id="user-profile-avatar" class="profile-avatar bg-blue-500 mr-4"></div><div><div id="user-profile-name" class="profile-name"></div></div></div><div class="space-y-2 text-sm"><div class="flex justify-between"><span>Total Today:</span><span id="user-profile-total-today" class="font-semibold"></span></div><div class="flex justify-between"><span>Total Overall:</span><span id="user-profile-total-overall" class="font-semibold"></span></div><div class="flex justify-between"><span>Last Active:</span><span id="user-profile-last-active" class="font-semibold"></span></div></div></div></div></div>
     <div id="quick-add-task-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Add Task for <span id="quick-add-task-date"></span></h2><button class="close-modal">&times;</button></div><form id="quick-add-task-form"><input type="hidden" id="quick-add-task-date-input"><input id="quick-add-task-title-input" type="text" class="w-full bg-gray-700 rounded-lg p-3 text-white" placeholder="e.g., Review chapter 5" required><button type="submit" class="w-full mt-3 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-2 rounded-lg">Add Task</button></form></div></div>
-    <div id="edit-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Edit Session</h2><button class="close-modal">&times;</button></div><form id="edit-session-form" class="space-y-4"><input type="hidden" id="edit-session-id"><input type="hidden" id="edit-session-old-duration"><input type="hidden" id="edit-session-ended-at"><div><label for="edit-session-subject" class="block text-gray-300 mb-2">Subject</label><input type="text" id="edit-session-subject" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" required></div><div><label for="edit-session-duration" class="block text-gray-300 mb-2">Duration (minutes)</label><input type="number" id="edit-session-duration" class="w-full bg-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400" min="1" required></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
+    <div id="edit-session-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Edit Session</h2><button class="close-modal">&times;</button></div><form id="edit-session-form" class="space-y-5"><input type="hidden" id="edit-session-id"><input type="hidden" id="edit-session-old-duration"><input type="hidden" id="edit-session-ended-at"><div><label for="edit-session-subject" class="block text-sm font-medium text-slate-600 mb-2">Subject</label><input type="text" id="edit-session-subject" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" required></div><div><label for="edit-session-duration" class="block text-sm font-medium text-slate-600 mb-2">Duration (minutes)</label><input type="number" id="edit-session-duration" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" min="1" required></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
     <div id="avatar-character-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Choose Character</h2><button class="close-modal">&times;</button></div><div id="avatar-character-picker" class="avatar-picker max-h-60 overflow-y-auto"></div><button id="save-character-avatar-btn" class="w-full mt-4 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Character</button></div></div>
     <div id="project-select-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Move to Project</h2><button class="close-modal">&times;</button></div><div id="project-select-list" class="space-y-1 max-h-60 overflow-y-auto"></div></div></div>
     <div id="repeat-settings-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Repeat Settings</h2><button class="close-modal">&times;</button></div><form id="repeat-settings-form"><div class="mb-4"><label for="repeat-type-select" class="block text-gray-300 mb-2">Repeat Frequency</label><select id="repeat-type-select" class="w-full bg-gray-700 rounded-lg p-3"><option value="none">None</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Set Repeat</button></form></div></div>
@@ -12829,7 +12838,7 @@ if (achievementsGrid) {
             }
 
             if (subjectSelectionData.length === 0) {
-                container.innerHTML = `<p class="text-gray-400 text-center">No subjects added yet. Add one below!</p>`;
+                container.innerHTML = `<p class="text-slate-500 text-center">No subjects added yet. Add one below!</p>`;
                 updateStartSessionSelectionUI();
                 return;
             }
@@ -12869,7 +12878,7 @@ if (achievementsGrid) {
             const taskList = Array.isArray(tasks) ? tasks.filter(task => !task.completed) : [];
 
             if (!taskList.length) {
-                container.innerHTML = `<p class="text-gray-400 text-center">No active tasks. Create a task to link it with your sessions.</p>`;
+                container.innerHTML = `<p class="text-slate-500 text-center">No active tasks. Create a task to link it with your sessions.</p>`;
                 if (startSessionSelected.taskId) {
                     startSessionSelected.taskId = null;
                 }
@@ -12912,10 +12921,10 @@ if (achievementsGrid) {
                 return `
                     <div class="task-selection-item ${isSelected ? 'selected' : ''}" data-task-id="${escapeAttribute(task.id)}">
                         <div class="flex flex-col">
-                            <span class="font-medium text-white">${task.title}</span>
-                            <span class="text-xs text-gray-400">${infoText || 'No pomodoro estimate'}</span>
+                            <span class="font-medium text-slate-900">${task.title}</span>
+                            <span class="text-xs text-slate-500">${infoText || 'No pomodoro estimate'}</span>
                         </div>
-                        <div class="text-xs text-gray-400 text-right whitespace-nowrap">${dueLabel}</div>
+                        <div class="text-xs text-slate-500 text-right whitespace-nowrap">${dueLabel}</div>
                     </div>
                 `;
             }).join('');
@@ -12939,7 +12948,7 @@ if (achievementsGrid) {
             const container = document.getElementById('planner-list');
             if (!container) return;
             if (tasks.length === 0) {
-                container.innerHTML = `<div class="text-center text-gray-500 py-8">No tasks scheduled. Add one to get started!</div>`;
+                container.innerHTML = `<div class="text-center text-slate-500 py-8">No tasks scheduled. Add one to get started!</div>`;
                 return;
             }
 
