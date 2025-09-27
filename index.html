@@ -3386,15 +3386,14 @@
         }
         .log-options-menu {
             display: none;
-            position: absolute;
-            right: 1rem;
-            top: 2.5rem;
+            position: fixed;
             background-color: #FFFFFF;
             border-radius: 0.75rem;
             border: 1px solid #E2E8F0;
             box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
-            z-index: 1600;
+            z-index: 2000;
             overflow: hidden;
+            min-width: 160px;
         }
         .log-options-menu.active {
             display: block;
@@ -11820,6 +11819,126 @@ if (achievementsGrid) {
         // Call renderStatsPage() when you open the Stats page.
         // Call disposeStatsPage() when you leave the page to clean subscriptions/intervals.
         
+        const __logMenuState = { menu: null, button: null };
+
+        function ensureLogOptionsMenu() {
+          if (__logMenuState.menu) return __logMenuState.menu;
+
+          const menu = document.createElement('div');
+          menu.id = 'log-options-portal';
+          menu.className = 'log-options-menu';
+          menu.innerHTML = `
+            <button class="log-edit-btn">Edit</button>
+            <button class="log-delete-btn">Delete</button>
+          `;
+
+          document.body.appendChild(menu);
+
+          menu.addEventListener('click', (event) => {
+            const actionBtn = event.target.closest('button');
+            if (!actionBtn) return;
+
+            const sessionId = menu.dataset.sessionId;
+            if (!sessionId) {
+              closeLogOptionsMenu();
+              return;
+            }
+
+            const durationSeconds = parseInt(menu.dataset.durationSeconds || '0', 10) || 0;
+            const endedAtISO = menu.dataset.endedAt || '';
+            if (actionBtn.classList.contains('log-delete-btn')) {
+              closeLogOptionsMenu();
+              const endedAtDate = endedAtISO ? new Date(endedAtISO) : null;
+              showConfirmationModal(
+                'Delete Session?',
+                'Are you sure you want to permanently delete this study session?',
+                () => deleteSession(sessionId, durationSeconds, endedAtDate)
+              );
+              return;
+            }
+
+            if (actionBtn.classList.contains('log-edit-btn')) {
+              closeLogOptionsMenu();
+              const modal = document.getElementById('edit-session-modal');
+              if (!modal) return;
+              document.getElementById('edit-session-id').value = sessionId;
+              document.getElementById('edit-session-subject').value = menu.dataset.sessionSubject || '';
+              document.getElementById('edit-session-duration').value = Math.max(1, Math.round(durationSeconds / 60));
+              document.getElementById('edit-session-old-duration').value = durationSeconds;
+              document.getElementById('edit-session-ended-at').value = endedAtISO;
+              modal.classList.add('active');
+            }
+          });
+
+          window.addEventListener('resize', closeLogOptionsMenu);
+          window.addEventListener('scroll', closeLogOptionsMenu, true);
+
+          __logMenuState.menu = menu;
+          return menu;
+        }
+
+        function closeLogOptionsMenu() {
+          const menu = __logMenuState.menu;
+          if (!menu) return;
+          menu.classList.remove('active');
+          menu.style.top = '';
+          menu.style.left = '';
+          menu.style.visibility = '';
+          menu.dataset.sessionId = '';
+          menu.dataset.sessionSubject = '';
+          menu.dataset.durationSeconds = '';
+          menu.dataset.endedAt = '';
+          __logMenuState.button = null;
+        }
+
+        function toggleLogOptionsMenu(button) {
+          const menu = ensureLogOptionsMenu();
+          if (__logMenuState.button === button && menu.classList.contains('active')) {
+            closeLogOptionsMenu();
+            return;
+          }
+          openLogOptionsMenu(button);
+        }
+
+        function openLogOptionsMenu(button) {
+          const menu = ensureLogOptionsMenu();
+          __logMenuState.button = button;
+
+          menu.dataset.sessionId = button.dataset.sessionId || '';
+          menu.dataset.sessionSubject = button.dataset.sessionSubject || '';
+          menu.dataset.durationSeconds = button.dataset.durationSeconds || '0';
+          menu.dataset.endedAt = button.dataset.endedAt || '';
+
+          menu.style.top = '0px';
+          menu.style.left = '0px';
+          menu.style.visibility = 'hidden';
+          menu.classList.add('active');
+
+          const buttonRect = button.getBoundingClientRect();
+          const menuRect = menu.getBoundingClientRect();
+
+          const viewportPadding = 16;
+          let top = buttonRect.bottom + 8;
+          let left = buttonRect.right - menuRect.width;
+
+          const maxLeft = window.innerWidth - menuRect.width - viewportPadding;
+          if (!Number.isFinite(left)) left = buttonRect.left;
+          left = Math.min(left, maxLeft);
+          left = Math.max(left, viewportPadding);
+
+          const maxTop = window.innerHeight - menuRect.height - viewportPadding;
+          if (top > maxTop) {
+            top = buttonRect.top - menuRect.height - 8;
+          }
+          if (top < viewportPadding) {
+            top = Math.max(viewportPadding, Math.min(buttonRect.bottom + 8, maxTop));
+          }
+
+          menu.style.left = `${Math.round(left)}px`;
+          menu.style.top = `${Math.round(top)}px`;
+          menu.style.visibility = 'visible';
+        }
+
         let __stats = { subSessions: null, subUser: null, liveInterval: null, cachedSessions: [], liveStudying: null, charts: {} };
         
         function disposeStatsPage() {
@@ -11827,12 +11946,14 @@ if (achievementsGrid) {
           if (__stats.subUser) { supabase.removeChannel(__stats.subUser); __stats.subUser = null; }
           if (__stats.liveInterval) { clearInterval(__stats.liveInterval); __stats.liveInterval = null; }
           __destroyAllCharts();
+          closeLogOptionsMenu();
         }
         
         function renderStatsPage(/* focusSessions (ignored now) */) {
           const insightsContainer = document.getElementById('insights-container');
           if (!insightsContainer) return;
-        
+          closeLogOptionsMenu();
+
           insightsContainer.innerHTML = `
             <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 w-full max-w-7xl mx-auto">
               <div>
@@ -11860,47 +11981,15 @@ if (achievementsGrid) {
           insightsContainer._delegatedListener = function(e) {
             const logContainer = document.getElementById('session-log-container-recent');
             if (!logContainer || !logContainer.contains(e.target)) return;
-        
+
             const optionsBtn = e.target.closest('.log-options-btn');
             if (optionsBtn) {
-              const menu = optionsBtn.nextElementSibling;
-              logContainer.querySelectorAll('.log-options-menu').forEach(m => {
-                if (m !== menu) m.classList.remove('active');
-              });
-              menu.classList.toggle('active');
+              e.preventDefault();
+              toggleLogOptionsMenu(optionsBtn);
               return;
             }
-        
-            const delBtn = e.target.closest('.log-delete-btn');
-            if (delBtn) {
-              const item = delBtn.closest('.session-log-item');
-              const dataBtn = item.querySelector('.log-options-btn');
-              const id = dataBtn.dataset.sessionId;
-              const duration = parseInt(dataBtn.dataset.durationSeconds, 10);
-              const endedAt = new Date(dataBtn.dataset.endedAt);
-              showConfirmationModal('Delete Session?', 'Are you sure you want to permanently delete this study session?', () => {
-                deleteSession(id, duration, endedAt);
-              });
-              return;
-            }
-        
-            const editBtn = e.target.closest('.log-edit-btn');
-            if (editBtn) {
-              const item = editBtn.closest('.session-log-item');
-              const dataBtn = item.querySelector('.log-options-btn');
-              const id = dataBtn.dataset.sessionId;
-              const subject = dataBtn.dataset.sessionSubject;
-              const duration = parseInt(dataBtn.dataset.durationSeconds, 10);
-              const endedAtISO = dataBtn.dataset.endedAt;
-              const modal = document.getElementById('edit-session-modal');
-              document.getElementById('edit-session-id').value = id;
-              document.getElementById('edit-session-subject').value = subject;
-              document.getElementById('edit-session-duration').value = Math.round(duration / 60);
-              document.getElementById('edit-session-old-duration').value = duration;
-              document.getElementById('edit-session-ended-at').value = endedAtISO;
-              modal.classList.add('active');
-              return;
-            }
+
+            closeLogOptionsMenu();
           }
         
           // Attach the new listener
@@ -12409,14 +12498,10 @@ if (achievementsGrid) {
                 <button class="log-options-btn p-2 rounded-full text-slate-500 hover:bg-slate-100"
                         data-session-id="${s.id}"
                         data-session-subject="${escapeAttribute(s.subject)}"
-                        data-duration-seconds="${s.durationSeconds}"
+                        data-duration-seconds="${s.durationSeconds ?? Math.round(s.duration * 60)}"
                         data-ended-at="${s.endTime.toISOString()}">
                   <i data-lucide="more-vertical" class="w-5 h-5 pointer-events-none"></i>
                 </button>
-                <div class="log-options-menu">
-                  <button class="log-edit-btn">Edit</button>
-                  <button class="log-delete-btn">Delete</button>
-                </div>
               </div>`;
             wrap.appendChild(item);
           });
@@ -16973,8 +17058,8 @@ if (achievementsGrid) {
             if (!e.target.closest('.subject-options-btn')) {
                 document.querySelectorAll('.subject-options-menu').forEach(m => m.classList.remove('active'));
             }
-            if (!e.target.closest('.log-options-btn')) {
-                document.querySelectorAll('.log-options-menu').forEach(m => m.classList.remove('active'));
+            if (!e.target.closest('.log-options-btn') && !e.target.closest('.log-options-menu')) {
+                closeLogOptionsMenu();
             }
         });
         
