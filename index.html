@@ -5189,6 +5189,7 @@
         // the profile data without navigating them away from their current page.
         if (event === 'SIGNED_OUT' && previousUserId) {
             await cancelAllServerHeadsUpSchedules('signed_out', { userIdOverride: previousUserId });
+            clearStoredTimerState();
         }
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
             routeAfterAuth();
@@ -5284,6 +5285,7 @@
             // Ensure daily totals persist across refreshes
             await loadDailyTotal();
             showPage('page-timer');
+            await restoreTimerStateFromCache();
 
             if (typeof Notification !== 'undefined') {
                 ensurePushSubscription().catch(error => {
@@ -5629,6 +5631,7 @@
                 document.getElementById('pause-btn').classList.add('hidden');
                 setPomodoroWakeLockActive(false);
                 pomodoroStatusDisplay.textContent = `Ready for ${newState.replace('_', ' ')}`;
+                clearStoredTimerState();
             }
         }
         // --- FIX END ---
@@ -6081,6 +6084,11 @@ let pauseStartTime = 0;
         let currentAdvancedGroupData = null;
         let advancedGroupCache = { groupId: null, fetchedAt: 0, data: null };
         const GROUP_GOAL_STORAGE_KEY = 'focusflow.groupGoals';
+        const TIMER_STORAGE_KEY = 'focusflow.timerState.v1';
+        let currentPomodoroPhaseStartMs = null;
+        let currentPomodoroDurationSeconds = null;
+        let pomodoroPauseRemainingSeconds = null;
+        let timerStateRestoredForUser = null;
 
         let currentGroupMemberIds = [];
 
@@ -6180,6 +6188,247 @@ let pauseStartTime = 0;
                 releasePomodoroWakeLock();
             }
         });
+
+        function parseTimerDisplayToSeconds(display) {
+            if (typeof display !== 'string' || !display.includes(':')) {
+                return null;
+            }
+            const parts = display.split(':').map(part => parseInt(part, 10));
+            if (parts.some(part => Number.isNaN(part))) {
+                return null;
+            }
+            if (parts.length === 3) {
+                return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+            }
+            if (parts.length === 2) {
+                return (parts[0] * 60) + parts[1];
+            }
+            return null;
+        }
+
+        function loadStoredTimerState() {
+            try {
+                if (typeof window === 'undefined' || !window.localStorage) {
+                    return null;
+                }
+                const raw = window.localStorage.getItem(TIMER_STORAGE_KEY);
+                if (!raw) return null;
+                return JSON.parse(raw);
+            } catch (error) {
+                console.warn('Failed to load cached timer state', error);
+                try {
+                    window.localStorage.removeItem(TIMER_STORAGE_KEY);
+                } catch (_) {
+                    /* ignore */
+                }
+                return null;
+            }
+        }
+
+        function clearStoredTimerState() {
+            try {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.removeItem(TIMER_STORAGE_KEY);
+                }
+            } catch (error) {
+                console.warn('Failed to clear cached timer state', error);
+            }
+            timerStateRestoredForUser = null;
+        }
+
+        function persistTimerState() {
+            try {
+                if (typeof window === 'undefined' || !window.localStorage) {
+                    return;
+                }
+            } catch (error) {
+                return;
+            }
+
+            const hasNormalTimer = timerMode === 'normal' && sessionStartTime && (timerInterval || isPaused);
+            const hasPomodoroTimer = timerMode === 'pomodoro' && (pomodoroState !== 'idle' || isPaused);
+
+            if (!hasNormalTimer && !hasPomodoroTimer) {
+                clearStoredTimerState();
+                return;
+            }
+
+            const payload = {
+                version: 1,
+                timerMode,
+                activeSubject: activeSubject || '',
+                activeTaskId: activeTaskId ?? null,
+                activeTaskTargetSeconds: Number.isFinite(activeTaskTargetSeconds) ? activeTaskTargetSeconds : null,
+                activeTaskRemainingPomodoros: typeof activeTaskRemainingPomodoros === 'number' ? activeTaskRemainingPomodoros : null,
+                isPaused,
+                pauseStartTime: isPaused && pauseStartTime ? pauseStartTime : 0,
+                userId: currentUser?.id || null,
+                savedAt: Date.now()
+            };
+
+            if (hasNormalTimer) {
+                payload.modeType = 'normal';
+                payload.sessionStartTime = sessionStartTime;
+            } else if (hasPomodoroTimer) {
+                payload.modeType = 'pomodoro';
+                payload.pomodoroState = pomodoroState;
+                payload.nextPomodoroPhase = nextPomodoroPhase ?? null;
+                payload.pomodoroPhaseStartMs = Number.isFinite(currentPomodoroPhaseStartMs) ? currentPomodoroPhaseStartMs : null;
+                payload.pomodoroDurationSeconds = Number.isFinite(currentPomodoroDurationSeconds) ? currentPomodoroDurationSeconds : null;
+                payload.remainingSecondsOnPause = isPaused && Number.isFinite(pomodoroPauseRemainingSeconds)
+                    ? pomodoroPauseRemainingSeconds
+                    : null;
+                payload.pomodoroStatusText = pomodoroStatusDisplay?.textContent || '';
+                payload.pomodoroStatusColor = pomodoroStatusDisplay?.style?.color || '';
+            }
+
+            try {
+                window.localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(payload));
+            } catch (error) {
+                console.warn('Failed to persist timer state', error);
+            }
+        }
+
+        async function restoreTimerStateFromCache() {
+            const stored = loadStoredTimerState();
+            if (!stored) {
+                return;
+            }
+
+            const restoreKey = currentUser?.id || '__anonymous__';
+            if (timerStateRestoredForUser === restoreKey) {
+                return;
+            }
+
+            if (stored.userId && currentUser?.id && stored.userId !== currentUser.id) {
+                clearStoredTimerState();
+                return;
+            }
+
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            timerMode = stored.timerMode === 'pomodoro' ? 'pomodoro' : 'normal';
+            document.getElementById('normal-timer-btn').classList.toggle('active', timerMode === 'normal');
+            document.getElementById('pomodoro-timer-btn').classList.toggle('active', timerMode === 'pomodoro');
+
+            activeSubject = stored.activeSubject || '';
+            activeSubjectDisplay.textContent = activeSubject;
+            activeTaskId = stored.activeTaskId ?? null;
+            activeTaskTargetSeconds = Number.isFinite(stored.activeTaskTargetSeconds) ? stored.activeTaskTargetSeconds : null;
+            activeTaskRemainingPomodoros = typeof stored.activeTaskRemainingPomodoros === 'number'
+                ? stored.activeTaskRemainingPomodoros
+                : null;
+
+            isPaused = !!stored.isPaused;
+            pauseStartTime = isPaused && stored.pauseStartTime ? stored.pauseStartTime : 0;
+
+            const startButton = document.getElementById('start-studying-btn');
+            const stopButton = document.getElementById('stop-studying-btn');
+            const pauseButton = document.getElementById('pause-btn');
+            const resumeButton = document.getElementById('resume-btn');
+            const manualStartButton = document.getElementById('manual-start-btn');
+
+            if (startButton) startButton.classList.add('hidden');
+            if (stopButton) stopButton.classList.remove('hidden');
+            if (manualStartButton) manualStartButton.classList.add('hidden');
+
+            if (timerMode === 'normal' && stored.modeType === 'normal' && Number.isFinite(stored.sessionStartTime)) {
+                sessionStartTime = stored.sessionStartTime;
+                const now = Date.now();
+                const elapsedSeconds = isPaused && pauseStartTime
+                    ? Math.max(Math.floor((pauseStartTime - sessionStartTime) / 1000), 0)
+                    : Math.max(Math.floor((now - sessionStartTime) / 1000), 0);
+
+                if (Number.isFinite(activeTaskTargetSeconds) && activeTaskTargetSeconds > 0) {
+                    const remainingSeconds = Math.max(activeTaskTargetSeconds - elapsedSeconds, 0);
+                    if (remainingSeconds <= 0) {
+                        await stopTimer();
+                        return;
+                    }
+                    sessionTimerDisplay.textContent = formatTime(remainingSeconds);
+                    if (!isPaused) {
+                        timerInterval = setInterval(() => {
+                            const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+                            const remaining = Math.max(activeTaskTargetSeconds - elapsed, 0);
+                            sessionTimerDisplay.textContent = formatTime(remaining);
+                            if (remaining <= 0) {
+                                stopTimer().catch(err => console.error('Failed to auto-stop restored countdown', err));
+                            }
+                        }, 1000);
+                    }
+                } else {
+                    sessionTimerDisplay.textContent = formatTime(elapsedSeconds);
+                    if (!isPaused) {
+                        timerInterval = setInterval(() => {
+                            const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+                            sessionTimerDisplay.textContent = formatTime(elapsed);
+                        }, 1000);
+                    }
+                }
+
+                if (pauseButton) pauseButton.classList.toggle('hidden', isPaused);
+                if (resumeButton) resumeButton.classList.toggle('hidden', !isPaused);
+                setPomodoroWakeLockActive(false);
+
+                timerStateRestoredForUser = restoreKey;
+                persistTimerState();
+                return;
+            }
+
+            if (timerMode === 'pomodoro' && stored.modeType === 'pomodoro' && Number.isFinite(stored.pomodoroPhaseStartMs) && Number.isFinite(stored.pomodoroDurationSeconds)) {
+                pomodoroState = stored.pomodoroState || 'idle';
+                if (pomodoroState === 'idle') {
+                    clearStoredTimerState();
+                    return;
+                }
+
+                nextPomodoroPhase = stored.nextPomodoroPhase ?? null;
+                currentPomodoroPhaseStartMs = stored.pomodoroPhaseStartMs;
+                currentPomodoroDurationSeconds = stored.pomodoroDurationSeconds;
+                pomodoroPauseRemainingSeconds = Number.isFinite(stored.remainingSecondsOnPause)
+                    ? stored.remainingSecondsOnPause
+                    : null;
+
+                let phaseStartMs = currentPomodoroPhaseStartMs;
+                if (isPaused && Number.isFinite(pomodoroPauseRemainingSeconds)) {
+                    phaseStartMs = Date.now() - ((currentPomodoroDurationSeconds - pomodoroPauseRemainingSeconds) * 1000);
+                }
+                currentPomodoroPhaseStartMs = phaseStartMs;
+
+                const targetEndMs = phaseStartMs + (currentPomodoroDurationSeconds * 1000);
+                const timeLeftSeconds = isPaused && Number.isFinite(pomodoroPauseRemainingSeconds)
+                    ? Math.max(Math.round(pomodoroPauseRemainingSeconds), 0)
+                    : Math.max(Math.ceil((targetEndMs - Date.now()) / 1000), 0);
+
+                sessionTimerDisplay.textContent = formatPomodoroTime(timeLeftSeconds);
+                if (stored.pomodoroStatusText) {
+                    pomodoroStatusDisplay.textContent = stored.pomodoroStatusText;
+                }
+                if (stored.pomodoroStatusColor) {
+                    pomodoroStatusDisplay.style.color = stored.pomodoroStatusColor;
+                }
+
+                if (pauseButton) pauseButton.classList.toggle('hidden', isPaused);
+                if (resumeButton) resumeButton.classList.toggle('hidden', !isPaused);
+
+                pomodoroWorker.postMessage({ command: 'start', duration: currentPomodoroDurationSeconds, startedAt: phaseStartMs });
+                if (isPaused && Number.isFinite(pomodoroPauseRemainingSeconds)) {
+                    setTimeout(() => { pomodoroWorker.postMessage({ command: 'pause' }); }, 0);
+                    setPomodoroWakeLockActive(false);
+                } else {
+                    setPomodoroWakeLockActive(true);
+                }
+
+                timerStateRestoredForUser = restoreKey;
+                persistTimerState();
+                return;
+            }
+
+            clearStoredTimerState();
+        }
         const availableSounds = {
             'None': '',
             '8-Bit Powerup': 'tone_powerup',
@@ -8073,6 +8322,11 @@ let pauseStartTime = 0;
                 return;
             }
             unlockAudio();
+            isPaused = false;
+            pauseStartTime = 0;
+            pomodoroPauseRemainingSeconds = null;
+            currentPomodoroPhaseStartMs = null;
+            currentPomodoroDurationSeconds = null;
 
             // Stop and save any active break session before starting a new study session
             if (breakTimerInterval) {
@@ -8134,6 +8388,7 @@ let pauseStartTime = 0;
             activeSubjectDisplay.textContent = activeSubject;
 
             if(timerInterval) clearInterval(timerInterval);
+            timerInterval = null;
 
             if (timerMode === 'normal') {
                 sessionStartTime = Date.now();
@@ -8170,9 +8425,15 @@ let pauseStartTime = 0;
                 pomodoroStatusDisplay.style.color = '#3b82f6';
 
                 const workDurationSeconds = pomodoroSettings.work * 60;
-                await ensurePushSubscription();
+                try {
+                    await ensurePushSubscription();
+                } catch (error) {
+                    console.warn('Failed to ensure push subscription before Pomodoro start', error);
+                }
                 cancelSWAlarm(POMODORO_HEADS_UP_TAG);
                 const workPhaseStartMs = Date.now();
+                currentPomodoroPhaseStartMs = workPhaseStartMs;
+                currentPomodoroDurationSeconds = workDurationSeconds;
                 const upcomingBreak = getUpcomingBreakConfig();
                 schedulePomodoroHeadsUpNotification({
                     phaseStartMs: workPhaseStartMs,
@@ -8205,13 +8466,17 @@ let pauseStartTime = 0;
             document.getElementById('pause-btn').classList.remove('hidden');
             document.getElementById('manual-start-btn').classList.add('hidden');
 
-            if (currentUser) {
-                const studyingStatus = { subject: activeSubject, startTime: nowIso(), type: 'study' };
-                if (task) {
-                    studyingStatus.taskId = task.id;
-                    studyingStatus.taskTitle = task.title;
+            try {
+                if (currentUser) {
+                    const studyingStatus = { subject: activeSubject, startTime: nowIso(), type: 'study' };
+                    if (task) {
+                        studyingStatus.taskId = task.id;
+                        studyingStatus.taskTitle = task.title;
+                    }
+                    await updateUserPrivate(currentUser.id, { studying: studyingStatus });
                 }
-                await updateUserPrivate(currentUser.id, { studying: studyingStatus });
+            } finally {
+                persistTimerState();
             }
         }
         
@@ -8229,12 +8494,16 @@ let pauseStartTime = 0;
             pauseStartTime = 0;
             // --- END OF ADDED BLOCK ---
 
+            clearStoredTimerState();
+
             const shouldSkipSave = suppressTimerSave;
             suppressTimerSave = false;
 
             if (timerInterval) {
                 clearInterval(timerInterval);
             }
+
+            timerInterval = null;
 
             if (!shouldSkipSave) {
                 if (timerMode === 'pomodoro' && pomodoroState !== 'idle') {
@@ -8266,6 +8535,10 @@ let pauseStartTime = 0;
             activeTaskId = null;
             activeTaskTargetSeconds = null;
             activeTaskRemainingPomodoros = null;
+            currentPomodoroPhaseStartMs = null;
+            currentPomodoroDurationSeconds = null;
+            pomodoroPauseRemainingSeconds = null;
+            sessionStartTime = 0;
             activeSubjectDisplay.textContent = '';
             sessionTimerDisplay.textContent = timerMode === 'pomodoro'
                 ? formatPomodoroTime(pomodoroSettings.work * 60)
@@ -8293,12 +8566,17 @@ let pauseStartTime = 0;
                 pauseStartTime = Date.now();
                 document.getElementById('pause-btn').classList.add('hidden');
                 document.getElementById('resume-btn').classList.remove('hidden');
+                persistTimerState();
             } else if (timerMode === 'pomodoro' && !isPaused) {
                 pomodoroWorker.postMessage({ command: 'pause' });
                 setPomodoroWakeLockActive(false);
                 isPaused = true;
+                pauseStartTime = Date.now();
+                const remainingSeconds = parseTimerDisplayToSeconds(sessionTimerDisplay.textContent);
+                pomodoroPauseRemainingSeconds = Number.isFinite(remainingSeconds) ? remainingSeconds : null;
                 document.getElementById('pause-btn').classList.add('hidden');
                 document.getElementById('resume-btn').classList.remove('hidden');
+                persistTimerState();
             }
         }
         
@@ -8314,12 +8592,16 @@ let pauseStartTime = 0;
                 pauseStartTime = 0;
                 document.getElementById('pause-btn').classList.remove('hidden');
                 document.getElementById('resume-btn').classList.add('hidden');
+                persistTimerState();
             } else if (timerMode === 'pomodoro' && isPaused) {
                 pomodoroWorker.postMessage({ command: 'resume' });
                 setPomodoroWakeLockActive(true);
                 isPaused = false;
+                pauseStartTime = 0;
+                pomodoroPauseRemainingSeconds = null;
                 document.getElementById('pause-btn').classList.remove('hidden');
                 document.getElementById('resume-btn').classList.add('hidden');
+                persistTimerState();
             }
         }
 
@@ -8361,6 +8643,11 @@ let pauseStartTime = 0;
             const initialTimeLeftSeconds = Math.max(Math.ceil((targetEndMs - nowMs) / 1000), 0);
 
             // Start the UI timer
+            currentPomodoroPhaseStartMs = phaseStartMs;
+            currentPomodoroDurationSeconds = durationSeconds;
+            pomodoroPauseRemainingSeconds = null;
+            isPaused = false;
+            pauseStartTime = 0;
             pomodoroWorker.postMessage({ command: 'start', duration: durationSeconds, startedAt: phaseStartMs });
             setPomodoroWakeLockActive(true);
             if (sessionTimerDisplay) {
@@ -8406,6 +8693,7 @@ let pauseStartTime = 0;
                     finalCopy: buildFinalTransitionCopy({ oldState: state, newState: 'work', label: breakLabel })
                 });
             }
+            persistTimerState();
         }
 
         function updateBreakTimerDisplay() {
@@ -14779,6 +15067,8 @@ if (achievementsGrid) {
                 }
                 return;
             }
+
+            clearStoredTimerState();
 
             timerMode = mode;
             document.getElementById('normal-timer-btn').classList.toggle('active', mode === 'normal');
