@@ -2343,37 +2343,39 @@
             width: 90%;
             max-width: 420px;
             color: #1F2937;
+            box-sizing: border-box;
         }
 
         #kick-member-modal .modal-content {
             max-height: min(85vh, 640px);
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
         #kick-member-modal .modal-header {
             flex-shrink: 0;
         }
 
-        #kick-member-list {
+        #kick-member-modal .modal-body {
             flex: 1;
             min-height: 0;
             overflow-y: auto;
-            padding-right: 0.5rem;
-            margin-right: -0.5rem;
+            margin: 0 -0.75rem -0.75rem 0;
+            padding-right: 0.75rem;
         }
 
-        #kick-member-list::-webkit-scrollbar {
+        #kick-member-modal .modal-body::-webkit-scrollbar {
             width: 6px;
         }
 
-        #kick-member-list::-webkit-scrollbar-thumb {
+        #kick-member-modal .modal-body::-webkit-scrollbar-thumb {
             background: rgba(100, 116, 139, 0.4);
             border-radius: 9999px;
         }
 
         #confirmation-modal {
-            z-index: 1200;
+            z-index: 3200;
         }
 
         .kick-member-btn {
@@ -3357,6 +3359,8 @@
         .session-log-item.options-open:hover {
             transform: none;
             box-shadow: 0 12px 26px rgba(15, 23, 42, 0.1);
+            z-index: 1500;
+            position: relative;
         }
         #page-stats .log-options-btn {
             transition: background-color 0.2s ease, color 0.2s ease;
@@ -3406,15 +3410,14 @@
         }
         .log-options-menu {
             display: none;
-            position: absolute;
-            right: 1rem;
-            top: 2.5rem;
+            position: fixed;
             background-color: #FFFFFF;
             border-radius: 0.75rem;
             border: 1px solid #E2E8F0;
             box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
-            z-index: 1300;
+            z-index: 2600;
             overflow: hidden;
+            min-width: 176px;
         }
         .log-options-menu.active {
             display: block;
@@ -4214,10 +4217,16 @@
                 <div class="modal-title">Kick Member</div>
                 <button class="close-modal">&times;</button>
             </div>
-            <div id="kick-member-list" class="space-y-3">
-                <p class="text-slate-600 text-sm">Select a member to remove from the group.</p>
+            <div class="modal-body">
+                <div id="kick-member-list" class="space-y-3">
+                    <p class="text-slate-600 text-sm">Select a member to remove from the group.</p>
+                </div>
             </div>
         </div>
+    </div>
+    <div id="session-log-popover" class="log-options-menu" role="menu" aria-hidden="true">
+        <button type="button" data-action="edit">Edit</button>
+        <button type="button" class="log-delete-btn" data-action="delete">Delete</button>
     </div>
     <div id="studicon-store-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Choose Your Studicon</div><button class="close-modal">&times;</button></div><div><div id="studicon-category-tabs" class="flex space-x-1 border-b border-gray-700 mb-4"></div><div id="studicon-picker" class="avatar-picker max-h-60 overflow-y-auto"></div><button id="save-studicon-btn" class="w-full mt-4 bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save</button></div></div></div>
     <div id="edit-group-info-modal" class="modal"><div class="modal-content"><div class="modal-header"><div class="modal-title">Edit Group Information</div><button class="close-modal">&times;</button></div><form id="edit-group-info-form" class="space-y-5"><input type="hidden" id="edit-group-id-input"><div><label class="block text-sm font-medium text-slate-600 mb-2">Group Name</label><input id="edit-group-name" type="text" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" required></div><div><label class="block text-sm font-medium text-slate-600 mb-2">Description</label><textarea id="edit-group-description" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 h-24" required></textarea></div><div><label class="block text-sm font-medium text-slate-600 mb-2">Category</label><select id="edit-group-category" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"><option>General study</option><option>Language study</option><option>Secondary School</option><option>University</option></select></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-slate-600 mb-2">Time Goal (h)</label><input id="edit-group-goal" type="number" min="1" max="10" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"></div><div><label class="block text-sm font-medium text-slate-600 mb-2">Capacity</label><input id="edit-group-capacity" type="number" min="2" max="100" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"></div></div><div><label class="block text-sm font-medium text-slate-600 mb-2">Password (optional)</label><input id="edit-group-password" type="text" class="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400" placeholder="Leave blank for public"></div><button type="submit" class="w-full bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold py-3 rounded-lg">Save Changes</button></form></div></div>
@@ -8209,6 +8218,7 @@ let pauseStartTime = 0;
             const modal = document.getElementById('confirmation-modal');
             modal.querySelector('#confirmation-modal-title').textContent = title;
             modal.querySelector('#confirmation-modal-message').textContent = message;
+            hideSessionLogPopover();
             modal.classList.add('active');
 
             const confirmBtn = modal.querySelector('#confirm-btn');
@@ -8227,6 +8237,113 @@ let pauseStartTime = 0;
             };
             cancelBtn.onclick = cleanup;
             closeModalBtns.forEach(btn => btn.onclick = cleanup);
+        }
+
+        const sessionLogPopover = document.getElementById('session-log-popover');
+        let sessionLogPopoverAnchor = null;
+
+        function hideSessionLogPopover() {
+            if (!sessionLogPopover) return;
+            sessionLogPopover.classList.remove('active');
+            sessionLogPopover.setAttribute('aria-hidden', 'true');
+            sessionLogPopover.style.removeProperty('top');
+            sessionLogPopover.style.removeProperty('left');
+            sessionLogPopover.style.removeProperty('visibility');
+            sessionLogPopover.removeAttribute('data-session-id');
+            sessionLogPopover.removeAttribute('data-session-subject');
+            sessionLogPopover.removeAttribute('data-duration-seconds');
+            sessionLogPopover.removeAttribute('data-ended-at');
+            if (sessionLogPopoverAnchor) {
+                sessionLogPopoverAnchor.classList.remove('options-open');
+                sessionLogPopoverAnchor = null;
+            }
+        }
+
+        function openSessionLogPopover(button) {
+            if (!sessionLogPopover || !button) return;
+
+            const item = button.closest('.session-log-item');
+            if (!item) return;
+
+            const sessionId = button.dataset.sessionId || '';
+            const isSameAnchor = sessionLogPopover.classList.contains('active') &&
+                sessionLogPopover.dataset.sessionId === sessionId;
+
+            hideSessionLogPopover();
+
+            if (isSameAnchor) {
+                return;
+            }
+
+            sessionLogPopover.dataset.sessionId = sessionId;
+            sessionLogPopover.dataset.sessionSubject = button.dataset.sessionSubject || '';
+            sessionLogPopover.dataset.durationSeconds = button.dataset.durationSeconds || '0';
+            sessionLogPopover.dataset.endedAt = button.dataset.endedAt || '';
+            sessionLogPopoverAnchor = item;
+            item.classList.add('options-open');
+
+            sessionLogPopover.classList.add('active');
+            sessionLogPopover.style.visibility = 'hidden';
+            sessionLogPopover.setAttribute('aria-hidden', 'false');
+
+            const rect = button.getBoundingClientRect();
+            const menuWidth = sessionLogPopover.offsetWidth;
+            const menuHeight = sessionLogPopover.offsetHeight;
+
+            let top = rect.bottom + 8;
+            let left = rect.right - menuWidth;
+
+            const maxLeft = window.innerWidth - menuWidth - 16;
+            if (left > maxLeft) left = maxLeft;
+            if (left < 16) left = 16;
+
+            if (top + menuHeight > window.innerHeight - 16) {
+                top = rect.top - menuHeight - 8;
+            }
+
+            if (top < 16) {
+                top = Math.min(rect.bottom + 8, window.innerHeight - menuHeight - 16);
+            }
+
+            sessionLogPopover.style.top = `${Math.max(16, top)}px`;
+            sessionLogPopover.style.left = `${left}px`;
+            sessionLogPopover.style.visibility = '';
+        }
+
+        if (sessionLogPopover) {
+            sessionLogPopover.addEventListener('click', (event) => {
+                const actionBtn = event.target.closest('button[data-action]');
+                if (!actionBtn) return;
+
+                event.preventDefault();
+                const action = actionBtn.dataset.action;
+                const sessionId = sessionLogPopover.dataset.sessionId;
+                const durationSeconds = parseInt(sessionLogPopover.dataset.durationSeconds || '0', 10);
+                const endedAtISO = sessionLogPopover.dataset.endedAt;
+                const subject = sessionLogPopover.dataset.sessionSubject || '';
+
+                hideSessionLogPopover();
+
+                if (!sessionId) return;
+
+                if (action === 'edit') {
+                    const modal = document.getElementById('edit-session-modal');
+                    if (!modal) return;
+                    document.getElementById('edit-session-id').value = sessionId;
+                    document.getElementById('edit-session-subject').value = subject;
+                    document.getElementById('edit-session-duration').value = Math.max(1, Math.round(durationSeconds / 60));
+                    document.getElementById('edit-session-old-duration').value = durationSeconds;
+                    document.getElementById('edit-session-ended-at').value = endedAtISO || '';
+                    modal.classList.add('active');
+                } else if (action === 'delete') {
+                    const endedAt = endedAtISO ? new Date(endedAtISO) : null;
+                    showConfirmationModal(
+                        'Delete Session?',
+                        'Are you sure you want to permanently delete this study session?',
+                        () => deleteSession(sessionId, durationSeconds, endedAt)
+                    );
+                }
+            });
         }
 
         function resetAndShowAddSubjectModal() {
@@ -11880,67 +11997,12 @@ if (achievementsGrid) {
           insightsContainer._delegatedListener = function(e) {
             const logContainer = document.getElementById('session-log-container-recent');
             if (!logContainer || !logContainer.contains(e.target)) return;
-        
+
             const optionsBtn = e.target.closest('.log-options-btn');
             if (optionsBtn) {
-              const menu = optionsBtn.nextElementSibling;
-              const item = optionsBtn.closest('.session-log-item');
-              const isActivating = menu ? !menu.classList.contains('active') : false;
-              logContainer.querySelectorAll('.log-options-menu').forEach(m => {
-                if (m !== menu) {
-                  m.classList.remove('active');
-                  const hostItem = m.closest('.session-log-item');
-                  if (hostItem) hostItem.classList.remove('options-open');
-                }
-              });
-              if (menu) {
-                menu.classList.toggle('active');
-              }
-              if (item) {
-                if (isActivating) {
-                  item.classList.add('options-open');
-                } else {
-                  item.classList.remove('options-open');
-                }
-              }
-              return;
-            }
-
-            const delBtn = e.target.closest('.log-delete-btn');
-            if (delBtn) {
-              const item = delBtn.closest('.session-log-item');
-              const dataBtn = item.querySelector('.log-options-btn');
-              const menu = item.querySelector('.log-options-menu');
-              if (menu) menu.classList.remove('active');
-              item.classList.remove('options-open');
-              const id = dataBtn.dataset.sessionId;
-              const duration = parseInt(dataBtn.dataset.durationSeconds, 10);
-              const endedAt = new Date(dataBtn.dataset.endedAt);
-              showConfirmationModal('Delete Session?', 'Are you sure you want to permanently delete this study session?', () => {
-                deleteSession(id, duration, endedAt);
-              });
-              return;
-            }
-        
-            const editBtn = e.target.closest('.log-edit-btn');
-            if (editBtn) {
-              const item = editBtn.closest('.session-log-item');
-              const dataBtn = item.querySelector('.log-options-btn');
-              const menu = item.querySelector('.log-options-menu');
-              if (menu) menu.classList.remove('active');
-              item.classList.remove('options-open');
-              const id = dataBtn.dataset.sessionId;
-              const subject = dataBtn.dataset.sessionSubject;
-              const duration = parseInt(dataBtn.dataset.durationSeconds, 10);
-              const endedAtISO = dataBtn.dataset.endedAt;
-              const modal = document.getElementById('edit-session-modal');
-              document.getElementById('edit-session-id').value = id;
-              document.getElementById('edit-session-subject').value = subject;
-              document.getElementById('edit-session-duration').value = Math.round(duration / 60);
-              document.getElementById('edit-session-old-duration').value = duration;
-              document.getElementById('edit-session-ended-at').value = endedAtISO;
-              modal.classList.add('active');
-              return;
+              e.preventDefault();
+              e.stopPropagation();
+              openSessionLogPopover(optionsBtn);
             }
           }
         
@@ -12436,6 +12498,9 @@ if (achievementsGrid) {
 
         function __renderSessionLog(list, containerId) {
           const wrap = document.getElementById(containerId); if (!wrap) return;
+          if (containerId === 'session-log-container-recent') {
+            hideSessionLogPopover();
+          }
           wrap.innerHTML = '';
           list.forEach(s => {
             const item = document.createElement('div');
@@ -12454,10 +12519,6 @@ if (achievementsGrid) {
                         data-ended-at="${s.endTime.toISOString()}">
                   <i data-lucide="more-vertical" class="w-5 h-5 pointer-events-none"></i>
                 </button>
-                <div class="log-options-menu">
-                  <button class="log-edit-btn">Edit</button>
-                  <button class="log-delete-btn">Delete</button>
-                </div>
               </div>`;
             wrap.appendChild(item);
           });
@@ -17014,10 +17075,13 @@ if (achievementsGrid) {
             if (!e.target.closest('.subject-options-btn')) {
                 document.querySelectorAll('.subject-options-menu').forEach(m => m.classList.remove('active'));
             }
-            if (!e.target.closest('.log-options-btn')) {
-                document.querySelectorAll('.log-options-menu').forEach(m => m.classList.remove('active'));
+            if (!e.target.closest('.log-options-btn') && !e.target.closest('#session-log-popover')) {
+                hideSessionLogPopover();
             }
         });
+
+        window.addEventListener('resize', hideSessionLogPopover);
+        window.addEventListener('scroll', hideSessionLogPopover, true);
         
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
