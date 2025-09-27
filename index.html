@@ -8269,9 +8269,11 @@ let pauseStartTime = 0;
         }
 
         const DEFAULT_ROUTE = 'timer';
+        const EXIT_ATTEMPT_TIMEOUT_MS = 2000;
         const routePageMap = {};
         const pageRouteMap = {};
         let lastHandledRoute = '';
+        let lastExitAttemptTime = 0;
 
         function buildRouteMaps() {
             document.querySelectorAll('.page[data-route]').forEach(page => {
@@ -8317,6 +8319,10 @@ let pauseStartTime = 0;
             lastHandledRoute = targetRoute;
             showPage(targetPageId);
             setActiveNavForRoute(targetRoute);
+
+            if (targetRoute !== DEFAULT_ROUTE) {
+                lastExitAttemptTime = 0;
+            }
         }
 
         function navigateToPage(pageId, { replace = false } = {}) {
@@ -8338,11 +8344,59 @@ let pauseStartTime = 0;
             showPage(pageId);
         }
 
+        function getHashFromUrl(url) {
+            if (!url) return '';
+            try {
+                return new URL(url, window.location.href).hash;
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function handlePotentialExitAttempt(newHash, oldHash) {
+            const normalizedNewRoute = getRouteFromHash(newHash);
+            if (normalizedNewRoute !== DEFAULT_ROUTE) {
+                lastExitAttemptTime = 0;
+                return false;
+            }
+
+            const trimmedNewHash = (newHash || '').replace(/^#/, '');
+            if (trimmedNewHash && trimmedNewHash !== `/${DEFAULT_ROUTE}`) {
+                lastExitAttemptTime = 0;
+                return false;
+            }
+
+            const normalizedOldRoute = getRouteFromHash(oldHash || '');
+            const cameFromDefaultRoute = normalizedOldRoute === DEFAULT_ROUTE;
+
+            if (!cameFromDefaultRoute) {
+                lastExitAttemptTime = 0;
+                return false;
+            }
+
+            const now = Date.now();
+            if (now - lastExitAttemptTime <= EXIT_ATTEMPT_TIMEOUT_MS) {
+                lastExitAttemptTime = 0;
+                return false;
+            }
+
+            lastExitAttemptTime = now;
+            showToast('Press back again to exit FocusFlow.', 'info');
+            history.replaceState(null, '', `#/${DEFAULT_ROUTE}`);
+            applyRouteFromHash(`#/${DEFAULT_ROUTE}`, { allowSame: true });
+            return true;
+        }
+
         function initializeRouter() {
             buildRouteMaps();
 
-            window.addEventListener('hashchange', () => {
-                applyRouteFromHash(window.location.hash, { allowSame: true });
+            window.addEventListener('hashchange', (event) => {
+                const oldHash = getHashFromUrl(event?.oldURL);
+                const newHash = window.location.hash;
+                if (handlePotentialExitAttempt(newHash, oldHash)) {
+                    return;
+                }
+                applyRouteFromHash(newHash, { allowSame: true });
             });
 
             const initialRoute = getRouteFromHash();
