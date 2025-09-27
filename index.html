@@ -3571,7 +3571,7 @@
         </div>
     </div>
 
-    <div id="page-username-setup" class="page flex-col items-center justify-center h-full p-4 fade-in">
+    <div id="page-username-setup" class="page flex-col items-center justify-center h-full p-4 fade-in" data-route="username-setup">
         <div class="w-full max-w-sm text-center">
             <h1 class="text-3xl font-bold text-white mb-2">Welcome to FocusFlow!</h1>
             <p class="text-gray-400 mb-8">Let's set up your profile.</p>
@@ -3589,7 +3589,7 @@
 
     <div id="app-container" class="flex-col h-screen">
         <main id="main" class="flex-grow overflow-y-auto no-scrollbar">
-            <div id="page-timer" class="page active flex-col h-full">
+            <div id="page-timer" class="page active flex-col h-full" data-route="timer">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20">
                      <div class="flex items-center">
                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -3641,7 +3641,7 @@
                 </div>
             </div>
             
-            <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="stats">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3655,7 +3655,7 @@
                     </div>
             </div>
             
-            <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="ranking">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
                     <button class="back-button p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3676,7 +3676,7 @@
                                     </div>
             </div>
             
-            <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="planner">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3702,7 +3702,7 @@
                 </div>
             </div>
 
-            <div id="page-profile" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-profile" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="profile">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3749,7 +3749,7 @@
                     </div>
             </div>
 
-            <div id="page-my-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-my-groups" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="my-groups">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button text-slate-500 hover:text-slate-700" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3764,7 +3764,7 @@
                 <div id="my-groups-list" class="p-4 space-y-4"></div>
             </div>
 
-            <div id="page-find-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-find-groups" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="find-groups">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button text-slate-500 hover:text-slate-700" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3801,7 +3801,7 @@
                 </button>
             </div>
 
-            <div id="page-create-group" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-create-group" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="create-group">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button text-slate-500 hover:text-slate-700" data-target="find-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3823,7 +3823,7 @@
                 </div>
             </div>
 
-            <div id="page-group-detail" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-group-detail" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="group-detail">
                 <header class="p-4 md:p-6 flex items-center z-20 border-b border-slate-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button text-slate-500 hover:text-slate-700" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3909,7 +3909,7 @@
                 </nav>
             </div>
             
-            <div id="page-pulse-forum" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-pulse-forum" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="pulse-forum">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3929,31 +3929,31 @@
         <nav id="main-nav" class="sidebar-nav bg-white border-t border-slate-200 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] sticky bottom-0">
             <ul class="grid grid-cols-5">
                 <li>
-                    <a href="#timer" class="nav-link nav-link--stacked nav-item active" data-page="timer">
+                    <a href="#/timer" class="nav-link nav-link--stacked nav-item active" data-page="timer">
                         <img src="assets/icons/timer.svg" alt="Timer">
                         <span>Timer</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#stats" class="nav-link nav-link--stacked nav-item" data-page="stats">
+                    <a href="#/stats" class="nav-link nav-link--stacked nav-item" data-page="stats">
                         <img src="assets/icons/stats.svg" alt="Stats">
                         <span>Stats</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#ranking" class="nav-link nav-link--stacked nav-item" data-page="ranking">
+                    <a href="#/ranking" class="nav-link nav-link--stacked nav-item" data-page="ranking">
                         <img src="assets/icons/rankings.svg" alt="Ranking">
                         <span>Ranking</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#planner" class="nav-link nav-link--stacked nav-item" data-page="planner">
+                    <a href="#/planner" class="nav-link nav-link--stacked nav-item" data-page="planner">
                         <img src="assets/icons/planner.svg" alt="Planner">
                         <span>Planner</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#pulse-forum" class="nav-link nav-link--stacked nav-item" data-page="pulse-forum">
+                    <a href="#/pulse-forum" class="nav-link nav-link--stacked nav-item" data-page="pulse-forum">
                         <img src="assets/icons/pulseforum.svg" alt="PulseForum">
                         <span>PulseForum</span>
                     </a>
@@ -5245,7 +5245,8 @@
 
         // Not logged in or malformed ID → stay on auth screen
         if (!currentUser || !isValidUUID(currentUser.id)) {
-            showPage('auth-screen');
+            routerReady = false;
+            showPage('auth-screen', { skipHashUpdate: true });
             return;
         }
 
@@ -5262,6 +5263,7 @@
         if (error) {
             console.error('profile fetch error', error);
             // Fallback: send to setup if we can’t read
+            routerReady = true;
             showPage('page-username-setup');
             return;
         }
@@ -5277,6 +5279,7 @@
             // This is a new user, so we trigger the country lookup function.
             // This is safer and simpler than using a database trigger.
             supabase.functions.invoke('get-user-country').catch(console.error);
+            routerReady = true;
             showPage('page-username-setup');
         } else {
             await loadMyProfile();
@@ -5284,7 +5287,16 @@
             setupRealtimeListeners();
             // Ensure daily totals persist across refreshes
             await loadDailyTotal();
-            showPage('page-timer');
+            routerReady = true;
+            const initialRoute = getRouteFromHash();
+            const initialPage = initialRoute
+                ? document.querySelector(`.page[data-route="${initialRoute}"]`)
+                : null;
+            if (initialPage) {
+                showPage(initialPage.id, { skipHashUpdate: true });
+            } else {
+                showPage('page-timer');
+            }
             await restoreTimerStateFromCache();
 
             if (typeof Notification !== 'undefined') {
@@ -8221,9 +8233,65 @@ let pauseStartTime = 0;
         }
 
         // --- Page Navigation ---
-        function showPage(pageId) {
+        const ROUTE_HASH_PREFIX = '#/';
+        let routerReady = false;
+        let suppressHashHandling = false;
+
+        function normalizeRoute(route = '') {
+            return route.toString().trim().toLowerCase();
+        }
+
+        function getRouteFromHash() {
+            const hash = window.location.hash || '';
+            if (!hash) return '';
+            if (hash.startsWith(ROUTE_HASH_PREFIX)) {
+                return normalizeRoute(hash.slice(ROUTE_HASH_PREFIX.length));
+            }
+            if (hash.startsWith('#')) {
+                return normalizeRoute(hash.slice(1));
+            }
+            return normalizeRoute(hash);
+        }
+
+        function updateNavActive(route) {
+            const navItems = Array.from(document.querySelectorAll('.nav-item'));
+            if (!navItems.length) return;
+
+            if (!route) {
+                navItems.forEach(item => item.classList.remove('active'));
+                return;
+            }
+
+            const routeMap = navItems.map(item => {
+                const href = item.getAttribute('href') || '';
+                let itemRoute = '';
+                if (href.startsWith(ROUTE_HASH_PREFIX)) {
+                    itemRoute = normalizeRoute(href.slice(ROUTE_HASH_PREFIX.length));
+                } else if (href.startsWith('#')) {
+                    itemRoute = normalizeRoute(href.slice(1));
+                } else if (item.dataset.page) {
+                    itemRoute = normalizeRoute(item.dataset.page);
+                }
+                return { item, itemRoute };
+            });
+
+            const hasMatch = routeMap.some(({ itemRoute }) => itemRoute === route);
+            if (!hasMatch) return;
+
+            routeMap.forEach(({ item, itemRoute }) => {
+                if (itemRoute === route) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        function showPage(pageId, options = {}) {
             if (!pageId) return;
-            
+
+            const { skipHashUpdate = false } = options;
+
             if (pageId === 'page-planner') {
                 plannerState.calendarYear = new Date().getFullYear();
                 plannerState.calendarMonth = new Date().getMonth();
@@ -8240,33 +8308,74 @@ let pauseStartTime = 0;
             document.getElementById('auth-screen').classList.remove('active');
             document.getElementById('app-container').classList.remove('active', 'flex');
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            
+
+            let routeName = '';
+
             if (pageId.startsWith('page-')) {
                  document.getElementById('app-container').classList.add('active', 'flex');
                  const targetPage = document.getElementById(pageId);
-                 if(targetPage) targetPage.classList.add('active');
+                 if(targetPage) {
+                     targetPage.classList.add('active');
+                     routeName = normalizeRoute(targetPage.dataset?.route || '');
+                 }
             } else {
                  const targetScreen = document.getElementById(pageId);
-                 if(targetScreen) targetScreen.classList.add('active');
+                 if(targetScreen) {
+                     targetScreen.classList.add('active');
+                     routeName = normalizeRoute(targetScreen.dataset?.route || '');
+                 }
             }
-            
+
             const mainNav = document.getElementById('main-nav');
             const groupNav = document.getElementById('group-detail-nav');
-            const mainNavPages = ['page-timer', 'page-stats', 'page-ranking', 'page-planner'];
+            const mainNavPages = ['page-timer', 'page-stats', 'page-ranking', 'page-planner', 'page-pulse-forum'];
 
-            mainNav.style.display = 'none';
+            if (mainNav) mainNav.style.display = 'none';
             if (groupNav) groupNav.style.display = 'none';
 
-            if (mainNavPages.includes(pageId)) {
+            if (mainNav && mainNavPages.includes(pageId)) {
                 mainNav.style.display = 'grid';
-            } else if (pageId === 'page-group-detail') {
-                if (groupNav) groupNav.style.display = 'grid';
+            } else if (pageId === 'page-group-detail' && groupNav) {
+                groupNav.style.display = 'grid';
             }
-            
+
+            updateNavActive(routeName);
+
+            if (!skipHashUpdate && routeName && routerReady) {
+                const desiredHash = `${ROUTE_HASH_PREFIX}${routeName}`;
+                if (window.location.hash !== desiredHash) {
+                    suppressHashHandling = true;
+                    window.location.hash = desiredHash;
+                }
+            }
+
             if (pageId === 'page-stats') {
                 renderStatsPage(userSessions);
             }
         }
+
+        function handleRouteChange() {
+            if (!routerReady) return;
+            const route = getRouteFromHash();
+            if (!route) {
+                showPage('page-timer');
+                return;
+            }
+            const targetPage = document.querySelector(`.page[data-route="${route}"]`);
+            if (targetPage) {
+                showPage(targetPage.id, { skipHashUpdate: true });
+            } else {
+                showPage('page-timer');
+            }
+        }
+
+        window.addEventListener('hashchange', () => {
+            if (suppressHashHandling) {
+                suppressHashHandling = false;
+                return;
+            }
+            handleRouteChange();
+        });
 
         function formatTime(seconds, includeSeconds = true) {
             if (isNaN(seconds) || seconds < 0) seconds = 0;
@@ -14872,21 +14981,25 @@ if (achievementsGrid) {
 
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', function(event) {
-            event.preventDefault();
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            this.classList.add('active');
-            const pageName = this.dataset.page;
-            showPage(`page-${pageName}`);
+            const href = this.getAttribute('href') || '';
+            const routeFromHref = href.startsWith('#')
+                ? href.slice(href.startsWith(ROUTE_HASH_PREFIX) ? ROUTE_HASH_PREFIX.length : 1)
+                : '';
+            const targetRoute = normalizeRoute(routeFromHref || this.dataset.page || '');
+            if (!targetRoute) return;
+            const targetPage = document.querySelector(`.page[data-route="${targetRoute}"]`);
+            if (!targetPage) return;
+            if (!href.startsWith(ROUTE_HASH_PREFIX)) {
+                event.preventDefault();
+            }
+            showPage(targetPage.id, { skipHashUpdate: href.startsWith(ROUTE_HASH_PREFIX) });
         }));
 
-        document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function() {
+        document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function(event) {
+            event.preventDefault();
             const targetPage = this.getAttribute('data-target');
+            if (!targetPage) return;
             showPage(`page-${targetPage}`);
-            const navItem = document.querySelector(`.nav-item[data-page="${targetPage}"]`);
-            if (navItem) {
-                 document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                 navItem.classList.add('active');
-            }
         }));
 
         // --- START: ADDED GUARDS FOR GUEST USERS ---
