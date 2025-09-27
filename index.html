@@ -3353,6 +3353,11 @@
             transform: translateY(-3px);
             box-shadow: 0 20px 34px rgba(56, 189, 248, 0.2);
         }
+        .session-log-item.options-open,
+        .session-log-item.options-open:hover {
+            transform: none;
+            box-shadow: 0 12px 26px rgba(15, 23, 42, 0.1);
+        }
         #page-stats .log-options-btn {
             transition: background-color 0.2s ease, color 0.2s ease;
         }
@@ -11879,17 +11884,35 @@ if (achievementsGrid) {
             const optionsBtn = e.target.closest('.log-options-btn');
             if (optionsBtn) {
               const menu = optionsBtn.nextElementSibling;
+              const item = optionsBtn.closest('.session-log-item');
+              const isActivating = menu ? !menu.classList.contains('active') : false;
               logContainer.querySelectorAll('.log-options-menu').forEach(m => {
-                if (m !== menu) m.classList.remove('active');
+                if (m !== menu) {
+                  m.classList.remove('active');
+                  const hostItem = m.closest('.session-log-item');
+                  if (hostItem) hostItem.classList.remove('options-open');
+                }
               });
-              menu.classList.toggle('active');
+              if (menu) {
+                menu.classList.toggle('active');
+              }
+              if (item) {
+                if (isActivating) {
+                  item.classList.add('options-open');
+                } else {
+                  item.classList.remove('options-open');
+                }
+              }
               return;
             }
-        
+
             const delBtn = e.target.closest('.log-delete-btn');
             if (delBtn) {
               const item = delBtn.closest('.session-log-item');
               const dataBtn = item.querySelector('.log-options-btn');
+              const menu = item.querySelector('.log-options-menu');
+              if (menu) menu.classList.remove('active');
+              item.classList.remove('options-open');
               const id = dataBtn.dataset.sessionId;
               const duration = parseInt(dataBtn.dataset.durationSeconds, 10);
               const endedAt = new Date(dataBtn.dataset.endedAt);
@@ -11903,6 +11926,9 @@ if (achievementsGrid) {
             if (editBtn) {
               const item = editBtn.closest('.session-log-item');
               const dataBtn = item.querySelector('.log-options-btn');
+              const menu = item.querySelector('.log-options-menu');
+              if (menu) menu.classList.remove('active');
+              item.classList.remove('options-open');
               const id = dataBtn.dataset.sessionId;
               const subject = dataBtn.dataset.sessionSubject;
               const duration = parseInt(dataBtn.dataset.durationSeconds, 10);
