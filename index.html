@@ -5262,7 +5262,7 @@
         if (error) {
             console.error('profile fetch error', error);
             // Fallback: send to setup if we can’t read
-            showPage('page-username-setup');
+            navigateToPage('page-username-setup', { replace: true });
             return;
         }
 
@@ -5277,22 +5277,14 @@
             // This is a new user, so we trigger the country lookup function.
             // This is safer and simpler than using a database trigger.
             supabase.functions.invoke('get-user-country').catch(console.error);
-            showPage('page-username-setup');
+            navigateToPage('page-username-setup', { replace: true });
         } else {
             await loadMyProfile();
             // This is the critical fix: Attach all real-time listeners after the user is verified.
             setupRealtimeListeners();
             // Ensure daily totals persist across refreshes
             await loadDailyTotal();
-            const initialRoute = getRouteFromHash();
-            const initialRouteTarget = initialRoute ? document.querySelector(`.page[data-route="${initialRoute}"]`) : null;
-            const initialPageId = initialRouteTarget?.id;
-
-            if (initialPageId && initialPageId !== 'page-username-setup') {
-                showPage(initialPageId, { updateHash: false });
-            } else {
-                showPage('page-timer');
-            }
+            navigateToPage('page-timer', { replace: true });
             await restoreTimerStateFromCache();
 
             if (typeof Notification !== 'undefined') {
@@ -8229,82 +8221,9 @@ let pauseStartTime = 0;
         }
 
         // --- Page Navigation ---
-        const ROUTE_TO_PAGE = {
-            'timer': 'page-timer',
-            'stats': 'page-stats',
-            'ranking': 'page-ranking',
-            'planner': 'page-planner',
-            'pulse-forum': 'page-pulse-forum',
-            'profile': 'page-profile',
-            'my-groups': 'page-my-groups',
-            'find-groups': 'page-find-groups',
-            'create-group': 'page-create-group',
-            'group-detail': 'page-group-detail',
-            'username-setup': 'page-username-setup'
-        };
-
-        const PAGE_TO_ROUTE = Object.fromEntries(Object.entries(ROUTE_TO_PAGE).map(([route, page]) => [page, route]));
-        const ROUTE_HASH_PREFIX = '#/';
-        let suppressNextHashUpdate = false;
-
-        function getRouteFromHash() {
-            const hash = window.location.hash || '';
-            if (!hash) return '';
-            if (hash.startsWith('#/')) {
-                return hash.slice(2).toLowerCase();
-            }
-            if (hash.startsWith('#')) {
-                return hash.slice(1).toLowerCase();
-            }
-            return hash.toLowerCase();
-        }
-
-        function updateHashForRoute(route) {
-            if (!route) return;
-            const normalizedRoute = route.toLowerCase();
-            const targetHash = `${ROUTE_HASH_PREFIX}${normalizedRoute}`;
-            if (window.location.hash === targetHash) return;
-            suppressNextHashUpdate = true;
-            window.location.hash = targetHash;
-        }
-
-        function setActiveNav(route) {
-            const activeItem = route ? document.querySelector(`.nav-item[data-route="${route}"]`) : null;
-            if (!activeItem) return;
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.toggle('active', item === activeItem);
-            });
-        }
-
-        function handleRouteChange() {
-            if (suppressNextHashUpdate) {
-                suppressNextHashUpdate = false;
-                return;
-            }
-
-            const authScreen = document.getElementById('auth-screen');
-            if (authScreen && authScreen.classList.contains('active')) {
-                return;
-            }
-
-            let route = getRouteFromHash();
-            if (!route || !ROUTE_TO_PAGE[route]) {
-                route = 'timer';
-                updateHashForRoute(route);
-            }
-
-            const targetPageId = ROUTE_TO_PAGE[route];
-            if (targetPageId) {
-                showPage(targetPageId, { updateHash: false });
-            }
-        }
-
-        window.addEventListener('hashchange', handleRouteChange);
-
-        function showPage(pageId, options = {}) {
+        function showPage(pageId) {
             if (!pageId) return;
-            const { updateHash = true } = options;
-            
+
             if (pageId === 'page-planner') {
                 plannerState.calendarYear = new Date().getFullYear();
                 plannerState.calendarMonth = new Date().getMonth();
@@ -8330,7 +8249,7 @@ let pauseStartTime = 0;
                  const targetScreen = document.getElementById(pageId);
                  if(targetScreen) targetScreen.classList.add('active');
             }
-
+            
             const mainNav = document.getElementById('main-nav');
             const groupNav = document.getElementById('group-detail-nav');
             const mainNavPages = ['page-timer', 'page-stats', 'page-ranking', 'page-planner'];
@@ -8344,16 +8263,95 @@ let pauseStartTime = 0;
                 if (groupNav) groupNav.style.display = 'grid';
             }
             
-            const routeName = PAGE_TO_ROUTE[pageId] || null;
-            if (routeName) {
-                setActiveNav(routeName);
-                if (updateHash) {
-                    updateHashForRoute(routeName);
-                }
-            }
-
             if (pageId === 'page-stats') {
                 renderStatsPage(userSessions);
+            }
+        }
+
+        const DEFAULT_ROUTE = 'timer';
+        const routePageMap = {};
+        const pageRouteMap = {};
+        let lastHandledRoute = '';
+
+        function buildRouteMaps() {
+            document.querySelectorAll('.page[data-route]').forEach(page => {
+                const routeName = (page.dataset.route || '').trim().toLowerCase();
+                if (!routeName) {
+                    return;
+                }
+                routePageMap[routeName] = page.id;
+                pageRouteMap[page.id] = routeName;
+            });
+        }
+
+        function getRouteFromHash(hash = window.location.hash) {
+            if (!hash) return DEFAULT_ROUTE;
+            const normalized = hash.replace(/^#\/?/, '').trim().toLowerCase();
+            return normalized || DEFAULT_ROUTE;
+        }
+
+        function setActiveNavForRoute(route) {
+            const normalizedRoute = (route || '').toLowerCase();
+            document.querySelectorAll('.nav-item').forEach(item => {
+                const navRoute = (item.dataset.route || '').toLowerCase();
+                if (navRoute === normalizedRoute) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        function applyRouteFromHash(hash, { allowSame = false } = {}) {
+            const route = getRouteFromHash(hash);
+            const hasMatchingRoute = Object.prototype.hasOwnProperty.call(routePageMap, route);
+            const targetRoute = hasMatchingRoute ? route : DEFAULT_ROUTE;
+            const targetPageId = routePageMap[targetRoute];
+
+            if (!targetPageId) return;
+
+            if (!allowSame && lastHandledRoute === targetRoute) {
+                return;
+            }
+
+            lastHandledRoute = targetRoute;
+            showPage(targetPageId);
+            setActiveNavForRoute(targetRoute);
+        }
+
+        function navigateToPage(pageId, { replace = false } = {}) {
+            const routeName = pageRouteMap[pageId];
+
+            if (routeName) {
+                const targetHash = `#/${routeName}`;
+                if (replace) {
+                    history.replaceState(null, '', targetHash);
+                    applyRouteFromHash(targetHash, { allowSame: true });
+                } else if (window.location.hash !== targetHash) {
+                    window.location.hash = targetHash;
+                } else {
+                    applyRouteFromHash(targetHash, { allowSame: true });
+                }
+                return;
+            }
+
+            showPage(pageId);
+        }
+
+        function initializeRouter() {
+            buildRouteMaps();
+
+            window.addEventListener('hashchange', () => {
+                applyRouteFromHash(window.location.hash, { allowSame: true });
+            });
+
+            const initialRoute = getRouteFromHash();
+            if (!window.location.hash || !Object.prototype.hasOwnProperty.call(routePageMap, initialRoute)) {
+                const fallbackHash = `#/${DEFAULT_ROUTE}`;
+                history.replaceState(null, '', fallbackHash);
+                applyRouteFromHash(fallbackHash, { allowSame: true });
+            } else {
+                applyRouteFromHash(window.location.hash, { allowSame: true });
             }
         }
 
@@ -12560,7 +12558,7 @@ if (achievementsGrid) {
                     const groupId = card.dataset.groupId;
                     if ((currentUserData?.joined_groups || []).includes(groupId)) {
                         renderGroupDetail(groupId);
-                        showPage('page-group-detail');
+                        navigateToPage('page-group-detail');
                     } else {
                         showToast('Join the group to see details.', 'info');
                     }
@@ -12941,7 +12939,7 @@ if (achievementsGrid) {
             const { data: group, error } = await supabase.from('groups').select('*').eq('id', groupId).single();
             if (error || !group) {
                 currentGroupLeaderId = null;
-                showPage('page-my-groups');
+                navigateToPage('page-my-groups');
                 return;
             }
 
@@ -14961,34 +14959,29 @@ if (achievementsGrid) {
 
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', function(event) {
-            if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) {
-                return;
-            }
-            event.preventDefault();
-            const routeName = this.dataset.route;
-            const targetPageId = ROUTE_TO_PAGE[routeName] || (routeName ? `page-${routeName}` : null);
-            if (targetPageId) {
-                showPage(targetPageId);
+            const routeName = (this.dataset.route || '').toLowerCase();
+            if (!routeName) return;
+            const targetHash = `#/${routeName}`;
+            if (window.location.hash === targetHash) {
+                event.preventDefault();
+                applyRouteFromHash(targetHash, { allowSame: true });
             }
         }));
 
-        document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function(event) {
-            event.preventDefault();
-            const targetRoute = this.getAttribute('data-target');
-            if (!targetRoute) return;
-            const targetPageId = ROUTE_TO_PAGE[targetRoute] || `page-${targetRoute}`;
-            showPage(targetPageId);
+        document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function() {
+            const targetPage = this.getAttribute('data-target');
+            navigateToPage(`page-${targetPage}`);
         }));
 
         // --- START: ADDED GUARDS FOR GUEST USERS ---
         ael('groups-btn', 'click', () => { 
             if (currentUser && currentUser.isAnonymous) {
                 showToast('Please create an account to use study groups.', 'info');
-                showPage('page-profile');
+                navigateToPage('page-profile');
                 return;
             }
-            renderJoinedGroups(); 
-            showPage('page-my-groups'); 
+            renderJoinedGroups();
+            navigateToPage('page-my-groups');
         });
         ael('premium-btn', 'click', () => {
             const premiumModal = document.getElementById('premium-modal');
@@ -14999,18 +14992,18 @@ if (achievementsGrid) {
                 showToast('Please create an account to use study groups.', 'info');
                 return;
             }
-            renderGroupRankings(); 
-            showPage('page-find-groups'); 
+            renderGroupRankings();
+            navigateToPage('page-find-groups');
         });
         ael('go-to-create-group-btn', 'click', () => { 
              if (currentUser && currentUser.isAnonymous) {
                 showToast('Please create an account to use study groups.', 'info');
                 return;
             }
-            showPage('page-create-group'); 
+            navigateToPage('page-create-group');
         });
         // --- END: ADDED GUARDS FOR GUEST USERS ---
-        ael('profile-btn', 'click', () => { showPage('page-profile'); });
+        ael('profile-btn', 'click', () => { navigateToPage('page-profile'); });
         
         // --- FIXES START HERE ---
 
@@ -15522,7 +15515,7 @@ if (achievementsGrid) {
                         const task = plannerState.tasks.find(t => t.id === taskId);
                         if (task) {
                             const subjectName = task.title;
-                            showPage('page-timer');
+                            navigateToPage('page-timer');
 
                             // Both buttons will now start a Pomodoro session for the task.
                             switchTimerMode('pomodoro');
@@ -15861,7 +15854,7 @@ if (achievementsGrid) {
 
                 showToast('Group created successfully!', 'success');
                 renderGroupRankings();
-                showPage('page-find-groups');
+                navigateToPage('page-find-groups');
                 form.reset();
             } catch (error) {
                 console.error('Error creating group:', error);
@@ -15904,14 +15897,14 @@ if (achievementsGrid) {
                 const groupId = groupCard.dataset.groupId;
                 if (groupId) {
                     renderGroupDetail(groupId); // Render first to have content when page shows
-                    showPage('page-group-detail');
+                    navigateToPage('page-group-detail');
                 }
             }
 
             // Handle the "Explore Groups" button on the empty state
             if (e.target.id === 'explore-groups-btn') {
-                renderGroupRankings(); 
-                showPage('page-find-groups');
+                renderGroupRankings();
+                navigateToPage('page-find-groups');
             }
         });
         
@@ -16807,7 +16800,7 @@ if (achievementsGrid) {
 
                             showToast('You have left the group.', 'success');
                             renderJoinedGroups();
-                            showPage('page-my-groups');
+                            navigateToPage('page-my-groups');
                         }
                     );
                     break;
@@ -16894,6 +16887,8 @@ if (achievementsGrid) {
             });
         }
 
+        initializeRouter();
+
         window.onload = () => {
             restoreUser().then(routeAfterAuth);
             if (typeof lucide !== 'undefined') {
@@ -16960,10 +16955,10 @@ if (achievementsGrid) {
                 if (currentUserData.joined_groups && currentUserData.joined_groups.length > 0) {
                     const targetGroupId = currentGroupId && currentUserData.joined_groups.includes(currentGroupId) ? currentGroupId : currentUserData.joined_groups[0];
                     currentGroupId = targetGroupId;
-                    showPage('page-group-detail');
+                    navigateToPage('page-group-detail');
                     renderGroupDetail(targetGroupId);
                 } else {
-                    showPage('page-my-groups');
+                    navigateToPage('page-my-groups');
                 }
             });
 
