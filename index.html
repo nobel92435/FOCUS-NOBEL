@@ -3514,7 +3514,7 @@
     <input type="file" id="image-upload-input" class="hidden" accept="image/*">
     <input type="file" id="profile-picture-upload" class="hidden" accept="image/*">
 
-    <div id="auth-screen" data-route="auth" class="active flex-col items-center justify-center h-full p-4 fade-in">
+    <div id="auth-screen" class="active flex-col items-center justify-center h-full p-4 fade-in">
         <div class="w-full max-w-sm text-center">
              <div class="flex items-center justify-center mb-6">
                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -3929,31 +3929,31 @@
         <nav id="main-nav" class="sidebar-nav bg-white border-t border-slate-200 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] sticky bottom-0">
             <ul class="grid grid-cols-5">
                 <li>
-                    <a href="#/timer" class="nav-link nav-link--stacked nav-item active" data-page="timer" data-route="timer">
+                    <a href="#/timer" class="nav-link nav-link--stacked nav-item active" data-route="timer">
                         <img src="assets/icons/timer.svg" alt="Timer">
                         <span>Timer</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#/stats" class="nav-link nav-link--stacked nav-item" data-page="stats" data-route="stats">
+                    <a href="#/stats" class="nav-link nav-link--stacked nav-item" data-route="stats">
                         <img src="assets/icons/stats.svg" alt="Stats">
                         <span>Stats</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#/ranking" class="nav-link nav-link--stacked nav-item" data-page="ranking" data-route="ranking">
+                    <a href="#/ranking" class="nav-link nav-link--stacked nav-item" data-route="ranking">
                         <img src="assets/icons/rankings.svg" alt="Ranking">
                         <span>Ranking</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#/planner" class="nav-link nav-link--stacked nav-item" data-page="planner" data-route="planner">
+                    <a href="#/planner" class="nav-link nav-link--stacked nav-item" data-route="planner">
                         <img src="assets/icons/planner.svg" alt="Planner">
                         <span>Planner</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#/pulse-forum" class="nav-link nav-link--stacked nav-item" data-page="pulse-forum" data-route="pulse-forum">
+                    <a href="#/pulse-forum" class="nav-link nav-link--stacked nav-item" data-route="pulse-forum">
                         <img src="assets/icons/pulseforum.svg" alt="PulseForum">
                         <span>PulseForum</span>
                     </a>
@@ -5284,7 +5284,15 @@
             setupRealtimeListeners();
             // Ensure daily totals persist across refreshes
             await loadDailyTotal();
-            showPage('page-timer');
+            const initialRoute = getRouteFromHash();
+            const initialRouteTarget = initialRoute ? document.querySelector(`.page[data-route="${initialRoute}"]`) : null;
+            const initialPageId = initialRouteTarget?.id;
+
+            if (initialPageId && initialPageId !== 'page-username-setup') {
+                showPage(initialPageId, { updateHash: false });
+            } else {
+                showPage('page-timer');
+            }
             await restoreTimerStateFromCache();
 
             if (typeof Notification !== 'undefined') {
@@ -8221,93 +8229,82 @@ let pauseStartTime = 0;
         }
 
         // --- Page Navigation ---
-        const ROUTE_PREFIX = '#/';
-        const DEFAULT_ROUTE_KEY = 'timer';
-        const mainNavItems = Array.from(document.querySelectorAll('.nav-item'));
-        const mainNavRoutes = new Set(mainNavItems.map(item => item.dataset.route || item.dataset.page));
-        let lastMainNavRoute = null;
+        const ROUTE_TO_PAGE = {
+            'timer': 'page-timer',
+            'stats': 'page-stats',
+            'ranking': 'page-ranking',
+            'planner': 'page-planner',
+            'pulse-forum': 'page-pulse-forum',
+            'profile': 'page-profile',
+            'my-groups': 'page-my-groups',
+            'find-groups': 'page-find-groups',
+            'create-group': 'page-create-group',
+            'group-detail': 'page-group-detail',
+            'username-setup': 'page-username-setup'
+        };
 
-        const initialActiveNavItem = mainNavItems.find(item => item.classList.contains('active'));
-        if (initialActiveNavItem) {
-            lastMainNavRoute = initialActiveNavItem.dataset.route || initialActiveNavItem.dataset.page || DEFAULT_ROUTE_KEY;
+        const PAGE_TO_ROUTE = Object.fromEntries(Object.entries(ROUTE_TO_PAGE).map(([route, page]) => [page, route]));
+        const ROUTE_HASH_PREFIX = '#/';
+        let suppressNextHashUpdate = false;
+
+        function getRouteFromHash() {
+            const hash = window.location.hash || '';
+            if (!hash) return '';
+            if (hash.startsWith('#/')) {
+                return hash.slice(2).toLowerCase();
+            }
+            if (hash.startsWith('#')) {
+                return hash.slice(1).toLowerCase();
+            }
+            return hash.toLowerCase();
         }
 
-        function formatRouteHash(routeKey) {
-            return `${ROUTE_PREFIX}${routeKey}`;
-        }
-
-        function setRouteHash(routeKey, { replace = false } = {}) {
-            if (!routeKey) return;
-            const normalizedRoute = routeKey.trim();
-            if (!normalizedRoute) return;
-            const targetHash = formatRouteHash(normalizedRoute);
+        function updateHashForRoute(route) {
+            if (!route) return;
+            const normalizedRoute = route.toLowerCase();
+            const targetHash = `${ROUTE_HASH_PREFIX}${normalizedRoute}`;
             if (window.location.hash === targetHash) return;
-            if (replace) {
-                window.history.replaceState(null, '', targetHash);
-            } else {
-                window.location.hash = targetHash;
-            }
+            suppressNextHashUpdate = true;
+            window.location.hash = targetHash;
         }
 
-        function updateMainNavActive(routeKey) {
-            if (!mainNavItems.length) return;
-            const isMainNavRoute = routeKey && mainNavRoutes.has(routeKey);
-            if (isMainNavRoute) {
-                mainNavItems.forEach(item => {
-                    const itemRoute = item.dataset.route || item.dataset.page;
-                    item.classList.toggle('active', itemRoute === routeKey);
-                });
-                lastMainNavRoute = routeKey;
-            } else if (lastMainNavRoute) {
-                mainNavItems.forEach(item => {
-                    const itemRoute = item.dataset.route || item.dataset.page;
-                    item.classList.toggle('active', itemRoute === lastMainNavRoute);
-                });
-            }
-        }
-
-        function getRouteTarget(routeKey) {
-            if (!routeKey) return null;
-            return document.querySelector(`[data-route="${routeKey}"]`);
+        function setActiveNav(route) {
+            const activeItem = route ? document.querySelector(`.nav-item[data-route="${route}"]`) : null;
+            if (!activeItem) return;
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.toggle('active', item === activeItem);
+            });
         }
 
         function handleRouteChange() {
-            const hash = window.location.hash;
-            if (hash && hash.startsWith(ROUTE_PREFIX)) {
-                const routeKey = decodeURIComponent(hash.slice(ROUTE_PREFIX.length));
-                const target = getRouteTarget(routeKey);
-                if (target?.id) {
-                    showPage(target.id, { skipRouteUpdate: true });
-                    return;
-                }
+            if (suppressNextHashUpdate) {
+                suppressNextHashUpdate = false;
+                return;
             }
 
-            const fallbackRoute = (lastMainNavRoute && getRouteTarget(lastMainNavRoute))
-                ? lastMainNavRoute
-                : DEFAULT_ROUTE_KEY;
-            const fallbackTarget = getRouteTarget(fallbackRoute);
-            if (fallbackTarget?.id) {
-                showPage(fallbackTarget.id, { skipRouteUpdate: true });
-                setRouteHash(fallbackTarget.dataset.route, { replace: true });
+            const authScreen = document.getElementById('auth-screen');
+            if (authScreen && authScreen.classList.contains('active')) {
+                return;
+            }
+
+            let route = getRouteFromHash();
+            if (!route || !ROUTE_TO_PAGE[route]) {
+                route = 'timer';
+                updateHashForRoute(route);
+            }
+
+            const targetPageId = ROUTE_TO_PAGE[route];
+            if (targetPageId) {
+                showPage(targetPageId, { updateHash: false });
             }
         }
 
-        function initializeRouting() {
-            const activeTarget = document.querySelector('[data-route].active');
-            if (!window.location.hash && activeTarget?.dataset.route) {
-                setRouteHash(activeTarget.dataset.route, { replace: true });
-                updateMainNavActive(activeTarget.dataset.route);
-            } else {
-                handleRouteChange();
-            }
-        }
+        window.addEventListener('hashchange', handleRouteChange);
 
         function showPage(pageId, options = {}) {
             if (!pageId) return;
-            const { skipRouteUpdate = false } = options;
-            const targetElement = document.getElementById(pageId);
-            const routeKey = targetElement?.dataset.route || null;
-
+            const { updateHash = true } = options;
+            
             if (pageId === 'page-planner') {
                 plannerState.calendarYear = new Date().getFullYear();
                 plannerState.calendarMonth = new Date().getMonth();
@@ -8324,12 +8321,14 @@ let pauseStartTime = 0;
             document.getElementById('auth-screen').classList.remove('active');
             document.getElementById('app-container').classList.remove('active', 'flex');
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-
+            
             if (pageId.startsWith('page-')) {
                  document.getElementById('app-container').classList.add('active', 'flex');
-                 if (targetElement) targetElement.classList.add('active');
-            } else if (targetElement) {
-                 targetElement.classList.add('active');
+                 const targetPage = document.getElementById(pageId);
+                 if(targetPage) targetPage.classList.add('active');
+            } else {
+                 const targetScreen = document.getElementById(pageId);
+                 if(targetScreen) targetScreen.classList.add('active');
             }
 
             const mainNav = document.getElementById('main-nav');
@@ -8344,15 +8343,18 @@ let pauseStartTime = 0;
             } else if (pageId === 'page-group-detail') {
                 if (groupNav) groupNav.style.display = 'grid';
             }
+            
+            const routeName = PAGE_TO_ROUTE[pageId] || null;
+            if (routeName) {
+                setActiveNav(routeName);
+                if (updateHash) {
+                    updateHashForRoute(routeName);
+                }
+            }
 
             if (pageId === 'page-stats') {
                 renderStatsPage(userSessions);
             }
-
-            if (!skipRouteUpdate && routeKey) {
-                setRouteHash(routeKey);
-            }
-            updateMainNavActive(routeKey);
         }
 
         function formatTime(seconds, includeSeconds = true) {
@@ -14959,23 +14961,23 @@ if (achievementsGrid) {
 
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', function(event) {
-            const routeKey = this.dataset.route || this.dataset.page;
-            if (!routeKey) return;
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) {
+                return;
+            }
             event.preventDefault();
-            setRouteHash(routeKey);
+            const routeName = this.dataset.route;
+            const targetPageId = ROUTE_TO_PAGE[routeName] || (routeName ? `page-${routeName}` : null);
+            if (targetPageId) {
+                showPage(targetPageId);
+            }
         }));
 
-        window.addEventListener('hashchange', handleRouteChange);
-        initializeRouting();
-
-        document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function() {
-            const targetPage = this.getAttribute('data-target');
-            showPage(`page-${targetPage}`);
-            const navItem = document.querySelector(`.nav-item[data-page="${targetPage}"]`);
-            if (navItem) {
-                 document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                 navItem.classList.add('active');
-            }
+        document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function(event) {
+            event.preventDefault();
+            const targetRoute = this.getAttribute('data-target');
+            if (!targetRoute) return;
+            const targetPageId = ROUTE_TO_PAGE[targetRoute] || `page-${targetRoute}`;
+            showPage(targetPageId);
         }));
 
         // --- START: ADDED GUARDS FOR GUEST USERS ---
@@ -15521,11 +15523,6 @@ if (achievementsGrid) {
                         if (task) {
                             const subjectName = task.title;
                             showPage('page-timer');
-                            const navItem = document.querySelector(`.nav-item[data-page="timer"]`);
-                            if (navItem) {
-                                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                                navItem.classList.add('active');
-                            }
 
                             // Both buttons will now start a Pomodoro session for the task.
                             switchTimerMode('pomodoro');
