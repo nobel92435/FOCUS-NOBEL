@@ -5411,7 +5411,8 @@
         const blob = new Blob([workerCode], { type: 'application/javascript' });
         const pomodoroWorker = new Worker(URL.createObjectURL(blob));
         const CLIENT_MESSAGE_TYPES = Object.freeze({
-            POMODORO_PUSH: 'POMODORO_PUSH'
+            POMODORO_PUSH: 'POMODORO_PUSH',
+            PUSH_SUBSCRIPTION_REFRESH: 'PUSH_SUBSCRIPTION_REFRESH'
         });
         let skipNextLocalPhaseEnd = false;
         let skipLocalPhaseTimeoutId = null;
@@ -5947,8 +5948,33 @@ function scheduleServerFinalTrigger({ groupKey, sendAtMs, notificationPayload })
             return null;
         }
 
+        function handlePushSubscriptionRefreshMessage(message) {
+            if (!currentUser || currentUser.isAnonymous) {
+                return;
+            }
+
+            if (message?.error) {
+                console.warn('[FocusFlow] Service worker reported push subscription refresh issue:', message.error);
+            }
+
+            console.log('[FocusFlow] Service worker requested push subscription refresh.');
+
+            ensurePushSubscription({ forceRefresh: true }).catch((error) => {
+                console.error('Failed to refresh push subscription after service worker request:', error);
+            });
+        }
+
         function handleServiceWorkerPushMessage(message) {
-            if (!message || message.type !== CLIENT_MESSAGE_TYPES.POMODORO_PUSH) {
+            if (!message || !message.type) {
+                return;
+            }
+
+            if (message.type === CLIENT_MESSAGE_TYPES.PUSH_SUBSCRIPTION_REFRESH) {
+                handlePushSubscriptionRefreshMessage(message);
+                return;
+            }
+
+            if (message.type !== CLIENT_MESSAGE_TYPES.POMODORO_PUSH) {
                 return;
             }
 
