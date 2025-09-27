@@ -25,6 +25,8 @@ type SendResult = {
   id: string;
   endpoint: string;
   delivered: boolean;
+  statusCode?: number;
+  removed?: boolean;
   error?: string;
 };
 
@@ -116,7 +118,12 @@ async function sendWakeNotification(
     const statusCode = (pushError as { statusCode?: number }).statusCode;
     console.error("Failed to send wake-up notification", pushError);
 
-    if (statusCode === 410) {
+    const isSubscriptionGone =
+      statusCode === 410 ||
+      statusCode === 404 ||
+      statusCode === 403;
+
+    if (isSubscriptionGone) {
       await deleteSubscription(supabaseAdmin, subscription.id);
     }
 
@@ -124,6 +131,8 @@ async function sendWakeNotification(
       id: subscription.id,
       endpoint: subscription.endpoint,
       delivered: false,
+      statusCode,
+      removed: isSubscriptionGone || undefined,
       error: pushError instanceof Error
         ? pushError.message
         : String(pushError),
@@ -236,11 +245,24 @@ serve(async (req) => {
 
     const delivered = deliveredResults.length > 0;
 
+    const removedCount = failedResults.reduce(
+      (total, result) => total + (result.removed ? 1 : 0),
+      0,
+    );
+
+    const responseMessage = delivered
+      ? undefined
+      : removedCount > 0
+      ? "Stale push subscription(s) were removed for this user. Ask them to reopen the app to refresh notifications."
+      : "Wake-up notification could not be delivered to any registered device.";
+
     return new Response(
       JSON.stringify({
         success: delivered,
         delivered,
         results: [...deliveredResults, ...failedResults],
+        removedCount,
+        message: responseMessage,
       }),
       {
         status: delivered ? 200 : 207,
