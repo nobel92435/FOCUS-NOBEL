@@ -1,8 +1,8 @@
 // HYBRID Service Worker for FocusFlow
-// Version 1.0.2 (updated for timer reliability and notification options fix)
+// Version 1.0.3 (updated for wake-up call push notifications)
 
 const CACHE_NAME = 'focusflow-cache-v2'; // Increment cache version for updates
-const OFFLINE_URL = './offline.html'; // Path to your dedicated offline page
+const OFLINE_URL = './offline.html'; // Path to your dedicated offline page
 
 // These paths should be relative to the root of the Service Worker's scope.
 const urlsToCache = [
@@ -85,10 +85,84 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// --- Service Worker Timer/Notification Logic ---
+
+// --- PUSH NOTIFICATION LOGIC (MODIFIED) ---
+
+self.addEventListener('push', (event) => {
+    if (!event.data) {
+        console.warn('[Service Worker] Push event received without data.');
+        return;
+    }
+
+    let payload = {};
+    try {
+        payload = event.data.json();
+    } catch (error) {
+        console.error('[Service Worker] Failed to parse push data as JSON.', error);
+        payload = { title: 'FocusFlow', body: event.data.text() };
+    }
+
+    // --- FIX: Differentiate between Wake-Up calls and Pomodoro notifications ---
+    // The wake-up notification has a specific data type we can check for.
+    if (payload.options?.data?.type === 'WAKE_UP_ALERT') {
+        console.log('[Service Worker] Handling a WAKE_UP_ALERT push.');
+        const title = payload.title || 'Wake Up Call!';
+        const options = payload.options || {
+            body: 'A fellow student is calling you to get back in focus!',
+            icon: DEFAULT_NOTIFICATION_ICON,
+            badge: DEFAULT_NOTIFICATION_BADGE,
+            vibrate: DEFAULT_NOTIFICATION_VIBRATE,
+            tag: 'wake-up-alert',
+            renotify: true,
+            requireInteraction: true
+        };
+        event.waitUntil(self.registration.showNotification(title, options));
+    } else {
+        console.log('[Service Worker] Handling a standard Pomodoro push.');
+        // This is your original logic for handling Pomodoro timer notifications.
+        event.waitUntil(handleIncomingPush(payload));
+    }
+});
+
+
+self.addEventListener('notificationclick', (event) => {
+    console.log(`[Service Worker] Notification clicked. Action: '${event.action}', Tag: '${event.notification.tag}'`);
+    event.notification.close();
+
+    const action = event.action;
+    const notificationData = event.notification?.data || {};
+    const transitionMessage = notificationData.transitionMessage;
+
+    // --- FIX: Handle actions for different notification types ---
+
+    // Handle actions for WAKE_UP_ALERT
+    if (notificationData.type === 'WAKE_UP_ALERT') {
+        if (action === 'open') {
+            event.waitUntil(focusClientWindow(null)); // Open/focus the app
+        } else if (action === 'acknowledge') {
+            // Just close the notification, which is already done.
+            console.log('[Service Worker] Wake-up acknowledged.');
+        } else {
+            // Default action for wake-up click is to open the app
+            event.waitUntil(focusClientWindow(null));
+        }
+        return; // Stop further processing
+    }
+
+    // Handle actions for Pomodoro notifications (your original logic)
+    if (action === 'snooze-5m') {
+        event.waitUntil(handleSnoozeAction(event.notification));
+        return;
+    }
+
+    // Default action for all other notifications is to focus the client
+    event.waitUntil(focusClientWindow(transitionMessage));
+});
+
+
+// --- ORIGINAL POMODORO AND HELPER LOGIC (UNCHANGED) ---
 
 let notificationTag = 'pomodoro-timer';
-
 const pendingNotifications = new Map();
 const CLIENT_MESSAGE_TYPES = Object.freeze({
     POMODORO_PUSH: 'POMODORO_PUSH'
@@ -222,19 +296,6 @@ function cancelAlarm(timerId) {
     }
 }
 
-self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-    const action = event.action;
-    const transitionMessage = event.notification?.data?.transitionMessage;
-
-    if (action === 'snooze-5m') {
-        event.waitUntil(handleSnoozeAction(event.notification));
-        return;
-    }
-
-    event.waitUntil(focusClientWindow(transitionMessage));
-});
-
 function focusClientWindow(transitionMessage) {
     return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
         const client = clients.find(c => c.visibilityState === 'visible') || clients[0];
@@ -243,6 +304,9 @@ function focusClientWindow(transitionMessage) {
                 client.postMessage(transitionMessage);
             }
             return client.focus();
+        } else if (self.clients.openWindow) {
+            // Fallback to open a new window if no client is found
+            return self.clients.openWindow('/');
         }
     });
 }
@@ -493,18 +557,3 @@ async function handleIncomingPush(payload) {
     });
 }
 
-self.addEventListener('push', (event) => {
-    if (!event.data) {
-        console.warn('[Service Worker] Push event received without data.');
-        return;
-    }
-
-    let payload = {};
-    try {
-        payload = event.data.json();
-    } catch (error) {
-        payload = { body: event.data.text() };
-    }
-
-    event.waitUntil(handleIncomingPush(payload));
-});
