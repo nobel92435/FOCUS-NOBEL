@@ -91,8 +91,52 @@ let notificationTag = 'pomodoro-timer';
 
 const pendingNotifications = new Map();
 const CLIENT_MESSAGE_TYPES = Object.freeze({
-    POMODORO_PUSH: 'POMODORO_PUSH'
+    POMODORO_PUSH: 'POMODORO_PUSH',
+    PUSH_SUBSCRIPTION_REFRESH: 'PUSH_SUBSCRIPTION_REFRESH'
 });
+
+function normalizeApplicationServerKey(key) {
+    if (!key) {
+        return null;
+    }
+
+    if (typeof key === 'string') {
+        const trimmed = key.trim();
+        if (!trimmed) {
+            return null;
+        }
+
+        const padding = '='.repeat((4 - (trimmed.length % 4)) % 4);
+        const base64 = (trimmed + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+
+        for (let i = 0; i < rawData.length; i += 1) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+
+        return outputArray;
+    }
+
+    if (key instanceof ArrayBuffer) {
+        return new Uint8Array(key);
+    }
+
+    if (ArrayBuffer.isView(key)) {
+        return new Uint8Array(key.buffer, key.byteOffset, key.byteLength);
+    }
+
+    return null;
+}
+
+function extractApplicationServerKeyFromSubscription(subscription) {
+    if (!subscription || typeof subscription !== 'object') {
+        return null;
+    }
+
+    const rawKey = subscription.options?.applicationServerKey;
+    return normalizeApplicationServerKey(rawKey);
+}
 
 async function broadcastClientMessage(message) {
     try {
@@ -492,6 +536,47 @@ async function handleIncomingPush(payload) {
         title
     });
 }
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+    event.waitUntil((async () => {
+        let subscription = event.newSubscription || null;
+        let errorMessage = null;
+
+        if (!subscription) {
+            try {
+                const applicationServerKey = extractApplicationServerKeyFromSubscription(event.oldSubscription)
+                    || extractApplicationServerKeyFromSubscription(event.newSubscription);
+
+                if (!applicationServerKey) {
+                    throw new Error('Missing applicationServerKey for resubscription.');
+                }
+
+                subscription = await self.registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey
+                });
+            } catch (error) {
+                errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('[Service Worker] Failed to resubscribe during pushsubscriptionchange:', error);
+            }
+        }
+
+        if (!subscription) {
+            try {
+                subscription = await self.registration.pushManager.getSubscription();
+            } catch (error) {
+                errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('[Service Worker] Failed to retrieve push subscription after change:', error);
+            }
+        }
+
+        await broadcastClientMessage({
+            type: CLIENT_MESSAGE_TYPES.PUSH_SUBSCRIPTION_REFRESH,
+            payload: subscription ? subscription.toJSON() : null,
+            error: errorMessage
+        });
+    })());
+});
 
 self.addEventListener('push', (event) => {
     if (!event.data) {
