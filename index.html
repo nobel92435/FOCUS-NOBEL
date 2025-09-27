@@ -3571,7 +3571,7 @@
         </div>
     </div>
 
-    <div id="page-username-setup" class="page flex-col items-center justify-center h-full p-4 fade-in">
+    <div id="page-username-setup" class="page flex-col items-center justify-center h-full p-4 fade-in" data-route="username-setup">
         <div class="w-full max-w-sm text-center">
             <h1 class="text-3xl font-bold text-white mb-2">Welcome to FocusFlow!</h1>
             <p class="text-gray-400 mb-8">Let's set up your profile.</p>
@@ -3589,7 +3589,7 @@
 
     <div id="app-container" class="flex-col h-screen">
         <main id="main" class="flex-grow overflow-y-auto no-scrollbar">
-            <div id="page-timer" class="page active flex-col h-full">
+            <div id="page-timer" class="page active flex-col h-full" data-route="timer">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20">
                      <div class="flex items-center">
                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -3641,7 +3641,7 @@
                 </div>
             </div>
             
-            <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-stats" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="stats">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3655,7 +3655,7 @@
                     </div>
             </div>
             
-            <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-ranking" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="ranking">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 sticky top-0">
                     <button class="back-button p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3676,7 +3676,7 @@
                                     </div>
             </div>
             
-            <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-planner" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="planner">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3702,7 +3702,7 @@
                 </div>
             </div>
 
-            <div id="page-profile" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-profile" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="profile">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3749,7 +3749,7 @@
                     </div>
             </div>
 
-            <div id="page-my-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-my-groups" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="my-groups">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button text-slate-500 hover:text-slate-700" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3764,7 +3764,7 @@
                 <div id="my-groups-list" class="p-4 space-y-4"></div>
             </div>
 
-            <div id="page-find-groups" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-find-groups" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="find-groups">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button text-slate-500 hover:text-slate-700" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3801,7 +3801,7 @@
                 </button>
             </div>
 
-            <div id="page-create-group" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-create-group" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="create-group">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-slate-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button text-slate-500 hover:text-slate-700" data-target="find-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3823,7 +3823,7 @@
                 </div>
             </div>
 
-            <div id="page-group-detail" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-group-detail" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="group-detail">
                 <header class="p-4 md:p-6 flex items-center z-20 border-b border-slate-200 sticky top-0 bg-white shadow-sm">
                     <button class="back-button text-slate-500 hover:text-slate-700" data-target="my-groups">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3909,7 +3909,7 @@
                 </nav>
             </div>
             
-            <div id="page-pulse-forum" class="page flex-col h-full overflow-y-auto no-scrollbar">
+            <div id="page-pulse-forum" class="page flex-col h-full overflow-y-auto no-scrollbar" data-route="pulse-forum">
                 <header class="p-4 md:p-6 flex items-center justify-between z-20 border-b border-gray-800 sticky top-0 bg-gray-900">
                     <button class="back-button text-gray-400 hover:text-white" data-target="timer">
                         <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3929,31 +3929,31 @@
         <nav id="main-nav" class="sidebar-nav bg-white border-t border-slate-200 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] sticky bottom-0">
             <ul class="grid grid-cols-5">
                 <li>
-                    <a href="#timer" class="nav-link nav-link--stacked nav-item active" data-page="timer">
+                    <a href="#/timer" class="nav-link nav-link--stacked nav-item active" data-page="timer">
                         <img src="assets/icons/timer.svg" alt="Timer">
                         <span>Timer</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#stats" class="nav-link nav-link--stacked nav-item" data-page="stats">
+                    <a href="#/stats" class="nav-link nav-link--stacked nav-item" data-page="stats">
                         <img src="assets/icons/stats.svg" alt="Stats">
                         <span>Stats</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#ranking" class="nav-link nav-link--stacked nav-item" data-page="ranking">
+                    <a href="#/ranking" class="nav-link nav-link--stacked nav-item" data-page="ranking">
                         <img src="assets/icons/rankings.svg" alt="Ranking">
                         <span>Ranking</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#planner" class="nav-link nav-link--stacked nav-item" data-page="planner">
+                    <a href="#/planner" class="nav-link nav-link--stacked nav-item" data-page="planner">
                         <img src="assets/icons/planner.svg" alt="Planner">
                         <span>Planner</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#pulse-forum" class="nav-link nav-link--stacked nav-item" data-page="pulse-forum">
+                    <a href="#/pulse-forum" class="nav-link nav-link--stacked nav-item" data-page="pulse-forum">
                         <img src="assets/icons/pulseforum.svg" alt="PulseForum">
                         <span>PulseForum</span>
                     </a>
@@ -5262,7 +5262,7 @@
         if (error) {
             console.error('profile fetch error', error);
             // Fallback: send to setup if we can’t read
-            showPage('page-username-setup');
+            navigateTo('page-username-setup', { replace: true });
             return;
         }
 
@@ -5277,14 +5277,17 @@
             // This is a new user, so we trigger the country lookup function.
             // This is safer and simpler than using a database trigger.
             supabase.functions.invoke('get-user-country').catch(console.error);
-            showPage('page-username-setup');
+            navigateTo('page-username-setup', { replace: true });
         } else {
             await loadMyProfile();
             // This is the critical fix: Attach all real-time listeners after the user is verified.
             setupRealtimeListeners();
             // Ensure daily totals persist across refreshes
             await loadDailyTotal();
-            showPage('page-timer');
+            const desiredRouteKey = pendingRoute && routeToPageMap[pendingRoute] ? pendingRoute : DEFAULT_ROUTE;
+            const desiredPageId = routeToPageMap[desiredRouteKey] || routeToPageMap[DEFAULT_ROUTE] || 'page-timer';
+            pendingRoute = null;
+            navigateTo(desiredPageId, { replace: true });
             await restoreTimerStateFromCache();
 
             if (typeof Notification !== 'undefined') {
@@ -8223,7 +8226,7 @@ let pauseStartTime = 0;
         // --- Page Navigation ---
         function showPage(pageId) {
             if (!pageId) return;
-            
+
             if (pageId === 'page-planner') {
                 plannerState.calendarYear = new Date().getFullYear();
                 plannerState.calendarMonth = new Date().getMonth();
@@ -8252,7 +8255,7 @@ let pauseStartTime = 0;
             
             const mainNav = document.getElementById('main-nav');
             const groupNav = document.getElementById('group-detail-nav');
-            const mainNavPages = ['page-timer', 'page-stats', 'page-ranking', 'page-planner'];
+            const mainNavPages = ['page-timer', 'page-stats', 'page-ranking', 'page-planner', 'page-pulse-forum'];
 
             mainNav.style.display = 'none';
             if (groupNav) groupNav.style.display = 'none';
@@ -8266,7 +8269,99 @@ let pauseStartTime = 0;
             if (pageId === 'page-stats') {
                 renderStatsPage(userSessions);
             }
+
+            const targetPage = document.getElementById(pageId);
+            const activeRoute = targetPage?.dataset.route ? targetPage.dataset.route.toLowerCase() : null;
+            if (activeRoute) {
+                document.querySelectorAll('#main-nav .nav-item').forEach(item => {
+                    const navRoute = item.dataset.page ? item.dataset.page.toLowerCase() : '';
+                    item.classList.toggle('active', navRoute === activeRoute);
+                });
+            } else {
+                document.querySelectorAll('#main-nav .nav-item').forEach(item => item.classList.remove('active'));
+            }
         }
+
+        const ROUTE_PREFIX = '#/';
+        const DEFAULT_ROUTE = 'timer';
+        const routeToPageMap = {};
+        let pendingRoute = null;
+
+        function normalizeRoute(route) {
+            return route ? route.toString().trim().toLowerCase() : '';
+        }
+
+        function registerRoutes() {
+            Object.keys(routeToPageMap).forEach(key => delete routeToPageMap[key]);
+            document.querySelectorAll('.page[data-route]').forEach(page => {
+                const routeName = normalizeRoute(page.dataset.route);
+                if (routeName) {
+                    routeToPageMap[routeName] = page.id;
+                }
+            });
+        }
+
+        function getRouteFromHash(hash) {
+            if (!hash) return DEFAULT_ROUTE;
+            if (hash.startsWith('#/')) {
+                return normalizeRoute(hash.slice(2));
+            }
+            if (hash.startsWith('#')) {
+                return normalizeRoute(hash.slice(1));
+            }
+            return normalizeRoute(hash);
+        }
+
+        function navigateTo(pageId, { replace = false, updateHash = true } = {}) {
+            if (!pageId) return;
+
+            showPage(pageId);
+
+            if (!updateHash) return;
+
+            const pageEl = document.getElementById(pageId);
+            const routeName = pageEl?.dataset.route;
+            const normalizedRoute = normalizeRoute(routeName);
+
+            if (!normalizedRoute) return;
+
+            const targetHash = `${ROUTE_PREFIX}${normalizedRoute}`;
+
+            if (replace) {
+                history.replaceState(null, '', targetHash);
+                return;
+            }
+
+            if (location.hash === targetHash) {
+                return;
+            }
+
+            location.hash = targetHash;
+        }
+
+        function handleHashChange() {
+            const route = getRouteFromHash(location.hash);
+            const pageId = routeToPageMap[route] || routeToPageMap[DEFAULT_ROUTE];
+
+            if (!currentUser) {
+                pendingRoute = routeToPageMap[route] ? route : DEFAULT_ROUTE;
+                return;
+            }
+
+            if (pageId) {
+                navigateTo(pageId, { updateHash: false });
+            }
+        }
+
+        function initializeRouting() {
+            registerRoutes();
+            window.addEventListener('hashchange', handleHashChange);
+
+            const initialRoute = getRouteFromHash(location.hash);
+            pendingRoute = routeToPageMap[initialRoute] ? initialRoute : DEFAULT_ROUTE;
+        }
+
+        initializeRouting();
 
         function formatTime(seconds, includeSeconds = true) {
             if (isNaN(seconds) || seconds < 0) seconds = 0;
@@ -12471,7 +12566,7 @@ if (achievementsGrid) {
                     const groupId = card.dataset.groupId;
                     if ((currentUserData?.joined_groups || []).includes(groupId)) {
                         renderGroupDetail(groupId);
-                        showPage('page-group-detail');
+                        navigateTo('page-group-detail');
                     } else {
                         showToast('Join the group to see details.', 'info');
                     }
@@ -12852,7 +12947,7 @@ if (achievementsGrid) {
             const { data: group, error } = await supabase.from('groups').select('*').eq('id', groupId).single();
             if (error || !group) {
                 currentGroupLeaderId = null;
-                showPage('page-my-groups');
+                navigateTo('page-my-groups');
                 return;
             }
 
@@ -14873,53 +14968,50 @@ if (achievementsGrid) {
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', function(event) {
             event.preventDefault();
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            this.classList.add('active');
             const pageName = this.dataset.page;
-            showPage(`page-${pageName}`);
+            if (pageName) {
+                navigateTo(`page-${pageName}`);
+            }
         }));
 
         document.querySelectorAll('.back-button').forEach(button => button.addEventListener('click', function() {
             const targetPage = this.getAttribute('data-target');
-            showPage(`page-${targetPage}`);
-            const navItem = document.querySelector(`.nav-item[data-page="${targetPage}"]`);
-            if (navItem) {
-                 document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                 navItem.classList.add('active');
+            if (targetPage) {
+                navigateTo(`page-${targetPage}`);
             }
         }));
 
         // --- START: ADDED GUARDS FOR GUEST USERS ---
-        ael('groups-btn', 'click', () => { 
+        ael('groups-btn', 'click', () => {
             if (currentUser && currentUser.isAnonymous) {
                 showToast('Please create an account to use study groups.', 'info');
-                showPage('page-profile');
+                navigateTo('page-profile');
                 return;
             }
-            renderJoinedGroups(); 
-            showPage('page-my-groups'); 
+            renderJoinedGroups();
+            navigateTo('page-my-groups');
         });
         ael('premium-btn', 'click', () => {
             const premiumModal = document.getElementById('premium-modal');
             if (premiumModal) premiumModal.classList.add('active');
         });
         ael('go-to-find-groups-btn', 'click', () => { 
-             if (currentUser && currentUser.isAnonymous) {
+            if (currentUser && currentUser.isAnonymous) {
                 showToast('Please create an account to use study groups.', 'info');
                 return;
             }
-            renderGroupRankings(); 
-            showPage('page-find-groups'); 
+            renderGroupRankings();
+            navigateTo('page-find-groups');
         });
-        ael('go-to-create-group-btn', 'click', () => { 
+        ael('go-to-create-group-btn', 'click', () => {
              if (currentUser && currentUser.isAnonymous) {
                 showToast('Please create an account to use study groups.', 'info');
                 return;
             }
-            showPage('page-create-group'); 
+            navigateTo('page-create-group');
         });
         // --- END: ADDED GUARDS FOR GUEST USERS ---
-        ael('profile-btn', 'click', () => { showPage('page-profile'); });
+        ael('profile-btn', 'click', () => { navigateTo('page-profile'); });
         
         // --- FIXES START HERE ---
 
@@ -15431,16 +15523,11 @@ if (achievementsGrid) {
                         const task = plannerState.tasks.find(t => t.id === taskId);
                         if (task) {
                             const subjectName = task.title;
-                            showPage('page-timer');
-                            const navItem = document.querySelector(`.nav-item[data-page="timer"]`);
-                            if (navItem) {
-                                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                                navItem.classList.add('active');
-                            }
+                            navigateTo('page-timer');
 
                             // Both buttons will now start a Pomodoro session for the task.
                             switchTimerMode('pomodoro');
-                            
+
                             startTimer(subjectName, { taskId: task.id });
                         }
                         return;
@@ -15775,7 +15862,7 @@ if (achievementsGrid) {
 
                 showToast('Group created successfully!', 'success');
                 renderGroupRankings();
-                showPage('page-find-groups');
+                navigateTo('page-find-groups');
                 form.reset();
             } catch (error) {
                 console.error('Error creating group:', error);
@@ -15815,18 +15902,18 @@ if (achievementsGrid) {
             // Handle clicking on a group card to enter the detail view
             const groupCard = e.target.closest('.group-card');
             if (groupCard) {
-                const groupId = groupCard.dataset.groupId;
-                if (groupId) {
-                    renderGroupDetail(groupId); // Render first to have content when page shows
-                    showPage('page-group-detail');
+                    const groupId = groupCard.dataset.groupId;
+                    if (groupId) {
+                        renderGroupDetail(groupId); // Render first to have content when page shows
+                        navigateTo('page-group-detail');
+                    }
                 }
-            }
 
-            // Handle the "Explore Groups" button on the empty state
-            if (e.target.id === 'explore-groups-btn') {
-                renderGroupRankings(); 
-                showPage('page-find-groups');
-            }
+                // Handle the "Explore Groups" button on the empty state
+                if (e.target.id === 'explore-groups-btn') {
+                    renderGroupRankings();
+                    navigateTo('page-find-groups');
+                }
         });
         
         // Profile Settings Modals
@@ -16721,7 +16808,7 @@ if (achievementsGrid) {
 
                             showToast('You have left the group.', 'success');
                             renderJoinedGroups();
-                            showPage('page-my-groups');
+                            navigateTo('page-my-groups');
                         }
                     );
                     break;
@@ -16874,10 +16961,10 @@ if (achievementsGrid) {
                 if (currentUserData.joined_groups && currentUserData.joined_groups.length > 0) {
                     const targetGroupId = currentGroupId && currentUserData.joined_groups.includes(currentGroupId) ? currentGroupId : currentUserData.joined_groups[0];
                     currentGroupId = targetGroupId;
-                    showPage('page-group-detail');
+                    navigateTo('page-group-detail');
                     renderGroupDetail(targetGroupId);
                 } else {
-                    showPage('page-my-groups');
+                    navigateTo('page-my-groups');
                 }
             });
 
