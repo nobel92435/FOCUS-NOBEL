@@ -8246,6 +8246,8 @@ let pauseStartTime = 0;
         const PAGE_TO_ROUTE = Object.fromEntries(Object.entries(ROUTE_TO_PAGE).map(([route, page]) => [page, route]));
         const ROUTE_HASH_PREFIX = '#/';
         let suppressNextHashUpdate = false;
+        const EXIT_PROMPT_TIMEOUT = 2000;
+        let lastExitPromptTime = 0;
 
         function getRouteFromHash() {
             const hash = window.location.hash || '';
@@ -8288,7 +8290,21 @@ let pauseStartTime = 0;
             }
 
             let route = getRouteFromHash();
-            if (!route || !ROUTE_TO_PAGE[route]) {
+            if (!route) {
+                const now = Date.now();
+                if (now - lastExitPromptTime <= EXIT_PROMPT_TIMEOUT) {
+                    lastExitPromptTime = 0;
+                    return; // Allow the browser to handle the back action (exit)
+                }
+
+                lastExitPromptTime = now;
+                showToast('Press back again to exit FocusFlow', 'info');
+                suppressNextHashUpdate = true;
+                window.history.forward();
+                return;
+            }
+
+            if (!ROUTE_TO_PAGE[route]) {
                 route = 'timer';
                 updateHashForRoute(route);
             }
@@ -8296,6 +8312,7 @@ let pauseStartTime = 0;
             const targetPageId = ROUTE_TO_PAGE[route];
             if (targetPageId) {
                 showPage(targetPageId, { updateHash: false });
+                lastExitPromptTime = 0;
             }
         }
 
