@@ -5263,6 +5263,9 @@
             prof.completed_setup === false;
 
         if (needsSetup) {
+            // This is a new user, so we trigger the country lookup function.
+            // This is safer and simpler than using a database trigger.
+            supabase.functions.invoke('get-user-country').catch(console.error);
             showPage('page-username-setup');
         } else {
             await loadMyProfile();
