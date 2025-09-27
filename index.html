@@ -4505,9 +4505,15 @@
                                 console.error('Failed to update subscription after conflict:', updateError);
                                 return null;
                             }
+                            if (updatedSub) {
+                                currentUserData = { ...currentUserData, push_subscription: updatedSub };
+                            }
                             return updatedSub;
                         }
 
+                        if (existingSub) {
+                            currentUserData = { ...currentUserData, push_subscription: existingSub };
+                        }
                         return existingSub;
                     }
 
@@ -4515,9 +4521,13 @@
                 }
                 // --- END FIX ---
 
+                if (dbSubscription) {
+                    currentUserData = { ...currentUserData, push_subscription: dbSubscription };
+                }
+
                 // This now returns the full row from the `push_subscriptions` table, including its ID.
                 console.log('[Debug] ensurePushSubscription: Process complete. Returning DB subscription:', dbSubscription);
-                return dbSubscription; 
+                return dbSubscription;
             } catch (error) {
                 console.error('[Debug] ensurePushSubscription: An unhandled error occurred in the main try/catch block:', error);
                 return null;
@@ -5275,8 +5285,12 @@
             await loadDailyTotal();
             showPage('page-timer');
 
-            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            if (typeof Notification !== 'undefined') {
                 ensurePushSubscription().catch(error => {
+                    if (Notification.permission === 'denied') {
+                        console.warn('Notifications are blocked by the user. Push subscription cannot be created.');
+                        return;
+                    }
                     console.warn('Failed to restore push subscription after auth:', error);
                 });
             }
