@@ -205,10 +205,12 @@ serve(async (req) => {
         JSON.stringify({
           success: false,
           delivered: false,
-          message: "No push subscriptions found for the target user.",
+          removedCount: 0,
+          message:
+            "No push subscriptions are registered for this user yet. Ask them to open FocusFlow on their device so we can refresh notifications.",
         }),
         {
-          status: 404,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
@@ -263,9 +265,10 @@ serve(async (req) => {
         results: [...deliveredResults, ...failedResults],
         removedCount,
         message: responseMessage,
+        httpStatus: delivered ? 200 : 207,
       }),
       {
-        status: delivered ? 200 : 207,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
