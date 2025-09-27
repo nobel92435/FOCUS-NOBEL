@@ -2345,6 +2345,37 @@
             color: #1F2937;
         }
 
+        #kick-member-modal .modal-content {
+            max-height: min(85vh, 640px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #kick-member-modal .modal-header {
+            flex-shrink: 0;
+        }
+
+        #kick-member-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+            margin-right: -0.5rem;
+        }
+
+        #kick-member-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #kick-member-list::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.4);
+            border-radius: 9999px;
+        }
+
+        #confirmation-modal {
+            z-index: 1200;
+        }
+
         .kick-member-btn {
             background: #FFFFFF;
             border: 1px solid #E2E8F0;
@@ -3377,7 +3408,7 @@
             border-radius: 0.75rem;
             border: 1px solid #E2E8F0;
             box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
-            z-index: 20;
+            z-index: 1300;
             overflow: hidden;
         }
         .log-options-menu.active {
